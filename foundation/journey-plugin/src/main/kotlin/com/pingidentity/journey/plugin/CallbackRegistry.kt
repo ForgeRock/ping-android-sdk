@@ -7,6 +7,7 @@
 
 package com.pingidentity.journey.plugin
 
+import com.pingidentity.orchestrate.ContinueNode
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
@@ -23,6 +24,20 @@ object CallbackRegistry {
     fun registerDerived(block: (JsonObject) -> String?) {
         derivedCallbacks.add(block)
     }
+
+    /**
+     * Injects the DaVinci and ContinueNode instances into the collectors.
+     * @param davinci The DaVinci instance to be injected.
+     * @param continueNode The ContinueNode instance to be injected.
+     */
+    fun inject(journey: Journey,  continueNode: ContinueNode) {
+        continueNode.callbacks.forEach { callback ->
+            if (callback is JourneyAware) {
+                callback.journey = journey
+            }
+        }
+    }
+
 
     fun callback(array: JsonArray): List<Callback> {
         val list = mutableListOf<Callback>()

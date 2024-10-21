@@ -9,6 +9,7 @@ package com.pingidentity.idp.browser
 
 import android.content.Intent
 import android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.result.ActivityResult
@@ -17,8 +18,6 @@ import androidx.browser.customtabs.CustomTabsIntent
 import com.pingidentity.android.ContextProvider
 import kotlinx.coroutines.flow.MutableStateFlow
 import java.net.URL
-
-internal typealias ContinueToken = String
 
 internal const val URL = "url"
 
@@ -47,7 +46,7 @@ class BrowserLauncherActivity : ComponentActivity() {
          * Starts the authorization process.
          * @return The continue token
          */
-        suspend fun authorize(url: URL): Result<ContinueToken> {
+        suspend fun authorize(url: URL): Result<Uri> {
             val pending = launchIfNotPending()
             return BrowserLauncher.authorize(url, pending)
         }

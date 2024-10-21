@@ -17,7 +17,6 @@ import com.pingidentity.journey.callback.NameCallback
 import com.pingidentity.journey.callback.NumberAttributeInputCallback
 import com.pingidentity.journey.callback.PasswordCallback
 import com.pingidentity.journey.callback.PollingWaitCallback
-import com.pingidentity.journey.callback.SelectIdPCallback
 import com.pingidentity.journey.callback.StringAttributeInputCallback
 import com.pingidentity.journey.callback.SuspendedTextOutputCallback
 import com.pingidentity.journey.callback.TextInputCallback
@@ -43,10 +42,9 @@ class CallbackRegistry : ModuleInitializer() {
         CallbackRegistry.register("HiddenValueCallback", ::HiddenValueCallback)
         CallbackRegistry.register("KbaCreateCallback", ::KbaCreateCallback)
         CallbackRegistry.register("NameCallback", ::NameCallback)
-        CallbackRegistry.register("NameCallback", ::NumberAttributeInputCallback)
+        CallbackRegistry.register("NumberAttributeInputCallback", ::NumberAttributeInputCallback)
         CallbackRegistry.register("PasswordCallback", ::PasswordCallback)
         CallbackRegistry.register("PollingWaitCallback", ::PollingWaitCallback)
-        CallbackRegistry.register("SelectIdPCallback", ::SelectIdPCallback)
         CallbackRegistry.register("StringAttributeInputCallback", ::StringAttributeInputCallback)
         CallbackRegistry.register("SuspendedTextOutputCallback", ::SuspendedTextOutputCallback)
         CallbackRegistry.register("TextInputCallback", ::TextInputCallback)

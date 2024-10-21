@@ -44,8 +44,10 @@ class BrowserHandler(
         val result = BrowserLauncherActivity.authorize(URL(url))
         return if (result.isSuccess) {
             Request().apply {
+                val continueToken = result.getOrThrow().toString()
+                    .substringAfter("continueToken=").substringBefore("&")
                 url(continueUrl)
-                header("Authorization", "Bearer ${result.getOrThrow()}")
+                header("Authorization", "Bearer ${continueToken}")
                 body()
             }
         } else {

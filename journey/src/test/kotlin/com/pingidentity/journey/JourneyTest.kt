@@ -10,9 +10,9 @@ package com.pingidentity.journey
 import com.pingidentity.utils.Result
 import com.pingidentity.journey.callback.NameCallback
 import com.pingidentity.journey.callback.PasswordCallback
-import com.pingidentity.journey.callback.callbacks
 import com.pingidentity.journey.module.Oidc
 import com.pingidentity.journey.module.Session
+import com.pingidentity.journey.plugin.callbacks
 import com.pingidentity.logger.CONSOLE
 import com.pingidentity.logger.Logger
 import com.pingidentity.logger.STANDARD

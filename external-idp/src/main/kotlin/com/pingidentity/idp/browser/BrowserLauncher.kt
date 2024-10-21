@@ -8,6 +8,7 @@
 package com.pingidentity.idp.browser
 
 import android.content.Intent
+import android.net.Uri
 import com.pingidentity.android.ContextProvider
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
@@ -40,7 +41,7 @@ object BrowserLauncher {
     suspend fun authorize(
         url: URL,
         pending: Boolean = false,
-    ): Result<ContinueToken> {
+    ): Result<Uri> {
         // Wait until the launcher is initialized
         // The launcher is initialized in BrowserLauncherActivity
         return isInitialized.first { it }.let {

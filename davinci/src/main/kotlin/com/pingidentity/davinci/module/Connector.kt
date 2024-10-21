@@ -8,7 +8,7 @@
 package com.pingidentity.davinci.module
 
 import com.pingidentity.davinci.collector.asJson
-import com.pingidentity.davinci.collector.asRequest
+import com.pingidentity.davinci.collector.request
 import com.pingidentity.davinci.collector.eventType
 import com.pingidentity.davinci.plugin.Collectors
 import com.pingidentity.orchestrate.ContinueNode
@@ -122,7 +122,7 @@ internal class Connector(
         }
 
         //Check if there is a collector that override the request
-        return collectors.asRequest(context, request)
+        return collectors.request(context, request)
     }
 
 }

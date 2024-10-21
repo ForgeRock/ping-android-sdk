@@ -16,6 +16,12 @@
             android:enabled="true"
             android:exported="false"/>
 
+        <provider
+            android:name=".journey.IdpCallbackRegistry"
+            android:authorities="${applicationId}.Registry"
+            android:enabled="true"
+            android:exported="false"/>
+
         <!-- Background Activity that does not care screen orientation -->
         <activity
             android:name="com.pingidentity.idp.browser.BrowserLauncherActivity"
@@ -37,7 +43,7 @@
         </activity>
 
         <!-- Facebook Login -->
-        <activity android:name=".davinci.FacebookActivity"
+        <activity android:name=".facebook.FacebookActivity"
             android:exported="false"/>
 
     </application>

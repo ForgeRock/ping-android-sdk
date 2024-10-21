@@ -27,6 +27,7 @@ dependencies {
     implementation(project(":foundation:logger"))
     implementation(project(":foundation:android"))
     implementation(project(":foundation:davinci-plugin"))
+    implementation(project(":foundation:journey-plugin"))
     implementation(libs.ktor.client.core)
     implementation(libs.androidx.activity.ktx)
     implementation(libs.androidx.activity)

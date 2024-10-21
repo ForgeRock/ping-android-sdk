@@ -40,11 +40,11 @@ internal fun Collectors.eventType(): String? {
 /**
  * Find any collectors that override the request
  */
-internal fun Collectors.asRequest(context: FlowContext, request: Request): Request {
+internal fun Collectors.request(context: FlowContext, request: Request): Request {
     var result = request
     forEach { collector ->
         if (collector is RequestAdapter) {
-            result = collector.asRequest(context, result)
+            result = collector.request(context, result)
         }
     }
     return result

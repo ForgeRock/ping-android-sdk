@@ -90,7 +90,7 @@ class IdpCollector : Collector, ContinueNodeAware, DaVinciAware, RequestAdapter 
     /**
      * Overrides the request with the resume request if initialized, else return the input request.
      */
-    override var asRequest: FlowContext.(Request) -> Request = { r ->
+    override var request: FlowContext.(Request) -> Request = { r ->
         if (this@IdpCollector::resumeRequest.isInitialized) {
             resumeRequest
         } else {

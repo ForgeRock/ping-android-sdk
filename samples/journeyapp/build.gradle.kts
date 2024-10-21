@@ -17,6 +17,8 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
+        manifestPlaceholders["appRedirectUriScheme"] = "org.forgerock.demo"
+
     }
 
     buildTypes {
@@ -28,6 +30,16 @@ android {
             )
         }
     }
+
+    signingConfigs {
+        getByName("debug") {
+            storeFile = file("debug.jks")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -43,7 +55,12 @@ dependencies {
     val composeBom = platform(libs.androidx.compose.bom)
     implementation(composeBom)
     implementation(project(":journey"))
+    implementation(project(":external-idp"))
     //implementation("com.pingidentity.sdks:davinci:0.9.0-SNAPSHOT")
+
+    //To enable Native Google Sign-In and Facebook Login
+    implementation(libs.googleid)
+    implementation(libs.facebook.login)
 
     implementation(libs.compose.ui)
     implementation(libs.compose.material3)

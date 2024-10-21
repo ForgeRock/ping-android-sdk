@@ -10,6 +10,7 @@ package com.pingidentity.idp.browser
 import android.app.Activity.RESULT_CANCELED
 import android.app.Activity.RESULT_OK
 import android.content.Intent
+import android.net.Uri
 import android.os.OperationCanceledException
 import androidx.activity.result.ActivityResult
 import androidx.activity.result.ActivityResultLauncher
@@ -28,7 +29,7 @@ internal class Launcher(
     suspend fun authorize(
         request: Intent,
         pending: Boolean = false,
-    ): Result<ContinueToken> {
+    ): Result<Uri> {
         if (!pending) {
             //Launch the CustomTabActivity
             launcher.launch(request)
@@ -39,13 +40,10 @@ internal class Launcher(
 
         when (result.resultCode) {
             RESULT_OK -> {
-                val data = result.data?.data?.toString() ?: ""
-                val continueToken = data.substringAfter("continueToken=").substringBefore("&")
-                return if (continueToken.isEmpty()) {
-                    Result.failure(IllegalStateException("No ContinueToken found in response"))
-                } else {
-                    Result.success(continueToken)
-                }
+                val uri = result.data?.data
+                uri?.let {
+                    return Result.success(it)
+                } ?: return Result.failure(IllegalStateException("No Uri found in response"))
             }
 
             RESULT_CANCELED -> return Result.failure(OperationCanceledException("Authorization canceled"))

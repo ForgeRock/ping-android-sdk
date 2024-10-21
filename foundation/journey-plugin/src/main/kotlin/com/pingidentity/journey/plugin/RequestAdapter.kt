@@ -5,7 +5,7 @@
  * of the MIT license. See the LICENSE file for details.
  */
 
-package com.pingidentity.davinci.plugin
+package com.pingidentity.journey.plugin
 
 import com.pingidentity.orchestrate.FlowContext
 import com.pingidentity.orchestrate.Request
@@ -17,5 +17,5 @@ interface RequestAdapter {
     /**
      * A function that transform to a Request within a given FlowContext.
      */
-    var request: FlowContext.(Request) -> Request
+    var asRequest: FlowContext.(Request) -> Request
 }

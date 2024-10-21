@@ -11,6 +11,7 @@ import com.pingidentity.exception.ApiException
 import com.pingidentity.journey.Journey
 import com.pingidentity.journey.options
 import com.pingidentity.journey.SSOTokenImpl
+import com.pingidentity.journey.callback.request
 import com.pingidentity.journey.plugin.Callback
 import com.pingidentity.journey.plugin.CallbackRegistry
 import com.pingidentity.orchestrate.ContinueNode
@@ -82,7 +83,7 @@ private fun transform(
             }
 
             override fun asRequest(): Request {
-                return Request().apply {
+                val request = Request().apply {
                     url(
                         "${journey.options.serverUrl}/json/realms/${journey.options.realm}/authenticate"
                     )
@@ -90,7 +91,10 @@ private fun transform(
                     if (journey.options.noSession) parameter("noSession", "true")
                     body(asJson())
                 }
+                return callbacks.request(context, request)
             }
+        }.apply {
+            CallbackRegistry.inject(journey, this)
         }
     }
     if ("tokenId" in json && json["tokenId"]?.jsonPrimitive?.content?.isNotEmpty() == true) {
