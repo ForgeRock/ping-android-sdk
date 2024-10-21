@@ -80,10 +80,13 @@ class JourneyTest {
 
             node = node.next()
             assertTrue(node is SuccessNode)
+            node.session
 
-            val user = node.user
-            val result = user.token()
+            val user = journey.user()
+            val result = user?.token()
             assertTrue(result is Result.Success)
+
+            val ssoToken: SSOToken? = journey.session()
         }
 
     @Ignore
@@ -125,7 +128,7 @@ class JourneyTest {
             assertTrue(node is SuccessNode)
 
             assertTrue {
-                (node as SuccessNode).session.value().isNotEmpty()
+                (node as SuccessNode).session.value.isNotEmpty()
             }
 
             //start again should return Success immediately, since the session is already established with the Cookie module

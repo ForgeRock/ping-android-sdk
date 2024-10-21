@@ -8,14 +8,20 @@
 package com.pingidentity.journey.plugin
 
 import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
-object CallbackFactory {
+object CallbackRegistry {
     private val callbacks: MutableMap<String, () -> Callback> = HashMap()
+    val derivedCallbacks: MutableList<(JsonObject) -> String?> = mutableListOf()
 
     fun register(type: String, block: () -> Callback) {
         callbacks[type] = block
+    }
+
+    fun registerDerived(block: (JsonObject) -> String?) {
+        derivedCallbacks.add(block)
     }
 
     fun callback(array: JsonArray): List<Callback> {

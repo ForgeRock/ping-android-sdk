@@ -6,16 +6,16 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
-class TextOutputCallback : AbstractCallback() {
+open class TextOutputCallback : AbstractCallback() {
     /**
      * The message type
      */
-    private var messageType = 0
+    var messageType = 0
 
     /**
      * The message
      */
-    private var message: String? = null
+    var message: String? = null
 
     override fun onAttribute(name: String, value: JsonElement) {
         when (name) {

@@ -48,7 +48,7 @@ internal fun sessionAgent(
                 parameter("code_challenge_method", pkce.codeChallengeMethod)
                 headers {
                     append("Accept-API-Version", "resource=2.1, protocol=1.0")
-                    append(cookie, session.value())
+                    append(cookie, session.value)
                 }
             }
             if (response.status == HttpStatusCode.Found) { // Check if the status is redirect

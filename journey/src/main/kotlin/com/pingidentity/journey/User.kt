@@ -33,21 +33,19 @@ suspend fun Journey.user(): User? {
         return it
     }
 
-    val session = session()
-    if (session != EmptySession) {
-        return prepareUser(this, OidcUser(oidcClientConfig()), session)
-    }
-    return null
+    session()?.let {
+        return prepareUser(this, OidcUser(oidcClientConfig()), it)
+    } ?: return null
 }
 
-/**
- * Alias for the Journey.user() function.
- * @return The user if found, otherwise null.
- */
-suspend fun Journey.journeyUser(): User? = this.user()
+fun User.session(): SSOToken {
+    return (this as SSOToken)
+}
 
-val SuccessNode.user: User
-    get() = session as User
+suspend fun Journey.session(): SSOToken? {
+    return session()
+}
+
 
 /**
  * Function to prepare the user.
@@ -62,7 +60,7 @@ val SuccessNode.user: User
 internal fun prepareUser(
     journey: Journey,
     user: User,
-    session: Session = EmptySession
+    session: SSOToken
 ): UserDelegate {
     return UserDelegate(journey, user, session).also {
         // Cache the user in the context
@@ -83,8 +81,8 @@ internal fun prepareUser(
 internal class UserDelegate(
     private val journey: Journey,
     private val user: User,
-    private val session: Session,
-) : User by user, Session by session {
+    private val session: SSOToken,
+) : User by user, SSOToken by session {
 
     /**
      * Function to log out the user.
@@ -93,6 +91,7 @@ internal class UserDelegate(
      */
     override suspend fun logout() {
         // instead of calling [OidcClient.endSession] directly, we call [DaVinci.signOff] to signoff the user
+        journey.sharedContext.remove(USER)
         journey.signOff()
     }
 }

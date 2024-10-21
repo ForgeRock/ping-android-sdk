@@ -8,9 +8,11 @@
 package com.pingidentity.journey.module
 
 import com.pingidentity.exception.ApiException
-import com.pingidentity.journey.journeyConfig
+import com.pingidentity.journey.Journey
+import com.pingidentity.journey.options
+import com.pingidentity.journey.SSOTokenImpl
 import com.pingidentity.journey.plugin.Callback
-import com.pingidentity.journey.plugin.CallbackFactory
+import com.pingidentity.journey.plugin.CallbackRegistry
 import com.pingidentity.orchestrate.ContinueNode
 import com.pingidentity.orchestrate.EmptySession
 import com.pingidentity.orchestrate.ErrorNode
@@ -19,9 +21,7 @@ import com.pingidentity.orchestrate.FlowContext
 import com.pingidentity.orchestrate.Module
 import com.pingidentity.orchestrate.Node
 import com.pingidentity.orchestrate.Request
-import com.pingidentity.orchestrate.Session
 import com.pingidentity.orchestrate.SuccessNode
-import com.pingidentity.orchestrate.Workflow
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
@@ -61,15 +61,15 @@ private fun error(json: JsonObject): ErrorNode {
 
 private fun transform(
     context: FlowContext,
-    workflow: Workflow,
+    journey: Journey,
     json: JsonObject,
 ): Node {
     val callbacks = mutableListOf<Callback>()
     if ("authId" in json) {
         json["callbacks"]?.jsonArray?.let {
-            callbacks.addAll(CallbackFactory.callback(it))
+            callbacks.addAll(CallbackRegistry.callback(it))
         }
-        return object : ContinueNode(context, workflow, json, callbacks) {
+        return object : ContinueNode(context, journey, json, callbacks) {
             private fun asJson(): JsonObject {
                 return buildJsonObject {
                     put("authId", json["authId"]?.jsonPrimitive?.content ?: "")
@@ -84,23 +84,22 @@ private fun transform(
             override fun asRequest(): Request {
                 return Request().apply {
                     url(
-                        "${workflow.journeyConfig().serverUrl}/json/realms/${workflow.journeyConfig().realm}/authenticate"
+                        "${journey.options.serverUrl}/json/realms/${journey.options.realm}/authenticate"
                     )
                     header("Content-Type", "application/json")
-                    if (workflow.journeyConfig().noSession) parameter("noSession", "true")
+                    if (journey.options.noSession) parameter("noSession", "true")
                     body(asJson())
                 }
             }
         }
     }
     if ("tokenId" in json && json["tokenId"]?.jsonPrimitive?.content?.isNotEmpty() == true) {
-        return SuccessNode(json,
-            object : Session {
-                override fun value(): String {
-                    return json["tokenId"]?.jsonPrimitive?.content ?: ""
-                }
-            }
+        val ssoToken = SSOTokenImpl(
+            value = json["tokenId"]?.jsonPrimitive?.content ?: "",
+            successUrl = json["successUrl"]?.jsonPrimitive?.content ?: "",
+            realm = json["realm"]?.jsonPrimitive?.content ?: "",
         )
+        return SuccessNode(json, ssoToken)
     } else {
         return SuccessNode(json, EmptySession)
     }

@@ -99,10 +99,8 @@ private fun transform(
         return SuccessNode(
             json,
             object : Session {
-                override fun value(): String {
-                    return json["authorizeResponse"]?.jsonObject?.get("code")?.jsonPrimitive?.content
-                        ?: throw AuthorizeException("Authorization code is missing.")
-                }
+                override val value: String = json["authorizeResponse"]?.jsonObject?.get("code")?.jsonPrimitive?.content
+                            ?: throw AuthorizeException("Authorization code is missing.")
             },
         )
     }
