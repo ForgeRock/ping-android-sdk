@@ -11,22 +11,17 @@ package com.pingidentity.orchestrate
  * Interface for a Session. A Session represents a user's session in the application.
  */
 interface Session {
-    /**
-     * Returns the value of the session.
-     * @return The value of the session as a String.
-     */
-    fun value(): String
+    val value: String
 }
 
 /**
  * Object for an EmptySession. An EmptySession represents a session with no value.
  */
-object EmptySession : Session {
+data object EmptySession : Session {
     /**
      * Returns the value of the empty session.
      * @return The value of the empty session as a String.
      */
-    override fun value(): String {
-        return ""
-    }
+    override val value: String
+        get() = ""
 }

@@ -7,10 +7,11 @@
 
 package com.pingidentity.journey.module
 
+import com.pingidentity.journey.EmptySSOToken
 import com.pingidentity.journey.Journey
+import com.pingidentity.journey.SSOToken
 import com.pingidentity.orchestrate.EmptySession
 import com.pingidentity.orchestrate.Module
-import com.pingidentity.orchestrate.Session
 
 
 private const val SESSION_CONFIG = "com.pingidentity.journey.SESSION_CONFIG"
@@ -25,7 +26,7 @@ val Session = Module.of(::SessionConfig) {
     success {
         //The session may be empty due to NoSession or reuse existing session
         if (it.session != EmptySession) { // If the session is not empty, save it
-            config.storage.save(it.session.value())
+            config.storage.save(it.session as SSOToken)
         }
         it
     }
@@ -36,19 +37,15 @@ val Session = Module.of(::SessionConfig) {
     }
 }
 
-suspend fun Journey.session(): Session {
+suspend fun Journey.session(): SSOToken? {
     init()
     sharedContext[SESSION_CONFIG]?.let { config ->
         config as SessionConfig
         config.storage.get()?.let {
-            return object : Session {
-                override fun value(): String {
-                    return it
-                }
-            }
+            return it
         }
     }
-    return EmptySession
+    return null
 }
 
 

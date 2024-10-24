@@ -16,12 +16,12 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-class CallbackFactoryTest {
+class CallbackRegistryTest {
 
     @BeforeTest
     fun setup() {
-        CallbackFactory.register("type1", ::DummyCallback)
-        CallbackFactory.register("type2", ::Dummy2Callback)
+        CallbackRegistry.register("type1", ::DummyCallback)
+        CallbackRegistry.register("type2", ::Dummy2Callback)
     }
 
     @Test
@@ -31,7 +31,7 @@ class CallbackFactoryTest {
             add(buildJsonObject { put("type", "type2") })
         }
 
-        val callbacks = CallbackFactory.callback(jsonArray)
+        val callbacks = CallbackRegistry.callback(jsonArray)
 
         assertEquals(2, callbacks.size)
     }
@@ -42,7 +42,7 @@ class CallbackFactoryTest {
             add(buildJsonObject { put("type", "invalidType") })
         }
 
-        val callbacks = CallbackFactory.callback(jsonArray)
+        val callbacks = CallbackRegistry.callback(jsonArray)
 
         assertTrue(callbacks.isEmpty())
     }
@@ -51,7 +51,7 @@ class CallbackFactoryTest {
     fun `Should return empty list when jsonArray is empty`() {
         val jsonArray = buildJsonArray { }
 
-        val callbacks = CallbackFactory.callback(jsonArray)
+        val callbacks = CallbackRegistry.callback(jsonArray)
 
         assertTrue(callbacks.isEmpty())
     }

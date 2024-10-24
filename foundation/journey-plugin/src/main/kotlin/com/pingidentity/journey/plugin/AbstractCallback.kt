@@ -49,6 +49,7 @@ abstract class AbstractCallback : Callback {
                         is Int -> put("value", element as Int)
                         is String -> put("value", element as String)
                         is Boolean -> put("value", element as Boolean)
+                        is Double -> put("value", element as Double)
                     }
                 })
             }
@@ -69,6 +70,7 @@ abstract class AbstractCallback : Callback {
         return update(updated)
     }
 
+    /*
     fun input(suffix: String, value: Any): JsonObject {
         val orig = json["input"]?.jsonArray
 
@@ -82,6 +84,7 @@ abstract class AbstractCallback : Callback {
                             is Int -> put("value", value)
                             is String -> put("value", value)
                             is Boolean -> put("value", value)
+                            is Double -> put("value", value)
                         }
                     })
                 } else {
@@ -91,6 +94,7 @@ abstract class AbstractCallback : Callback {
         }
         return update(updated)
     }
+     */
 
     private fun update(input: JsonArray): JsonObject {
         // Convert the JsonObject to a mutable map

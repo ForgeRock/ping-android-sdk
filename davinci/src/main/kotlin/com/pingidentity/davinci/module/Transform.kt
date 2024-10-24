@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024. PingIdentity. All rights reserved.
+ * Copyright (c) 2024 PingIdentity. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -10,6 +10,7 @@ package com.pingidentity.davinci.module
 import com.pingidentity.exception.ApiException
 import com.pingidentity.davinci.collector.Form
 import com.pingidentity.davinci.plugin.Collector
+import com.pingidentity.davinci.plugin.CollectorFactory
 import com.pingidentity.oidc.exception.AuthorizeException
 import com.pingidentity.orchestrate.ErrorNode
 import com.pingidentity.orchestrate.FailureNode
@@ -50,7 +51,11 @@ internal val NodeTransform =
                     val connectorId = jsonResponse["connectorId"]?.jsonPrimitive?.content
                     if (connectorId == "pingOneAuthenticationConnector") {
                         val capabilityName = jsonResponse["capabilityName"]?.jsonPrimitive?.content
-                        if (capabilityName in listOf("returnSuccessResponseRedirect", "setSession")) {
+                        if (capabilityName in listOf(
+                                "returnSuccessResponseRedirect",
+                                "setSession"
+                            )
+                        ) {
                             return@transform FailureNode(ApiException(statusCode, body))
                         }
                     }
@@ -94,10 +99,8 @@ private fun transform(
         return SuccessNode(
             json,
             object : Session {
-                override fun value(): String {
-                    return json["authorizeResponse"]?.jsonObject?.get("code")?.jsonPrimitive?.content
-                        ?: throw AuthorizeException("Authorization code is missing.")
-                }
+                override val value: String = json["authorizeResponse"]?.jsonObject?.get("code")?.jsonPrimitive?.content
+                            ?: throw AuthorizeException("Authorization code is missing.")
             },
         )
     }
@@ -105,5 +108,8 @@ private fun transform(
     val collectors = mutableListOf<Collector>()
     if ("form" in json) collectors.addAll(Form.parse(json))
 
-    return DaVinciConnector(context, workflow, json, collectors.toList())
+    return Connector(context, workflow, json, collectors.toList()).apply {
+        CollectorFactory.inject(workflow, this)
+    }
+
 }

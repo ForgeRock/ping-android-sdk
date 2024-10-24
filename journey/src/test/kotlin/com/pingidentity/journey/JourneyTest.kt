@@ -10,9 +10,9 @@ package com.pingidentity.journey
 import com.pingidentity.utils.Result
 import com.pingidentity.journey.callback.NameCallback
 import com.pingidentity.journey.callback.PasswordCallback
-import com.pingidentity.journey.callback.callbacks
 import com.pingidentity.journey.module.Oidc
 import com.pingidentity.journey.module.Session
+import com.pingidentity.journey.plugin.callbacks
 import com.pingidentity.logger.CONSOLE
 import com.pingidentity.logger.Logger
 import com.pingidentity.logger.STANDARD
@@ -80,10 +80,13 @@ class JourneyTest {
 
             node = node.next()
             assertTrue(node is SuccessNode)
+            node.session
 
-            val user = node.user
-            val result = user.token()
+            val user = journey.user()
+            val result = user?.token()
             assertTrue(result is Result.Success)
+
+            val ssoToken: SSOToken? = journey.session()
         }
 
     @Ignore
@@ -125,7 +128,7 @@ class JourneyTest {
             assertTrue(node is SuccessNode)
 
             assertTrue {
-                (node as SuccessNode).session.value().isNotEmpty()
+                (node as SuccessNode).session.value.isNotEmpty()
             }
 
             //start again should return Success immediately, since the session is already established with the Cookie module

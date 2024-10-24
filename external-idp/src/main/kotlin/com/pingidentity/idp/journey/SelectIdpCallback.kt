@@ -1,8 +1,16 @@
-package com.pingidentity.journey.callback
+/*
+ * Copyright (c) 2024 PingIdentity. All rights reserved.
+ *
+ * This software may be modified and distributed under the terms
+ * of the MIT license. See the LICENSE file for details.
+ */
+
+package com.pingidentity.idp.journey
 
 import com.pingidentity.journey.plugin.AbstractCallback
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -10,7 +18,7 @@ import kotlinx.serialization.json.jsonPrimitive
 /**
  * Callback to collect an Identity Provider
  */
-class SelectIdPCallback : AbstractCallback() {
+class SelectIdpCallback : AbstractCallback() {
 
     var providers = emptyList<IdPValue>()
     private set
@@ -32,13 +40,8 @@ class SelectIdPCallback : AbstractCallback() {
     }
 
     class IdPValue(jsonObject: JsonObject) {
-        private var provider: String = ""
-        private var uiConfig: JsonObject?
-
-        init {
-            this.provider = jsonObject["provider"]?.jsonPrimitive?.content ?: ""
-            this.uiConfig = jsonObject["uiConfig"]?.jsonObject
-        }
+        var provider: String = jsonObject["provider"]?.jsonPrimitive?.content ?: ""
+        var uiConfig: JsonObject = jsonObject["uiConfig"]?.jsonObject ?: buildJsonObject {}
     }
 
 }

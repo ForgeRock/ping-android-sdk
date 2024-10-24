@@ -18,7 +18,7 @@ occur during the authentication process.
 
 ```kotlin
 dependencies {
-    implementation(project(":davinci"))
+    implementation("com.pingidentity.sdks:davinci:<version>")
 }
 ```
 
@@ -54,7 +54,7 @@ use the `next` method to transition to the next state.
 ```kotlin
 val daVinci = DaVinci {
     timeout = 30 //Default 30s, Seconds for network timeout
-    logger = Logcat //Default Logcat, this is the default, you can override the logger to log information
+    logger = Logger.STANDARD // Use the standard logger which logs to the Logcat
     module(Oidc) {
         //...
         storage = MemoryStorage<Token>() //Default DataStoreStorage, you can override the storage to store the tokens
@@ -113,7 +113,7 @@ when receiving an error, you cannot continue the Flow, you may want to display a
 the issue to the Support team.
 The Error may include Network issue, parsing issue, API Error (Server response other that 2xx and 400) and other unexpected issues.
 
-For `ErrorNode`, you can retrieve the error message by using `node.message()`, and the raw json response with `node.input`. 
+For `ErrorNode`, you can retrieve the error message by using `node.message()`, and the raw json response with `node.input`.
 The `message` is a `String` object, when receiving a failure, you can continue the Flow with previous `ContinueNode` Node, but you may want to display the error message to the user.
 e.g "Username/Password is incorrect", "OTP is invalid", etc...
 

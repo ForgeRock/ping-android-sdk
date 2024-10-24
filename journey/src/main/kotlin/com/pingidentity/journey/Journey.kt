@@ -13,15 +13,15 @@ import com.pingidentity.journey.module.Start
 import com.pingidentity.orchestrate.Node
 import com.pingidentity.orchestrate.OverrideMode
 import com.pingidentity.orchestrate.Request
+import com.pingidentity.orchestrate.Setup
 import com.pingidentity.orchestrate.Workflow
 import com.pingidentity.orchestrate.WorkflowConfig
 import com.pingidentity.orchestrate.module.Cookie
 import com.pingidentity.orchestrate.module.CustomHeader
 
-// typealias DaVinciConfig = WorkflowConfig
 typealias Journey = Workflow
 
-class JourneyConfig : WorkflowConfig() {
+class JourneyOptions : WorkflowConfig() {
     lateinit var serverUrl: String
     var realm: String = "root"
     var cookie: String = "iPlanetDirectoryPro"
@@ -34,17 +34,19 @@ class JourneyConfig : WorkflowConfig() {
     }
 }
 
-fun Workflow.journeyConfig(): JourneyConfig {
-    return this.config as JourneyConfig
-}
+val Journey.options: JourneyOptions
+    get() = this.config as JourneyOptions
+
+val <T : Any> Setup<T>.journey: Journey
+    get() = this.workflow
 
 suspend fun Journey.start(journeyName: String): Node {
     val request = Request().apply {
-        url("${journeyConfig().serverUrl}/json/realms/${journeyConfig().realm}/authenticate")
+        url("${options.serverUrl}/json/realms/${options.realm}/authenticate")
         parameter("authIndexType", "service")
         parameter("authIndexValue", journeyName)
-        if (journeyConfig().forceAuth) parameter("ForceAuth", "true")
-        if (journeyConfig().noSession) parameter("noSession", "true")
+        if (options.forceAuth) parameter("ForceAuth", "true")
+        if (options.noSession) parameter("noSession", "true")
     }
 
     request.body()
@@ -52,8 +54,8 @@ suspend fun Journey.start(journeyName: String): Node {
 }
 
 
-fun Journey(block: JourneyConfig.() -> Unit = {}): Journey {
-    val config = JourneyConfig()
+fun Journey(block: JourneyOptions.() -> Unit = {}): Journey {
+    val config = JourneyOptions()
 
     // Apply default
     config.apply {

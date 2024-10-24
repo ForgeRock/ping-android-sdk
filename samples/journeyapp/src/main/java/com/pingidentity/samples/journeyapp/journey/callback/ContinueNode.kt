@@ -16,9 +16,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.pingidentity.idp.journey.IdpCallback
+import com.pingidentity.idp.journey.SelectIdpCallback
 import com.pingidentity.journey.callback.NameCallback
 import com.pingidentity.journey.callback.PasswordCallback
-import com.pingidentity.journey.callback.callbacks
+import com.pingidentity.journey.plugin.callbacks
 import com.pingidentity.orchestrate.ContinueNode
 
 @Composable
@@ -27,60 +29,26 @@ fun ContinueNode(
     onNodeUpdated: () -> Unit,
     onNext: () -> Unit,
 ) {
-    /*
-    Row(
-        modifier =
-        Modifier
-            .padding(4.dp)
-            .fillMaxWidth(),
-    ) {
-        Spacer(Modifier.width(8.dp))
-        Text(
-            text = connector.name,
-            Modifier
-                .wrapContentWidth(Alignment.CenterHorizontally)
-                .weight(1f),
-            fontWeight = FontWeight.Bold,
-            style = MaterialTheme.typography.titleLarge,
-        )
-    }
-    Row(
-        modifier =
-        Modifier
-            .padding(4.dp)
-            .fillMaxWidth(),
-    ) {
-        Spacer(Modifier.width(8.dp))
-        Text(
-            text = connector.description,
-            Modifier
-                .wrapContentWidth(Alignment.CenterHorizontally)
-                .weight(1f),
-            style = MaterialTheme.typography.titleSmall,
-        )
-    }
-     */
-
     Column(
         modifier =
         Modifier
             .padding(4.dp)
             .fillMaxWidth(),
     ) {
-        val hasAction = false
+        var showNext = true
 
         continueNode.callbacks.forEach {
             when (it) {
-                is NameCallback -> {
-                    NameCallback(it, onNodeUpdated)
-                }
-
-                is PasswordCallback -> {
-                    PasswordCallback(it, onNodeUpdated)
+                is NameCallback -> NameCallback(it, onNodeUpdated)
+                is PasswordCallback -> PasswordCallback(it, onNodeUpdated)
+                is SelectIdpCallback -> SelectIdpCallback(it, onNext)
+                is IdpCallback -> {
+                    showNext = false
+                    IdPCallback(it, onNext)
                 }
             }
         }
-        if (!hasAction) {
+        if (showNext) {
             Button(
                 modifier = Modifier.align(Alignment.End),
                 onClick = onNext,

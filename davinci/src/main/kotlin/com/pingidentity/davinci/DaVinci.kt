@@ -9,7 +9,7 @@ package com.pingidentity.davinci
 
 import com.pingidentity.davinci.module.NodeTransform
 import com.pingidentity.davinci.module.Oidc
-import com.pingidentity.orchestrate.Workflow
+import com.pingidentity.davinci.plugin.DaVinci
 import com.pingidentity.orchestrate.WorkflowConfig
 import com.pingidentity.orchestrate.module.Cookie
 import com.pingidentity.orchestrate.module.CustomHeader
@@ -21,8 +21,6 @@ private const val X_REQUESTED_PLATFORM = "x-requested-platform"
 // Constants for header values
 private const val FORGEROCK_SDK = "forgerock-sdk"
 private const val ANDROID = "android"
-
-typealias DaVinci = Workflow
 
 class DaVinciConfig : WorkflowConfig()
 

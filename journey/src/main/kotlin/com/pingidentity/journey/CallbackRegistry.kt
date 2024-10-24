@@ -11,13 +11,19 @@ import com.pingidentity.android.ModuleInitializer
 import com.pingidentity.journey.callback.ChoiceCallback
 import com.pingidentity.journey.callback.ConfirmationCallback
 import com.pingidentity.journey.callback.ConsentMappingCallback
+import com.pingidentity.journey.callback.HiddenValueCallback
+import com.pingidentity.journey.callback.KbaCreateCallback
 import com.pingidentity.journey.callback.NameCallback
+import com.pingidentity.journey.callback.NumberAttributeInputCallback
 import com.pingidentity.journey.callback.PasswordCallback
 import com.pingidentity.journey.callback.PollingWaitCallback
-import com.pingidentity.journey.callback.SelectIdPCallback
+import com.pingidentity.journey.callback.StringAttributeInputCallback
+import com.pingidentity.journey.callback.SuspendedTextOutputCallback
 import com.pingidentity.journey.callback.TextInputCallback
 import com.pingidentity.journey.callback.TextOutputCallback
-import com.pingidentity.journey.plugin.CallbackFactory
+import com.pingidentity.journey.callback.ValidatedPasswordCallback
+import com.pingidentity.journey.callback.ValidatedUsernameCallback
+import com.pingidentity.journey.plugin.CallbackRegistry
 
 /**
  * This class is responsible for registering callbacks in the application.
@@ -30,14 +36,20 @@ class CallbackRegistry : ModuleInitializer() {
      * It registers two callbacks: NameCallback and PasswordCallback.
      */
     override fun initialize() {
-        CallbackFactory.register("NameCallback", ::NameCallback)
-        CallbackFactory.register("PasswordCallback", ::PasswordCallback)
-        CallbackFactory.register("PollingWaitCallback", ::PollingWaitCallback)
-        CallbackFactory.register("ChoiceCallback", ::ChoiceCallback)
-        CallbackFactory.register("ConfirmationCallback", ::ConfirmationCallback)
-        CallbackFactory.register("ConsentMappingCallback", ::ConsentMappingCallback)
-        CallbackFactory.register("TextInputCallback", ::TextInputCallback)
-        CallbackFactory.register("TextOutputCallback", ::TextOutputCallback)
-        CallbackFactory.register("SelectIdPCallback", ::SelectIdPCallback)
+        CallbackRegistry.register("ChoiceCallback", ::ChoiceCallback)
+        CallbackRegistry.register("ConfirmationCallback", ::ConfirmationCallback)
+        CallbackRegistry.register("ConsentMappingCallback", ::ConsentMappingCallback)
+        CallbackRegistry.register("HiddenValueCallback", ::HiddenValueCallback)
+        CallbackRegistry.register("KbaCreateCallback", ::KbaCreateCallback)
+        CallbackRegistry.register("NameCallback", ::NameCallback)
+        CallbackRegistry.register("NumberAttributeInputCallback", ::NumberAttributeInputCallback)
+        CallbackRegistry.register("PasswordCallback", ::PasswordCallback)
+        CallbackRegistry.register("PollingWaitCallback", ::PollingWaitCallback)
+        CallbackRegistry.register("StringAttributeInputCallback", ::StringAttributeInputCallback)
+        CallbackRegistry.register("SuspendedTextOutputCallback", ::SuspendedTextOutputCallback)
+        CallbackRegistry.register("TextInputCallback", ::TextInputCallback)
+        CallbackRegistry.register("TextOutputCallback", ::TextOutputCallback)
+        CallbackRegistry.register("ValidatedPasswordCallback", ::ValidatedPasswordCallback)
+        CallbackRegistry.register("ValidatedUsernameCallback", ::ValidatedUsernameCallback)
     }
 }

@@ -7,7 +7,7 @@
 
 package com.pingidentity.davinci.module
 
-import com.pingidentity.davinci.DaVinci
+import com.pingidentity.davinci.plugin.DaVinci
 import com.pingidentity.davinci.prepareUser
 import com.pingidentity.davinci.user
 import com.pingidentity.oidc.Agent
@@ -41,8 +41,8 @@ val Oidc =
          */
         init {
             // propagate the configuration from workflow to the module
-            config.httpClient = workflow.config.httpClient
-            config.logger = workflow.config.logger
+            config.httpClient = httpClient
+            config.logger = logger
             sharedContext[OIDC_CONFIG] = config
 
             //Override the agent setting
@@ -107,7 +107,7 @@ internal fun agent(
         override suspend fun authorize(oidcConfig: OidcConfig<Unit>): AuthCode {
             //We don't get the state, The state may not be returned since this is primarily for
             //CSRF in redirect-based interactions, and pi.flow doesn't use redirect.
-            if (session.value().isEmpty()) {
+            if (session.value.isEmpty()) {
                 throw AuthorizeException("Please start DaVinci flow to authenticate.")
             }
             if (used) {
@@ -133,7 +133,7 @@ internal fun agent(
  */
 internal fun Session.authCode(pkce: Pkce?): AuthCode {
     // parse the response and return the auth code
-    return AuthCode(code = value(), pkce?.codeVerifier)
+    return AuthCode(code = value, pkce?.codeVerifier)
 }
 
 /**

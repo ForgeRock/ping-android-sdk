@@ -24,9 +24,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
-import com.pingidentity.utils.Result.Failure
-import com.pingidentity.utils.Result.Success
-import com.pingidentity.idp.IdpCollector
+import com.pingidentity.idp.davinci.IdpCollector
 import com.pingidentity.samples.app.R
 import kotlinx.coroutines.launch
 
@@ -51,6 +49,7 @@ fun SocialLoginButton(
             "FACEBOOK" -> id = R.drawable.facebook
         }
         Spacer(modifier = Modifier.weight(1f, true))
+        //When image not found, display a button with the label
         if (id == -1) {
             Button(
                 modifier =
