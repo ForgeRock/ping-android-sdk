@@ -7,7 +7,7 @@
 
 package com.pingidentity.davinci.module
 
-import com.pingidentity.davinci.DaVinci
+import com.pingidentity.davinci.plugin.DaVinci
 import com.pingidentity.davinci.prepareUser
 import com.pingidentity.davinci.user
 import com.pingidentity.oidc.Agent

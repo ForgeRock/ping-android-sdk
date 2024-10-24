@@ -24,4 +24,10 @@
     <string name="desc_fkekf3oi8e">If you have an active account with a valid email address, you will receive an email with a recovery code which you may enter here, along with a new password.
     If you do not have an account or email, please contact your administrator to recover your password.</string>
 
+
+    <!-- Facebook Login -->
+    <string name="facebook_app_id">{facebook client id}</string>
+    <string name="fb_login_protocol_scheme">fb{facebook client id}</string>
+    <string name="facebook_client_token">{client token}</string>
+
 </resources>

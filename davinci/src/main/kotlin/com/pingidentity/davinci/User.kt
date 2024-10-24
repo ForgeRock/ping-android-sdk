@@ -8,6 +8,7 @@
 package com.pingidentity.davinci
 
 import com.pingidentity.davinci.module.oidcClientConfig
+import com.pingidentity.davinci.plugin.DaVinci
 import com.pingidentity.oidc.OidcUser
 import com.pingidentity.oidc.User
 import com.pingidentity.orchestrate.EmptySession

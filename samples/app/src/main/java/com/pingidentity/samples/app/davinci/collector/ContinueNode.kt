@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024. PingIdentity. All rights reserved.
+ * Copyright (c) 2024 PingIdentity. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -29,7 +29,7 @@ import com.pingidentity.davinci.collector.TextCollector
 import com.pingidentity.davinci.module.description
 import com.pingidentity.davinci.module.name
 import com.pingidentity.davinci.plugin.collectors
-import com.pingidentity.idp.IdpCollector
+import com.pingidentity.idp.davinci.IdpCollector
 import com.pingidentity.orchestrate.ContinueNode
 
 @Composable
@@ -95,6 +95,8 @@ fun ContinueNode(
                 }
 
                 is TextCollector -> Text(it, onNodeUpdated)
+
+                is IdpCollector -> SocialLoginButton(it, onStart, onNext)
             }
         }
 

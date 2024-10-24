@@ -11,7 +11,7 @@
 
     <application>
         <provider
-            android:name=".CollectorRegistry"
+            android:name=".davinci.CollectorRegistry"
             android:authorities="${applicationId}.collectorRegistry"
             android:enabled="true"
             android:exported="false"/>
@@ -35,6 +35,10 @@
                 <data android:scheme="${appRedirectUriScheme}" />
             </intent-filter>
         </activity>
+
+        <!-- Facebook Login -->
+        <activity android:name=".davinci.FacebookActivity"
+            android:exported="false"/>
 
     </application>
 

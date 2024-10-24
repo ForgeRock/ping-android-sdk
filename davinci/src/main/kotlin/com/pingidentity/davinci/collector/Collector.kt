@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024. PingIdentity. All rights reserved.
+ * Copyright (c) 2024 PingIdentity. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -8,7 +8,9 @@
 package com.pingidentity.davinci.collector
 
 import com.pingidentity.davinci.plugin.Collectors
-import com.pingidentity.davinci.plugin.ContinueTokenCollector
+import com.pingidentity.davinci.plugin.RequestAdapter
+import com.pingidentity.orchestrate.FlowContext
+import com.pingidentity.orchestrate.Request
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -28,25 +30,24 @@ internal fun Collectors.eventType(): String? {
                     return it.value
                 }
             }
+
             else -> {}
         }
     }
     return null
 }
 
-internal fun Collectors.continueToken(): String? {
-    forEach {
-        when (it) {
-            is ContinueTokenCollector -> {
-                if (it.continueToken() != null) {
-                    return it.continueToken()
-                }
-            }
-
-            else -> {}
+/**
+ * Find any collectors that override the request
+ */
+internal fun Collectors.asRequest(context: FlowContext, request: Request): Request {
+    var result = request
+    forEach { collector ->
+        if (collector is RequestAdapter) {
+            result = collector.asRequest(context, result)
         }
     }
-    return null
+    return result
 }
 
 /**
