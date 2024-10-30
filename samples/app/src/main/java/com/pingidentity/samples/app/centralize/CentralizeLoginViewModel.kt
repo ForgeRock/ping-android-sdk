@@ -39,7 +39,7 @@ val ping =
                         //VersionedBrowserMatcher.CHROME_BROWSER
                     )
                 )
-           }
+            }
         }
 
         clientId = "c12743f9-08e8-4420-a624-71bbb08e9fe1"
@@ -50,6 +50,20 @@ val ping =
         redirectUri = "com.pingidentity.demo://oauth2redirect"
         //signOutRedirectUri = "com.pingidentity.demo://oauth2redirect"
     }
+
+val pingTest =
+    OidcClient {
+
+        updateAgent(browser)
+        clientId = "3172d977-8fdc-4e8b-b3c5-4f3a34cb7262"
+        discoveryEndpoint =
+            "https://auth.test-one-pingone.com/0c6851ed-0f12-4c9a-a174-9b1bf8b438ae/as/.well-known/openid-configuration"
+        scopes = mutableSetOf("openid", "email", "address")
+        // Make sure adding the redirectUri to the Signoff URLs console
+        redirectUri = "com.pingidentity.demo://oauth2redirect"
+        //signOutRedirectUri = "com.pingidentity.demo://oauth2redirect"
+    }
+
 
 val forgerock =
     OidcClient {

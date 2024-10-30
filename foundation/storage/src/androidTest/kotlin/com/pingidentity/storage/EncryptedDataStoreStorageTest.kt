@@ -28,7 +28,9 @@ import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 
 @RunWith(AndroidJUnit4::class)
@@ -40,12 +42,13 @@ class EncryptedDataStoreStorageTest {
     val watcher: TestWatcher = TestRailWatcher
 
     private val applicationContext: Context by lazy { ApplicationProvider.getApplicationContext<Application>() }
-    private val Context.dataStore: DataStore<Data?> by dataStore(this.javaClass.simpleName, EncryptedSerializer(
-        SecretKeyEncryptor {
-            logger = Logger.CONSOLE
-            keyAlias = EncryptedDataStoreStorageTest::class.java.simpleName
-        }
-    ))
+    private val encryptor = SecretKeyEncryptor {
+        logger = Logger.CONSOLE
+        keyAlias = EncryptedDataStoreStorageTest::class.java.simpleName
+    }
+    private val Context.dataStore: DataStore<Data?> by dataStore(
+        this.javaClass.simpleName, EncryptedDataToJsonSerializer(encryptor)
+    )
 
     @BeforeTest
     fun setUp() = runTest {
@@ -76,5 +79,13 @@ class EncryptedDataStoreStorageTest {
             val storedData = storage.get()
             assertEquals(1, storedData!!.a)
             assertEquals("some data", storedData.b)
+
+            val dataStoreFile =
+                applicationContext.filesDir.resolve("datastore/${EncryptedDataStoreStorageTest::class.java.simpleName}")
+            val rawData = dataStoreFile.readBytes()
+            //The rawData should be encrypted and dose not contain the original data
+            assertFalse(String(rawData).contains("some data"))
+            assertTrue(String(encryptor.decrypt(rawData)).contains("some data"))
+
         }
 }

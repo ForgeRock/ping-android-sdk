@@ -17,12 +17,13 @@ import com.pingidentity.logger.LoggerContext
 import com.pingidentity.logger.None
 import com.pingidentity.oidc.agent.browser
 import com.pingidentity.storage.DataStoreStorage
-import com.pingidentity.storage.EncryptedSerializer
+import com.pingidentity.storage.EncryptedDataToJsonSerializer
 import com.pingidentity.storage.StorageDelegate
 import com.pingidentity.storage.encrypt.SecretKeyEncryptor
 import com.pingidentity.utils.PingDsl
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
+import io.ktor.client.engine.cio.CIO
 import io.ktor.client.plugins.logging.LogLevel
 import io.ktor.client.plugins.logging.Logging
 import io.ktor.client.request.get
@@ -36,7 +37,7 @@ private const val COM_PING_SDK_V_1_TOKENS = "com.pingidentity.sdk.v1.tokens"
 // Default DataStore for OIDC tokens
 private val Context.defaultOidcTokenDataStore: DataStore<Token?> by dataStore(
     COM_PING_SDK_V_1_TOKENS,
-    EncryptedSerializer(SecretKeyEncryptor {
+    EncryptedDataToJsonSerializer(SecretKeyEncryptor {
         keyAlias = COM_PING_SDK_V_1_TOKENS
     })
 )
@@ -172,7 +173,7 @@ class OidcClientConfig {
     suspend fun init() {
 
         if (!::httpClient.isInitialized) {
-            httpClient = HttpClient {
+            httpClient = HttpClient(CIO) {
                 val log = logger
                 followRedirects = false
                 if (logger !is None) {

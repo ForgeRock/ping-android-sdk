@@ -26,7 +26,7 @@ import kotlinx.serialization.serializer
  * @param key The key to use for storing the object in the shared preferences.
  * @param serializer The serializer to use for serializing the object.
  */
-class EncryptedSharedPreferences<T : @Serializable Any>(
+class EncryptedSharedPreferencesStorage<T : @Serializable Any>(
     context: Context = ContextProvider.context,
     filename: String,
     private val key: String,
@@ -81,18 +81,18 @@ class EncryptedSharedPreferences<T : @Serializable Any>(
  * @param filename The name of the shared preferences file.
  * @param key The key to use for storing the object in the shared preferences. Defaults to the name of the class of T.
  * @param context The context to use for creating the MasterKey and SharedPreferences. Defaults to ContextProvider.context.
- * @param cacheable Whether the storage should cache the object in memory.
+ * @param cacheable Whether the storage shokuld cache the object in memory.
  *
  * @return A new Storage instance.
  */
-inline fun <reified T : @Serializable Any> EncryptedStorage(
+inline fun <reified T : @Serializable Any> EncryptedSharedPreferencesStorage(
     filename: String,
     key: String = T::class.java.name,
     context: Context = ContextProvider.context,
     cacheable: Boolean = false,
 ): StorageDelegate<T> =
     StorageDelegate(
-        EncryptedSharedPreferences(
+        EncryptedSharedPreferencesStorage(
             filename = filename,
             context = context,
             key = key,

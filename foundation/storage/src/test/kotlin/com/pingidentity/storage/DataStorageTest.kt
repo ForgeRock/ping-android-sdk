@@ -31,8 +31,8 @@ class DataStorageTest {
 
     private val context: Context by lazy { ApplicationProvider.getApplicationContext<Application>() }
 
-    private val Context.dataStore: DataStore<Data?> by dataStore("test", DataStoreSerializer())
-    private val Context.dataStoreList: DataStore<List<Data>?> by dataStore("test-list", DataStoreSerializer())
+    private val Context.dataStore: DataStore<Data?> by dataStore("test", DataToJsonSerializer())
+    private val Context.dataStoreList: DataStore<List<Data>?> by dataStore("test-list", DataToJsonSerializer())
 
     @AfterTest
     fun tearDown() =

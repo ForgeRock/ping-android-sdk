@@ -37,7 +37,7 @@ class EncryptedDataStoreStorageStressTest {
     val watcher: TestWatcher = TestRailWatcher
 
     private val applicationContext: Context by lazy { ApplicationProvider.getApplicationContext<Application>() }
-    private val Context.dataStore: DataStore<Data?> by dataStore(this.javaClass.simpleName, EncryptedSerializer(
+    private val Context.dataStore: DataStore<Data?> by dataStore(this.javaClass.simpleName, EncryptedDataToJsonSerializer(
         SecretKeyEncryptor {
             keyAlias = EncryptedDataStoreStorageStressTest::class.java.simpleName
         }

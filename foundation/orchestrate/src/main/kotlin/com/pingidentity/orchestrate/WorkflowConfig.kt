@@ -12,6 +12,7 @@ import com.pingidentity.logger.LoggerContext
 import com.pingidentity.logger.None
 import com.pingidentity.utils.PingDsl
 import io.ktor.client.HttpClient
+import io.ktor.client.engine.cio.CIO
 import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.logging.LogLevel
 import io.ktor.client.plugins.logging.Logging
@@ -121,7 +122,7 @@ open class WorkflowConfig {
      */
     internal fun register(workflow: Workflow) {
         if (!::httpClient.isInitialized) {
-            httpClient = HttpClient {
+            httpClient = HttpClient(CIO) {
 
                 val log = logger
                 followRedirects = false

@@ -34,6 +34,7 @@ dependencies {
     implementation(libs.androidx.datastore)
     implementation(libs.ktor.client.okhttp)
     implementation(libs.ktor.client.logging)
+    implementation(libs.ktor.client.cio)
     implementation(libs.androidx.appcompat)
     compileOnly(libs.appauth)
 

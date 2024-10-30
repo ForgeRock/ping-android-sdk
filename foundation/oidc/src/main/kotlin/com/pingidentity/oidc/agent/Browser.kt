@@ -14,6 +14,7 @@ import com.pingidentity.oidc.ID_TOKEN_HINT
 import com.pingidentity.oidc.OidcConfig
 import com.pingidentity.utils.PingDsl
 import io.ktor.client.request.get
+import io.ktor.client.request.headers
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.Url
 import io.ktor.http.isSuccess
@@ -58,13 +59,15 @@ var browser =
                         endpoint = it
                     }
                 }
-                val response = oidcConfig.oidcClientConfig.httpClient
-                    .get(endpoint) {
-                        url {
-                            parameters.append(ID_TOKEN_HINT, idToken)
-                            parameters.append(CLIENT_ID, oidcConfig.oidcClientConfig.clientId)
-                        }
+                val response = oidcConfig.oidcClientConfig.httpClient.get(endpoint) {
+                    headers {
+                        append("Accept", "application/json")
                     }
+                    url {
+                        parameters.append(ID_TOKEN_HINT, idToken)
+                        parameters.append(CLIENT_ID, oidcConfig.oidcClientConfig.clientId)
+                    }
+                }
                 if (response.status.isSuccess()) {
                     return true
                 } else {

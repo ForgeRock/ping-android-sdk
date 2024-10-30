@@ -9,6 +9,7 @@ package com.pingidentity.orchestrate
 
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
+import kotlin.coroutines.cancellation.CancellationException
 
 /**
  * Sealed interface for Node. Represents a node in the workflow.
@@ -78,6 +79,7 @@ inline fun catch(block: () -> Node): Node {
     return try {
         block()
     } catch (e: Throwable) {
+        if (e is CancellationException) throw e
         FailureNode(e)
     }
 }

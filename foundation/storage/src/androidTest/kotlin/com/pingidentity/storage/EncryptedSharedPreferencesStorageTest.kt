@@ -26,7 +26,7 @@ import kotlin.test.assertNull
 
 @RunWith(AndroidJUnit4::class)
 @SmallTest
-class EncryptedStorageTest {
+class EncryptedSharedPreferencesStorageTest {
     @JvmField
     @Rule
     val watcher: TestWatcher = TestRailWatcher
@@ -36,7 +36,7 @@ class EncryptedStorageTest {
     @AfterTest
     fun tearDown() =
         runTest {
-            val storage = EncryptedStorage<Data>(filename = "1", context = context)
+            val storage = EncryptedSharedPreferencesStorage<Data>(filename = "1", context = context)
             storage.delete()
         }
 
@@ -44,7 +44,7 @@ class EncryptedStorageTest {
     @Test
     fun testDataStore() =
         runTest {
-            val storage = EncryptedStorage<Data>(filename = "1", context = context)
+            val storage = EncryptedSharedPreferencesStorage<Data>(filename = "1", context = context)
             storage.save(Data(1, "test"))
             val storedData = storage.get()
             assertEquals(1, storedData!!.a)
@@ -55,7 +55,7 @@ class EncryptedStorageTest {
     @Test
     fun testMultipleData() =
         runTest {
-            val storage = EncryptedStorage<List<Data>>("1", context = context)
+            val storage = EncryptedSharedPreferencesStorage<List<Data>>("1", context = context)
             val dataList = listOf(Data(1, "test1"), Data(2, "test2"))
             storage.save(dataList)
             val storedData = storage.get()
@@ -66,7 +66,7 @@ class EncryptedStorageTest {
     @Test
     fun testDeleteData() =
         runTest {
-            val storage = EncryptedStorage<Data>(filename = "1", context = context)
+            val storage = EncryptedSharedPreferencesStorage<Data>(filename = "1", context = context)
             val data = Data(1, "test")
             storage.save(data)
             storage.delete()
@@ -78,7 +78,7 @@ class EncryptedStorageTest {
     @Test
     fun testOverwriteData() =
         runTest {
-            val storage = EncryptedStorage<Data>("1", context = context)
+            val storage = EncryptedSharedPreferencesStorage<Data>("1", context = context)
             storage.save(Data(1, "test1"))
             val storedData = storage.get()
             assertEquals(1, storedData!!.a)
@@ -94,8 +94,8 @@ class EncryptedStorageTest {
     @Test
     fun testDifferentDataObjectsWithSameStorage() =
         runTest {
-            val storageData = EncryptedStorage<Data>("1", context = context)
-            val storageData2 = EncryptedStorage<Data2>("1", context = context)
+            val storageData = EncryptedSharedPreferencesStorage<Data>("1", context = context)
+            val storageData2 = EncryptedSharedPreferencesStorage<Data2>("1", context = context)
 
             val data = Data(1, "test")
             val data2 = Data2(2, "test1")
@@ -118,7 +118,7 @@ class EncryptedStorageTest {
     @Test
     fun testGettingNullData() =
         runTest {
-            val storage = EncryptedStorage<Data>(filename = "2", context = context)
+            val storage = EncryptedSharedPreferencesStorage<Data>(filename = "2", context = context)
             val storedData = storage.get()
             assertNull(storedData)
         }

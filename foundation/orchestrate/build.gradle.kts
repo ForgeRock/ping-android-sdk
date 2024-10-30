@@ -25,6 +25,7 @@ dependencies {
 
     implementation(libs.androidx.datastore)
     implementation(libs.ktor.client.logging)
+    implementation(libs.ktor.client.cio)
     implementation(libs.kotlinx.serialization.json)
 
     testImplementation(project(":foundation:testrail"))

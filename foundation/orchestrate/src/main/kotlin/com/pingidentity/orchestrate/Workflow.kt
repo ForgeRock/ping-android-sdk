@@ -11,12 +11,16 @@ import io.ktor.client.request.request
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.last
 import kotlinx.coroutines.flow.scan
+import kotlinx.coroutines.joinAll
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.coroutines.coroutineContext
 
 /**
  * Creates a new Workflow instance with the provided configuration block.
@@ -108,6 +112,7 @@ class Workflow(val config: WorkflowConfig) {
             return Result.success(Unit)
         } catch (e: Throwable) {
             config.logger.e("Error during sign off", e)
+            coroutineContext.ensureActive()
             return Result.failure(e)
         }
     }
@@ -203,6 +208,7 @@ class Workflow(val config: WorkflowConfig) {
         context: FlowContext,
         resp: Response,
     ) = coroutineScope {
-        response.map { async { context.it(resp) } }.awaitAll()
+        //Execute all the response actions in parallel, response is read-only
+        response.map { launch { context.it(resp) } }.joinAll()
     }
 }

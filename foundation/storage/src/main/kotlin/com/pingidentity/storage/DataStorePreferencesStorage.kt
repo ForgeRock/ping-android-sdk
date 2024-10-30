@@ -15,7 +15,6 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
 import kotlinx.serialization.serializer
 
 /**
@@ -40,7 +39,7 @@ class DataStorePreferencesStorage<T : @Serializable Any>(
      */
     override suspend fun save(item: T) {
         dataStore.edit { preferences ->
-            preferences[preferencesKey] = Json.encodeToString(serializer, item)
+            preferences[preferencesKey] = json.encodeToString(serializer, item)
         }
     }
 
@@ -54,7 +53,7 @@ class DataStorePreferencesStorage<T : @Serializable Any>(
             it[preferencesKey]
         }.map {
             it?.let {
-                Json.decodeFromString(serializer, it)
+                json.decodeFromString(serializer, it)
             }
         }.first()
     }
@@ -87,7 +86,7 @@ inline fun <reified T : @Serializable Any> DataStorePreferencesStorage(
         DataStorePreferencesStorage(
             key = T::class.java.name,
             dataStore = dataStore,
-            serializer = Json.serializersModule.serializer(),
+            serializer = json.serializersModule.serializer(),
         ),
         cacheable,
     )

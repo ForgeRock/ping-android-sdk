@@ -16,15 +16,15 @@ import io.ktor.client.request.header
 import io.ktor.http.HttpHeaders
 import io.ktor.http.isSuccess
 import io.ktor.http.parameters
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
+import kotlin.coroutines.coroutineContext
 
 /**
  * Factory function to create an instance of OidcClient with a given configuration.
@@ -81,6 +81,7 @@ open class OidcClient(private val config: OidcClientConfig) {
                         return@catch refreshToken(refreshToken)
                     }
                 } catch (e: Exception) {
+                    coroutineContext.ensureActive()
                     logger.w("Failed to refresh token. Revoking token and re-authenticating.", e)
                     revoke(it)
                 }
@@ -108,18 +109,17 @@ open class OidcClient(private val config: OidcClientConfig) {
                 append(REFRESH_TOKEN, refreshToken)
                 append(CLIENT_ID, config.clientId)
             }
-        val token =
-            withContext(Dispatchers.IO) {
-                val response = config.httpClient.submitForm(config.openId.tokenEndpoint, params)
-                if (response.status.isSuccess()) {
-                    return@withContext with(response) {
-                        json.decodeFromString<Token>(call.body())
-                    }
-                }
-                throw ApiException(response.status.value, response.body())
+
+        val response = config.httpClient.submitForm(config.openId.tokenEndpoint, params)
+        if (response.status.isSuccess()) {
+            val token = with(response) {
+                json.decodeFromString<Token>(call.body())
             }
-        config.storage.save(token)
-        return token
+            config.storage.save(token)
+            return token
+        } else {
+            throw ApiException(response.status.value, response.body())
+        }
     }
 
     /**

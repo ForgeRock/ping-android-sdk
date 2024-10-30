@@ -9,6 +9,7 @@ package com.pingidentity.testrail
 
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
+import io.ktor.client.engine.cio.CIO
 import io.ktor.client.plugins.auth.Auth
 import io.ktor.client.plugins.auth.providers.BasicAuthCredentials
 import io.ktor.client.plugins.auth.providers.basic
@@ -32,7 +33,7 @@ inline fun TestRailClient(block: TestRailClientConfig.() -> Unit = {}): TestRail
 
 class TestRailClient(private val config: TestRailClientConfig) {
 
-    private val client = HttpClient() {
+    private val client = HttpClient(CIO) {
         install(ContentNegotiation) {
             json(Json {
                 prettyPrint = true

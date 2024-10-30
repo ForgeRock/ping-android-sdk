@@ -10,7 +10,7 @@ package com.pingidentity.orchestrate.module
 import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.dataStore
-import com.pingidentity.storage.EncryptedSerializer
+import com.pingidentity.storage.EncryptedDataToJsonSerializer
 import com.pingidentity.storage.encrypt.SecretKeyEncryptor
 
 private const val COM_PING_SDK_V_1_COOKIES = "com.pingidentity.sdk.v1.cookies"
@@ -20,7 +20,7 @@ private const val COM_PING_SDK_V_1_COOKIES = "com.pingidentity.sdk.v1.cookies"
  */
 internal val Context.defaultCookieDataStore: DataStore<Cookies?> by dataStore(
     COM_PING_SDK_V_1_COOKIES,
-    EncryptedSerializer(SecretKeyEncryptor {
+    EncryptedDataToJsonSerializer(SecretKeyEncryptor {
         keyAlias = COM_PING_SDK_V_1_COOKIES
     })
 )

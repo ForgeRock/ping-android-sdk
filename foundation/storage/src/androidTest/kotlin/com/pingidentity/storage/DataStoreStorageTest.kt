@@ -24,7 +24,6 @@ import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
-import kotlin.time.Duration
 
 @RunWith(AndroidJUnit4::class)
 @SmallTest
@@ -34,7 +33,7 @@ class DataStoreStorageTest {
     val watcher: TestWatcher = TestRailWatcher
 
     private val context: Context by lazy { ApplicationProvider.getApplicationContext<Application>() }
-    private val Context.dataStore: DataStore<Data?> by dataStore("test", DataStoreSerializer())
+    private val Context.dataStore: DataStore<Data?> by dataStore("test", DataToJsonSerializer())
 
     @AfterTest
     fun tearDown() =
@@ -44,8 +43,7 @@ class DataStoreStorageTest {
 
     @TestRailCase(21605, 21611)
     @Test
-    fun testDataStore() =
-        runTest(timeout = Duration.INFINITE) {
+    fun testDataStore() = runTest {
             val storage = DataStoreStorage(context.dataStore)
             val v = storage.get()
             assertNull(v)
