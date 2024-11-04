@@ -24,17 +24,16 @@ class SessionTest {
     @TestRailCase(22123)
     @Test
     fun `EmptySession value should return empty string`() {
-        assertEquals("", EmptySession.value())
+        assertEquals("", EmptySession.value)
     }
 
     @TestRailCase(22124)
     @Test
     fun `Session value should return correct session value`() {
         val session = object : Session {
-            override fun value(): String {
-                return "session_value"
-            }
+            override val value: String
+                get() = "session_value"
         }
-        assertEquals("session_value", session.value())
+        assertEquals("session_value", session.value)
     }
 }

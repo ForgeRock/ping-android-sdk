@@ -7,6 +7,7 @@
 
 package com.pingidentity.idp
 
+import com.pingidentity.idp.davinci.IdpCollector
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import java.net.MalformedURLException
@@ -14,7 +15,6 @@ import java.net.URL
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertNull
 
 class IdpCollectorTest {
 
@@ -54,10 +54,4 @@ class IdpCollectorTest {
         idpCollector.init(jsonObject)
     }
 
-    @Test
-    fun `continueToken is null by default`() {
-        val token = idpCollector.continueToken()
-
-        assertNull(token)
-    }
 }

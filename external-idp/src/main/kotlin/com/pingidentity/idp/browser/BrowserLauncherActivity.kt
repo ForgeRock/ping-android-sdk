@@ -9,6 +9,7 @@ package com.pingidentity.idp.browser
 
 import android.content.Intent
 import android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.result.ActivityResult
@@ -18,16 +19,20 @@ import com.pingidentity.android.ContextProvider
 import kotlinx.coroutines.flow.MutableStateFlow
 import java.net.URL
 
-internal typealias ContinueToken = String
-
 internal const val URL = "url"
 
+/**
+ * The BrowserLauncherActivity class is responsible for managing the [ActivityResultContracts],
+ * the [ActivityResultContracts] needs to be registered during the [ComponentActivity.onCreate].
+ */
 class BrowserLauncherActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         val state: MutableStateFlow<ActivityResult?> = MutableStateFlow(null)
+        //registerForActivityResult needs to be called in onCreate()
+        //The activity to be launched is CustomTabActivity
         val launcher =
             registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
                 state.value = it
@@ -43,13 +48,22 @@ class BrowserLauncherActivity : ComponentActivity() {
     }
 
     companion object {
+
         /**
-         * Starts the authorization process.
-         * @return The continue token
+         * Launch the provided URL with CustomTab, get the response from CustomTab (exits or redirect).
+         * Here is the sequence of call:
+         * 1. launch BrowserLauncherActivity and register for Activity Result (CustomTabActivity)
+         * 2. BrowserLauncher.launch -> Start CustomTabActivity in background and wait for state update
+         * 3. CustomTabActivity -> CustomTab -> CustomTabActivity ->
+         * BrowserLauncherActivity ActivityResultCallback() -> state updated, and finish()
+         *
+         * @param url The URL to authorize.
+         * @return A Result containing the authorized Uri.
          */
-        suspend fun authorize(url: URL): Result<ContinueToken> {
+        suspend fun launch(url: URL,  customizer: CustomTabsIntent.Builder.() -> Unit = {}): Result<Uri> {
+            CustomTabActivity.customTabsCustomizer = customizer
             val pending = launchIfNotPending()
-            return BrowserLauncher.authorize(url, pending)
+            return BrowserLauncher.launch(url, pending)
         }
 
         /**
@@ -69,7 +83,5 @@ class BrowserLauncherActivity : ComponentActivity() {
                 true
             }
         }
-
-        var customTabsCustomizer: CustomTabsIntent.Builder.() -> Unit = {}
     }
 }

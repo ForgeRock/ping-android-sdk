@@ -12,7 +12,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.pingidentity.android.ContextProvider
-import com.pingidentity.davinci.davinciUser
+import com.pingidentity.davinci.user
 import com.pingidentity.oidc.OidcUser
 import com.pingidentity.samples.app.centralize.oidcClient
 import com.pingidentity.samples.app.davinci.daVinci
@@ -55,14 +55,14 @@ object User {
             it?.let {
                 when (Mode.valueOf(it)) {
                     Mode.DAVINCI -> {
-                        daVinci.davinciUser()
+                        daVinci.user()
                     }
 
                     Mode.CENTRALIZE -> {
                         OidcUser(oidcClient)
                     }
                 }
-            } ?: daVinci.davinciUser()
+            } ?: daVinci.user()
         }.first()
 
     private object PreferencesKeys {

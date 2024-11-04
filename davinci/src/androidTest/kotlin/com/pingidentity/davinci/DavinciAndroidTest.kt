@@ -21,7 +21,6 @@ import com.pingidentity.logger.Logger
 import com.pingidentity.logger.STANDARD
 import com.pingidentity.orchestrate.ContinueNode
 import com.pingidentity.orchestrate.ErrorNode
-import com.pingidentity.orchestrate.FailureNode
 import com.pingidentity.orchestrate.SuccessNode
 import com.pingidentity.testrail.TestRailCase
 import com.pingidentity.testrail.TestRailWatcher
@@ -38,7 +37,7 @@ import kotlin.test.assertTrue
 
 @SmallTest
 class DavinciAndroidTest {
-    private var daVinci: DaVinci =  DaVinci {
+    private var daVinci = DaVinci {
         logger = Logger.STANDARD
 
         module(Oidc) {

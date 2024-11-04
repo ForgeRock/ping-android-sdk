@@ -7,18 +7,19 @@
 
 package com.pingidentity.journey.module
 
-import com.pingidentity.journey.journeyConfig
+import com.pingidentity.journey.journey
+import com.pingidentity.journey.options
 import com.pingidentity.orchestrate.Module
 
 val Start = Module.of {
 
     start {
-        if (workflow.journeyConfig().hasJourneyName() && it.hasUrl.not()) {
-            it.url("${workflow.journeyConfig().serverUrl}/json/realms/${workflow.journeyConfig().realm}/authenticate")
+        if (journey.options.hasJourneyName() && it.hasUrl.not()) {
+            it.url("${journey.options.serverUrl}/json/realms/${journey.options.realm}/authenticate")
             it.parameter("authIndexType", "service")
-            it.parameter("authIndexValue", workflow.journeyConfig().journeyName)
-            if (workflow.journeyConfig().forceAuth) it.parameter("ForceAuth", "true")
-            if (workflow.journeyConfig().noSession) it.parameter("noSession", "true")
+            it.parameter("authIndexValue", journey.options.journeyName)
+            if (journey.options.forceAuth) it.parameter("ForceAuth", "true")
+            if (journey.options.noSession) it.parameter("noSession", "true")
             it.body()
         }
         it

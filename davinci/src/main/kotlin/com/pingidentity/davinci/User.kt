@@ -8,6 +8,7 @@
 package com.pingidentity.davinci
 
 import com.pingidentity.davinci.module.oidcClientConfig
+import com.pingidentity.davinci.plugin.DaVinci
 import com.pingidentity.oidc.OidcUser
 import com.pingidentity.oidc.User
 import com.pingidentity.orchestrate.EmptySession
@@ -39,12 +40,6 @@ suspend fun DaVinci.user(): User? {
 
     return null
 }
-
-/**
- * Alias for the DaVinci.user() function.
- * @return The user if found, otherwise null.
- */
-suspend fun DaVinci.davinciUser(): User? = this.user()
 
 /**
  * Extension property for Success to cast the [SuccessNode.session] to a User.
