@@ -316,9 +316,7 @@ class OidcClientTest {
                         }
 
                         "/idp/signoff" -> {
-                            respond("", HttpStatusCode.Found,
-                                headersOf("location" to listOf("http://localhost/signoff"))
-                            )
+                            respond("", HttpStatusCode.NoContent)
                         }
 
                         else -> {

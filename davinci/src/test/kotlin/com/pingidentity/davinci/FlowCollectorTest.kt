@@ -5,7 +5,6 @@
  * of the MIT license. See the LICENSE file for details.
  */
 
-import com.pingidentity.davinci.collector.FieldCollector
 import com.pingidentity.davinci.collector.FlowCollector
 import com.pingidentity.testrail.TestRailCase
 import com.pingidentity.testrail.TestRailWatcher
@@ -27,13 +26,6 @@ class FlowCollectorTest {
     fun testInitialization() {
         val flowCollector = FlowCollector()
         assertNotNull(flowCollector)
-    }
-
-    @TestRailCase(22145)
-    @Test
-    fun testInheritance() {
-        val flowCollector = FlowCollector()
-        assertTrue(flowCollector is FieldCollector)
     }
 
     @TestRailCase(22146)
