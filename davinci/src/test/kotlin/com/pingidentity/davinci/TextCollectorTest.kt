@@ -5,7 +5,6 @@
  * of the MIT license. See the LICENSE file for details.
  */
 
-import com.pingidentity.davinci.collector.FieldCollector
 import com.pingidentity.davinci.collector.TextCollector
 import com.pingidentity.testrail.TestRailCase
 import com.pingidentity.testrail.TestRailWatcher
@@ -27,13 +26,6 @@ class TextCollectorTest {
     fun testInitialization() {
         val textCollector = TextCollector()
         assertNotNull(textCollector)
-    }
-
-    @TestRailCase(22556)
-    @Test
-    fun testInheritance() {
-        val textCollector = TextCollector()
-        assertTrue(textCollector is FieldCollector)
     }
 
     @TestRailCase(22557)

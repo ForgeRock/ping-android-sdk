@@ -15,8 +15,7 @@ import com.pingidentity.oidc.OidcConfig
 import com.pingidentity.utils.PingDsl
 import io.ktor.client.request.get
 import io.ktor.client.request.headers
-import io.ktor.http.HttpStatusCode
-import io.ktor.http.Url
+import io.ktor.http.HttpHeaders
 import io.ktor.http.isSuccess
 import net.openid.appauth.AppAuthConfiguration
 
@@ -61,29 +60,14 @@ var browser =
                 }
                 val response = oidcConfig.oidcClientConfig.httpClient.get(endpoint) {
                     headers {
-                        append("Accept", "application/json")
+                        append(HttpHeaders.Accept, "application/json")
                     }
                     url {
                         parameters.append(ID_TOKEN_HINT, idToken)
                         parameters.append(CLIENT_ID, oidcConfig.oidcClientConfig.clientId)
                     }
                 }
-                if (response.status.isSuccess()) {
-                    return true
-                } else {
-                    if (response.status == HttpStatusCode.Found) {
-                        response.headers["location"]?.let {
-                            val error = Url(it).parameters["error"]
-                            if (error != null) {
-                                oidcConfig.oidcClientConfig.logger.w("Error during end session: $error")
-                                return false
-                            } else {
-                                return true
-                            }
-                        }
-                    }
-                    return false
-                }
+                return response.status.isSuccess()
             }
         }
 

@@ -9,7 +9,6 @@ package com.pingidentity.storage.encrypt
 
 import android.content.Context
 import android.content.pm.PackageManager
-import android.os.Build
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.security.keystore.StrongBoxUnavailableException
@@ -276,11 +275,10 @@ class SecretKeyEncryptor(block: SecretKeyEncryptorConfig.() -> Unit = {}) : Encr
         keyGenParameterSpec.setInvalidatedByBiometricEnrollment(config.invalidatedByBiometricEnrollment)
 
         //Allow access the data during screen lock
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            keyGenParameterSpec.setUnlockedDeviceRequired(false)
-            if (config.context.packageManager.hasSystemFeature(PackageManager.FEATURE_STRONGBOX_KEYSTORE)) {
-                keyGenParameterSpec.setIsStrongBoxBacked(true)
-            }
+        //Add in Level 28
+        keyGenParameterSpec.setUnlockedDeviceRequired(false)
+        if (config.context.packageManager.hasSystemFeature(PackageManager.FEATURE_STRONGBOX_KEYSTORE)) {
+            keyGenParameterSpec.setIsStrongBoxBacked(true)
         }
 
         val keyPairGenerator = KeyPairGenerator.getInstance(
@@ -288,17 +286,14 @@ class SecretKeyEncryptor(block: SecretKeyEncryptorConfig.() -> Unit = {}) : Encr
         )
 
         keyPairGenerator.initialize(keyGenParameterSpec.build())
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            try {
-                keyPairGenerator.generateKeyPair()
-            } catch (e: StrongBoxUnavailableException) {
-                //In case failed to use Strong Box, disable it.
-                logger.w("Strong Box unavailable, recover without strong box", e)
-                keyGenParameterSpec.setIsStrongBoxBacked(false)
-                keyPairGenerator.initialize(keyGenParameterSpec.build())
-                keyPairGenerator.generateKeyPair()
-            }
-        } else {
+        //Add in Level 28
+        try {
+            keyPairGenerator.generateKeyPair()
+        } catch (e: StrongBoxUnavailableException) {
+            //In case failed to use Strong Box, disable it.
+            logger.w("Strong Box unavailable, recover without strong box", e)
+            keyGenParameterSpec.setIsStrongBoxBacked(false)
+            keyPairGenerator.initialize(keyGenParameterSpec.build())
             keyPairGenerator.generateKeyPair()
         }
     }
@@ -368,25 +363,21 @@ class SecretKeyEncryptor(block: SecretKeyEncryptorConfig.() -> Unit = {}) : Encr
         specBuilder.setInvalidatedByBiometricEnrollment(config.invalidatedByBiometricEnrollment)
 
         //Allow access the data during screen lock
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            specBuilder.setUnlockedDeviceRequired(false)
-            if (config.context.packageManager.hasSystemFeature(PackageManager.FEATURE_STRONGBOX_KEYSTORE)) {
-                specBuilder.setIsStrongBoxBacked(true)
-            }
+        //Add in Level 28
+        specBuilder.setUnlockedDeviceRequired(false)
+        if (config.context.packageManager.hasSystemFeature(PackageManager.FEATURE_STRONGBOX_KEYSTORE)) {
+            specBuilder.setIsStrongBoxBacked(true)
         }
 
         keyGenerator.init(specBuilder.build())
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            try {
-                return keyGenerator.generateKey()
-            } catch (e: StrongBoxUnavailableException) {
-                //In case failed to use Strong Box, disable it.
-                logger.w("Strong Box unavailable, recover without strong box", e)
-                specBuilder.setIsStrongBoxBacked(false)
-                keyGenerator.init(specBuilder.build())
-                return keyGenerator.generateKey()
-            }
-        } else {
+        //Add in Level 28
+        try {
+            return keyGenerator.generateKey()
+        } catch (e: StrongBoxUnavailableException) {
+            //In case failed to use Strong Box, disable it.
+            logger.w("Strong Box unavailable, recover without strong box", e)
+            specBuilder.setIsStrongBoxBacked(false)
+            keyGenerator.init(specBuilder.build())
             return keyGenerator.generateKey()
         }
     }

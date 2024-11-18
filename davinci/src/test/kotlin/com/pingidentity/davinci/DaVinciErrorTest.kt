@@ -14,6 +14,7 @@ import com.pingidentity.davinci.collector.SubmitCollector
 import com.pingidentity.davinci.collector.TextCollector
 import com.pingidentity.davinci.module.Oidc
 import com.pingidentity.davinci.plugin.collectors
+import com.pingidentity.logger.CONSOLE
 import com.pingidentity.logger.Logger
 import com.pingidentity.logger.STANDARD
 import com.pingidentity.orchestrate.ContinueNode
@@ -31,6 +32,7 @@ import kotlin.test.assertTrue
 import com.pingidentity.orchestrate.ErrorNode
 import com.pingidentity.orchestrate.FailureNode
 import com.pingidentity.testrail.TestRailWatcher
+import io.ktor.http.headers
 import org.junit.Rule
 import org.junit.rules.TestWatcher
 import kotlin.test.BeforeTest
@@ -119,12 +121,15 @@ class DaVinciErrorTest {
                         }
 
                         "/authorize" -> {
-                            respond(content = ByteReadChannel("{\n" +
-                                    "    \"id\": \"7bbe285f-c0e0-41ef-8925-c5c5bb370acc\",\n" +
-                                    "    \"code\": \"INVALID_REQUEST\",\n" +
-                                    "    \"message\": \"Invalid DV Flow Policy ID: Single_Factor\"\n" +
-                                    "}")
-                                , HttpStatusCode.BadRequest, headers)
+                            respond(
+                                content = ByteReadChannel(
+                                    "{\n" +
+                                            "    \"id\": \"7bbe285f-c0e0-41ef-8925-c5c5bb370acc\",\n" +
+                                            "    \"code\": \"INVALID_REQUEST\",\n" +
+                                            "    \"message\": \"Invalid DV Flow Policy ID: Single_Factor\"\n" +
+                                            "}"
+                                ), HttpStatusCode.BadRequest, headers
+                            )
                         }
 
                         else -> {
@@ -174,17 +179,20 @@ class DaVinciErrorTest {
                         }
 
                         "/authorize" -> {
-                            respond(content = ByteReadChannel("{\n" +
-                                    "    \"environment\": {\n" +
-                                    "        \"id\": \"0c6851ed-0f12-4c9a-a174-9b1bf8b438ae\"\n" +
-                                    "    },\n" +
-                                    "    \"status\": \"FAILED\",\n" +
-                                    "    \"error\": {\n" +
-                                    "        \"code\": \"login_required\",\n" +
-                                    "        \"message\": \"The request could not be completed. There was an issue processing the request\"\n" +
-                                    "    }\n" +
-                                    "}")
-                                , HttpStatusCode.OK, headers)
+                            respond(
+                                content = ByteReadChannel(
+                                    "{\n" +
+                                            "    \"environment\": {\n" +
+                                            "        \"id\": \"0c6851ed-0f12-4c9a-a174-9b1bf8b438ae\"\n" +
+                                            "    },\n" +
+                                            "    \"status\": \"FAILED\",\n" +
+                                            "    \"error\": {\n" +
+                                            "        \"code\": \"login_required\",\n" +
+                                            "        \"message\": \"The request could not be completed. There was an issue processing the request\"\n" +
+                                            "    }\n" +
+                                            "}"
+                                ), HttpStatusCode.OK, headers
+                            )
                         }
 
                         else -> {
@@ -235,8 +243,11 @@ class DaVinciErrorTest {
 
                         // Sending a invalid json from server should throw a failure.
                         "/authorize" -> {
-                            respond(content = ByteReadChannel("{ Not a Json }")
-                                , HttpStatusCode.OK, authorizeResponseHeaders)
+                            respond(
+                                content = ByteReadChannel("{ Not a Json }"),
+                                HttpStatusCode.OK,
+                                authorizeResponseHeaders
+                            )
                         }
 
 
@@ -287,11 +298,19 @@ class DaVinciErrorTest {
                         }
 
                         "/customHTMLTemplate" -> {
-                            respond(customHTMLTemplateWithInvalidPassword(), HttpStatusCode.BadRequest, customHTMLTemplateHeaders)
+                            respond(
+                                customHTMLTemplateWithInvalidPassword(),
+                                HttpStatusCode.BadRequest,
+                                customHTMLTemplateHeaders
+                            )
                         }
 
                         "/authorize" -> {
-                            respond(authorizeResponse(), HttpStatusCode.OK, authorizeResponseHeaders)
+                            respond(
+                                authorizeResponse(),
+                                HttpStatusCode.OK,
+                                authorizeResponseHeaders
+                            )
                         }
 
                         else -> {
@@ -335,7 +354,10 @@ class DaVinciErrorTest {
 
             assertTrue(next is ErrorNode)
             assertEquals(" Invalid username and/or password", next.message)
-            assertContains(next.input.toString(), "The provided password did not match provisioned password")
+            assertContains(
+                next.input.toString(),
+                "The provided password did not match provisioned password"
+            )
 
         }
 
@@ -352,16 +374,19 @@ class DaVinciErrorTest {
                         }
 
                         "/authorize" -> {
-                            respond(content = ByteReadChannel("{\n" +
-                                    "    \"environment\": {\n" +
-                                    "        \"id\": \"0c6851ed-0f12-4c9a-a174-9b1bf8b438ae\"\n" +
-                                    "    },\n" +
-                                    "    \"error\": {\n" +
-                                    "        \"code\": \"login_required\",\n" +
-                                    "        \"message\": \"The request could not be completed. There was an issue processing the request\"\n" +
-                                    "    }\n" +
-                                    "}")
-                                , HttpStatusCode.OK, headers)
+                            respond(
+                                content = ByteReadChannel(
+                                    "{\n" +
+                                            "    \"environment\": {\n" +
+                                            "        \"id\": \"0c6851ed-0f12-4c9a-a174-9b1bf8b438ae\"\n" +
+                                            "    },\n" +
+                                            "    \"error\": {\n" +
+                                            "        \"code\": \"login_required\",\n" +
+                                            "        \"message\": \"The request could not be completed. There was an issue processing the request\"\n" +
+                                            "    }\n" +
+                                            "}"
+                                ), HttpStatusCode.OK, headers
+                            )
                         }
 
                         else -> {
@@ -398,30 +423,36 @@ class DaVinciErrorTest {
             assertContains((node as FailureNode).cause.toString(), "login_required")
         }
 
-    @TestRailCase (23794)
+    @TestRailCase(23794)
     @Test
     fun `DaVinci 4xx Error with Error Timeout in Response`() =
         runTest {
-            val randomErrorCode = listOf(HttpStatusCode.BadRequest,
+            val randomErrorCode = listOf(
+                HttpStatusCode.BadRequest,
                 HttpStatusCode.NotFound,
                 HttpStatusCode.MethodNotAllowed,
-                HttpStatusCode.NotAcceptable).random()
+                HttpStatusCode.NotAcceptable
+            ).random()
             mockEngine =
                 MockEngine { request ->
                     when (request.url.encodedPath) {
                         "/.well-known/openid-configuration" -> {
                             respond(openIdConfigurationResponse(), HttpStatusCode.OK, headers)
                         }
+
                         "/authorize" -> {
 
-                            respond(content = ByteReadChannel("{\n" +
-                                    "    \"environment\": {\n" +
-                                    "        \"id\": \"0c6851ed-0f12-4c9a-a174-9b1bf8b438ae\"\n" +
-                                    "    },\n" +
-                                    "    \"code\": \"requestTimedOut\",\n" +
-                                    "    \"message\": \"Unauthorized!\"\n" +
-                                    "}")
-                                , randomErrorCode, headers)
+                            respond(
+                                content = ByteReadChannel(
+                                    "{\n" +
+                                            "    \"environment\": {\n" +
+                                            "        \"id\": \"0c6851ed-0f12-4c9a-a174-9b1bf8b438ae\"\n" +
+                                            "    },\n" +
+                                            "    \"code\": \"requestTimedOut\",\n" +
+                                            "    \"message\": \"Unauthorized!\"\n" +
+                                            "}"
+                                ), randomErrorCode, headers
+                            )
                         }
 
 
@@ -466,25 +497,31 @@ class DaVinciErrorTest {
     @Test
     fun `DaVinci 4xx Error with Error Code 1999 in Response`() =
         runTest {
-            val randomErrorCode = listOf(HttpStatusCode.BadRequest,
+            val randomErrorCode = listOf(
+                HttpStatusCode.BadRequest,
                 HttpStatusCode.NotFound,
                 HttpStatusCode.MethodNotAllowed,
-                HttpStatusCode.NotAcceptable).random()
+                HttpStatusCode.NotAcceptable
+            ).random()
             mockEngine =
                 MockEngine { request ->
                     when (request.url.encodedPath) {
                         "/.well-known/openid-configuration" -> {
                             respond(openIdConfigurationResponse(), HttpStatusCode.OK, headers)
                         }
+
                         "/authorize" -> {
-                            respond(content = ByteReadChannel("{\n" +
-                                    "    \"environment\": {\n" +
-                                    "        \"id\": \"0c6851ed-0f12-4c9a-a174-9b1bf8b438ae\"\n" +
-                                    "    },\n" +
-                                    "    \"code\": 1999,\n" +
-                                    "    \"message\": \"Unauthorized!\"\n" +
-                                    "}")
-                                ,randomErrorCode, headers)
+                            respond(
+                                content = ByteReadChannel(
+                                    "{\n" +
+                                            "    \"environment\": {\n" +
+                                            "        \"id\": \"0c6851ed-0f12-4c9a-a174-9b1bf8b438ae\"\n" +
+                                            "    },\n" +
+                                            "    \"code\": 1999,\n" +
+                                            "    \"message\": \"Unauthorized!\"\n" +
+                                            "}"
+                                ), randomErrorCode, headers
+                            )
                         }
 
 
@@ -529,28 +566,34 @@ class DaVinciErrorTest {
     @Test
     fun `DaVinci 4xx Error with Invalid Connector and Session`() =
         runTest {
-            val randomErrorCode = listOf(HttpStatusCode.BadRequest,
+            val randomErrorCode = listOf(
+                HttpStatusCode.BadRequest,
                 HttpStatusCode.NotFound,
                 HttpStatusCode.MethodNotAllowed,
                 HttpStatusCode.TooManyRequests,
                 HttpStatusCode.UpgradeRequired,
-                HttpStatusCode.NotAcceptable).random()
+                HttpStatusCode.NotAcceptable
+            ).random()
             mockEngine =
                 MockEngine { request ->
                     when (request.url.encodedPath) {
                         "/.well-known/openid-configuration" -> {
                             respond(openIdConfigurationResponse(), HttpStatusCode.OK, headers)
                         }
+
                         "/authorize" -> {
-                            respond(content = ByteReadChannel("{\n" +
-                                    "    \"environment\": {\n" +
-                                    "        \"id\": \"0c6851ed-0f12-4c9a-a174-9b1bf8b438ae\"\n" +
-                                    "    },\n" +
-                                    "    \"connectorId\": \"pingOneAuthenticationConnector\",\n" +
-                                    "    \"capabilityName\": \"setSession\",\n" +
-                                    "    \"message\": \"Invalid Connector.\"\n" +
-                                    "}")
-                                , randomErrorCode, headers)
+                            respond(
+                                content = ByteReadChannel(
+                                    "{\n" +
+                                            "    \"environment\": {\n" +
+                                            "        \"id\": \"0c6851ed-0f12-4c9a-a174-9b1bf8b438ae\"\n" +
+                                            "    },\n" +
+                                            "    \"connectorId\": \"pingOneAuthenticationConnector\",\n" +
+                                            "    \"capabilityName\": \"setSession\",\n" +
+                                            "    \"message\": \"Invalid Connector.\"\n" +
+                                            "}"
+                                ), randomErrorCode, headers
+                            )
                         }
 
 
@@ -602,16 +645,20 @@ class DaVinciErrorTest {
                         "/.well-known/openid-configuration" -> {
                             respond(openIdConfigurationResponse(), HttpStatusCode.OK, headers)
                         }
+
                         "/authorize" -> {
-                            respond(content = ByteReadChannel("{\n" +
-                                    "    \"environment\": {\n" +
-                                    "        \"id\": \"0c6851ed-0f12-4c9a-a174-9b1bf8b438ae\"\n" +
-                                    "    },\n" +
-                                    "    \"connectorId\": \"pingOneAuthenticationConnector\",\n" +
-                                    "    \"capabilityName\": \"returnSuccessResponseRedirect\",\n" +
-                                    "    \"message\": \"Invalid response.\"\n" +
-                                    "}")
-                                , HttpStatusCode(randomErrorCode, ""), headers)
+                            respond(
+                                content = ByteReadChannel(
+                                    "{\n" +
+                                            "    \"environment\": {\n" +
+                                            "        \"id\": \"0c6851ed-0f12-4c9a-a174-9b1bf8b438ae\"\n" +
+                                            "    },\n" +
+                                            "    \"connectorId\": \"pingOneAuthenticationConnector\",\n" +
+                                            "    \"capabilityName\": \"returnSuccessResponseRedirect\",\n" +
+                                            "    \"message\": \"Invalid response.\"\n" +
+                                            "}"
+                                ), HttpStatusCode(randomErrorCode, ""), headers
+                            )
                         }
 
 
@@ -649,6 +696,67 @@ class DaVinciErrorTest {
             assertContains((node as FailureNode).cause.toString(), "Invalid response.")
             val exception = node.cause as ApiException
             assertTrue { exception.status == randomErrorCode }
+
+        }
+
+    @Test
+    fun `DaVinci 3xx Error with Location Header in Response`() =
+        runTest {
+            mockEngine =
+                MockEngine { request ->
+                    when (request.url.encodedPath) {
+                        "/.well-known/openid-configuration" -> {
+                            respond(openIdConfigurationResponse(), HttpStatusCode.OK, headers)
+                        }
+                        "/authorize" -> {
+                            respond(content = ByteReadChannel(""),
+                                status = HttpStatusCode.Found,
+                                headers = headers {
+                                    append(
+                                        "Location",
+                                        " https://apps.pingone.ca/02fb4743-189a-4bc7-9d6c-a919edfe6447/signon/?error=test"
+                                    )
+                                })
+                        }
+                        else -> {
+                            return@MockEngine respond(
+                                content =
+                                ByteReadChannel(""),
+                                status = HttpStatusCode.InternalServerError,
+                            )
+                        }
+                    }
+                }
+
+            val daVinci =
+                DaVinci {
+                    httpClient = HttpClient(mockEngine) {
+                        followRedirects = false
+                    }
+                    logger = Logger.CONSOLE
+                    // Oidc as module
+                    module(Oidc) {
+                        clientId = "test"
+                        discoveryEndpoint =
+                            "http://localhost/.well-known/openid-configuration"
+                        scopes = mutableSetOf("openid", "email", "address")
+                        redirectUri = "http://localhost:8080"
+                        storage = MemoryStorage()
+                    }
+                    module(Cookie) {
+                        storage = MemoryStorage()
+                        persist = mutableListOf("ST")
+                    }
+                }
+
+            val node = daVinci.start() // Return first Node
+            assertTrue { node is FailureNode }
+            assertContains(
+                (node as FailureNode).cause.toString(),
+                "Location:  https://apps.pingone.ca/02fb4743-189a-4bc7-9d6c-a919edfe6447/signon/?error=test"
+            )
+            val exception = node.cause as ApiException
+            assertTrue { exception.status == HttpStatusCode.Found.value }
 
         }
 }
