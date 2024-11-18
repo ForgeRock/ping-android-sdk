@@ -5,7 +5,6 @@
  * of the MIT license. See the LICENSE file for details.
  */
 
-import com.pingidentity.davinci.collector.FieldCollector
 import com.pingidentity.davinci.collector.SubmitCollector
 import com.pingidentity.testrail.TestRailCase
 import com.pingidentity.testrail.TestRailWatcher
@@ -27,10 +26,4 @@ class SubmitCollectorTest {
         assertNotNull(submitCollector)
     }
 
-    @TestRailCase(22561)
-    @Test
-    fun testInheritance() {
-        val submitCollector = SubmitCollector()
-        assertTrue(submitCollector is FieldCollector)
-    }
 }

@@ -16,7 +16,7 @@ import androidx.annotation.VisibleForTesting
  * @param config The configuration for the module.
  * @param setup A function that sets up the module.
  */
-@VisibleForTesting
+@VisibleForTesting(otherwise = VisibleForTesting.PACKAGE_PRIVATE)
 class ModuleRegistry<Config : Any> internal constructor(
     val module: Module<Config>,
     val priority: Int,
