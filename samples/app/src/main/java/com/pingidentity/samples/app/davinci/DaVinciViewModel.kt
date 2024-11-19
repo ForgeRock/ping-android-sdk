@@ -43,7 +43,7 @@ val prod = DaVinci {
 
     // Oidc as module
     module(Oidc) {
-        clientId = "c12743f9-08e8-4420-a624-71bbb08e9fe1"
+        clientId = "3d3f7650-2dea-4a42-8bf9-8bb6b96d30c7"
         discoveryEndpoint = "https://auth.pingone.ca/02fb4743-189a-4bc7-9d6c-a919edfe6447/as/.well-known/openid-configuration"
         scopes = mutableSetOf("openid", "email", "address", "phone", "profile")
         redirectUri = "org.forgerock.demo://oauth2redirect"
