@@ -41,7 +41,7 @@ class DavinciAndroidTest {
         logger = Logger.STANDARD
 
         module(Oidc) {
-            clientId = "a9cf6b4c-8669-4dee-8b97-7c703752c04f"
+            clientId = "021b83ce-a9b1-4ad4-8c1d-79e576eeab76"
             discoveryEndpoint = "https://auth.pingone.ca/02fb4743-189a-4bc7-9d6c-a919edfe6447/as/.well-known/openid-configuration"
             scopes = mutableSetOf("openid", "email", "address", "phone", "profile")
             redirectUri = "org.forgerock.demo://oauth2redirect"
@@ -81,17 +81,6 @@ class DavinciAndroidTest {
         var node = daVinci.start() // Return first Node
         assertTrue(node is ContinueNode)
 
-        assertTrue { (node as ContinueNode).collectors.size == 1 }
-        assertEquals("Start Node", node.name)
-        assertEquals("Click next to continue...", node.description)
-
-        val collector = node.collectors[0] as TextCollector
-        assertEquals("protectsdk", collector.key)
-        assertEquals("Protect Payload", collector.label)
-
-        node = node.next()
-        node = node as ContinueNode
-
         // Login form validation...
         assertTrue(node.collectors.size == 5 )
 
@@ -106,8 +95,8 @@ class DavinciAndroidTest {
         assertEquals("Username", (node.collectors[0] as TextCollector).label)
         assertEquals("Password", (node.collectors[1] as PasswordCollector).label)
         assertEquals("Sign On", (node.collectors[2] as SubmitCollector).label)
-        assertEquals("Having trouble signing on?", (node.collectors[3] as FlowCollector).label)
-        assertEquals("No account? Register now!", (node.collectors[4] as FlowCollector).label)
+        assertEquals("No account? Register now!", (node.collectors[3] as FlowCollector).label)
+        assertEquals("Having trouble signing on?", (node.collectors[4] as FlowCollector).label)
 
         // Fill in the login form with valid credentials and submit...
         (node.collectors[0] as? TextCollector)?.value = username
@@ -149,8 +138,7 @@ class DavinciAndroidTest {
     @Test
     fun loginFailure() = runTest {
         var node = daVinci.start() // Return first Node
-        node = (node as ContinueNode).next()
-        node = node as ContinueNode
+        assertTrue(node is ContinueNode)
 
         // Fill in the login form with invalid credentials and submit...
         (node.collectors[0] as? TextCollector)?.value = username
@@ -170,10 +158,6 @@ class DavinciAndroidTest {
     fun checkActiveSession() = runTest {
         var node = daVinci.start() // Return first Node
         assertTrue(node is ContinueNode)
-        node = (node as ContinueNode)
-
-        // Skip the first node
-        node = node.next() as ContinueNode
 
         // Fill in the login form with valid credentials and submit...
         (node.collectors[0] as? TextCollector)?.value = username
@@ -209,13 +193,13 @@ class DavinciAndroidTest {
     @Test
     fun userRegistrationSuccess() = runBlocking {
         var node = daVinci.start()
-        node = (node as ContinueNode).next() as ContinueNode
+        assertTrue(node is ContinueNode)
 
         // Make sure that we are at the login form
         assertEquals("E2E Login Form", node.name)
 
         // Click on the registration link
-        (node.collectors[4] as? FlowCollector)?.value = "register"
+        (node.collectors[3] as? FlowCollector)?.value = "register"
         node = node.next()
 
         assertTrue(node is ContinueNode)
@@ -223,20 +207,20 @@ class DavinciAndroidTest {
         // Validate the registration form
         assertEquals(6, node.collectors.size )
         assertEquals("Registration Form", node.name)
-        assertEquals("Fill the form below to register a new account", node.description)
-        assertEquals("First Name", (node.collectors[0] as TextCollector).label)
-        assertEquals("Last Name", (node.collectors[1] as TextCollector).label)
-        assertEquals("Email", (node.collectors[2] as TextCollector).label)
-        assertEquals("Password", (node.collectors[3] as PasswordCollector).label)
-        assertEquals("Save", (node.collectors[4] as SubmitCollector).label)
-        assertEquals("Already have an account? Sign on", (node.collectors[5] as FlowCollector).label)
+        assertEquals("Collect Name, Email, Password", node.description)
+        assertEquals("Email", (node.collectors[0] as TextCollector).label)
+        assertEquals("Password", (node.collectors[1] as PasswordCollector).label)
+        assertEquals("Given Name", (node.collectors[2] as TextCollector).label)
+        assertEquals("Family Name", (node.collectors[3] as TextCollector).label)
+        assertEquals("Continue", (node.collectors[4] as SubmitCollector).label)
+        assertEquals("Already have an account? Sign On", (node.collectors[5] as FlowCollector).label)
 
         // Fill in the registration form
         val newUser = "e2e" + System.currentTimeMillis() + "@example.com"
-        (node.collectors[0] as? TextCollector)?.value = userFname
-        (node.collectors[1] as? TextCollector)?.value = userLname
-        (node.collectors[2] as? TextCollector)?.value = newUser
-        (node.collectors[3] as? PasswordCollector)?.value = password
+        (node.collectors[0] as? TextCollector)?.value = newUser
+        (node.collectors[1] as? PasswordCollector)?.value = password
+        (node.collectors[2] as? TextCollector)?.value = userFname
+        (node.collectors[3] as? TextCollector)?.value = userLname
         (node.collectors[4] as? SubmitCollector)?.value = "Save"
 
         node = node.next() as ContinueNode
@@ -264,8 +248,8 @@ class DavinciAndroidTest {
         assertTrue(node.collectors.size == 1 )
 
         assertTrue(node.collectors[0] is SubmitCollector)
-        assertEquals("Successful user creation", node.name)
-        assertEquals("The PingOne user has been successfully created and verified", node.description)
+        assertEquals("Registration Complete", node.name)
+        assertEquals("Notify User Account Is Successfully Created", node.description)
         assertEquals("Continue", (node.collectors[0] as SubmitCollector).label)
 
         // Click "Continue" to finish the registration process
@@ -291,30 +275,31 @@ class DavinciAndroidTest {
     @Test
     fun userRegistrationFailureUserAlreadyExists() = runTest {
         var node = daVinci.start()
-        node = (node as ContinueNode).next() as ContinueNode
+        node = (node as ContinueNode)
 
         // Make sure that we are at the login form
         assertEquals("E2E Login Form", node.name)
 
         // Click on the registration link
-        (node.collectors[4] as? FlowCollector)?.value = "click"
+        (node.collectors[3] as? FlowCollector)?.value = "click"
         node = node.next() as ContinueNode
 
         // Make sure that we are at the registration form
         assertEquals("Registration Form", node.name)
 
         // Fill in the registration form with user that already exists
-        (node.collectors[0] as? TextCollector)?.value = userFname
-        (node.collectors[1] as? TextCollector)?.value = userLname
-        (node.collectors[2] as? TextCollector)?.value = username
-        (node.collectors[3] as? PasswordCollector)?.value = password
+        (node.collectors[0] as? TextCollector)?.value = username
+        (node.collectors[1] as? PasswordCollector)?.value = password
+        (node.collectors[2] as? TextCollector)?.value = userFname
+        (node.collectors[3] as? TextCollector)?.value = userLname
         (node.collectors[4] as? SubmitCollector)?.value = "Save"
 
         val errorNode = node.next()
         assertTrue(errorNode is ErrorNode)
 
-        assertEquals("400", errorNode.input["code"].toString())
-        assertEquals("uniquenessViolation username: is unique but a non-unique value is provided", errorNode.message.trim())
+        assertEquals("\"uniquenessViolation\"", errorNode.input["code"].toString())
+        assertEquals("400", errorNode.input["httpResponseCode"].toString())
+        assertEquals("An account with that email address already exists.", errorNode.message.trim())
 
         // Make sure that we are still at the registration form
         assertEquals("Registration Form", node.name)
@@ -325,46 +310,46 @@ class DavinciAndroidTest {
     @Test
     fun userRegistrationFailureInvalidEmail() = runTest {
         var node = daVinci.start()
-        node = (node as ContinueNode).next() as ContinueNode
+        node = (node as ContinueNode)
 
         // Make sure that we are at the login form
         assertEquals("E2E Login Form", node.name)
 
         // Click on the registration link
-        (node.collectors[4] as? FlowCollector)?.value = "click"
+        (node.collectors[3] as? FlowCollector)?.value = "click"
         node = node.next() as ContinueNode
 
         // Make sure that we are at the registration form
         assertEquals("Registration Form", node.name)
 
         // Fill in the registration form with empty username (email)
-        (node.collectors[0] as? TextCollector)?.value = userFname
-        (node.collectors[1] as? TextCollector)?.value = userLname
-        (node.collectors[2] as? TextCollector)?.value = ""
-        (node.collectors[3] as? PasswordCollector)?.value = password
+        (node.collectors[0] as? TextCollector)?.value = ""
+        (node.collectors[1] as? PasswordCollector)?.value = password
+        (node.collectors[2] as? TextCollector)?.value = userFname
+        (node.collectors[3] as? TextCollector)?.value = userLname
         (node.collectors[4] as? SubmitCollector)?.value = "Save"
 
         var errorNode = node.next()
         assertTrue(errorNode is ErrorNode)
 
-        assertEquals("400", errorNode.input["code"].toString())
-        assertEquals("invalidInput \"username\" - must not be blank", errorNode.message.trim())
+        assertEquals("400", errorNode.input["httpResponseCode"].toString())
+        assertEquals("Enter a valid email address", errorNode.message.trim())
 
         // Make sure that we are still at the registration form
         assertEquals("Registration Form", node.name)
 
-        // Fill in the registration form with empty username (email)
-        (node.collectors[0] as? TextCollector)?.value = userFname
-        (node.collectors[1] as? TextCollector)?.value = userLname
-        (node.collectors[2] as? TextCollector)?.value = "invalid-email"
-        (node.collectors[3] as? PasswordCollector)?.value = password
+        // Fill in the registration form with an invalid username (email)
+        (node.collectors[0] as? TextCollector)?.value = "invalid-email"
+        (node.collectors[1] as? PasswordCollector)?.value = password
+        (node.collectors[2] as? TextCollector)?.value = userFname
+        (node.collectors[3] as? TextCollector)?.value = userLname
         (node.collectors[4] as? SubmitCollector)?.value = "Save"
 
         errorNode = node.next()
         assertTrue(errorNode is ErrorNode)
 
-        assertEquals("400", errorNode.input["code"].toString())
-        assertEquals("invalidValue email: must be a well-formed email address", errorNode.message.trim())
+        assertEquals("400", errorNode.input["httpResponseCode"].toString())
+        assertEquals("email: must be a well-formed email address", errorNode.message.trim())
 
         assertNull(daVinci.user())
     }
@@ -373,30 +358,32 @@ class DavinciAndroidTest {
     @Test
     fun userRegistrationFailureInvalidPassword() = runTest {
         var node = daVinci.start()
-        node = (node as ContinueNode).next() as ContinueNode
+        node = (node as ContinueNode)
 
         // Make sure that we are at the login form
         assertEquals("E2E Login Form", node.name)
 
         // Click on the registration link
-        (node.collectors[4] as? FlowCollector)?.value = "click"
+        (node.collectors[3] as? FlowCollector)?.value = "click"
         node = node.next() as ContinueNode
 
         // Make sure that we are at the registration form
         assertEquals("Registration Form", node.name)
 
         // Fill in the registration form with user that already exists
-        (node.collectors[0] as? TextCollector)?.value = userFname
-        (node.collectors[1] as? TextCollector)?.value = userLname
-        (node.collectors[2] as? TextCollector)?.value = userFname + System.currentTimeMillis() + "@example.com"
-        (node.collectors[3] as? PasswordCollector)?.value = "invalid"
+        (node.collectors[0] as? TextCollector)?.value = userFname + System.currentTimeMillis() + "@example.com"
+        // Note: The password rules for the E2E Tests population require at least one number
+        (node.collectors[1] as? PasswordCollector)?.value = "invalid"
+        (node.collectors[2] as? TextCollector)?.value = userFname
+        (node.collectors[3] as? TextCollector)?.value = userLname
         (node.collectors[4] as? SubmitCollector)?.value = "Save"
 
         val errorNode = node.next()
         assertTrue(errorNode is ErrorNode)
 
-        assertEquals("400", errorNode.input["code"].toString())
-        assertEquals("invalidValue password: User password did not satisfy password policy requirements", errorNode.message.trim())
+        assertEquals("\"invalidValue\"", errorNode.input["code"].toString())
+        assertEquals("400", errorNode.input["httpResponseCode"].toString())
+        assertEquals("password: User password did not satisfy password policy requirements", errorNode.message.trim())
 
         // Make sure that we are still at the registration form
         assertEquals("Registration Form", node.name)
@@ -408,14 +395,13 @@ class DavinciAndroidTest {
     @Test
     fun userRegistrationFailureInvalidVerificationCode() = runBlocking {
         var node = daVinci.start()
-        node = (node as ContinueNode).next()
         node = node as ContinueNode
 
         // Make sure that we are at the login form
         assertEquals("E2E Login Form", node.name)
 
         // Click on the registration link
-        (node.collectors[4] as? FlowCollector)?.value = "click"
+        (node.collectors[3] as? FlowCollector)?.value = "click"
         node = node.next() as ContinueNode
 
         // Make sure that we are at the registration form
@@ -423,10 +409,10 @@ class DavinciAndroidTest {
 
         // Fill in the registration form
         val newUser = userFname + System.currentTimeMillis() + "@example.com"
-        (node.collectors[0] as? TextCollector)?.value = userFname
-        (node.collectors[1] as? TextCollector)?.value = userLname
-        (node.collectors[2] as? TextCollector)?.value = newUser
-        (node.collectors[3] as? PasswordCollector)?.value = password
+        (node.collectors[0] as? TextCollector)?.value = newUser
+        (node.collectors[1] as? PasswordCollector)?.value = password
+        (node.collectors[2] as? TextCollector)?.value = userFname
+        (node.collectors[3] as? TextCollector)?.value = userLname
         (node.collectors[4] as? SubmitCollector)?.value = "Save"
 
         node = node.next() as ContinueNode
@@ -443,14 +429,14 @@ class DavinciAndroidTest {
         assertEquals("400", errorNode.input["code"].toString())
         assertEquals("Invalid verification code", errorNode.message.trim())
 
-        // Make sure that we are still at the registration form
+        // Make sure that we are still at verification code page
         assertEquals("Enter verification code", node.name)
 
         // Resend the verification code
         (node.collectors[2] as? FlowCollector)?.value = "click"
         node = node.next() as ContinueNode
 
-        // Make sure that we are still at the registration form
+        // Make sure that we are still at verification code page
         assertEquals("Enter verification code", node.name)
 
         assertNull(daVinci.user())
@@ -460,77 +446,30 @@ class DavinciAndroidTest {
     @TestRailCase(21277)
     @Test
     fun passwordRecovery() = runBlocking {
+        // Register a test user...
         val newUser = userFname + System.currentTimeMillis() + "@example.com"
+        registerUser(newUser, password)
 
-        // Register a user first...
+        /// Login again...
         var node = daVinci.start()
-        node = (node as ContinueNode).next()
         node = node as ContinueNode
 
-        // Make sure that we are at the login form
-        assertEquals("E2E Login Form", node.name)
-
-        // Click on the registration link
+        // Click on the "Having trouble..." link
         (node.collectors[4] as? FlowCollector)?.value = "click"
         node = node.next() as ContinueNode
 
-        // Make sure that we are at the registration form
-        assertEquals("Registration Form", node.name)
-
-        // Fill in the registration form
-        (node.collectors[0] as? TextCollector)?.value = userFname
-        (node.collectors[1] as? TextCollector)?.value = userLname
-        (node.collectors[2] as? TextCollector)?.value = newUser
-        (node.collectors[3] as? PasswordCollector)?.value = password
-        (node.collectors[4] as? SubmitCollector)?.value = "Save"
-
-        node = node.next() as ContinueNode
-
-        // Make sure that we are at the "Verification Code" screen
-        assertEquals("Enter verification code", node.name)
-
-        // Enter verification code and submit
-        (node.collectors[0] as? TextCollector)?.value = "1234"
-        (node.collectors[1] as? SubmitCollector)?.value = "Verify"
-        node = node.next()
-        assertTrue(node is ContinueNode)
-
-        // User should be navigated to the "Successful user creation" screen...
-        assertEquals("Successful user creation", node.name)
-
-        // Click "Continue" to finish the registration process
-        (node.collectors[0] as? SubmitCollector)?.value = "Continue"
-        node = node.next()
-        assertTrue(node is SuccessNode)
-
-        // Make sure the user is not null
-        var user = node.user
-        assertNotNull((user.token() as Result.Success).value.accessToken)
-
-        // Logout the user
-        var u = daVinci.user()
-        u?.logout() ?: throw Exception("User is null")
-
-        /// Login again...
-        node = daVinci.start()
-        node = (node as ContinueNode).next() as ContinueNode
-
-        // Click on the "Having trouble..." link
-        (node.collectors[3] as? FlowCollector)?.value = "click"
-        node = node.next() as ContinueNode
-
-        // At the "Forgot password" screen...
+        // At the "User Identifier Form" screen...
         assertTrue(node.collectors.size == 3)
 
-        assertTrue(node.collectors[0] is TextCollector)
-        assertTrue(node.collectors[1] is SubmitCollector)
-        assertTrue(node.collectors[2] is FlowCollector)
+        assertTrue(node.collectors[0] is TextCollector)     // Username
+        assertTrue(node.collectors[1] is SubmitCollector)   // Continue button
+        assertTrue(node.collectors[2] is FlowCollector)     // Back link
 
-        assertEquals("Forgot password", node.name)
-        assertEquals("Submit username to reset your password", node.description)
+        assertEquals("User Identifier Form", node.name)
+        assertEquals("Prompt For Email To Send Instructions To Reset Password", node.description)
         assertEquals("Username", (node.collectors[0] as TextCollector).label)
-        assertEquals("Submit", (node.collectors[1] as SubmitCollector).label)
-        assertEquals("Cancel", (node.collectors[2] as FlowCollector).label)
+        assertEquals("Continue", (node.collectors[1] as SubmitCollector).label)
+        assertEquals("Back", (node.collectors[2] as FlowCollector).label)
 
         // Fill in the username and submit
         (node.collectors[0] as? TextCollector)?.value = newUser
@@ -538,35 +477,37 @@ class DavinciAndroidTest {
         node = node.next()
         assertTrue(node is ContinueNode)
 
-        // At the "Forgot password recovery code" screen...
-        assertTrue(node.collectors.size == 4)
+        // At the "Password Recovery Form" screen...
+        assertTrue(node.collectors.size == 6)
 
-        assertTrue(node.collectors[0] is TextCollector)
-        assertTrue(node.collectors[1] is PasswordCollector)
-        assertTrue(node.collectors[2] is SubmitCollector)
-        assertTrue(node.collectors[3] is FlowCollector)
+        assertEquals("Password Recovery Form", node.name)
+        assertEquals("Enter The Recovery Code and Set New Password (Hint: Recovery code is 1234)", node.description)
+        assertTrue(node.collectors[0] is TextCollector)     // Recovery Code
+        assertTrue(node.collectors[1] is PasswordCollector) // New Password
+        assertTrue(node.collectors[2] is PasswordCollector) // Verify New Password
+        assertTrue(node.collectors[3] is SubmitCollector)   // Continue button
+        assertTrue(node.collectors[4] is FlowCollector)     // Resend recovery code
+        assertTrue(node.collectors[5] is FlowCollector)     // Cancel link
 
-        assertEquals("Forgot password recovery code", node.name)
-        assertEquals(
-            "Enter recovery code and a new password. Hint: Recovery code is 1234.",
-            node.description
-        )
         assertEquals("Recovery Code", (node.collectors[0] as TextCollector).label)
         assertEquals("New Password", (node.collectors[1] as PasswordCollector).label)
-        assertEquals("Submit", (node.collectors[2] as SubmitCollector).label)
-        assertEquals("Cancel", (node.collectors[3] as FlowCollector).label)
+        assertEquals("Verify New Password", (node.collectors[2] as PasswordCollector).label)
+        assertEquals("Continue", (node.collectors[3] as SubmitCollector).label)
+        assertEquals("Resend recovery code", (node.collectors[4] as FlowCollector).label)
+        assertEquals("Cancel", (node.collectors[5] as FlowCollector).label)
 
         // Fill in the recovery code and password and submit
         (node.collectors[0] as? TextCollector)?.value = verificationCode
         (node.collectors[1] as? PasswordCollector)?.value = "New$password"
-        (node.collectors[2] as? SubmitCollector)?.value = "Submit"
+        (node.collectors[2] as? PasswordCollector)?.value = "New$password"
+        (node.collectors[3] as? SubmitCollector)?.value = "Submit"
         node = node.next()
         assertTrue(node is ContinueNode)
 
         // At the "Successful password reset" screen...
         assertTrue(node.collectors.size == 1)
-        assertEquals("Successful password reset", node.name)
-        assertEquals("Password was successfully reset", node.description)
+        assertEquals("Password Reset Success", node.name)
+        assertEquals("Success Message With Animated Checkmark", node.description)
         assertEquals("Continue", (node.collectors[0] as SubmitCollector).label)
 
         // Click "Continue" to finish the password reset process
@@ -575,10 +516,10 @@ class DavinciAndroidTest {
         assertTrue(node is SuccessNode)
 
         // Make sure the user is not null
-        user = node.user
+        val user = node.user
         assertNotNull((user.token() as Result.Success).value.accessToken)
 
-        u = daVinci.user()
+        val u = daVinci.user()
         u?.logout() ?: throw Exception("User is null")
 
         // After logout make sure the user is null
@@ -591,60 +532,13 @@ class DavinciAndroidTest {
     @TestRailCase(21278)
     @Test
     fun passwordReset() = runBlocking {
+        // Register a test user...
         val newUser = userFname + System.currentTimeMillis() + "@example.com"
+        registerUser(newUser, password)
 
-        // Register a user first...
+        // Login...
         var node = daVinci.start()
-        node = (node as ContinueNode).next()
         node = node as ContinueNode
-
-        // Make sure that we are at the login form
-        assertEquals("E2E Login Form", node.name)
-
-        // Click on the registration link
-        (node.collectors[4] as? FlowCollector)?.value = "click"
-        node = node.next() as ContinueNode
-
-        // Make sure that we are at the registration form
-        assertEquals("Registration Form", node.name)
-
-        // Fill in the registration form
-        (node.collectors[0] as? TextCollector)?.value = userFname
-        (node.collectors[1] as? TextCollector)?.value = userLname
-        (node.collectors[2] as? TextCollector)?.value = newUser
-        (node.collectors[3] as? PasswordCollector)?.value = password
-        (node.collectors[4] as? SubmitCollector)?.value = "Save"
-
-        node = node.next() as ContinueNode
-
-        // Make sure that we are at the "Verification Code" screen
-        assertEquals("Enter verification code", node.name)
-
-        // Enter verification code and submit
-        (node.collectors[0] as? TextCollector)?.value = "1234"
-        (node.collectors[1] as? SubmitCollector)?.value = "Verify"
-        node = node.next()
-        assertTrue(node is ContinueNode)
-
-        // User should be navigated to the "Successful user creation" screen...
-        assertEquals("Successful user creation", node.name)
-
-        // Click "Continue" to finish the registration process
-        (node.collectors[0] as? SubmitCollector)?.value = "Continue"
-        node = node.next()
-        assertTrue(node is SuccessNode)
-
-        // Make sure the user is not null
-        var user = node.user
-        assertNotNull((user.token() as Result.Success).value.accessToken)
-
-        // Logout the user
-        var u = daVinci.user()
-        u?.logout() ?: throw Exception("User is null")
-
-        /// Login again...
-        node = daVinci.start()
-        node = (node as ContinueNode).next() as ContinueNode
 
         // Make suer that we are at the Login form...
         assertEquals("E2E Login Form", node.name)
@@ -663,54 +557,46 @@ class DavinciAndroidTest {
         (node.collectors[1] as? FlowCollector)?.value = "Reset Password"
         node = node.next() as ContinueNode
 
-        // Make sure that we are at the "Reset Password" screen...
-        assertEquals("Reset Password", node.name)
+        // At the "Change Password Form" screen...
+        assertTrue(node.collectors.size == 5)
 
-        // Fill in the reset password form with the same password
+        assertEquals("Change Password Form", node.name)
+        assertEquals("Prompt for existing and new password", node.description)
+        assertTrue(node.collectors[0] is PasswordCollector)     // Current Password
+        assertTrue(node.collectors[1] is PasswordCollector)     // New Password
+        assertTrue(node.collectors[2] is PasswordCollector)     // Verify New Password
+        assertTrue(node.collectors[3] is SubmitCollector)       // Continue button
+        assertTrue(node.collectors[4] is FlowCollector)         // Cancel link
+
+        assertEquals("Current Password", (node.collectors[0] as PasswordCollector).label)
+        assertEquals("New Password", (node.collectors[1] as PasswordCollector).label)
+        assertEquals("Verify New Password", (node.collectors[2] as PasswordCollector).label)
+        assertEquals("Continue", (node.collectors[3] as SubmitCollector).label)
+        assertEquals("Cancel", (node.collectors[4] as FlowCollector).label)
+
+        // Fill in the reset password form and submit
         (node.collectors[0] as? PasswordCollector)?.value = password
-        (node.collectors[1] as? PasswordCollector)?.value = password
-        (node.collectors[2] as? SubmitCollector)?.value = "Save"
-
-        var errorNode = node.next()
-        assertTrue(errorNode is ErrorNode)
-
-        assertEquals("400", errorNode.input["code"].toString())
-        assertEquals("newPasswordNotValid newPassword: New password did not satisfy password policy requirements", errorNode.message.trim())
-
-        // Make sure that we are still at the "Reset Password" screen
-        assertEquals("Reset Password", node.name)
-
-        // Fill in the reset password form with the weak new password
-        (node.collectors[0] as? PasswordCollector)?.value = password
-        (node.collectors[1] as? PasswordCollector)?.value = "weak"
-        (node.collectors[2] as? SubmitCollector)?.value = "Save"
-
-        errorNode = node.next()
-        assertTrue(errorNode is ErrorNode)
-
-        assertEquals("400", errorNode.input["code"].toString())
-        assertEquals("newPasswordNotValid newPassword: New password did not satisfy password policy requirements", errorNode.message.trim())
-
-        // Fill in the reset password form with valid new password
-        (node.collectors[0] as? PasswordCollector)?.value = password
-        (node.collectors[1] as? PasswordCollector)?.value = "New" + password
-        (node.collectors[2] as? SubmitCollector)?.value = "Save"
+        (node.collectors[1] as? PasswordCollector)?.value = "New$password"
+        (node.collectors[2] as? PasswordCollector)?.value = "New$password"
+        (node.collectors[3] as? SubmitCollector)?.value = "Continue"
         node = node.next() as ContinueNode
 
-        assertEquals("Reset password success", node.name)
-        assertEquals("Password has been successfully reset", node.description)
+        // At the "Password Reset Success" screen...
+        assertTrue(node.collectors.size == 1)
+        assertEquals("Password Reset Success", node.name)
+        assertEquals("Success Message With Animated Checkmark", node.description)
         assertEquals("Continue", (node.collectors[0] as SubmitCollector).label)
+
+        // Click "Continue" to finish the password reset process
         (node.collectors[0] as? SubmitCollector)?.value = "Continue"
         node = node.next()
-
         assertTrue(node is SuccessNode)
 
         // Make sure the user is not null
-        user = node.user
+        val user = node.user
         assertNotNull((user.token() as Result.Success).value.accessToken)
 
-        // Logout the user
-        u = daVinci.user()
+        val u = daVinci.user()
         u?.logout() ?: throw Exception("User is null")
 
         // After logout make sure the user is null
@@ -720,9 +606,145 @@ class DavinciAndroidTest {
         deleteUser(newUser, "New$password")
     }
 
+    @TestRailCase(24629)
+    @Test(timeout = 20000)
+    fun accountLocked() = runBlocking {
+        // Register a test user...
+        val newUser = userFname + System.currentTimeMillis() + "@example.com"
+        registerUser(newUser, password)
+
+        // Login again...
+        var node = daVinci.start()
+        node = node as ContinueNode
+
+        // Make sure that we are at the Login form...
+        assertEquals("E2E Login Form", node.name)
+
+        // Fill in the login form with invalid credentials and submit...
+        // The following rules apply for the E2E test population:
+        // Account Lockout Rules:
+        // The user's account will be locked out after 2 distinct failed password attempts;
+        // repeated attempts of the same password are not counted.
+        // Automatically unlock accounts that were locked by failed password attempts after 1 seconds
+        (node.collectors[0] as? TextCollector)?.value = newUser
+        (node.collectors[1] as? PasswordCollector)?.value = "wrong1"
+        (node.collectors[2] as? SubmitCollector)?.value = "Sign On"
+        val errorNode = node.next()
+
+        assertTrue(errorNode is ErrorNode)
+        assertEquals("Invalid username and/or password", errorNode.message.trim())
+
+        // Make sure that we are still at the Login form...
+        assertEquals("E2E Login Form", node.name)
+
+        (node.collectors[0] as? TextCollector)?.value = newUser
+        (node.collectors[1] as? PasswordCollector)?.value = "wrong2"
+        (node.collectors[2] as? SubmitCollector)?.value = "Sign On"
+        node = node.next() as ContinueNode
+
+        // Make sure that we are at the "Account Locked" screen...
+        assertEquals("Account Locked Message", node.name)
+        assertEquals("Notify when account will unlock", node.description)
+
+        assertTrue(node.collectors.size == 1)
+
+        assertTrue(node.collectors[0] is FlowCollector) // Back to sign on
+        assertEquals("Back to sign on", (node.collectors[0] as FlowCollector).label)
+        // Click on the back link
+        (node.collectors[0] as? FlowCollector)?.value = "Back"
+
+        node = node.next()
+        assertTrue(node is ContinueNode)
+
+        // Make sure that we are back at the Login form
+        assertEquals("E2E Login Form", node.name)
+        assertNull(daVinci.user())
+
+        // Wait for a second, so that the account unlocks automatically and enter valid username and password
+        Thread.sleep(1500)
+        (node.collectors[0] as? TextCollector)?.value = newUser
+        (node.collectors[1] as? PasswordCollector)?.value = password
+        (node.collectors[2] as? SubmitCollector)?.value = "Sign On"
+        node = node.next() as ContinueNode
+
+        assertEquals("Successful login", node.name)
+        assertEquals("Successfully logged in to DaVinci", node.description)
+        // Click continue
+        (node.collectors[0] as? SubmitCollector)?.value = "Continue"
+
+        node = node.next()
+        assertTrue(node is SuccessNode)
+
+        // Make sure the user is not null
+        val user = node.user
+        assertNotNull((user.token() as Result.Success).value.accessToken)
+
+        val u = daVinci.user()
+        u?.logout() ?: throw Exception("User is null")
+
+        //After logout make sure the user is null
+        assertNull(daVinci.user())
+
+        // Delete the user from PingOne
+        deleteUser(newUser, password)
+    }
+
+    // Helper function to register a user
+    private suspend fun registerUser(username: String, password: String){
+        var node = daVinci.start()
+        node = node as ContinueNode
+
+        // Make sure that we are at the login form
+        assertEquals("E2E Login Form", node.name)
+
+        // Click on the registration link
+        (node.collectors[3] as? FlowCollector)?.value = "click"
+        node = node.next() as ContinueNode
+
+        // Make sure that we are at the registration form
+        assertEquals("Registration Form", node.name)
+
+        // Fill in the registration form
+        (node.collectors[0] as? TextCollector)?.value = username
+        (node.collectors[1] as? PasswordCollector)?.value = password
+        (node.collectors[2] as? TextCollector)?.value = userFname
+        (node.collectors[3] as? TextCollector)?.value = userLname
+        (node.collectors[4] as? SubmitCollector)?.value = "Save"
+
+        node = node.next() as ContinueNode
+
+        // Make sure that we are at the "Verification Code" screen
+        assertEquals("Enter verification code", node.name)
+
+        // Enter verification code and submit
+        (node.collectors[0] as? TextCollector)?.value = verificationCode
+        (node.collectors[1] as? SubmitCollector)?.value = "Verify"
+        node = node.next()
+        assertTrue(node is ContinueNode)
+
+        assertTrue(node.collectors[0] is SubmitCollector)
+        assertEquals("Registration Complete", node.name)
+        assertEquals("Notify User Account Is Successfully Created", node.description)
+        assertEquals("Continue", (node.collectors[0] as SubmitCollector).label)
+
+        // Click "Continue" to finish the registration process
+        (node.collectors[0] as? SubmitCollector)?.value = "Continue"
+        node = node.next()
+        assertTrue(node is SuccessNode)
+
+        // Make sure the user is not null
+        var user = node.user
+        assertNotNull((user.token() as Result.Success).value.accessToken)
+
+        // Logout the user
+        var u = daVinci.user()
+        u?.logout() ?: throw Exception("User is null")
+    }
+
+    // Helper function to delete a user
     private suspend fun deleteUser(username: String, password: String) {
         var node = daVinci.start()
-        node = (node as ContinueNode).next() as ContinueNode
+        node = (node as ContinueNode)
 
         // Make sure that we are at the Login form...
         assertEquals("E2E Login Form", node.name)
@@ -740,7 +762,6 @@ class DavinciAndroidTest {
         // Click delete user button
         (node.collectors[2] as? FlowCollector)?.value = "Delete User"
         node = node.next() as ContinueNode
-
 
         // Validate success user deletion screen
         assertEquals("Success", node.name)
