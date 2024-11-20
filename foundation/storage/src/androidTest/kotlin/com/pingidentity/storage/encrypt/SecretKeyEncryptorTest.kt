@@ -6,9 +6,6 @@
  */
 package com.pingidentity.storage.encrypt
 
-import android.app.Application
-import android.content.Context
-import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.SmallTest
 import kotlinx.coroutines.Job
@@ -16,7 +13,6 @@ import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
 import org.junit.runner.RunWith
-import java.io.File
 import java.security.KeyStore.PrivateKeyEntry
 import java.security.KeyStore.SecretKeyEntry
 import kotlin.test.AfterTest
@@ -29,7 +25,6 @@ import kotlin.test.assertTrue
 class SecretKeyEncryptorTest {
 
     private val alias = "keystore-key"
-    private val context: Context by lazy { ApplicationProvider.getApplicationContext<Application>() }
 
     private val testDispatcher = StandardTestDispatcher()
     private val testCoroutineScope = TestScope(testDispatcher + Job())
