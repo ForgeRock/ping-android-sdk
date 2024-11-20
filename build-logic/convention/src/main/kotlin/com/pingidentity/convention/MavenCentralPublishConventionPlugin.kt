@@ -69,7 +69,7 @@ class MavenCentralPublishConventionPlugin : Plugin<Project> {
                                 pom.description.set(project.description)
                                 from(components.getByName("release"))
                             }
-                            url.set("https://github.com/ForgeRock/unified-sdk-android")
+                            url.set("https://github.com/ForgeRock/ping-android-sdk")
                             licenses {
                                 license {
                                     name.set("MIT")
@@ -93,9 +93,9 @@ class MavenCentralPublishConventionPlugin : Plugin<Project> {
                                     }
                                 }
                                 scm {
-                                    connection.set("https://github.com/ForgeRock/unified-sdk-android.git")
-                                    developerConnection.set("https://github.com/ForgeRock/unified-sdk-android.git")
-                                    url.set("https://github.com/ForgeRock/unified-sdk-android")
+                                    connection.set("https://github.com/ForgeRock/ping-android-sdk.git")
+                                    developerConnection.set("https://github.com/ForgeRock/ping-android-sdk.git")
+                                    url.set("https://github.com/ForgeRock/ping-android-sdk.git")
                                 }
                             }
                         }
