@@ -198,7 +198,7 @@ class DaVinciTest {
             assertEquals("My Password", formData?.get("password")?.jsonPrimitive?.content)
 
             // Assert the headers are set
-            assertEquals("forgerock-sdk", request.headers["x-requested-with"])
+            assertEquals("ping-sdk", request.headers["x-requested-with"])
             assertEquals("android", request.headers["x-requested-platform"])
             assertContains(request.headers["Cookie"].toString(), "interactionId")
             assertContains(request.headers["Cookie"].toString(), "interactionToken")
