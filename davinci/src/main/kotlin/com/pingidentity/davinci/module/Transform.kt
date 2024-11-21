@@ -36,11 +36,11 @@ internal val NodeTransform =
         transform {
             val statusCode = it.status()
             val body = it.body()
-            val jsonResponse: JsonObject = body.asJson()
-            val message: String = jsonResponse["message"]?.jsonPrimitive?.content ?: ""
             when (statusCode) {
                 // Check for 4XX errors that are unrecoverable
                 in 400..499 -> {
+                    val jsonResponse: JsonObject = body.asJson()
+                    val message: String = jsonResponse["message"]?.jsonPrimitive?.content ?: ""
                     val errorCode = jsonResponse["code"]?.jsonPrimitive?.intOrNull
                     val errorText = jsonResponse["code"]?.jsonPrimitive?.contentOrNull
                     // Filter out client-side "timeout" related unrecoverable failures
@@ -64,6 +64,7 @@ internal val NodeTransform =
                 }
                 // Handle success (2XX) responses
                 200 -> {
+                    val jsonResponse: JsonObject = body.asJson()
                     // Filter out 2XX errors with 'failure' status
                     if (jsonResponse["status"]?.jsonPrimitive?.content == "FAILED") {
                         return@transform FailureNode(ApiException(statusCode, body))
@@ -75,6 +76,15 @@ internal val NodeTransform =
                         return@transform FailureNode(ApiException(HttpStatusCode.OK.value, body))
                     }
                     return@transform transform(this, workflow, jsonResponse)
+                }
+
+                in 300..399 -> {
+                    return@transform FailureNode(
+                        ApiException(
+                            statusCode,
+                            "Location: ${it.header("Location")}"
+                        )
+                    )
                 }
                 else -> {
                     // 5XX errors are treated as unrecoverable failures
@@ -99,8 +109,9 @@ private fun transform(
         return SuccessNode(
             json,
             object : Session {
-                override val value: String = json["authorizeResponse"]?.jsonObject?.get("code")?.jsonPrimitive?.content
-                            ?: throw AuthorizeException("Authorization code is missing.")
+                override val value: String =
+                    json["authorizeResponse"]?.jsonObject?.get("code")?.jsonPrimitive?.content
+                        ?: throw AuthorizeException("Authorization code is missing.")
             },
         )
     }
