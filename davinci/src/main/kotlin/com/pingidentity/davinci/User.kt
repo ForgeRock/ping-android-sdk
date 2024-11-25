@@ -9,7 +9,6 @@ package com.pingidentity.davinci
 
 import com.pingidentity.davinci.module.oidcClientConfig
 import com.pingidentity.davinci.plugin.DaVinci
-import com.pingidentity.exception.catchOrNull
 import com.pingidentity.oidc.OidcUser
 import com.pingidentity.oidc.User
 import com.pingidentity.orchestrate.EmptySession
@@ -28,19 +27,21 @@ private const val USER = "com.pingidentity.davinci.User"
  * @return The user if found, otherwise null.
  */
 suspend fun DaVinci.user(): User? {
-
-    return catchOrNull {
+    try {
         init()
-        // Retrieve the cached user from the context
-        sharedContext.getValue<User>(USER)?.let {
-            return it
-        }
-
-        if (hasCookies()) {
-            return prepareUser(this, OidcUser(oidcClientConfig()))
-        }
-        return null
+    } catch (e: Exception) {
+        config.logger.e("Failed to initialize DaVinci", e)
     }
+
+    // Retrieve the cached user from the context
+    sharedContext.getValue<User>(USER)?.let {
+        return it
+    }
+
+    if (hasCookies()) {
+        return prepareUser(this, OidcUser(oidcClientConfig()))
+    }
+    return null
 }
 
 /**

@@ -490,8 +490,10 @@ class WorkflowTest {
     @TestRailCase(21300)
     @Test
     fun `test init state function throw exception`() = runTest {
+        var count = 0
         val initFailed = Module.of {
             init {
+                count++
                 throw IllegalStateException("Failed to initialize")
             }
         }
@@ -500,7 +502,10 @@ class WorkflowTest {
             module(initFailed)
         }
 
+        //Call the start twice, since the init() failed, it will call init again.
         val node = workflow.start()
+        workflow.start()
+        assertTrue { count == 2 }
         assertTrue(node is FailureNode)
         assertTrue(node.cause is IllegalStateException)
     }

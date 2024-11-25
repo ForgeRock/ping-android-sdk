@@ -38,6 +38,7 @@ import org.junit.rules.TestWatcher
 import kotlin.test.BeforeTest
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 
 class DaVinciErrorTest {
     @JvmField
@@ -100,6 +101,8 @@ class DaVinciErrorTest {
                         persist = mutableListOf("ST")
                     }
                 }
+
+            assertNull(daVinci.user()) //Return null instead of throwing exception
 
             val node = daVinci.start() // Return first Node
             assertTrue { node is FailureNode }
