@@ -7,7 +7,6 @@
 
 package com.pingidentity.journey.module
 
-import com.pingidentity.exception.catchOrNull
 import com.pingidentity.journey.Journey
 import com.pingidentity.journey.SSOToken
 import com.pingidentity.orchestrate.EmptySession
@@ -38,16 +37,19 @@ val Session = Module.of(::SessionConfig) {
 }
 
 suspend fun Journey.session(): SSOToken? {
-    return catchOrNull {
+    try {
         init()
-        sharedContext[SESSION_CONFIG]?.let { config ->
-            config as SessionConfig
-            config.storage.get()?.let {
-                return it
-            }
-        }
-        return null
+    } catch (e: Exception) {
+        config.logger.e("Failed to initialize Journey", e)
     }
+
+    sharedContext[SESSION_CONFIG]?.let { config ->
+        config as SessionConfig
+        config.storage.get()?.let {
+            return it
+        }
+    }
+    return null
 }
 
 

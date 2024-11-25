@@ -13,7 +13,6 @@ import androidx.datastore.dataStore
 import com.pingidentity.android.ContextProvider
 import com.pingidentity.exception.ApiException
 import com.pingidentity.logger.Logger
-import com.pingidentity.logger.LoggerContext
 import com.pingidentity.logger.None
 import com.pingidentity.oidc.agent.browser
 import com.pingidentity.storage.DataStoreStorage
@@ -81,7 +80,7 @@ class OidcClientConfig {
     /**
      * Logger instance for logging.
      */
-    var logger: Logger = LoggerContext.get()
+    var logger: Logger = Logger.logger
 
     /**
      * Storage delegate for storing tokens.
@@ -236,6 +235,7 @@ class OidcClientConfig {
      */
     operator fun plusAssign(other: OidcClientConfig) {
         this.openId = other.openId
+        this.refreshThreshold = other.refreshThreshold
         this.agent = other.agent
         this.logger = other.logger
         this.storage = other.storage
@@ -243,7 +243,9 @@ class OidcClientConfig {
         this.clientId = other.clientId
         this.scopes = other.scopes
         this.redirectUri = other.redirectUri
+        this.signOutRedirectUri = other.signOutRedirectUri
         this.loginHint = other.loginHint
+        this.state = other.state
         this.nonce = other.nonce
         this.display = other.display
         this.prompt = other.prompt
