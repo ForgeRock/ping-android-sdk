@@ -7,13 +7,11 @@
 
 package com.pingidentity.journey
 
+import com.pingidentity.exception.catchOrNull
 import com.pingidentity.journey.module.oidcClientConfig
 import com.pingidentity.journey.module.session
 import com.pingidentity.oidc.OidcUser
 import com.pingidentity.oidc.User
-import com.pingidentity.orchestrate.EmptySession
-import com.pingidentity.orchestrate.Session
-import com.pingidentity.orchestrate.SuccessNode
 
 private const val USER = "com.pingidentity.journey.User"
 
@@ -26,16 +24,17 @@ private const val USER = "com.pingidentity.journey.User"
  * @return The user if found, otherwise null.
  */
 suspend fun Journey.user(): User? {
-    init()
+    return catchOrNull {
+        init()
+        // Retrieve the cached user from the context
+        sharedContext.getValue<User>(USER)?.let {
+            return it
+        }
 
-    // Retrieve the cached user from the context
-    sharedContext.getValue<User>(USER)?.let {
-        return it
+        session()?.let {
+            return prepareUser(this, OidcUser(oidcClientConfig()), it)
+        } ?: return null
     }
-
-    session()?.let {
-        return prepareUser(this, OidcUser(oidcClientConfig()), it)
-    } ?: return null
 }
 
 fun User.session(): SSOToken {

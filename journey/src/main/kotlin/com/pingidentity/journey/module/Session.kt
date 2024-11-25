@@ -7,7 +7,7 @@
 
 package com.pingidentity.journey.module
 
-import com.pingidentity.journey.EmptySSOToken
+import com.pingidentity.exception.catchOrNull
 import com.pingidentity.journey.Journey
 import com.pingidentity.journey.SSOToken
 import com.pingidentity.orchestrate.EmptySession
@@ -38,14 +38,16 @@ val Session = Module.of(::SessionConfig) {
 }
 
 suspend fun Journey.session(): SSOToken? {
-    init()
-    sharedContext[SESSION_CONFIG]?.let { config ->
-        config as SessionConfig
-        config.storage.get()?.let {
-            return it
+    return catchOrNull {
+        init()
+        sharedContext[SESSION_CONFIG]?.let { config ->
+            config as SessionConfig
+            config.storage.get()?.let {
+                return it
+            }
         }
+        return null
     }
-    return null
 }
 
 
