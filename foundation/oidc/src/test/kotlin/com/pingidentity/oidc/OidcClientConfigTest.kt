@@ -13,9 +13,7 @@ import androidx.test.core.app.ApplicationProvider
 import com.pingidentity.android.ContextProvider
 import com.pingidentity.exception.ApiException
 import com.pingidentity.logger.CONSOLE
-import com.pingidentity.logger.Console
 import com.pingidentity.logger.Logger
-import com.pingidentity.logger.Standard
 import com.pingidentity.storage.MemoryStorage
 import com.pingidentity.storage.StorageDelegate
 import com.pingidentity.testrail.TestRailCase
@@ -33,11 +31,12 @@ import org.junit.Rule
 import org.junit.rules.TestWatcher
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import kotlin.reflect.KClass
+import kotlin.reflect.full.memberProperties
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
-import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 @RunWith(RobolectricTestRunner::class)
@@ -179,6 +178,7 @@ class OidcClientConfigTest {
         val oidcClientConfig =
             OidcClientConfig().apply {
                 openId = OpenIdConfiguration()
+                refreshThreshold = 100
                 agent = mockk()
                 logger = mockk()
                 storage = mockk<StorageDelegate<Token>>()
@@ -186,7 +186,9 @@ class OidcClientConfigTest {
                 clientId = "clientId"
                 scope("openid")
                 redirectUri = "http://localhost/callback"
+                signOutRedirectUri = "http://localhost/signout"
                 loginHint = "loginHint"
+                state = "state"
                 nonce = "nonce"
                 display = "display"
                 prompt = "prompt"
@@ -196,9 +198,14 @@ class OidcClientConfigTest {
                 httpClient = mockk()
             }
 
+        //Ensure there are 19 properties in the class for now.
+        val clazz: KClass<OidcClientConfig> = OidcClientConfig::class
+        assertEquals(clazz.memberProperties.size, 19)
+
         val clonedConfig = oidcClientConfig.clone()
 
         assertEquals(oidcClientConfig.openId, clonedConfig.openId)
+        assertEquals(oidcClientConfig.refreshThreshold, clonedConfig.refreshThreshold)
         assertEquals(oidcClientConfig.agent, clonedConfig.agent)
         assertEquals(oidcClientConfig.logger, clonedConfig.logger)
         assertEquals(oidcClientConfig.storage, clonedConfig.storage)
@@ -206,7 +213,9 @@ class OidcClientConfigTest {
         assertEquals(oidcClientConfig.clientId, clonedConfig.clientId)
         assertEquals(oidcClientConfig.scopes, clonedConfig.scopes)
         assertEquals(oidcClientConfig.redirectUri, clonedConfig.redirectUri)
+        assertEquals(oidcClientConfig.signOutRedirectUri, clonedConfig.signOutRedirectUri)
         assertEquals(oidcClientConfig.loginHint, clonedConfig.loginHint)
+        assertEquals(oidcClientConfig.state, clonedConfig.state)
         assertEquals(oidcClientConfig.nonce, clonedConfig.nonce)
         assertEquals(oidcClientConfig.display, clonedConfig.display)
         assertEquals(oidcClientConfig.prompt, clonedConfig.prompt)

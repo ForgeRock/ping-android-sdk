@@ -50,6 +50,7 @@ dependencies {
     testImplementation(libs.ktor.client.mock)
     testImplementation(libs.robolectric)
     testImplementation(libs.appauth)
+    testImplementation(kotlin("reflect"))
 
     testImplementation(project(":foundation:testrail"))
 }
