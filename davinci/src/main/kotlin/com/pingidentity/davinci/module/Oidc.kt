@@ -40,6 +40,12 @@ val Oidc =
          * Initializes the module.
          */
         init {
+
+            logger.i(
+                "Initializing the OIDC module: the httpClient, logger, " +
+                        "and agent will be propagated from DaVinci. " +
+                        "Any explicit settings for these in the OIDC module will be ignored."
+            )
             // propagate the configuration from workflow to the module
             config.httpClient = httpClient
             config.logger = logger
@@ -78,7 +84,7 @@ val Oidc =
          * Handles sign off of the module.
          */
         signOff { request ->
-           request.url(config.openId.endSessionEndpoint)
+            request.url(config.openId.endSessionEndpoint)
             OidcClient(config).endSession {
                 request.parameter("id_token_hint", it)
                 request.parameter("client_id", config.clientId)

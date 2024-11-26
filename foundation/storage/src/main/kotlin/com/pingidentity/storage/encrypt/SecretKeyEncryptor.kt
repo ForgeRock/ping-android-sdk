@@ -13,7 +13,7 @@ import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.security.keystore.StrongBoxUnavailableException
 import com.pingidentity.android.ContextProvider
-import com.pingidentity.logger.LoggerContext
+import com.pingidentity.logger.Logger
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -60,7 +60,7 @@ class SecretKeyEncryptorConfig {
     var throwWhenEncryptError = true
     var symmetricKeySize = 256
     var invalidatedByBiometricEnrollment = true
-    var logger = LoggerContext.get()
+    var logger = Logger.logger
 
     /**
      * Initializes the context if it's not already initialized.
