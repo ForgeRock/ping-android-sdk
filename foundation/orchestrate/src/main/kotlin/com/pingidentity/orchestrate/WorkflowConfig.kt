@@ -8,7 +8,7 @@
 package com.pingidentity.orchestrate
 
 import androidx.annotation.VisibleForTesting
-import com.pingidentity.logger.LoggerContext
+import com.pingidentity.logger.Logger
 import com.pingidentity.logger.None
 import com.pingidentity.utils.PingDsl
 import io.ktor.client.HttpClient
@@ -40,11 +40,10 @@ open class WorkflowConfig {
     var timeout: Long = 15000
 
     // Logger for the log, default is None
-    var logger = LoggerContext.get()
+    var logger = Logger.logger
         set(value) {
             field = value
-            // Propagate the logger to Modules
-            LoggerContext.put(value)
+            Logger.logger = value
         }
 
     // HTTP client for the engine
