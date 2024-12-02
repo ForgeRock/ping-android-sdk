@@ -1,8 +1,9 @@
-<div>
-  <picture>
-     <img src="https://www.pingidentity.com/content/dam/ping-6-2-assets/topnav-json-configs/Ping-Logo.svg" width="80" height="80"  alt=""/>
-  </picture>
-</div>
+<p align="center">
+  <a href="https://github.com/ForgeRock/ping-android-sdk">
+    <img src="https://www.pingidentity.com/content/dam/picr/nav/Ping-Logo-2.svg" alt="Logo">
+  </a>
+  <hr/>
+</p>
 
 # Ping Storage SDK
 
@@ -116,8 +117,8 @@ There are configuration options for `SecretKeyEncryptor`:
 ### Creating a Custom Storage
 
 You can create a custom repository by implementing the `Repository` interface. This could be useful
-for creating
-file-based storage, cloud storage, etc. Here is an example of creating a custom memory storage:
+for creating file-based storage, cloud storage, etc... 
+Here is an example of creating a custom memory storage:
 
 ```kotlin
 class MemoryRepository<T : @Serializable Any> : Repository<T> {

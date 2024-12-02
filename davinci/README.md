@@ -1,8 +1,9 @@
-<div>
-  <picture>
-     <img src="https://www.pingidentity.com/content/dam/ping-6-2-assets/topnav-json-configs/Ping-Logo.svg" width="80" height="80"  alt=""/>
-  </picture>
-</div>
+<p align="center">
+  <a href="https://github.com/ForgeRock/ping-android-sdk">
+    <img src="https://www.pingidentity.com/content/dam/picr/nav/Ping-Logo-2.svg" alt="Logo">
+  </a>
+  <hr/>
+</p>
 
 # DaVinci
 
@@ -53,11 +54,11 @@ use the `next` method to transition to the next state.
 
 ```kotlin
 val daVinci = DaVinci {
-    timeout = 30 //Default 30s, Seconds for network timeout
+    timeout = 30 // Default 30s, Seconds for network timeout
     logger = Logger.STANDARD // Use the standard logger which logs to the Logcat
     module(Oidc) {
         //...
-        storage = MemoryStorage<Token>() //Default DataStoreStorage, you can override the storage to store the tokens
+        storage = MemoryStorage<Token>() // Default DataStoreStorage, you can override the storage to store the tokens
     }
 }
 ```
@@ -65,7 +66,7 @@ val daVinci = DaVinci {
 ### Navigate the authentication Flow
 
 ```kotlin
-val node = daVinci.start() //Start the flow
+val node = daVinci.start() // Start the flow
 
 //Determine the Node Type
 when (node) {
@@ -102,7 +103,7 @@ To access the collectors, you can use the following code:
         }
     }
 
-    //Move to next Node, and repeat the flow until it reaches `SuccessNode` or `ErrorNode`
+    // Move to next Node, and repeat the flow until it reaches `SuccessNode` or `ErrorNode`
     val next = node.next()
 ```
 
@@ -118,16 +119,16 @@ The `message` is a `String` object, when receiving a failure, you can continue t
 e.g "Username/Password is incorrect", "OTP is invalid", etc...
 
 ```kotlin
-val node = daVinci.start() //Start the flow
+val node = daVinci.start() // Start the flow
 
 //Determine the Node Type
 when (node) {
     is ContinueNode -> {}
     is ErrorNode -> {
-        node.message() //Retrieve the cause of the error
+        node.message() // Retrieve the cause of the error
     }
     is FailureNode -> {
-        node.cause() //Retrieve the error message
+        node.cause() // Retrieve the error message
     }
     is SuccessNode -> {}
 }
@@ -159,13 +160,13 @@ Other than `id`, you can also use `node.name` to retrieve the name of the Node, 
 
 ViewModel
 ```kotlin
-//Define State that listen by the View
+// Define State that listen by the View
 var state = MutableStateFlow<Node>(Empty)
 
 //Start the DaVinci flow
 val next = daVinci.start()
 
-//Update the state
+// Update the state
 state.update {
     next
 }
@@ -195,8 +196,8 @@ After authenticate with DaVinci, the user session will be stored in the storage.
 To retrieve the existing session, you can use the following code:
 
 ```kotlin
-//Retrieve the existing user, if ST cookie exists in the storage, ```user``` will be not null.
-//However, even with the user object, you may not be able to retrieve a valid token, as the token and refresh may be expired.
+// Retrieve the existing user, if ST cookie exists in the storage, ```user``` will be not null.
+// However, even with the user object, you may not be able to retrieve a valid token, as the token and refresh may be expired.
 
 val user: User? = daVinci.user()
 

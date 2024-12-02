@@ -1,8 +1,9 @@
-<div>
-  <picture>
-     <img src="https://www.pingidentity.com/content/dam/ping-6-2-assets/topnav-json-configs/Ping-Logo.svg" width="80" height="80"  alt=""/>
-  </picture>
-</div>
+<p align="center">
+  <a href="https://github.com/ForgeRock/ping-android-sdk">
+    <img src="https://www.pingidentity.com/content/dam/picr/nav/Ping-Logo-2.svg" alt="Logo">
+  </a>
+  <hr/>
+</p>
 
 `oidc` module provides OIDC client for PingOne and ForgeRock platform.
 
@@ -20,7 +21,7 @@ dependencies {
 
 ## Set scheme in AndroidManifest.xml
 
-By default, the SDK uses the `Browser` agent to launch the browser for the authorization request.
+By default, the Ping SDK uses the `Browser` agent to launch the browser for the authorization request.
 The SDK uses the Custom Tabs to launch the browser, you can customize the browser agent by providing the `customTab`
 properties. To receive the redirect from the browser, you need to define the `scheme` in the `AndroidManifest.xml`.
 
@@ -75,8 +76,8 @@ when (val result = ping.accessToken()) { // Retrieve the access token
     }
 }
 
-ping.revoke() //Revoke the access token
-ping.endSession() //End the session
+ping.revoke() // Revoke the access token
+ping.endSession() // End the session
 ```
 
 By default, the SDK use `DataStoreStorage` (With `EncryptedSerializer` ) to stores the token and `None` Logger is set,
@@ -86,8 +87,8 @@ Basic Configuration with custom `storage` and `logger`
 
 ```kotlin
 val ping = OidcClient {
-    storage = encryptedStorage(clientId) //Store the token in the encrypted storage
-    logger = Logger.Standard //Log to Logcat
+    storage = encryptedStorage(clientId) // Store the token in the encrypted storage
+    logger = Logger.Standard // Log to Logcat
     //...
 }
 ```
@@ -116,7 +117,7 @@ val ping = OidcClient {
 
     agent(browser) {
         
-        //Customize the CustomTab
+        // Customize the CustomTab
         customTab = {
             setColorScheme(CustomTabsIntent.COLOR_SCHEME_DARK)
             setShowTitle(false)
@@ -145,7 +146,7 @@ interface Agent<T> {
 Here is an example of creating a custom agent.
 
 ```kotlin
-//Create a custom agent configuration
+// Create a custom agent configuration
 @OidcDsl
 class CustomAgentConfig {
     var config1 = "config1Value"
@@ -163,8 +164,8 @@ var customAgent = object : Agent<CustomAgentConfig> {
     override suspend fun endSession(oidcConfig: OidcConfig<CustomAgentConfig>, idToken: String):
             Boolean {
         //Logout session with idToken
-        oidcConfig.config.config1 //Access the agent configuration
-        oidcConfig.oidcClientConfig.openId.endSessionEndpoint //Access the oidcClientConfig
+        oidcConfig.config.config1 // Access the agent configuration
+        oidcConfig.oidcClientConfig.openId.endSessionEndpoint // Access the oidcClientConfig
         return true
     }
 }

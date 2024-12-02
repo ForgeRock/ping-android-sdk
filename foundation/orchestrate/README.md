@@ -1,8 +1,9 @@
-<div>
-  <picture>
-     <img src="https://www.pingidentity.com/content/dam/ping-6-2-assets/topnav-json-configs/Ping-Logo.svg" width="80" height="80"  alt=""/>
-  </picture>
-</div>
+<p align="center">
+  <a href="https://github.com/ForgeRock/ping-android-sdk">
+    <img src="https://www.pingidentity.com/content/dam/picr/nav/Ping-Logo-2.svg" alt="Logo">
+  </a>
+  <hr/>
+</p>
 
 # Orchestrate
 
@@ -11,10 +12,10 @@
 Orchestrate provides a simple way to build a state machine for ForgeRock Journey and PingOne DaVinci.
 It allows you to define a series of states and transitions between them. You can use the workflow engine to build
 complex workflows that involve multiple steps and conditions.
-The Workflow engine allow you to define a series of functions and register them as a module to the `Workflow` instance
+The Workflow engine allows you to define a series of functions and register them as a module to the `Workflow` instance
 in different state of the workflow.
 
-The Workflow engine contains the following state:
+The Workflow engine contains the following states:
 
 <img src="images/state.png" width="500">
 
@@ -22,7 +23,7 @@ The Workflow engine contains the following state:
 |------------|:--------------------------------------:|---------:|--------:|---------------------------------------------------------------------------:|
 | Init       |         Initialize the modules         |       () |    Unit |                             OAuth module loads endpoint from discovery URL |
 | Start      |             Start the flow             |  Request | Request |        Intercept the start request, for example inject forceAuth parameter |
-| Response   |          Handle the response           | Response |    Unit |                   Parse the response, for example store the cookie header. |
+| Response   |          Handle the response           | Response |    Unit |                    Parse the response, for example store the cookie header |
 | *Transform |     Transform the response to Node     | Response |    Node | For Journey, transform response to Callback, for DaVinci transform to Form |
 | Node       | Process the Node or Transform the Node |     Node |    Node |                             Transform MetadataCallback to WebAuthnCallback |
 | Next       |           Move to next state           |  Request | Request |                                                 Inject noSession parameter |
@@ -32,9 +33,8 @@ The Workflow engine contains the following state:
 ### Module
 
 Module allows you to register functions in different state of the workflow. For example, you can register a function
-that
-will be called when the workflow is initialized,
-when a node is received, when a node is sent, and when the workflow is started.
+that will be called when the workflow is initialized, when a node is received, when a node is sent, and when 
+the workflow is started.
 
 <img src="images/functions.png" width="500">
 
@@ -119,7 +119,7 @@ More module examples:
 ```kotlin
 @PingDsl
 val forceAuth = Module {
-    //Intercept all send request and inject custom header during start state
+    // Intercept all send request and inject custom header during start state
     start { request ->
         request.parameter("forceAuth", "true")
         request
@@ -127,7 +127,7 @@ val forceAuth = Module {
 }
 
 val noSession = Module {
-    //Intercept all send request and inject custom header during next state
+    // Intercept all send request and inject custom header during next state
     next { request ->
         request.parameter("forceAuth", "true")
         request

@@ -1,8 +1,9 @@
-<div>
-  <picture>
-     <img src="https://www.pingidentity.com/content/dam/ping-6-2-assets/topnav-json-configs/Ping-Logo.svg" width="80" height="80"  alt=""/>
-  </picture>
-</div>
+<p align="center">
+  <a href="https://github.com/ForgeRock/ping-android-sdk">
+    <img src="https://www.pingidentity.com/content/dam/picr/nav/Ping-Logo-2.svg" alt="Logo">
+  </a>
+  <hr/>
+</p>
 
 # Ping External IDP
 
@@ -73,11 +74,11 @@ if (node is ContinueNode) {
             is IdpCollector -> {
                 when (val result = idpCollector.authorize()) {
                     is Success -> {
-                        //When success, move to next Node
+                        // When success, move to next Node
                         node.next()
                     }
                     is Failure -> {
-                        //Handle the failure
+                        // Handle the failure
                     }
                 }
             }
@@ -94,10 +95,10 @@ otherwise, it will return a `Failure`  with `Throwable` which shows the root cau
 ```kotlin
 when (val result = idpCollector.authorize()) {
     is SuccessNode -> {
-        result.value //This is the continueToken
+        result.value // This is the continueToken
     }
     is FailureNode -> {
-        result.value //This is the Throwable
+        result.value // This is the Throwable
     }
 }
 ```
