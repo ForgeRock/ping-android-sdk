@@ -11,7 +11,6 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
-import android.security.keystore.StrongBoxUnavailableException
 import com.pingidentity.android.ContextProvider
 import com.pingidentity.logger.Logger
 import kotlinx.coroutines.Dispatchers
@@ -23,6 +22,7 @@ import java.nio.charset.StandardCharsets
 import java.security.KeyPairGenerator
 import java.security.KeyStore
 import java.security.PrivateKey
+import java.security.PublicKey
 import java.security.spec.AlgorithmParameterSpec
 import java.security.spec.MGF1ParameterSpec
 import javax.crypto.Cipher
@@ -167,24 +167,27 @@ class SecretKeyEncryptor(block: SecretKeyEncryptorConfig.() -> Unit = {}) : Encr
      */
     private suspend fun secretKey(): SymmetricKey = withContext(Dispatchers.IO) {
         //Check if the key exists in the keystore
-        if (keyStore.containsAlias(config.keyAlias)) {
-            when (val key = keyStore.getEntry(config.keyAlias, null)) {
-                //If the key is a SecretKeyEntry, return the SecretKey
+        val key = keyStore.getEntry(config.keyAlias, null)
+        key?.let {
+            when (it) {
                 is KeyStore.SecretKeyEntry -> {
                     if (config.enforceAsymmetricKey) {
                         //It was using symmetric key, now switch to asymmetric key
                         generateEmbeddedSecretKey()
                     } else {
                         //return the generated SecretKey
-                        SymmetricKey(key.secretKey)
+                        SymmetricKey(it.secretKey)
                     }
                 }
 
                 //If the key is a PrivateKeyEntry, retrieve the SecretKey
-                is KeyStore.PrivateKeyEntry -> generateEmbeddedSecretKey(key.privateKey)
+                is KeyStore.PrivateKeyEntry -> {
+                    generateEmbeddedSecretKey(it.certificate.publicKey)
+                }
+
                 else -> throw IllegalStateException("KeyStore entry is not a SecretKeyEntry or PrivateKeyEntry")
             }
-        } else {
+        } ?: run {
             try {
                 SymmetricKey(generateAndroidKeyStoreSecretKey())
             } catch (e: Throwable) {
@@ -198,26 +201,29 @@ class SecretKeyEncryptor(block: SecretKeyEncryptorConfig.() -> Unit = {}) : Encr
     private suspend fun secretKey(encryptedData: ByteArray): SymmetricKey =
         withContext(Dispatchers.IO) {
             //Check if the key exists in the keystore
-            if (keyStore.containsAlias(config.keyAlias)) {
-                when (val key = keyStore.getEntry(config.keyAlias, null)) {
+            val key = keyStore.getEntry(config.keyAlias, null)
+            key?.let {
+                when (it) {
                     //If the key is a SecretKeyEntry, return the SecretKey
                     is KeyStore.SecretKeyEntry -> {
                         if (config.enforceAsymmetricKey) {
                             logger.w("SecretKey was generated in AndroidKeyStore, Enforcing asymmetric key is ignored.")
                         }
                         //return the generated SecretKey
-                        SymmetricKey(key.secretKey)
+                        SymmetricKey(it.secretKey)
                     }
 
                     //If the key is a PrivateKeyEntry, retrieve the SecretKey
-                    is KeyStore.PrivateKeyEntry -> getEmbeddedSecretKey(
-                        key.privateKey,
-                        encryptedData
-                    )
+                    is KeyStore.PrivateKeyEntry -> {
+                        getEmbeddedSecretKey(
+                            it.privateKey,
+                            encryptedData
+                        )
+                    }
 
                     else -> throw IllegalStateException("KeyStore entry is not a SecretKeyEntry or PrivateKeyEntry")
-                }
-            } else {
+               }
+            } ?: run {
                 throw IllegalStateException("SecretKey not found")
             }
         }
@@ -227,15 +233,19 @@ class SecretKeyEncryptor(block: SecretKeyEncryptorConfig.() -> Unit = {}) : Encr
      * If a private key is provided, it uses it to encrypt the secret key.
      * Otherwise, it generates a new asymmetric key pair in the Android keystore.
      *
-     * @param privateKey The private key used to encrypt the secret key. If null, a new key pair is generated.
+     * @param publicKey The private key used to encrypt the secret key. If null, a new key pair is generated.
      * @return The generated symmetric key.
      */
-    private fun generateEmbeddedSecretKey(privateKey: PrivateKey? = null): SymmetricKey {
-        privateKey ?: generateAndroidKeyStoreAsymmetricKey()
+    private fun generateEmbeddedSecretKey(publicKey: PublicKey? = null): SymmetricKey {
+
+        val key = publicKey ?: run {
+            generateAndroidKeyStoreAsymmetricKey()
+            keyStore.getCertificate(config.keyAlias).publicKey
+        }
         val cipher = Cipher.getInstance(RSA_ECB_OAEP_PADDING).apply {
             init(
                 Cipher.ENCRYPT_MODE,
-                keyStore.getCertificate(config.keyAlias).publicKey,
+                key,
                 OAEPParameterSpec(
                     "SHA-256",
                     "MGF1",
@@ -249,7 +259,6 @@ class SecretKeyEncryptor(block: SecretKeyEncryptorConfig.() -> Unit = {}) : Encr
 
         return SymmetricKey(secretKey, encryptedSecretKey.size.toByteArray() + encryptedSecretKey)
     }
-
 
     /**
      * Generates an asymmetric key pair in the Android keystore.
@@ -286,11 +295,10 @@ class SecretKeyEncryptor(block: SecretKeyEncryptorConfig.() -> Unit = {}) : Encr
         )
 
         keyPairGenerator.initialize(keyGenParameterSpec.build())
-        //Add in Level 28
         try {
             keyPairGenerator.generateKeyPair()
-        } catch (e: StrongBoxUnavailableException) {
-            //In case failed to use Strong Box, disable it.
+        } catch (e: Exception) {
+            //Retry again without strong box enabled, some platform may not response with StrongBoxUnavailableException
             logger.w("Strong Box unavailable, recover without strong box", e)
             keyGenParameterSpec.setIsStrongBoxBacked(false)
             keyPairGenerator.initialize(keyGenParameterSpec.build())
@@ -359,7 +367,6 @@ class SecretKeyEncryptor(block: SecretKeyEncryptorConfig.() -> Unit = {}) : Encr
             .setUserAuthenticationRequired(false)
             .setKeySize(config.symmetricKeySize)
 
-        //Add in Level 24
         specBuilder.setInvalidatedByBiometricEnrollment(config.invalidatedByBiometricEnrollment)
 
         //Allow access the data during screen lock
@@ -370,11 +377,10 @@ class SecretKeyEncryptor(block: SecretKeyEncryptorConfig.() -> Unit = {}) : Encr
         }
 
         keyGenerator.init(specBuilder.build())
-        //Add in Level 28
         try {
             return keyGenerator.generateKey()
-        } catch (e: StrongBoxUnavailableException) {
-            //In case failed to use Strong Box, disable it.
+        } catch (e: Exception) {
+            //Retry again without strong box enabled, some platform may not response with StrongBoxUnavailableException
             logger.w("Strong Box unavailable, recover without strong box", e)
             specBuilder.setIsStrongBoxBacked(false)
             keyGenerator.init(specBuilder.build())

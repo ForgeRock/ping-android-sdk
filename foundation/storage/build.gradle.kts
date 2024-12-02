@@ -33,7 +33,6 @@ dependencies {
     implementation(libs.androidx.datastore.core)
 
     compileOnly(libs.androidx.datastore.preferences) //Make it optional for developer
-    compileOnly(libs.androidx.security.crypto.ktx) //Make it optional for developer
 
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.serialization.json)
@@ -51,6 +50,5 @@ dependencies {
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.test.runner)
     androidTestImplementation(libs.androidx.datastore.preferences) //Make it optional for developer
-    androidTestImplementation(libs.androidx.security.crypto.ktx)
     androidTestImplementation(project(":foundation:testrail"))
 }
