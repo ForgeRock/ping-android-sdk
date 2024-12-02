@@ -1,17 +1,18 @@
 [![Build Status](https://github.com/ForgeRock/ping-android-sdk/actions/workflows/ci.yaml/badge.svg)](https://github.com/ForgeRock/ping-android-sdk/actions/workflows/ci.yaml)
 [![Coverage](https://codecov.io/gh/ForgeRock/unified-sdk-android/graph/badge.svg?token=1UYU8JMS8C)](https://codecov.io/gh/ForgeRock/unified-sdk-android)
 
-<div>
-  <picture>
-     <img src="https://www.pingidentity.com/content/dam/ping-6-2-assets/topnav-json-configs/Ping-Logo.svg" width="80" height="80"  alt=""/>
-  </picture>
-</div>
+<p align="center">
+  <a href="https://github.com/ForgeRock/ping-android-sdk">
+    <img src="https://www.pingidentity.com/content/dam/picr/nav/Ping-Logo-2.svg" alt="Logo">
+  </a>
+  <hr/>
+</p>
 
-Unified SDK is an SDK designed for creating Mobile Native Apps that seamlessly integrate with the PingOne platform.
+The Ping SDK for Android is designed for creating mobile native Apps that seamlessly integrate with the PingOne platform.
 It offers a range of APIs for user authentication, user device management, and accessing resources secured by PingOne.
 This SDK is support Browser, iOS and Android platforms.
 
-# Module
+# Modules
 
     ping 
     ├── foundation                            # Foundation module
@@ -38,12 +39,12 @@ This SDK is support Browser, iOS and Android platforms.
 
 ## Add dependency to your project
 
-The PingIdentity unified SDK project emphasizes modularity, allowing you to select and include only the necessary SDKs for your app instead of including the entire SDK.
+The Ping SDK for Android project emphasizes modularity, allowing you to select and include only the necessary SDKs for your app, instead of including the entire SDK.
 For example:
 
 ### Scenario 1:
 
-An application with Centralize Login
+An application with Centralized Login
 
 ```kotlin
 dependencies {
@@ -62,7 +63,7 @@ dependencies {
 }
 ```
 
-### Scenario 2:
+### Scenario 3:
 
 An Orchestrate authentication with Journey, and in the authentication journey, I would like to have Google Social Login,
 enable PingOne Protect and PingOne Verify
