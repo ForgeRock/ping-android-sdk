@@ -67,7 +67,7 @@ internal class Connector(
     private fun asJson(): JsonObject {
         return buildJsonObject {
             put("id", input["id"]?.jsonPrimitive?.content ?: "")
-            put("eventName", input["eventName"]?.jsonPrimitive?.content ?: "")
+            put("eventName", input["eventName"]?.jsonPrimitive?.content ?: "continue")
             put("parameters", buildJsonObject {
                 collectors.eventType()?.let {
                     put("eventType", it)

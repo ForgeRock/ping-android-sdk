@@ -39,6 +39,18 @@ internal object Form {
                 collectors.addAll(CollectorFactory.collector(array))
             }
         }
+
+        //Populate values for collectors
+        json["formData"]?.jsonObject?.let { formData ->
+            formData["value"]?.jsonObject?.let { value ->
+                collectors.filterIsInstance<FieldCollector>().forEach { collector ->
+                    value[collector.key]?.let {
+                        collector.init(it)
+                    }
+                }
+            }
+        }
+
         return collectors
     }
 

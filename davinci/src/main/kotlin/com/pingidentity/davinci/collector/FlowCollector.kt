@@ -8,11 +8,11 @@
 package com.pingidentity.davinci.collector
 
 /**
- * Class representing a FLOW_BUTTON Type.
+ * Class representing a FLOW_BUTTON, FLOW_LINK Type.
  *
  * This class inherits from the FieldCollector class and implements the Collector interface.
  * It is used to collect data in a flow.
  *
  * @constructor Creates a new FlowCollector with the given input.
  */
-class FlowCollector : FieldCollector()
+class FlowCollector : SingleValueCollector()
