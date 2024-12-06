@@ -49,7 +49,7 @@ class GoogleHandler(val davinci: DaVinci) : IdpHandler {
         }
 
         val response = davinci.config.httpClient.get(url) {
-            header("x-requested-with", "forgerock-sdk")
+            header("x-requested-with", "ping-sdk")
             header("Accept", "application/json")
         }
 

@@ -68,7 +68,7 @@ dependencies {
     implementation(composeBom)
 
     implementation(project(":davinci"))
-    //implementation("com.pingidentity.sdks:davinci:0.9.0-SNAPSHOT")
+    //implementation("com.pingidentity.sdks:davinci:0.9.2-SNAPSHOT")
 
     // Social Login
     implementation(project(":external-idp"))

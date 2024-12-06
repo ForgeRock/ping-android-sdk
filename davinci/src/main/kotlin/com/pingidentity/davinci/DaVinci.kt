@@ -19,7 +19,7 @@ private const val X_REQUESTED_WITH = "x-requested-with"
 private const val X_REQUESTED_PLATFORM = "x-requested-platform"
 
 // Constants for header values
-private const val FORGEROCK_SDK = "forgerock-sdk"
+private const val PING_SDK = "ping-sdk"
 private const val ANDROID = "android"
 
 class DaVinciConfig : WorkflowConfig()
@@ -47,7 +47,7 @@ fun DaVinci(block: DaVinciConfig.() -> Unit = {}): DaVinci {
     // Apply default
     config.apply {
         module(CustomHeader) {
-            header(X_REQUESTED_WITH, FORGEROCK_SDK)
+            header(X_REQUESTED_WITH, PING_SDK)
             header(X_REQUESTED_PLATFORM, ANDROID)
         }
         module(NodeTransform)
