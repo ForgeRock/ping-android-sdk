@@ -1,0 +1,99 @@
+#
+# Copyright (c) 2024 Ping Identity. All rights reserved.
+#
+# This software may be modified and distributed under the terms
+# of the MIT license. See the LICENSE file for details.
+#
+
+name: Build and Test
+on:
+  workflow_call:
+    inputs:
+      runs-on:
+        description: Platform to execute on
+        type: string
+        default: ubuntu-latest
+      testrail-run-id:
+        description: The TestRail run ID
+        type: string
+    secrets:
+      SLACK_WEBHOOK:
+        description: Slack Notifier Incoming Webhook
+        required: true
+      CODECOV_TOKEN:
+        description: Codecov token
+        required: true
+      TESTRAIL_USERNAME:
+        description: TestRail username
+        required: true
+      TESTRAIL_API_KEY:
+        description: TestRail API key
+        required: true
+jobs:
+  build-and-test:
+    runs-on: ${{ inputs.runs-on }}
+
+    steps:
+      # Clone the repo
+      - name: Clone the repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          repository: ${{github.event.pull_request.head.repo.full_name}}
+          fetch-depth: 0
+
+      # Setup JDK and cache and restore dependencies.
+      - name: Setup JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle'
+
+      # Execute all unit tests from all modules
+      - name: Execute unit tests
+        env:
+          TESTRAIL_ENABLE: ${{vars.TESTRAIL_ENABLE}}
+          TESTRAIL_DEBUG: ${{vars.TESTRAIL_DEBUG}}
+          TESTRAIL_URL: ${{vars.TESTRAIL_URL}}
+          TESTRAIL_PROJECT_ID: ${{vars.TESTRAIL_PROJECT_ID}}
+          TESTRAIL_RUN_ID: ${{inputs.testrail-run-id}}
+          TESTRAIL_USERNAME: ${{secrets.TESTRAIL_USERNAME}}
+          TESTRAIL_API_KEY: ${{secrets.TESTRAIL_API_KEY}}
+        run: |
+          ./gradlew --rerun-tasks testDebugUnitTestCoverage --stacktrace --no-daemon
+
+      # Publish test reports for the unit tests
+      - name: Publish test results
+        if: success() || failure()
+        uses: dorny/test-reporter@v1
+        with:
+          name: Unit tests results
+          path: '**/build/test-results/**/TEST-*.xml'
+          list-suites: 'all'
+          list-tests: 'all'
+          fail-on-error: 'true'
+          reporter: java-junit
+
+      # Collect all coverage report files
+      - name: Find all coverage report files from all modules
+        run: |
+          echo "COVERAGE_REPORTS=$(echo $(printf '%s,' $(find . | grep test-coverage.xml)))" >> $GITHUB_ENV
+
+      # Upload code coverage report to Codecov
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v4.5.0
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ${{ env.COVERAGE_REPORTS }}
+          flags: unit-tests
+
+      - uses: 8398a7/action-slack@v3
+        with:
+          mention: 'stoyan.petrov,andy.witrisna,jey.periyasamy'
+          if_mention: 'failure,cancelled'
+          fields: repo,author,eventName,message,job,pullRequest,took
+          status: ${{ job.status }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
+        if: always()

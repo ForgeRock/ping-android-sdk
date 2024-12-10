@@ -1,0 +1,82 @@
+# Documentation for all configuration options:
+# https://docs.github.com/github/administering-a-repository/configuration-options-for-dependency-updates
+
+version: 2
+updates:
+  - package-ecosystem: "gradle"
+    directory: "/davinci"
+    target-branch: "develop"
+    schedule:
+      interval: "daily"
+    labels:
+      - "library update"
+    assignees:
+      - "spetrov"
+    reviewers:
+      - "witrisna"
+      - "jeyanthanperiyasamy"
+
+  - package-ecosystem: "gradle"
+    directory: "/external-idp"
+    target-branch: "develop"
+    schedule:
+      interval: "daily"
+    labels:
+      - "library update"
+    assignees:
+      - "spetrov"
+    reviewers:
+      - "witrisna"
+      - "jeyanthanperiyasamy"
+
+  - package-ecosystem: "gradle"
+    directory: "/foundation/davinci-plugin"
+    target-branch: "develop"
+    schedule:
+      interval: "daily"
+    labels:
+      - "library update"
+    assignees:
+      - "spetrov"
+    reviewers:
+      - "witrisna"
+      - "jeyanthanperiyasamy"
+
+  - package-ecosystem: "gradle"
+    directory: "/foundation/oidc"
+    target-branch: "develop"
+    schedule:
+      interval: "daily"
+    labels:
+      - "library update"
+    assignees:
+      - "spetrov"
+    reviewers:
+      - "witrisna"
+      - "jeyanthanperiyasamy"
+
+  - package-ecosystem: "gradle"
+    directory: "/foundation/orchestrate"
+    target-branch: "develop"
+    schedule:
+      interval: "daily"
+    labels:
+      - "library update"
+    assignees:
+      - "spetrov"
+    reviewers:
+      - "witrisna"
+      - "jeyanthanperiyasamy"
+
+  - package-ecosystem: "gradle"
+    directory: "/foundation/storage"
+    target-branch: "develop"
+    schedule:
+      interval: "daily"
+    labels:
+      - "library update"
+    assignees:
+      - "spetrov"
+    reviewers:
+      - "witrisna"
+      - "jeyanthanperiyasamy"

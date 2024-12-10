@@ -1,0 +1,46 @@
+#
+# Copyright (c) 2024 Ping Identity. All rights reserved.
+#
+# This software may be modified and distributed under the terms
+# of the MIT license. See the LICENSE file for details.
+#
+
+name: 'Close stale PRs'
+on:
+  workflow_dispatch:
+  schedule:
+    # every day at 1:30 AM
+    - cron: '30 1 * * *'
+
+permissions:
+  issues: write
+  pull-requests: write
+
+jobs:
+  check-stale-prs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/stale@v9
+        with:
+          stale-pr-message: >
+            This PR has not been updated in the last 90 days and is being marked as
+            stale. It will be closed 60 days from now if it remains inactive. If you
+            are not actively working on this PR or don't anticipate that it can be
+            merged soon, please consider making it a draft or closing the PR and
+            reopening the PR (or a new PR) when it's once again ready for review.
+          close-pr-message: >
+            This PR has not seen any new activity in the last 150 days, so it has
+            been closed. This is an automated housekeeping operation and
+            your PR can still be updated at any time. Feel free to reopen it
+            (or a new PR) when it's ready for review!
+          # Note that the days-before-* parameters specify days of inactivity, not
+          # days since creation. A PR with recent comments or other changes will
+          # not be closed automatically.
+          days-before-stale: 90
+          days-before-close: 60
+          enable-statistics: true
+          close-pr-label: stale-closed
+          exempt-pr-labels: do-not-close,security
+          exempt-draft-pr: true
+          # allow more operations per run to handle large number of PRs
+          operations-per-run: 200

@@ -1,0 +1,49 @@
+#
+# Copyright (c) 2024 Ping Identity. All rights reserved.
+#
+# This software may be modified and distributed under the terms
+# of the MIT license. See the LICENSE file for details.
+#
+
+name: Create TestRail Run
+on:
+  workflow_call:
+    secrets:
+      TESTRAIL_USERNAME:
+        description: TestRail username
+        required: true
+      TESTRAIL_API_KEY:
+        description: TestRail API key
+        required: true
+    inputs:
+      testrail-run-name:
+        description: The name of the TestRail run
+        type: string
+        default: "PR #${{ github.event.number }} :: ${{ github.event.pull_request.title }} (${{github.event.pull_request.head.ref}})"
+    outputs:
+      testrail-run-id:
+        description: The newly created run id in TestRail
+        value: ${{jobs.create-testrail-run.outputs.testrail_run_id}}
+jobs:
+  create-testrail-run:
+    runs-on: ubuntu-latest
+    outputs:
+      testrail_run_id: ${{steps.testrail-run-id.outputs.testrail_run_id}}
+
+    steps:
+      # Crate a new TestRail run
+      - name: Create a new TestRail run
+        env:
+          TESTRAIL_URL: ${{vars.TESTRAIL_URL}}
+          TESTRAIL_PROJECT_ID: ${{vars.TESTRAIL_PROJECT_ID}}
+          TESTRAIL_RUN_NAME: ${{inputs.testrail-run-name}}
+          TESTRAIL_USERNAME: ${{secrets.TESTRAIL_USERNAME}}
+          TESTRAIL_API_KEY: ${{secrets.TESTRAIL_API_KEY}}
+        run: |
+          echo "TESTRAIL_RUN_ID=$(curl -H 'Content-Type: application/json' -u $TESTRAIL_USERNAME:$TESTRAIL_API_KEY $TESTRAIL_URL/index.php\?/api/v2/add_run/$TESTRAIL_PROJECT_ID --data "{\"name\":\"$TESTRAIL_RUN_NAME\", \"include_all\": true}" | jq '.id')"  >> $GITHUB_ENV
+
+      - name: Set the newly created testrail run id as output
+        id: testrail-run-id
+        run: |
+          echo "testrail_run_id=${{env.TESTRAIL_RUN_ID}}"
+          echo "testrail_run_id=${{env.TESTRAIL_RUN_ID}}" >> "$GITHUB_OUTPUT"

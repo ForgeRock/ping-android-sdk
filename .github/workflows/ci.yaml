@@ -1,0 +1,66 @@
+#
+# Copyright (c) 2024 Ping Identity. All rights reserved.
+#
+# This software may be modified and distributed under the terms
+# of the MIT license. See the LICENSE file for details.
+#
+
+name: CI
+
+# Trigger on push or pull request
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, edited]
+
+  push:
+    branches:
+      - master
+      - develop
+
+permissions: write-all
+jobs:
+  # Create TestRail run
+  create-testrail-run:
+      name: Create TestRail Run
+      uses: ./.github/workflows/create-testrail-run.yaml
+      secrets:
+        TESTRAIL_USERNAME: ${{ secrets.TESTRAIL_USERNAME }}
+        TESTRAIL_API_KEY: ${{ secrets.TESTRAIL_API_KEY }}
+
+  # Build and run unit tests
+  build-and-test:
+    name: Build and test
+    uses: ./.github/workflows/build-and-test.yaml
+    needs: create-testrail-run
+    secrets:
+      SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+      TESTRAIL_USERNAME: ${{ secrets.TESTRAIL_USERNAME }}
+      TESTRAIL_API_KEY: ${{ secrets.TESTRAIL_API_KEY }}
+    with:
+      runs-on: ubuntu-latest
+      testrail-run-id: ${{needs.create-testrail-run.outputs.testrail-run-id}}
+
+  # Run integration tests on emulators
+  integration-tests:
+    name: Integration tests
+    uses: ./.github/workflows/integration-tests.yaml
+    if: ${{ vars.ENABLE_INTEGRATION_TESTS == 'true' }}
+    needs: create-testrail-run
+    secrets:
+      SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+      TESTRAIL_USERNAME: ${{ secrets.TESTRAIL_USERNAME }}
+      TESTRAIL_API_KEY: ${{ secrets.TESTRAIL_API_KEY }}
+    with:
+      runs-on: ubuntu-latest
+      testrail-run-id: ${{needs.create-testrail-run.outputs.testrail-run-id}}
+
+  # Run Mend CLI Scan
+  mend-cli-scan:
+    name: Mend CLI Scan
+    uses: ./.github/workflows/mend-cli-scan.yaml
+    secrets:
+      MEND_EMAIL: ${{ secrets.MEND_EMAIL }}
+      MEND_USER_KEY: ${{ secrets.MEND_USER_KEY }}
+      SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
