@@ -5,6 +5,8 @@
   <hr/>
 </p>
 
+# This Module is currently under development, do not apply this module directly to your project.
+
 `oidc` module provides OIDC client for PingOne and ForgeRock platform.
 
 The `oidc` module follows the [OIDC](https://openid.net/specs/openid-connect-core-1_0.html) specification and
@@ -33,9 +35,9 @@ to receive the redirect from the browser.
 ```xml
 
 <activity
-        android:name="net.openid.appauth.RedirectUriReceiverActivity"
-        android:exported="true"
-        tools:node="replace">
+    android:name="net.openid.appauth.RedirectUriReceiverActivity"
+    android:exported="true"
+    tools:node="replace">
     <intent-filter>
         <action android:name="android.intent.action.VIEW"/>
 
@@ -55,7 +57,7 @@ Basic Configuration, use `discoveryEndpoint` to lookup OIDC endpoints
 ```kotlin
 val ping = OidcClient {
     discoveryEndpoint =
-            "https://auth.pingone.ca/02fb4743-189a-4bc7-9d6c-a919edfe6447/as/.well-known/openid-configuration"
+        "https://auth.pingone.ca/02fb4743-189a-4bc7-9d6c-a919edfe6447/as/.well-known/openid-configuration"
     clientId = "c12743f9-08e8-4420-a624-71bbb08e9fe1"
     redirectUri = "org.forgerock.demo://oauth2redirect"
     scopes = mutableSetOf("openid", "email", "address", "profile", "phone")
@@ -116,7 +118,7 @@ the [customTab property](https://developer.android.com/reference/androidx/browse
 val ping = OidcClient {
 
     agent(browser) {
-        
+
         // Customize the CustomTab
         customTab = {
             setColorScheme(CustomTabsIntent.COLOR_SCHEME_DARK)
