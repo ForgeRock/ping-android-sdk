@@ -9,7 +9,6 @@ package com.pingidentity.samples.app
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.pingidentity.samples.app.centralize.oidcClient
 import kotlinx.coroutines.launch
 
 class LogoutViewModel : ViewModel() {
