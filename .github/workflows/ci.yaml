@@ -56,6 +56,44 @@ jobs:
       runs-on: ubuntu-latest
       testrail-run-id: ${{needs.create-testrail-run.outputs.testrail-run-id}}
 
+  # Build and sign BitBar test artifacts (app-debug-androidTest-signed.apk and davinci-debug-androidTest-signed.apk)
+  # Skip this step for PRs created by dependabot
+  bitbar-prepare-artifacts:
+    name: Prepare device farm artifacts
+    uses: ./.github/workflows/bitbar-prepare-artifacts.yaml
+    if: ${{ github.actor != 'dependabot[bot]' }}
+    needs: build-and-test
+    secrets:
+      SIGNING_KEYSTORE: ${{ secrets.SIGNING_KEYSTORE }}
+      SIGNING_ALIAS: ${{ secrets.SIGNING_ALIAS }}
+      SIGNING_KEYSTORE_PASSWORD: ${{ secrets.SIGNING_KEYSTORE_PASSWORD }}
+      SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
+      SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+
+  # Execute e2e test cases in BitBar. The workflow outputs the newly created run id.
+  bitbar-run:
+    name: Run tests in BitBar
+    uses: ./.github/workflows/bitbar-run.yaml
+    needs: bitbar-prepare-artifacts
+    secrets:
+      BITBAR_API_KEY: ${{ secrets.BITBAR_API_KEY }}
+      SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+    with:
+      bitbar-project-id: ${{ vars.BITBAR_PROJECT_ID }}
+      bitbar-device-group-id: ${{ vars.BITBAR_DEVICE_GROUP_ID }}
+
+  # Wait for BitBar test run to finish and publish results
+  bitbar-results:
+    name: BitBar test results
+    uses: ./.github/workflows/bitbar-results.yaml
+    needs: bitbar-run
+    secrets:
+      BITBAR_API_KEY: ${{ secrets.BITBAR_API_KEY }}
+      SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+    with:
+      bitbar-project-id: ${{ vars.BITBAR_PROJECT_ID }} 
+      bitbar-run-id: ${{ needs.bitbar-run.outputs.bitbar-run-id }}
+
   # Run Mend CLI Scan
   mend-cli-scan:
     name: Mend CLI Scan
