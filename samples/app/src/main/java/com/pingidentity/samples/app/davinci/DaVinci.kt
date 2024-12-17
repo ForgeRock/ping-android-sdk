@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Ping Identity. All rights reserved.
+ * Copyright (c) 2024 - 2025 Ping Identity. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -9,6 +9,7 @@ package com.pingidentity.samples.app.davinci
 
 import android.util.Log
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -33,17 +34,22 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.pingidentity.davinci.module.details
 import com.pingidentity.orchestrate.ContinueNode
 import com.pingidentity.orchestrate.ErrorNode
 import com.pingidentity.orchestrate.FailureNode
 import com.pingidentity.orchestrate.SuccessNode
+import com.pingidentity.samples.app.Alert
 import com.pingidentity.samples.app.R
 import com.pingidentity.samples.app.davinci.collector.ContinueNode
 
@@ -178,6 +184,14 @@ fun Render(node: FailureNode) {
 
 @Composable
 fun Render(node: ErrorNode) {
+    var showAlert by remember { mutableStateOf(false) }
+
+    if (showAlert) {
+        Alert(node) {
+            showAlert = false
+        }
+    }
+
     Row(
         modifier =
         Modifier
@@ -192,7 +206,10 @@ fun Render(node: ErrorNode) {
             modifier =
             Modifier
                 .fillMaxWidth()
-                .padding(8.dp),
+                .padding(8.dp)
+                .clickable {
+                    showAlert = true
+                },
             shape = MaterialTheme.shapes.medium,
         ) {
             Row(
