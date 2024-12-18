@@ -9,6 +9,7 @@ package com.pingidentity.davinci.plugin
 
 import com.pingidentity.orchestrate.Action
 import com.pingidentity.orchestrate.ContinueNode
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 
 /**
@@ -22,6 +23,14 @@ interface Collector : Action {
      * @param input The JsonObject used to initialize the Collector.
      */
     fun init(input: JsonObject)
+
+    /**
+     * Initializes the default values of the Collector with the given input.
+     * The formData.value.{key} is used to lookup the default value.
+     */
+    fun init(input: JsonElement) {
+        //Default implementation for init with JsonElement
+    }
 }
 
 /**
