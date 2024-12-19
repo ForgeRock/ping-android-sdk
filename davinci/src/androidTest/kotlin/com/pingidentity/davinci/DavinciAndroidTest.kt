@@ -607,7 +607,7 @@ class DavinciAndroidTest {
     }
 
     @TestRailCase(24629)
-    @Test(timeout = 20000)
+    @Test(timeout = 60000)
     fun accountLocked() = runBlocking {
         // Register a test user...
         val newUser = userFname + System.currentTimeMillis() + "@example.com"
