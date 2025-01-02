@@ -58,7 +58,11 @@ fun SocialLoginButton(
                     .wrapContentWidth(Alignment.CenterHorizontally),
                 onClick = {
                     coroutineScope.launch {
-                        val result = idpCollector.authorize()
+                        val result = idpCollector.authorize {
+                            setShowTitle(false)
+                            setColorScheme(CustomTabsIntent.COLOR_SCHEME_DARK)
+                            setUrlBarHidingEnabled(true)
+                        }
                         result.onSuccess {
                             onNext()
                         }

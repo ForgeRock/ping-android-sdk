@@ -5,11 +5,12 @@
  * of the MIT license. See the LICENSE file for details.
  */
 
-package com.pingidentity.idp.journey
+package com.pingidentity.idp
 
 data class IdpClient(
-    val clientId: String,
-    val redirectUri: String,
-    val scopes: List<String>,
-    val nonce: String
+    val clientId: String? = null,
+    val redirectUri: String? = null,
+    val scopes: List<String> = emptyList(),
+    val nonce: String? = null,
+    val continueUrl: String? = null
 )

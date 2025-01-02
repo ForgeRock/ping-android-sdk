@@ -8,21 +8,25 @@
 package com.pingidentity.idp.journey
 
 import android.net.Uri
+import com.pingidentity.idp.IdpClient
+import com.pingidentity.idp.IdpHandler
+import com.pingidentity.idp.IdpResult
 import com.pingidentity.idp.browser.BrowserLauncherActivity
 import java.net.URL
 
-class AppleHandler : IdpHandler {
+internal class AppleHandler : IdpHandler {
+
     override var tokenType: String = "authorization_code"
 
-    override suspend fun authorize(client: IdpClient): IdpResult {
+    override suspend fun authorize(idpClient: IdpClient): IdpResult {
         val request = Uri.parse("https://appleid.apple.com/auth/authorize")
             .buildUpon()
-            .appendQueryParameter("client_id", client.clientId)
-            .appendQueryParameter("redirect_uri", client.redirectUri)
+            .appendQueryParameter("client_id", idpClient.clientId)
+            .appendQueryParameter("redirect_uri", idpClient.redirectUri)
             .appendQueryParameter("response_mode", "form_post")
             .appendQueryParameter("response_type", "code")
-            .appendQueryParameter("scope", client.scopes.joinToString(" "))
-            .appendQueryParameter("nonce", client.nonce)
+            .appendQueryParameter("scope", idpClient.scopes.joinToString(" "))
+            .appendQueryParameter("nonce", idpClient.nonce)
             .build()
 
         val result = BrowserLauncherActivity.launch(URL(request.toString()))

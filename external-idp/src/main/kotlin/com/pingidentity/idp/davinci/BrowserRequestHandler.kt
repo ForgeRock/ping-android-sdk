@@ -9,7 +9,6 @@ package com.pingidentity.idp.davinci
 
 import androidx.browser.customtabs.CustomTabsIntent
 import com.pingidentity.idp.browser.BrowserLauncherActivity
-import com.pingidentity.idp.browser.CustomTabActivity
 import com.pingidentity.orchestrate.ContinueNode
 import com.pingidentity.orchestrate.Request
 import kotlinx.serialization.json.jsonObject
@@ -22,10 +21,10 @@ import java.net.URL
  * @property customizer A lambda function to customize the CustomTabsIntent.Builder.
  * @property continueNode The continue node for the DaVinci flow.
  */
-class BrowserHandler(
+internal class BrowserRequestHandler(
     private val continueNode: ContinueNode,
     private val customizer: CustomTabsIntent.Builder.() -> Unit = {},
-) : IdpHandler {
+) : IdpRequestHandler {
 
     /**
      * Authorizes a user by making a request to the given URL.
@@ -48,7 +47,7 @@ class BrowserHandler(
                 val continueToken = result.getOrThrow().toString()
                     .substringAfter("continueToken=").substringBefore("&")
                 url(continueUrl)
-                header("Authorization", "Bearer ${continueToken}")
+                header("Authorization", "Bearer $continueToken")
                 body()
             }
         } else {

@@ -1,11 +1,11 @@
 /*
- * Copyright (c) 2024 PingIdentity. All rights reserved.
+ * Copyright (c) 2024 - 2024 Ping Identity. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
  */
 
-package com.pingidentity.idp.journey
+package com.pingidentity.idp
 
 import androidx.credentials.CredentialManager
 import androidx.credentials.CustomCredential
@@ -14,13 +14,25 @@ import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.pingidentity.android.ContextProvider
 
-class GoogleHandler : IdpHandler {
+internal class GoogleHandler : IdpHandler {
     override var tokenType: String = "id_token"
+    override suspend fun authorize(idpClient: IdpClient): IdpResult {
+        try {
+            Class.forName("com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption")
+        } catch (e: ClassNotFoundException) {
+            throw UnsupportedIdPException("Google SDK is not available.")
+        }
 
-    override suspend fun authorize(client: IdpClient): IdpResult {
+        if (idpClient.clientId == null) {
+            throw IllegalArgumentException("Client ID is required.")
+        }
+        if (idpClient.nonce == null) {
+            throw IllegalArgumentException("Nonce is required.")
+        }
+
         val signInWithGoogleOption: GetSignInWithGoogleOption =
-            GetSignInWithGoogleOption.Builder(client.clientId)
-                .setNonce(client.nonce)
+            GetSignInWithGoogleOption.Builder(idpClient.clientId)
+                .setNonce(idpClient.nonce)
                 .build()
 
         val request: GetCredentialRequest = GetCredentialRequest.Builder()

@@ -5,6 +5,6 @@
  * of the MIT license. See the LICENSE file for details.
  */
 
-package com.pingidentity.idp.journey
+package com.pingidentity.idp
 
 data class IdpResult(val token: String, val additionalParameters: Map<String, String> = emptyMap())
