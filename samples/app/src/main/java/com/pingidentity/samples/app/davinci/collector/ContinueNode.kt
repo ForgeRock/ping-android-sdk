@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 PingIdentity. All rights reserved.
+ * Copyright (c) 2024 - 2025 Ping Identity. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -23,7 +23,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.pingidentity.davinci.collector.FlowCollector
+import com.pingidentity.davinci.collector.LabelCollector
+import com.pingidentity.davinci.collector.MultiSelectCollector
 import com.pingidentity.davinci.collector.PasswordCollector
+import com.pingidentity.davinci.collector.SingleSelectCollector
 import com.pingidentity.davinci.collector.SubmitCollector
 import com.pingidentity.davinci.collector.TextCollector
 import com.pingidentity.davinci.module.description
@@ -95,6 +98,23 @@ fun ContinueNode(
                 }
 
                 is TextCollector -> Text(it, onNodeUpdated)
+
+                is LabelCollector -> Label(it)
+
+                is MultiSelectCollector -> {
+                    if (it.type == "COMBOBOX") {
+                        ComboBox(it, onNodeUpdated)
+                    } else {
+                        CheckBox(it, onNodeUpdated)
+                    }
+                }
+                is SingleSelectCollector -> {
+                    if (it.type == "DROPDOWN") {
+                        Dropdown(it, onNodeUpdated)
+                    } else {
+                        Radio(it, onNodeUpdated)
+                    }
+                }
 
                 is IdpCollector -> SocialLoginButton(it, onStart, onNext)
             }
