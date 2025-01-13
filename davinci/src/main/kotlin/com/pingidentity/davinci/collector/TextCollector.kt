@@ -15,4 +15,4 @@ package com.pingidentity.davinci.collector
  *
  * @constructor Creates a new TextCollector.
  */
-class TextCollector : ValidatedCollector()
+class TextCollector : FieldCollector()

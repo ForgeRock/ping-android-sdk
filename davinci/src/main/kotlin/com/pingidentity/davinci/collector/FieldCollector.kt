@@ -14,28 +14,23 @@ import kotlinx.serialization.json.jsonPrimitive
 /**
  * Abstract class representing a fields from the form.
  *
- * @property type The type of the field collector.
  * @property key The key of the field collector.
  * @property label The label of the field collector.
+ * @property value The value of the field collector.
  *
  */
 abstract class FieldCollector : Collector {
-    var type = ""
-        private set
     var key = ""
-        private set
     var label = ""
-        private set
+    open var value: String = ""
 
     /**
      * Function to initialize the field collector.
      * @param input The input JSON object to parse.
      */
     override fun init(input: JsonObject) {
-        type = input["type"]?.jsonPrimitive?.content ?: ""
         key = input["key"]?.jsonPrimitive?.content ?: ""
         label = input["label"]?.jsonPrimitive?.content ?: ""
+
     }
 }
-
-data class Validation(val regex: Regex, val errorMessage: String)

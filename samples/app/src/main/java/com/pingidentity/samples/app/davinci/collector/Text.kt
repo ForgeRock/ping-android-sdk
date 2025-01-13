@@ -12,36 +12,24 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentWidth
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.pingidentity.davinci.collector.TextCollector
-import com.pingidentity.utils.Result
 
 @Composable
 fun Text(
     field: TextCollector,
     onNodeUpdated: () -> Unit,
 ) {
-
-    var isValid by remember {
-        mutableStateOf(false)
-    }
-
     Row(
         modifier =
         Modifier
             .padding(4.dp)
             .fillMaxWidth(),
     ) {
-
         // var text by rememberSaveable { mutableStateOf("") }
 
         Spacer(modifier = Modifier.weight(1f, true))
@@ -52,19 +40,9 @@ fun Text(
             onValueChange = { value ->
                 // text = value
                 field.value = value
-                isValid = field.validate().isEmpty()
                 onNodeUpdated()
             },
-            isError = !isValid,
-            supportingText = if (!isValid) {
-                @Composable {
-                    ErrorMessage(field.validate())
-                }
-            } else null,
-            label = {
-                androidx.compose.material3.Text(
-                text = if (field.required) "${field.label}*" else field.label
-            ) }
+            label = { androidx.compose.material3.Text(field.label) },
         )
         Spacer(modifier = Modifier.weight(1f, true))
     }

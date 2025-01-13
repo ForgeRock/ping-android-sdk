@@ -5,9 +5,8 @@
  * of the MIT license. See the LICENSE file for details.
  */
 
-import com.pingidentity.davinci.collector.FieldCollector
-import com.pingidentity.davinci.collector.SingleValueCollector
 import com.pingidentity.testrail.TestRailCase
+import com.pingidentity.davinci.collector.FieldCollector
 import com.pingidentity.testrail.TestRailWatcher
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -26,14 +25,12 @@ class FieldCollectorTest {
     fun `should initialize key and label from JsonObject`() {
         val fieldCollector = object : FieldCollector() {}
         val jsonObject = buildJsonObject {
-            put("type", "testType")
             put("key", "testKey")
             put("label", "testLabel")
         }
 
         fieldCollector.init(jsonObject)
 
-        assertEquals("testType", fieldCollector.type)
         assertEquals("testKey", fieldCollector.key)
         assertEquals("testLabel", fieldCollector.label)
     }
@@ -41,7 +38,7 @@ class FieldCollectorTest {
     @TestRailCase(21281)
     @Test
     fun `should return value when value is set`() {
-        val fieldCollector = object : SingleValueCollector() {}
+        val fieldCollector = object : FieldCollector() {}
         fieldCollector.value = "test"
         assertEquals("test", fieldCollector.value)
     }

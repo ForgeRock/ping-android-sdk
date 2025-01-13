@@ -8,15 +8,12 @@
 import com.pingidentity.davinci.collector.FlowCollector
 import com.pingidentity.testrail.TestRailCase
 import com.pingidentity.testrail.TestRailWatcher
-import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
+import org.junit.Test
 import org.junit.Assert.*
 import org.junit.Rule
 import org.junit.rules.TestWatcher
-import kotlin.test.Test
-import kotlin.test.assertEquals
 
 class FlowCollectorTest {
 
@@ -38,14 +35,12 @@ class FlowCollectorTest {
         val jsonObject = buildJsonObject {
             put("key", "testKey")
             put("label", "testLabel")
-            put("type", "testType")
         }
 
         flowCollector.init(jsonObject)
 
-        assertEquals("testKey", flowCollector.key)
-        assertEquals("testLabel", flowCollector.label)
-        assertEquals("testType", flowCollector.type)
+        kotlin.test.assertEquals("testKey", flowCollector.key)
+        kotlin.test.assertEquals("testLabel", flowCollector.label)
     }
 
     @TestRailCase(22147)
@@ -53,24 +48,6 @@ class FlowCollectorTest {
     fun `should return value when value is set`() {
         val flowCollector = FlowCollector()
         flowCollector.value = "test"
-        assertEquals("test", flowCollector.value)
+        kotlin.test.assertEquals("test", flowCollector.value)
     }
-
-    @Test
-    fun `should initialize default value`() {
-        val flowCollector = FlowCollector()
-        val jsonObject = buildJsonObject {
-            put("key", "testKey")
-            put("label", "testLabel")
-            put("type", "testType")
-        }
-
-        flowCollector.init(jsonObject)
-
-        assertEquals("testKey", flowCollector.key)
-        assertEquals("testLabel", flowCollector.label)
-        assertEquals("testType", flowCollector.type)
-    }
-
-
 }

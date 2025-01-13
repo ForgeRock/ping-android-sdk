@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentWidth
-import androidx.compose.material3.Button
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -31,33 +30,17 @@ fun FlowButton(
             .fillMaxWidth(),
     ) {
         field.value = ""
-        if (field.type == "FLOW_LINK") {
-            TextButton(
-                modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .wrapContentWidth(Alignment.CenterHorizontally),
-                onClick = {
-                    field.value = "action"
-                    onNext()
-                },
-            ) {
-                androidx.compose.material3.Text(field.label)
-            }
-        } else {
-           Button(
-                modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .wrapContentWidth(Alignment.CenterHorizontally),
-                onClick = {
-                    field.value = "action"
-                    onNext()
-                },
-            ) {
-                androidx.compose.material3.Text(field.label)
-            }
-
+        TextButton(
+            modifier =
+            Modifier
+                .fillMaxWidth()
+                .wrapContentWidth(Alignment.CenterHorizontally),
+            onClick = {
+                field.value = "action"
+                onNext()
+            },
+        ) {
+            androidx.compose.material3.Text(field.label)
         }
     }
 }

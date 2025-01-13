@@ -15,8 +15,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import com.pingidentity.davinci.module.details
-import com.pingidentity.orchestrate.ErrorNode
 
 @Composable
 fun Alert(throwable: Throwable) {
@@ -35,45 +33,6 @@ fun Alert(throwable: Throwable) {
             },
             text = {
                 Text(text = throwable.toString())
-            }
-        )
-    }
-}
-
-@Composable
-fun Alert(node: ErrorNode, onDismissRequest: () -> Unit) {
-    var showConfirmation by remember {
-        mutableStateOf(true)
-    }
-
-    var error = ""
-    node.details().forEach {
-        it.rawResponse.let { rawResponse ->
-            rawResponse.details?.forEach { detail ->
-                error += ("${detail.message}\n\n")
-                detail.innerError?.errors?.forEach { (key, value) ->
-                    error += ("$key: $value\n\n")
-                }
-            }
-        }
-    }
-
-    if (showConfirmation) {
-        AlertDialog(
-            onDismissRequest = {
-                showConfirmation = false
-                onDismissRequest()
-            },
-            confirmButton = {},
-            dismissButton = {
-                TextButton(onClick = {
-                    showConfirmation = false
-                    onDismissRequest()
-                })
-                { Text(text = "Ok") }
-            },
-            text = {
-                Text(text = error)
             }
         )
     }

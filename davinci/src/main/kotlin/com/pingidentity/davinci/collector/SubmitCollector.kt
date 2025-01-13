@@ -15,4 +15,4 @@ package com.pingidentity.davinci.collector
  *
  * @constructor Creates a new SubmitCollector.
  */
-class SubmitCollector : SingleValueCollector()
+class SubmitCollector : FieldCollector()

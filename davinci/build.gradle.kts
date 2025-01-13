@@ -11,7 +11,6 @@ plugins {
     id("com.pingidentity.convention.jacoco")
     alias(libs.plugins.androidLibrary)
     alias(libs.plugins.kotlinAndroid)
-    alias(libs.plugins.kotlinSerialization)
 }
 
 description = "DaVinci library"
@@ -50,7 +49,6 @@ dependencies {
 
     testImplementation(project(":foundation:testrail"))
     testImplementation(libs.kotlin.test)
-    testImplementation(libs.mockk)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.ktor.client.mock)
 
