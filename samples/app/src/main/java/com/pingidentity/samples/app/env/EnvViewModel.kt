@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Ping Identity. All rights reserved.
+ * Copyright (c) 2024 - 2025 Ping Identity. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -33,9 +33,9 @@ val test by lazy {
         timeout = 30
         logger = Logger.STANDARD
         module(Oidc) {
-            clientId = "3172d977-8fdc-4e8b-b3c5-4f3a34cb7262"
+            clientId = "dummy"
             discoveryEndpoint =
-                "https://auth.test-one-pingone.com/0c6851ed-0f12-4c9a-a174-9b1bf8b438ae/as/.well-known/openid-configuration"
+                "https://auth.test-one-pingone.com/dummy/as/.well-known/openid-configuration"
             scopes = mutableSetOf("openid", "email", "address")
             redirectUri = "org.forgerock.demo://oauth2redirect"
         }
@@ -46,9 +46,9 @@ val prod by lazy {
     DaVinci {
         logger = Logger.STANDARD
         module(Oidc) {
-            clientId = "c12743f9-08e8-4420-a624-71bbb08e9fe1"
+            clientId = "dummy"
             discoveryEndpoint =
-                "https://auth.pingone.ca/02fb4743-189a-4bc7-9d6c-a919edfe6447/as/.well-known/openid-configuration"
+                "https://auth.pingone.ca/dummy/as/.well-known/openid-configuration"
             scopes = mutableSetOf("openid", "email", "address", "phone", "profile")
             redirectUri = "org.forgerock.demo://oauth2redirect"
         }
@@ -59,9 +59,9 @@ val social by lazy {
     DaVinci {
         logger = Logger.STANDARD
         module(Oidc) {
-            clientId = "9c7767b5-3a9d-4e9c-9d65-9fc77ccfd284"
+            clientId = "dummy"
             discoveryEndpoint =
-                "https://auth.pingone.com/c2a669c0-c396-4544-994d-9c6eb3fb1602/as/.well-known/openid-configuration"
+                "https://auth.pingone.com/dummy/as/.well-known/openid-configuration"
             scopes = mutableSetOf("openid", "email", "address")
             redirectUri = "com.pingidentity.demo://oauth2redirect"
         }
