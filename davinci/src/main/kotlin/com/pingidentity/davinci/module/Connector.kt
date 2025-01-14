@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Ping Identity. All rights reserved.
+ * Copyright (c) 2024 - 2025 Ping Identity. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -67,7 +67,7 @@ internal class Connector(
     private fun asJson(): JsonObject {
         return buildJsonObject {
             put("id", input["id"]?.jsonPrimitive?.content ?: "")
-            put("eventName", input["eventName"]?.jsonPrimitive?.content ?: "")
+            put("eventName", input["eventName"]?.jsonPrimitive?.content ?: "continue")
             put("parameters", buildJsonObject {
                 collectors.eventType()?.let {
                     put("eventType", it)

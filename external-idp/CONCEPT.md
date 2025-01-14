@@ -140,6 +140,7 @@ sequenceDiagram
         BrowserRequestHandler ->> IdpCollector: Request(Authorization with Bearer ${ContinueToken})
         IdpCollector ->> Developer: Success
         Developer ->> ContinueNode: next()
+        ContinueNode ->> ContinueNode: asRequest()
     else Result is Failure
         BrowserRequestHandler ->> IdpCollector: Failure
         IdpCollector ->> Developer: Failure

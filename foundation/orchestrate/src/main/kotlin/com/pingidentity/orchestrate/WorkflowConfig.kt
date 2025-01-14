@@ -41,10 +41,6 @@ open class WorkflowConfig {
 
     // Logger for the log, default is None
     var logger = Logger.logger
-        set(value) {
-            field = value
-            Logger.logger = value
-        }
 
     // HTTP client for the engine
     lateinit var httpClient: HttpClient

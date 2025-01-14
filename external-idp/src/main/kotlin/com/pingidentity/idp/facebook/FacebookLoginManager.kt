@@ -21,7 +21,7 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
 /**
- * An object for managing Facebook callback registration and unregistration.
+ * An object for managing Facebook callback registration and de-register.
  */
 internal object FacebookLoginManager {
     var callbackManager: CallbackManager? = null
@@ -38,7 +38,7 @@ internal object FacebookLoginManager {
     /**
      * Unregisters the current callback manager.
      */
-    fun unregister() {
+    fun deregister() {
         callbackManager?.let {
             LoginManager.getInstance().unregisterCallback(it)
         }

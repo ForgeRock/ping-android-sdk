@@ -30,7 +30,6 @@ class FacebookActivity : ComponentActivity() {
         // Retrieve the scopes from the intent
         val scopes = intent.getStringArrayListExtra(EXTRA_SCOPES) ?: listOf("public_profile", "email")
 
-
         val launcher = registerForActivityResult(
             LoginManager.getInstance()
                 .createLogInActivityResultContract(FacebookLoginManager.callbackManager)
@@ -46,7 +45,7 @@ class FacebookActivity : ComponentActivity() {
      */
     override fun onDestroy() {
         super.onDestroy()
-        FacebookLoginManager.unregister()
+        FacebookLoginManager.deregister()
     }
 
     companion object {

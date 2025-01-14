@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Ping Identity. All rights reserved.
+ * Copyright (c) 2024 - 2025 Ping Identity. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -7,9 +7,11 @@
 
 package com.pingidentity.davinci
 
-import com.pingidentity.testrail.TestRailCase
-import com.pingidentity.utils.Result
+import com.pingidentity.davinci.collector.FlowCollector
+import com.pingidentity.davinci.collector.LabelCollector
+import com.pingidentity.davinci.collector.MultiSelectCollector
 import com.pingidentity.davinci.collector.PasswordCollector
+import com.pingidentity.davinci.collector.SingleSelectCollector
 import com.pingidentity.davinci.collector.SubmitCollector
 import com.pingidentity.davinci.collector.TextCollector
 import com.pingidentity.davinci.module.NodeTransform
@@ -28,7 +30,10 @@ import com.pingidentity.orchestrate.module.Cookie
 import com.pingidentity.orchestrate.module.Cookies
 import com.pingidentity.orchestrate.module.CustomHeader
 import com.pingidentity.storage.MemoryStorage
+import com.pingidentity.test.readFile
+import com.pingidentity.testrail.TestRailCase
 import com.pingidentity.testrail.TestRailWatcher
+import com.pingidentity.utils.Result
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
@@ -330,4 +335,124 @@ class DaVinciTest {
             } ?: throw Exception("User is null")
 
         }
+
+    @Test
+    fun `DaVinci collectors parsing`() = runTest {
+        mockEngine =
+            MockEngine { request ->
+                when (request.url.encodedPath) {
+                    "/.well-known/openid-configuration" -> {
+                        respond(openIdConfigurationResponse(), HttpStatusCode.OK, headers)
+                    }
+
+                    "/authorize" -> {
+                        respond(ByteReadChannel(readFile("ResponseWithBasicType.json")), HttpStatusCode.OK, authorizeResponseHeaders)
+                    }
+
+                    else -> {
+                        return@MockEngine respond(
+                            content =
+                            ByteReadChannel(""),
+                            status = HttpStatusCode.InternalServerError,
+                        )
+                    }
+                }
+            }
+        val daVinci = DaVinci {
+            httpClient = HttpClient(mockEngine)
+            // Oidc as module
+            module(Oidc) {
+                clientId = "test"
+                discoveryEndpoint =
+                    "http://localhost/.well-known/openid-configuration"
+                scopes = mutableSetOf("openid", "email", "address")
+                redirectUri = "http://localhost:8080"
+                storage = MemoryStorage()
+            }
+            module(Cookie) {
+                storage = MemoryStorage()
+                persist = mutableListOf("ST")
+            }
+        }
+
+        val node = daVinci.start() // Return first Node
+        assertTrue(node is ContinueNode)
+        assertEquals(11, node.collectors.size)
+
+        (node.collectors[0] as? LabelCollector)?.content?.let { assertEquals("Sign On", it) }
+        (node.collectors[1] as? LabelCollector)?.content?.let { assertEquals("Welcome to Ping Identity", it) }
+
+        (node.collectors[2] as? TextCollector)?.let {
+            assertEquals("TEXT", it.type)
+            assertEquals("user.username", it.key)
+            assertEquals("Username", it.label)
+            assertEquals(true, it.required)
+            assertEquals("^[^@]+@[^@]+\\.[^@]+\$", it.validation!!.regex.pattern)
+            assertEquals("Must be valid email address", it.validation!!.errorMessage)
+            assertEquals("default-username", it.value)
+        }
+
+        (node.collectors[3] as? PasswordCollector)?.let {
+            assertEquals("PASSWORD", it.type)
+            assertEquals("password", it.key)
+            assertEquals("Password", it.label)
+            assertEquals(true, it.required)
+            assertEquals("default-password", it.value)
+        }
+
+        (node.collectors[4] as? SubmitCollector)?.let {
+            assertEquals("SUBMIT_BUTTON", it.type)
+            assertEquals("submit", it.key)
+            assertEquals("Sign On", it.label)
+        }
+
+        (node.collectors[5] as? FlowCollector)?.let {
+            assertEquals("FLOW_LINK", it.type)
+            assertEquals("register", it.key)
+            assertEquals("No account? Register now!", it.label)
+        }
+
+        (node.collectors[6] as? FlowCollector)?.let {
+            assertEquals("FLOW_LINK", it.type)
+            assertEquals("trouble", it.key)
+            assertEquals("Having trouble signing on?", it.label)
+        }
+
+        (node.collectors[7] as? MultiSelectCollector)?.let {
+            assertEquals("DROPDOWN", it.type)
+            assertEquals("dropdown-field", it.key)
+            assertEquals("Dropdown", it.label)
+            assertEquals(true, it.required)
+            assertEquals(3, it.options.size)
+            assertContains(it.value, "default-dropdown")
+        }
+
+
+        (node.collectors[8] as? SingleSelectCollector)?.let {
+            assertEquals("COMBOBOX", it.type)
+            assertEquals("combobox-field", it.key)
+            assertEquals("Combobox", it.label)
+            assertEquals(true, it.required)
+            assertEquals(2, it.options.size)
+            assertEquals("default-combobox", it.value)
+        }
+
+        (node.collectors[9] as? MultiSelectCollector)?.let {
+            assertEquals("RADIO", it.type)
+            assertEquals("radio-field", it.key)
+            assertEquals("Radio", it.label)
+            assertEquals(true, it.required)
+            assertEquals(2, it.options.size)
+            assertContains(it.value, "default-radio")
+        }
+
+        (node.collectors[10] as? SingleSelectCollector)?.let {
+            assertEquals("CHECKBOX", it.type)
+            assertEquals("checkbox-field", it.key)
+            assertEquals("Checkbox", it.label)
+            assertEquals(true, it.required)
+            assertEquals(2, it.options.size)
+            assertEquals("default-checkbox", it.value)
+        }
+    }
 }
