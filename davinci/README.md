@@ -138,7 +138,7 @@ textCollector.label //To access the label
 textCollector.key //To access the key attribute
 textCollector.type //To access the type attribute
 textCollector.required //To access the required attribute
-textCollector.valiation //To access the validation attribute
+textCollector.validation //To access the validation attribute
 
 textCollector.validate() //To validate the field's input value using both required and regex constraints.
 textCollector.value = "My First Name" //To set the value
