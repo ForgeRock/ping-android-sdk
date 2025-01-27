@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 PingIdentity. All rights reserved.
+ * Copyright (c) 2024 - 2025 Ping Identity. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -7,13 +7,13 @@
 
 package com.pingidentity.idp.facebook
 
-import android.os.OperationCanceledException
 import com.facebook.CallbackManager
 import com.facebook.CallbackManager.Factory.create
 import com.facebook.FacebookCallback
 import com.facebook.FacebookException
 import com.facebook.login.LoginManager
 import com.facebook.login.LoginResult
+import com.pingidentity.idp.IdpCanceledException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
@@ -21,7 +21,7 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
 /**
- * An object for managing Facebook callback registration and unregistration.
+ * An object for managing Facebook callback registration and de-register.
  */
 internal object FacebookLoginManager {
     var callbackManager: CallbackManager? = null
@@ -38,7 +38,7 @@ internal object FacebookLoginManager {
     /**
      * Unregisters the current callback manager.
      */
-    fun unregister() {
+    fun deregister() {
         callbackManager?.let {
             LoginManager.getInstance().unregisterCallback(it)
         }
@@ -63,7 +63,7 @@ internal object FacebookLoginManager {
                         }
 
                         override fun onCancel() {
-                            continuation.resumeWithException(OperationCanceledException("Login cancelled"))
+                            continuation.resumeWithException(IdpCanceledException())
                         }
 
                         override fun onError(error: FacebookException) {

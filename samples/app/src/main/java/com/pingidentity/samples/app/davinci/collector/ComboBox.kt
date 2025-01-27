@@ -39,6 +39,10 @@ fun ComboBox(field: MultiSelectCollector, onNodeUpdated: () -> Unit) {
     var expanded by remember { mutableStateOf(false) }
     val selectedOptions = remember { mutableStateListOf<String>() }
 
+    var isValid by remember {
+        mutableStateOf(true)
+    }
+
     LaunchedEffect(field) {
         selectedOptions.clear()
         field.options.forEach { item ->
@@ -59,12 +63,20 @@ fun ComboBox(field: MultiSelectCollector, onNodeUpdated: () -> Unit) {
         ) {
             OutlinedTextField(
                 value = if (selectedOptions.isEmpty()) "" else selectedOptions.joinToString(),
-                onValueChange = {},
+                onValueChange = {
+
+                },
                 readOnly = true,
-                label = { androidx.compose.material3.Text(field.label) },
+                label = { androidx.compose.material3.Text(if (field.required) "${field.label}*" else field.label) },
                 trailingIcon = {
                     TrailingIcon(expanded = expanded)
                 },
+                isError = !isValid,
+                supportingText = if (!isValid) {
+                    @Composable {
+                        ErrorMessage(field.validate())
+                    }
+                } else null,
                 modifier = Modifier
                     .menuAnchor(MenuAnchorType.PrimaryNotEditable)
                     .fillMaxWidth()
@@ -96,6 +108,7 @@ fun ComboBox(field: MultiSelectCollector, onNodeUpdated: () -> Unit) {
                                 field.value.add(option)
                             }
                             onNodeUpdated()
+                            isValid = field.validate().isEmpty()
                         }
                     )
                 }

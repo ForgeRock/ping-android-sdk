@@ -28,9 +28,13 @@ import com.pingidentity.davinci.collector.SingleSelectCollector
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun Dropdown(field: SingleSelectCollector, onNodeUpdated: () -> Unit) {
-    val options = field.options.map { it.value }
+    val options = listOf("") + field.options.map { it.value }
     var expanded by remember { mutableStateOf(false) }
     var selectedOption by remember { mutableStateOf(field.value) }
+
+    var isValid by remember {
+        mutableStateOf(true)
+    }
 
     Column(
         modifier = Modifier
@@ -43,12 +47,20 @@ fun Dropdown(field: SingleSelectCollector, onNodeUpdated: () -> Unit) {
         ) {
             OutlinedTextField(
                 value = selectedOption,
-                onValueChange = { selectedOption = it },
+                onValueChange = {
+                    selectedOption = it
+                },
                 readOnly = true, // Make it readonly so the dropdown acts like a spinner
-                label = { androidx.compose.material3.Text(field.label) },
+                label = { androidx.compose.material3.Text(if (field.required) "${field.label}*" else field.label) },
                 trailingIcon = {
                     TrailingIcon(expanded = expanded)
                 },
+                isError = !isValid,
+                supportingText = if (!isValid) {
+                    @Composable {
+                        ErrorMessage(field.validate())
+                    }
+                } else null,
                 modifier = Modifier
                     .menuAnchor(MenuAnchorType.PrimaryNotEditable)
                     .fillMaxWidth()
@@ -65,6 +77,7 @@ fun Dropdown(field: SingleSelectCollector, onNodeUpdated: () -> Unit) {
                             selectedOption = option
                             expanded = false // Close the dropdown on selection
                             field.value = option
+                            isValid = field.validate().isEmpty()
                             onNodeUpdated()
                         }
                     )

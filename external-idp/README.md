@@ -9,7 +9,8 @@
 
 ## Overview
 
-Ping External IDP is a library that allows you to authenticate with External IDP, for example, Google, Facebook, Apple, etc...
+Ping External IDP is a library that allows you to authenticate with External IDP, for example, Google, Facebook, Apple,
+etc...
 This library act as a plugin to the `ping-davinci` and `ping-journey` library,
 and it provides the necessary configuration to authenticate with the External IDP.
 
@@ -44,8 +45,10 @@ For Native experience the only option is to use the `DaVinci Connector`.
 
 <img src="images/htmlTemplate.png" width="500">
 
-For the `skIDP`, ensure the `Application Return to Url` configure with the `appRedirectUriScheme` that you setup in the App.
+For the `skIDP`, ensure the `Application Return to Url` configure with the `appRedirectUriScheme` that you setup in the
+App.
 for example:
+
 ```kotlin
 myapp://callback
 ```
@@ -54,14 +57,13 @@ myapp://callback
 
 In the App `gradle.build.kts` file, add the following `manifestPlaceholders` to the `android.defaultConfig`:
 
-```json
+```kotlin
 android {
     defaultConfig {
         manifestPlaceholders["appRedirectUriScheme"] = "myapp"
     }
 }
 ```
-
 
 Here's an example of how to use the `IdpCollector` instance:
 
@@ -93,13 +95,12 @@ once the authentication is successful, it will return a `Success` result,
 otherwise, it will return a `Failure`  with `Throwable` which shows the root cause of the issue.
 
 ```kotlin
-when (val result = idpCollector.authorize()) {
-    is SuccessNode -> {
-        result.value // This is the continueToken
-    }
-    is FailureNode -> {
-        result.value // This is the Throwable
-    }
+  val result = idpCollector.authorize()
+result.onSuccess {
+    //Move to next Node
+}
+result.onFailure {
+    it //The Throwable
 }
 ```
 
@@ -119,24 +120,32 @@ idpCollector.authorize {
 
 <img src="images/GoogleNativeSupport.png" width="300">
 
-To enhance the user experience when integrating external identity providers like Google and Facebook in your Android application, you can include their native SDKs as dependencies. Once the SDKs are added, the IDP solutions will automatically recognize their presence, allowing the app to deliver a smooth native login experience.
-This guide explains how to add the necessary dependencies for both Google and Facebook login and how IDP solutions can automatically detect these SDKs to offer a native experience.
+To enhance the user experience when integrating external identity providers like Google and Facebook in your Android
+application, you can include their native SDKs as dependencies. By adding these SDKs, the IDP solutions will
+automatically recognize their presence, allowing the app to deliver a smooth native login experience.
 
-Add Facebook and Google SDKs to Your Project
+For instance, you can add the Google SDK for Android using the following dependency:
 
 ```gradle
-dependencies {
-    // Facebook SDK for Android
-    implementation("com.google.android.libraries.identity.googleid:googleid:<latest_version>")
-    implementation("com.facebook.android:facebook-login:<latest_version>")
-}
+implementation("com.google.android.libraries.identity.googleid:googleid:<latest_version>")
 ```
+
+Similarly, you can add the Facebook SDK for Android:
+
+```gradle
+implementation("com.facebook.android:facebook-login:<latest_version>")
+```
+
+If the native SDKs are not present, the IDP solutions will fall back to the web-based login experience. This guide
+explains how to add the necessary dependencies for both Google and Facebook login and how IDP solutions can
+automatically detect these SDKs to offer a native experience.
 
 Replace `latest_version` with the latest stable version of the Google & Facebook SDK (e.g., 15.2.0).
 
 ### Google Developer Console Configuration
 
-You have to create both credentials: `Client ID for Web application` and `Client ID for Android`, for the External IDP configuration, use the `Client ID for Web application` client ID and client secret.
+You have to create both credentials: `Client ID for Web application` and `Client ID for Android`, for the External IDP
+configuration, use the `Client ID for Web application` client ID and client secret.
 
 <img src="images/GoogleClientWeb.png" width="500">
 
@@ -144,27 +153,30 @@ You have to create both credentials: `Client ID for Web application` and `Client
 
 ### Facebook Developer Console Configuration
 
-Follow the direction from the [Facebook Developer Console](https://developers.facebook.com/docs/facebook-login/android) to configure the Facebook SDK.
+Follow the direction from the [Facebook Developer Console](https://developers.facebook.com/docs/facebook-login/android)
+to configure the Facebook SDK.
 
 Make sure you add the `email` and `public_profile` permissions to your Facebook app.
 
 <img src="images/FacebookScope.png" width="500">
 
 #### String.xml
+
 ```xml
     <!-- Facebook Login -->
-    <string name="facebook_app_id">[app_id]</string>
-    <string name="fb_login_protocol_scheme">fb[app_id]</string>
-    <string name="facebook_client_token">[client_token]</string>
+<string name="facebook_app_id">[app_id]</string>
+<string name="fb_login_protocol_scheme">fb[app_id]</string>
+<string name="facebook_client_token">[client_token]</string>
 
 ```
 
 #### AndroidManifest.xml
+
 ```xml
 
 <activity
-        android:name="com.facebook.CustomTabActivity"
-        android:exported="true">
+    android:name="com.facebook.CustomTabActivity"
+    android:exported="true">
     <intent-filter>
         <action android:name="android.intent.action.VIEW"/>
 

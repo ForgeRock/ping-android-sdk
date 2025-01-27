@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 PingIdentity. All rights reserved.
+ * Copyright (c) 2024 - 2025 Ping Identity. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -7,10 +7,15 @@
 
 package com.pingidentity.idp.journey
 
+import com.pingidentity.idp.FacebookHandler
+import com.pingidentity.idp.GoogleHandler
+import com.pingidentity.idp.IdpClient
+import com.pingidentity.idp.IdpHandler
+import com.pingidentity.idp.IdpResult
 import com.pingidentity.journey.plugin.AbstractCallback
 import com.pingidentity.journey.plugin.Journey
 import com.pingidentity.journey.plugin.JourneyAware
-import com.pingidentity.journey.plugin.RequestAdapter
+import com.pingidentity.journey.plugin.RequestInterceptor
 import com.pingidentity.orchestrate.FlowContext
 import com.pingidentity.orchestrate.Request
 import kotlinx.coroutines.yield
@@ -19,7 +24,7 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonPrimitive
 
 
-class IdpCallback : AbstractCallback(), JourneyAware, RequestAdapter {
+class IdpCallback : AbstractCallback(), JourneyAware, RequestInterceptor {
     var provider: String = ""
     var clientId: String = ""
     var redirectUri: String = ""
@@ -53,27 +58,19 @@ class IdpCallback : AbstractCallback(), JourneyAware, RequestAdapter {
     /**
      * Overrides the request with the resume request if initialized, else return the input request.
      */
-    override var asRequest: FlowContext.(Request) -> Request = { request ->
+    override var intercept: FlowContext.(Request) -> Request = { request ->
         result.additionalParameters.forEach { (key, value) ->
             request.parameter(key, value)
         }
         request
     }
 
-    suspend fun authorize(): Result<Unit> {
-        val handler: IdpHandler
-        if (provider.lowercase().contains("google")) {
-            handler = GoogleHandler()
-        } else if (provider.lowercase().contains("facebook")) {
-            handler = FacebookHandler()
-        } else if (provider.lowercase().contains("apple")) {
-            handler = AppleHandler()
-        } else {
-            return Result.failure(IllegalArgumentException("Unsupported provider: $provider"))
-        }
+    suspend fun authorize(idpHandler: IdpHandler? = getIdpHandler()): Result<Unit> {
+        idpHandler
+            ?: return Result.failure(IllegalArgumentException("Unsupported provider: $provider"))
         try {
-            result = handler.authorize(IdpClient(clientId, redirectUri, scopes, nonce))
-            tokenType = handler.tokenType
+            result = idpHandler.authorize(IdpClient(clientId, redirectUri, scopes, nonce))
+            tokenType = idpHandler.tokenType
         } catch (e: Exception) {
             yield()
             journey.config.logger.e("Failed to authorize with $provider", e)
@@ -82,6 +79,18 @@ class IdpCallback : AbstractCallback(), JourneyAware, RequestAdapter {
 
         return Result.success(Unit)
 
+    }
+
+    private fun getIdpHandler(): IdpHandler? {
+        if (provider.lowercase().contains("google")) {
+            return GoogleHandler()
+        } else if (provider.lowercase().contains("facebook")) {
+            return FacebookHandler()
+        } else if (provider.lowercase().contains("apple")) {
+            return AppleHandler()
+        } else {
+            return null
+        }
     }
 
 

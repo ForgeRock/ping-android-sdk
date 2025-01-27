@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Ping Identity. All rights reserved.
+ * Copyright (c) 2024 - 2025 Ping Identity. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -58,7 +58,11 @@ fun SocialLoginButton(
                     .wrapContentWidth(Alignment.CenterHorizontally),
                 onClick = {
                     coroutineScope.launch {
-                        val result = idpCollector.authorize()
+                        val result = idpCollector.authorize {
+                            setShowTitle(false)
+                            setColorScheme(CustomTabsIntent.COLOR_SCHEME_DARK)
+                            setUrlBarHidingEnabled(true)
+                        }
                         result.onSuccess {
                             onNext()
                         }

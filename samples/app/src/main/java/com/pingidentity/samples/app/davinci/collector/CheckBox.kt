@@ -15,8 +15,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -32,6 +35,10 @@ fun CheckBox(field: MultiSelectCollector, onNodeUpdated: () -> Unit) {
         }
     }
 
+    var isValid by remember {
+        mutableStateOf(true)
+    }
+
     OutlinedCard (
         modifier = Modifier
             .padding(8.dp)
@@ -39,9 +46,12 @@ fun CheckBox(field: MultiSelectCollector, onNodeUpdated: () -> Unit) {
     ) {
         androidx.compose.material3.Text(
             modifier = Modifier.padding(8.dp),
-            text = field.label,
+            text =if (field.required) "${field.label}*" else field.label,
             style = MaterialTheme.typography.titleSmall,
         )
+        if (!isValid) {
+            ErrorMessage(field.validate())
+        }
         field.options.forEach { option ->
             val isChecked = selectedOptions[option.value]
             Row(
@@ -59,6 +69,7 @@ fun CheckBox(field: MultiSelectCollector, onNodeUpdated: () -> Unit) {
                         } else {
                             field.value.remove(option.value)
                         }
+                        isValid = field.validate().isEmpty()
                         onNodeUpdated()
                     }
                 )

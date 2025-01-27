@@ -50,7 +50,7 @@ fun Password(
 ) {
 
     var isValid by remember {
-        mutableStateOf(false)
+        mutableStateOf(true)
     }
     var verify by remember { mutableStateOf("") }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Ping Identity. All rights reserved.
+ * Copyright (c) 2024 - 2025 Ping Identity. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -11,9 +11,9 @@ import android.app.Activity.RESULT_CANCELED
 import android.app.Activity.RESULT_OK
 import android.content.Intent
 import android.net.Uri
-import android.os.OperationCanceledException
 import androidx.activity.result.ActivityResult
 import androidx.activity.result.ActivityResultLauncher
+import com.pingidentity.idp.IdpCanceledException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.filterNotNull
@@ -56,8 +56,7 @@ internal class Launcher(
                     return Result.success(it)
                 } ?: return Result.failure(IllegalStateException("No Uri found in response"))
             }
-
-            RESULT_CANCELED -> return Result.failure(OperationCanceledException("CustomTab closed"))
+            RESULT_CANCELED -> return Result.failure(IdpCanceledException())
             else -> return Result.failure(UnknownError("Launch CustomTab failed: ${result.resultCode}"))
         }
     }

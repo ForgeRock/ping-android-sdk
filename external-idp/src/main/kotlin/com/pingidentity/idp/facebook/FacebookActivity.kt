@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 PingIdentity. All rights reserved.
+ * Copyright (c) 2024 - 2025 Ping Identity. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -30,7 +30,6 @@ class FacebookActivity : ComponentActivity() {
         // Retrieve the scopes from the intent
         val scopes = intent.getStringArrayListExtra(EXTRA_SCOPES) ?: listOf("public_profile", "email")
 
-
         val launcher = registerForActivityResult(
             LoginManager.getInstance()
                 .createLogInActivityResultContract(FacebookLoginManager.callbackManager)
@@ -46,7 +45,7 @@ class FacebookActivity : ComponentActivity() {
      */
     override fun onDestroy() {
         super.onDestroy()
-        FacebookLoginManager.unregister()
+        FacebookLoginManager.deregister()
     }
 
     companion object {
