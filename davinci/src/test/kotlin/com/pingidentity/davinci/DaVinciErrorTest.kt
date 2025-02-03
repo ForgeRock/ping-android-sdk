@@ -37,11 +37,14 @@ import com.pingidentity.testrail.TestRailWatcher
 import io.ktor.http.headers
 import org.junit.Rule
 import org.junit.rules.TestWatcher
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
 import kotlin.test.BeforeTest
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 
+@RunWith(RobolectricTestRunner::class)
 class DaVinciErrorTest {
     @JvmField
     @Rule

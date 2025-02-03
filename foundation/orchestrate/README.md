@@ -33,7 +33,7 @@ The Workflow engine contains the following states:
 ### Module
 
 Module allows you to register functions in different state of the workflow. For example, you can register a function
-that will be called when the workflow is initialized, when a node is received, when a node is sent, and when 
+that will be called when the workflow is initialized, when a node is received, when a node is sent, and when
 the workflow is started.
 
 <img src="images/functions.png" width="500">
@@ -132,5 +132,21 @@ val noSession = Module {
         request.parameter("forceAuth", "true")
         request
     }
+}
+```
+
+## Module execution order
+The SDK allows you to register a module into the ```Workflow``` Engine. It accepts several parameters to control how the module is registered and configured:
+
+- ```priority``` (optional): A numeric value that determines the module's execution order in the registry. Default value is 10. Lower priority values indicate higher precedence - modules with lower numbers will be processed first.
+- ```mode``` (optional): Determines how the registration handles existing modules. Default is OVERRIDE. The available modes are:
+  - ```OVERRIDE```: If a module with the same identifier already exists, the new module will replace it.
+  - ```APPEND```: The new module will be added to the registry's list and cannot be overridden by future registrations. This ensures the module remains in the workflow permanently.
+  - ```IGNORE```: If a module with the same identifier already exists, the registration request will be silently ignored, keeping the existing module unchanged.
+
+Here is an example of how to register a module with a specific priority and mode:
+```kotlin
+module(CustomHeader, priority = 5, mode = OverrideMode.APPEND) {
+  header("Accept-Language", "zh")
 }
 ```
