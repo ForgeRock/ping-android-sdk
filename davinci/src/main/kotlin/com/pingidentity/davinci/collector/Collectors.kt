@@ -71,19 +71,19 @@ internal fun Collectors.asJson(): JsonObject {
             when (it) {
                 is TextCollector, is PasswordCollector -> {
                     if ((it as SingleValueCollector).value.isNotEmpty()) {
-                        toMap(map, it.key, it.value)
+                        map[it.key] = it.value
                     }
                 }
 
                 is SingleSelectCollector -> {
                     if (it.value.isNotEmpty()) {
-                        toMap(map, it.key, it.value)
+                        map[it.key] = it.value
                     }
                 }
 
                 is MultiSelectCollector -> {
                     if (it.value.isNotEmpty()) {
-                        toMap(map, it.key, it.value)
+                        map[it.key] = it.value
                     }
                 }
             }
@@ -92,25 +92,6 @@ internal fun Collectors.asJson(): JsonObject {
     }
 }
 
-@Suppress("UNCHECKED_CAST")
-private fun toMap(map: MutableMap<String, Any>, key: String, value: Any) {
-    var currentMap = map
-
-    //TODO Remove this when the nested key is removed.
-    val keys = key.split(".")
-
-    for (i in keys.indices) {
-        val part = keys[i]
-        if (i == keys.size - 1) {
-            currentMap[part] = value
-        } else {
-            currentMap =
-                currentMap.getOrPut(part) { mutableMapOf<String, Any>() } as MutableMap<String, Any>
-        }
-    }
-}
-
-//TODO Remove this when the nested key is removed.
 @Suppress("UNCHECKED_CAST")
 fun mapToJsonObject(map: Map<String, Any>): JsonObject {
     return JsonObject(map.mapValues { (_, value) ->

@@ -53,13 +53,13 @@ class CollectorRegistryTest {
             add(buildJsonObject { put("type", "PASSWORD") })
             add(buildJsonObject { put("type", "PASSWORD_VERIFY") })
             add(buildJsonObject { put("type", "SUBMIT_BUTTON") })
-            add(buildJsonObject { put("type", "FLOW_BUTTON") })
-            add(buildJsonObject { put("type", "FLOW_LINK") })
+            add(buildJsonObject { put("inputType", "ACTION") })
+            add(buildJsonObject { put("inputType", "ACTION") })
             add(buildJsonObject { put("type", "LABEL") })
-            add(buildJsonObject { put("type", "DROPDOWN") })
-            add(buildJsonObject { put("type", "RADIO") })
-            add(buildJsonObject { put("type", "COMBOBOX") })
-            add(buildJsonObject { put("type", "CHECKBOX") })
+            add(buildJsonObject { put("inputType", "SINGLE_SELECT") })
+            add(buildJsonObject { put("inputType", "SINGLE_SELECT") })
+            add(buildJsonObject { put("inputType", "MULTI_SELECT") })
+            add(buildJsonObject { put("inputType", "MULTI_SELECT") })
         }
 
         val collectors = CollectorFactory.collector(jsonArray)
@@ -85,13 +85,12 @@ class CollectorRegistryTest {
             add(buildJsonObject { put("type", "TEXT") })
             add(buildJsonObject { put("type", "PASSWORD") })
             add(buildJsonObject { put("type", "SUBMIT_BUTTON") })
-            add(buildJsonObject { put("type", "FLOW_BUTTON") })
+            add(buildJsonObject { put("inputType", "ACTION") })
             add(buildJsonObject { put("type", "UNKNOWN") })
         }
 
         val collectors = CollectorFactory.collector(jsonArray)
         assertEquals(4, collectors.size)
     }
-
 
 }

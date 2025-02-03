@@ -9,6 +9,7 @@ package com.pingidentity.davinci
 
 import com.pingidentity.davinci.collector.MultiSelectCollector
 import com.pingidentity.davinci.collector.Required
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
@@ -40,10 +41,10 @@ class MultiSelectCollectorTest {
 
     @Test
     fun initializesValueWithProvidedJsonElement() {
-        val input = JsonPrimitive("Selected Option")
+        val input = JsonArray(listOf(JsonPrimitive("Hello"), JsonPrimitive("World")))
         val collector = MultiSelectCollector()
         collector.init(input)
-        assertEquals(listOf("Selected Option"), collector.value)
+        assertEquals(listOf("Hello", "World"), collector.value)
     }
 
     @Test
@@ -69,7 +70,7 @@ class MultiSelectCollectorTest {
         val input = buildJsonObject {
             put("required", true)
         }
-        val inputDefault = JsonPrimitive("Selected Option")
+        val inputDefault = JsonArray(listOf(JsonPrimitive("Hello")))
         val collector = MultiSelectCollector()
         collector.init(input)
         collector.init(inputDefault)
