@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Ping Identity. All rights reserved.
+ * Copyright (c) 2024 - 2025 Ping Identity. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -69,6 +69,10 @@ fun DaVinci(block: DaVinciConfig.() -> Unit = {}): DaVinci {
     return DaVinci(config)
 }
 
+/**
+ * An extension function for the LocaleList class that converts a list of locales
+ * (language/region settings) into an HTTP Accept-Language header string.
+ */
 fun LocaleList.toAcceptLanguage(): String {
     if (isEmpty) return ""
 
