@@ -7,6 +7,7 @@
 
 package com.pingidentity.davinci.collector
 
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.boolean
@@ -37,9 +38,10 @@ open class MultiSelectCollector : FieldCollector() {
 
     override fun init(input: JsonElement) {
         super.init(input)
-        //TODO should jsonArray
-        if (input.jsonPrimitive.content.isNotEmpty()) {
-            value.add(input.jsonPrimitive.content)
+        if (input is JsonArray) {
+            input.forEach {
+                value.add(it.jsonPrimitive.content)
+            }
         }
     }
 

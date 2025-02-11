@@ -40,17 +40,12 @@ internal class CollectorRegistry : ModuleInitializer() {
         CollectorFactory.register("SUBMIT_BUTTON", ::SubmitCollector)
 
         // Register FlowCollector with the CollectorFactory
-        CollectorFactory.register("FLOW_BUTTON", ::FlowCollector)
-
-        // Register FlowCollector with the CollectorFactory
-        CollectorFactory.register("FLOW_LINK", ::FlowCollector)
+        CollectorFactory.register("ACTION", ::FlowCollector)
 
         // Register LabelCollector with the CollectorFactory
         CollectorFactory.register("LABEL", ::LabelCollector)
 
-        CollectorFactory.register("DROPDOWN", ::SingleSelectCollector)
-        CollectorFactory.register("RADIO", ::SingleSelectCollector)
-        CollectorFactory.register("COMBOBOX", ::MultiSelectCollector)
-        CollectorFactory.register("CHECKBOX", ::MultiSelectCollector)
+        CollectorFactory.register("SINGLE_SELECT", ::SingleSelectCollector)
+        CollectorFactory.register("MULTI_SELECT", ::MultiSelectCollector)
     }
 }
