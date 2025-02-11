@@ -8,7 +8,7 @@
 package com.pingidentity.davinci.collector
 
 import com.pingidentity.davinci.plugin.Collectors
-import com.pingidentity.davinci.plugin.RequestAdapter
+import com.pingidentity.davinci.plugin.RequestInterceptor
 import com.pingidentity.orchestrate.FlowContext
 import com.pingidentity.orchestrate.Request
 import kotlinx.serialization.json.JsonArray
@@ -38,8 +38,8 @@ internal fun Collectors.eventType(): String? {
 internal fun Collectors.request(context: FlowContext, request: Request): Request {
     var result = request
     forEach { collector ->
-        if (collector is RequestAdapter) {
-            result = collector.request(context, result)
+        if (collector is RequestInterceptor) {
+            result = collector.intercept(context, result)
         }
     }
     return result

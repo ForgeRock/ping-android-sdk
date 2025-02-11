@@ -25,11 +25,12 @@ import com.pingidentity.davinci.collector.ValidationError
 fun ErrorMessage(errors: List<ValidationError>) {
     if (errors.isEmpty()) return // Don't display if there are no errors
 
-    Column(modifier = Modifier.padding(2.dp)) {
+    Column(modifier = Modifier.padding(8.dp)) {
         for (error in errors) {
             androidx.compose.material3.Text(
                 text = getErrorMessage(error),
                 style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
                 modifier = Modifier.padding(vertical = 4.dp)
             )
         }

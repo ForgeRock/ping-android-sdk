@@ -27,6 +27,10 @@ import com.pingidentity.davinci.collector.SingleSelectCollector
 fun Radio(field: SingleSelectCollector, onNodeUpdated: () -> Unit) {
     var selectedOption by remember { mutableStateOf(field.value) }
 
+    var isValid by remember {
+        mutableStateOf(true)
+    }
+
     OutlinedCard (
         modifier = Modifier
             .padding(8.dp)
@@ -34,9 +38,12 @@ fun Radio(field: SingleSelectCollector, onNodeUpdated: () -> Unit) {
     ) {
         androidx.compose.material3.Text(
             modifier = Modifier.padding(8.dp),
-            text = field.label,
+            text =if (field.required) "${field.label}*" else field.label,
             style = MaterialTheme.typography.titleSmall,
         )
+        if (!isValid) {
+            ErrorMessage(field.validate())
+        }
         field.options.forEach { option ->
             Row(
                 modifier = Modifier
@@ -47,8 +54,16 @@ fun Radio(field: SingleSelectCollector, onNodeUpdated: () -> Unit) {
                 RadioButton(
                     selected = selectedOption == option.value,
                     onClick = {
-                        selectedOption = option.value
-                        field.value = option.value
+                        if (selectedOption == option.value) {
+                            // Reset to unselected state
+                            selectedOption = ""
+                            field.value = ""
+                        } else {
+                            // Select the option
+                            selectedOption = option.value
+                            field.value = option.value
+                        }
+                        isValid = field.validate().isEmpty()
                         onNodeUpdated()
                     }
                 )

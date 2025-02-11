@@ -1,34 +1,32 @@
 /*
- * Copyright (c) 2024 Ping Identity. All rights reserved.
+ * Copyright (c) 2025 Ping Identity. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
  */
 
-package com.pingidentity.idp
-
+import com.pingidentity.exception.ApiException
 import com.pingidentity.idp.davinci.IdpCollector
+import com.pingidentity.idp.davinci.IdpRequestHandler
+import com.pingidentity.orchestrate.Request
+import io.mockk.coEvery
+import io.mockk.mockk
+import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import java.net.MalformedURLException
 import java.net.URL
-import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertTrue
 
 class IdpCollectorTest {
 
-    private lateinit var idpCollector: IdpCollector
-
-    @BeforeTest
-    fun setUp() {
-        idpCollector = IdpCollector()
-    }
-
     @Test
-    fun `initialize with valid json object`() {
+    fun `initialize with missing idpEnabled defaults to true`() {
         val jsonObject = buildJsonObject {
-            put("idpEnabled", true)
             put("idpId", "testId")
             put("idpType", "testType")
             put("label", "testLabel")
@@ -39,6 +37,8 @@ class IdpCollectorTest {
             })
         }
 
+        val idpCollector = IdpCollector()
+
         idpCollector.init(jsonObject)
 
         assertEquals(true, idpCollector.idpEnabled)
@@ -48,10 +48,70 @@ class IdpCollectorTest {
         assertEquals(URL("http://test.com"), idpCollector.link)
     }
 
-    @Test(expected = MalformedURLException::class)
-    fun `initialize with empty json object`() {
-        val jsonObject = buildJsonObject { }
-        idpCollector.init(jsonObject)
+    @Test
+    fun `initialize with invalid URL throws MalformedURLException`() {
+        val jsonObject = buildJsonObject {
+            put("idpEnabled", JsonPrimitive(true))
+            put("idpId", JsonPrimitive("testId"))
+            put("idpType", JsonPrimitive("testType"))
+            put("label", JsonPrimitive("testLabel"))
+            put("links", buildJsonObject {
+                put("authenticate", buildJsonObject {
+                    put("href", JsonPrimitive("invalid-url"))
+                })
+            })
+        }
+        val idpCollector = IdpCollector()
+        assertFailsWith<MalformedURLException> {
+            idpCollector.init(jsonObject)
+        }
     }
 
+
+    @Test
+    fun `authorize with mock idpRequestHandler returns success`() = runTest {
+        val idpRequestHandler: IdpRequestHandler = mockk()
+        val idpCollector = IdpCollector().apply {
+            init(buildJsonObject {
+                put("idpEnabled", JsonPrimitive(true))
+                put("idpId", JsonPrimitive("testId"))
+                put("idpType", JsonPrimitive("GOOGLE"))
+                put("label", JsonPrimitive("testLabel"))
+                put("links", buildJsonObject {
+                    put("authenticate", buildJsonObject {
+                        put("href", JsonPrimitive("http://test.com"))
+                    })
+                })
+            })
+        }
+
+        coEvery { idpRequestHandler.authorize("http://test.com") } returns Request()
+        val result = idpCollector.authorize(idpRequestHandler)
+        assertTrue(result.isSuccess)
+    }
+
+    @Test
+    fun `authorize with mock idpRequestHandler throws exception`() = runTest {
+        val idpRequestHandler: IdpRequestHandler = mockk()
+        val idpCollector = IdpCollector().apply {
+            init(buildJsonObject {
+                put("idpEnabled", JsonPrimitive(true))
+                put("idpId", JsonPrimitive("testId"))
+                put("idpType", JsonPrimitive("GOOGLE"))
+                put("label", JsonPrimitive("testLabel"))
+                put("links", buildJsonObject {
+                    put("authenticate", buildJsonObject {
+                        put("href", JsonPrimitive("http://test.com"))
+                    })
+                })
+            })
+        }
+
+        coEvery { idpRequestHandler.authorize("http://test.com") } throws
+                ApiException(404, "Unsupported IDP")
+
+        val result = idpCollector.authorize(idpRequestHandler)
+        assertTrue(result.isFailure)
+        assertTrue { result.exceptionOrNull() is ApiException }
+    }
 }
