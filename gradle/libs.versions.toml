@@ -31,7 +31,6 @@ junitKtx = "1.2.1"
 androidx-test-runner = "1.6.2"
 androidx-credentials = "1.3.0" #May need to use 1.2.2, seem to have issues with 1.3.0-alpha04
 robolectric = "4.12.2"
-appauth = "0.11.1"
 composeBom = "2024.12.01"
 activity = "1.9.3"
 mockk = "1.13.10"
@@ -87,7 +86,6 @@ core-ktx = { group = "androidx.test", name = "core-ktx", version.ref = "coreKtxV
 androidx-junit-ktx = { group = "androidx.test.ext", name = "junit-ktx", version.ref = "junitKtx" }
 androidx-test-runner = { group = "androidx.test", name = "runner", version.ref = "androidx-test-runner" }
 robolectric = { group = "org.robolectric", name = "robolectric", version.ref = "robolectric" }
-appauth = { group = "net.openid", name = "appauth", version.ref = "appauth" }
 androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "composeBom" }
 
 androidx-activity = { group = "androidx.activity", name = "activity", version.ref = "activity" }

@@ -8,7 +8,6 @@
 package com.pingidentity.samples.app.davinci.collector
 
 import android.util.Log
-import androidx.browser.customtabs.CustomTabsIntent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Row
@@ -24,6 +23,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import com.pingidentity.browser.BrowserLauncher
 import com.pingidentity.idp.davinci.IdpCollector
 import com.pingidentity.samples.app.R
 import kotlinx.coroutines.launch
@@ -58,11 +58,11 @@ fun SocialLoginButton(
                     .wrapContentWidth(Alignment.CenterHorizontally),
                 onClick = {
                     coroutineScope.launch {
-                        val result = idpCollector.authorize {
+                        BrowserLauncher.customTabsCustomizer = {
                             setShowTitle(false)
-                            setColorScheme(CustomTabsIntent.COLOR_SCHEME_DARK)
                             setUrlBarHidingEnabled(true)
                         }
+                        val result = idpCollector.authorize()
                         result.onSuccess {
                             onNext()
                         }
@@ -87,11 +87,11 @@ fun SocialLoginButton(
                     .wrapContentWidth(Alignment.CenterHorizontally)
                     .clickable {
                         coroutineScope.launch {
-                            val result = idpCollector.authorize {
+                            BrowserLauncher.customTabsCustomizer = {
                                 setShowTitle(false)
-                                setColorScheme(CustomTabsIntent.COLOR_SCHEME_DARK)
                                 setUrlBarHidingEnabled(true)
                             }
+                            val result = idpCollector.authorize()
                             result.onSuccess { onNext() }
                             result.onFailure {
                                 Log.e(

@@ -8,7 +8,7 @@
 package com.pingidentity.idp.davinci
 
 import android.net.Uri
-import com.pingidentity.idp.browser.BrowserLauncherActivity
+import com.pingidentity.browser.BrowserLauncher
 import com.pingidentity.orchestrate.ContinueNode
 import io.mockk.*
 import kotlinx.coroutines.test.runTest
@@ -33,6 +33,8 @@ class BrowserRequestHandlerTest {
     fun setup() {
         continueNode = mockk()
         browserRequestHandler = BrowserRequestHandler(continueNode)
+
+        mockkObject(BrowserLauncher)
     }
 
     @AfterTest
@@ -61,7 +63,7 @@ class BrowserRequestHandlerTest {
         assertEquals("Bearer $continueToken", request.builder.headers["Authorization"])
         coVerifyAll {
             continueNode.input
-            BrowserLauncherActivity.launch(URL(authUrl), any())
+            BrowserLauncher.launch(URL(authUrl))
         }
     }
 
@@ -97,7 +99,7 @@ class BrowserRequestHandlerTest {
         }
         coVerifyAll {
             continueNode.input
-            BrowserLauncherActivity.launch(URL(authUrl), any())
+            BrowserLauncher.launch(any())
         }
     }
 
@@ -117,7 +119,7 @@ class BrowserRequestHandlerTest {
         }
         coVerifyAll {
             continueNode.input
-            BrowserLauncherActivity.launch(URL(authUrl), any())
+            BrowserLauncher.launch(URL(authUrl))
         }
     }
 
@@ -140,9 +142,8 @@ class BrowserRequestHandlerTest {
     }
 
     private fun mockBrowserLaunch(url: String, result: Result<Uri>) {
-        mockkObject(BrowserLauncherActivity)
         coEvery {
-            BrowserLauncherActivity.launch(URL(url), any())
+            BrowserLauncher.launch(URL(url))
         } returns result
     }
 

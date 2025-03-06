@@ -5,11 +5,14 @@
  * of the MIT license. See the LICENSE file for details.
  */
 
+package com.pingidentity.idp.davinci
+import com.pingidentity.davinci.plugin.DaVinci
 import com.pingidentity.exception.ApiException
-import com.pingidentity.idp.davinci.IdpCollector
-import com.pingidentity.idp.davinci.IdpRequestHandler
+import com.pingidentity.logger.Logger
 import com.pingidentity.orchestrate.Request
+import com.pingidentity.orchestrate.WorkflowConfig
 import io.mockk.coEvery
+import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.JsonPrimitive
@@ -17,12 +20,24 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import java.net.MalformedURLException
 import java.net.URL
+import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 class IdpCollectorTest {
+
+    private lateinit var daVinci: DaVinci
+
+    @BeforeTest
+    fun setUp() {
+        val logger: Logger = mockk()
+        val config: WorkflowConfig = mockk()
+        daVinci = mockk()
+        every { daVinci.config } returns config
+        every { config.logger } returns logger
+    }
 
     @Test
     fun `initialize with missing idpEnabled defaults to true`() {
@@ -85,6 +100,8 @@ class IdpCollectorTest {
             })
         }
 
+        idpCollector.davinci = daVinci
+
         coEvery { idpRequestHandler.authorize("http://test.com") } returns Request()
         val result = idpCollector.authorize(idpRequestHandler)
         assertTrue(result.isSuccess)
@@ -106,6 +123,7 @@ class IdpCollectorTest {
                 })
             })
         }
+        idpCollector.davinci = daVinci
 
         coEvery { idpRequestHandler.authorize("http://test.com") } throws
                 ApiException(404, "Unsupported IDP")

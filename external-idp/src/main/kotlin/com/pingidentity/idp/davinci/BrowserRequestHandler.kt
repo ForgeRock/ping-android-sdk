@@ -7,8 +7,7 @@
 
 package com.pingidentity.idp.davinci
 
-import androidx.browser.customtabs.CustomTabsIntent
-import com.pingidentity.idp.browser.BrowserLauncherActivity
+import com.pingidentity.browser.BrowserLauncher
 import com.pingidentity.orchestrate.ContinueNode
 import com.pingidentity.orchestrate.Request
 import kotlinx.serialization.json.jsonObject
@@ -18,12 +17,10 @@ import java.net.URL
 /**
  * A handler class for managing browser-based Identity Provider (IdP) authorization.
  *
- * @property customizer A lambda function to customize the CustomTabsIntent.Builder.
  * @property continueNode The continue node for the DaVinci flow.
  */
 internal class BrowserRequestHandler(
-    private val continueNode: ContinueNode,
-    private val customizer: CustomTabsIntent.Builder.() -> Unit = {},
+    private val continueNode: ContinueNode
 ) : IdpRequestHandler {
 
     /**
@@ -39,9 +36,7 @@ internal class BrowserRequestHandler(
             ?.jsonObject?.get("href")
             ?.jsonPrimitive?.content ?: throw IllegalStateException("Continue URL not found")
 
-        val result = BrowserLauncherActivity.launch(URL(url)) {
-            customizer
-        }
+        val result = BrowserLauncher.launch(URL(url))
         return if (result.isSuccess) {
             Request().apply {
                 val continueToken = result.getOrThrow().toString()

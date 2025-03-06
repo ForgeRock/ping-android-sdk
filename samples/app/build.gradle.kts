@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 PingIdentity. All rights reserved.
+ * Copyright (c) 2024 - 2025 Ping Identity. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -24,7 +24,7 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        manifestPlaceholders["appRedirectUriScheme"] = "myapp"
+        manifestPlaceholders["appRedirectUriScheme"] = "com.pingidentity.demo"
     }
 
     buildTypes {
@@ -75,9 +75,6 @@ dependencies {
     //To enable Native Google Sign-In, fall back to browser if Google SDK is not available.
     implementation(libs.googleid)
     implementation(libs.facebook.login)
-
-    //App Auth is only required for Centralize Login with oidc module
-    implementation(libs.appauth)
 
     implementation(libs.androidx.datastore.preferences)
 
