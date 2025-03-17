@@ -20,11 +20,11 @@ android {
     namespace = "com.pingidentity.davinci"
 
     unitTestVariants.all {
-        this.mergedFlavor.manifestPlaceholders["appAuthRedirectScheme"] = "com.pingidentity.demo"
+        this.mergedFlavor.manifestPlaceholders["appRedirectUriScheme"] = "com.pingidentity.demo"
     }
 
     testVariants.all {
-        this.mergedFlavor.manifestPlaceholders["appAuthRedirectScheme"] = "com.pingidentity.demo"
+        this.mergedFlavor.manifestPlaceholders["appRedirectUriScheme"] = "com.pingidentity.demo"
     }
 
     buildTypes {
