@@ -8,10 +8,10 @@
 package com.pingidentity.idp.journey
 
 import android.net.Uri
+import com.pingidentity.browser.BrowserLauncher
 import com.pingidentity.idp.IdpClient
 import com.pingidentity.idp.IdpHandler
 import com.pingidentity.idp.IdpResult
-import com.pingidentity.idp.browser.BrowserLauncherActivity
 import java.net.URL
 
 internal class AppleHandler : IdpHandler {
@@ -29,7 +29,7 @@ internal class AppleHandler : IdpHandler {
             .appendQueryParameter("nonce", idpClient.nonce)
             .build()
 
-        val result = BrowserLauncherActivity.launch(URL(request.toString()))
+        val result = BrowserLauncher.launch(URL(request.toString()))
         val uri = result.getOrThrow()
 
         return IdpResult(

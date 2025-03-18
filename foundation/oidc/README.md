@@ -25,29 +25,21 @@ dependencies {
 
 By default, the Ping SDK uses the `Browser` agent to launch the browser for the authorization request.
 The SDK uses the Custom Tabs to launch the browser, you can customize the browser agent by providing the `customTab`
-properties. To receive the redirect from the browser, you need to define the `scheme` in the `AndroidManifest.xml`.
+properties. To receive the redirect from the browser, you need to define the `scheme`.
 
 Define `scheme` to receive redirect from browser, the `scheme` should match the `redirect uri` scheme.
 
-In the following example, the `scheme` is `com.pingidentity.demo` and `org.forgerock.demo`. You can define multiple schemes
+In the following example, the `scheme` is `com.pingidentity.demo`. You can define multiple schemes
 to receive the redirect from the browser.
 
-```xml
+In the App `gradle.build.kts` file, add the following `manifestPlaceholders` to the `android.defaultConfig`:
 
-<activity
-    android:name="net.openid.appauth.RedirectUriReceiverActivity"
-    android:exported="true"
-    tools:node="replace">
-    <intent-filter>
-        <action android:name="android.intent.action.VIEW"/>
-
-        <category android:name="android.intent.category.DEFAULT"/>
-        <category android:name="android.intent.category.BROWSABLE"/>
-
-        <data android:scheme="com.pingidentity.demo"/>
-        <data android:scheme="org.forgerock.demo"/>
-    </intent-filter>
-</activity>
+```kotlin
+android {
+    defaultConfig {
+        manifestPlaceholders["appRedirectUriScheme"] = "com.pingidentity.demo"
+    }
+}
 ```
 
 ## Oidc Client Configuration

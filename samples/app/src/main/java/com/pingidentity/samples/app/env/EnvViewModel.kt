@@ -73,7 +73,7 @@ lateinit var oidcClient: OidcClient
 
 class EnvViewModel : ViewModel() {
 
-    val servers = listOf(test, prod, social)
+    private val servers = listOf(test, prod, social)
     val oidcConfigs = listOf(test.oidcConfig(), prod.oidcConfig(), social.oidcConfig())
 
     var current by mutableStateOf(prod.oidcConfig())
@@ -88,7 +88,8 @@ class EnvViewModel : ViewModel() {
 
     fun select(config: OidcClientConfig) {
 
-        servers.first { it.oidcConfig().clientId == config.clientId }.let { daVinci = it }
+        val server = servers.firstOrNull { it.oidcConfig().clientId == config.clientId } ?: prod
+        daVinci = server
 
         oidcClient = OidcClient {
             clientId = config.clientId

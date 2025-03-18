@@ -7,7 +7,7 @@
 
 package com.pingidentity.idp.davinci
 
-import androidx.browser.customtabs.CustomTabsIntent
+import com.pingidentity.browser.BrowserLauncher
 import com.pingidentity.davinci.plugin.Collector
 import com.pingidentity.davinci.plugin.ContinueNodeAware
 import com.pingidentity.davinci.plugin.RequestInterceptor
@@ -100,15 +100,14 @@ class IdpCollector : Collector, ContinueNodeAware, DaVinciAware, RequestIntercep
      * Authorizes the user using the specified IdP.
      *
      * @param idpRequestHandler The IdP request handler to use, if null will use the predefined handler.
-     * @param customizer A lambda function to customize the CustomTabsIntent.Builder.
      * @return A Result object indicating success or failure.
      */
     suspend fun authorize(
-        idpRequestHandler: IdpRequestHandler? = null,
-        customizer: CustomTabsIntent.Builder.() -> Unit = {}
+        idpRequestHandler: IdpRequestHandler? = null
     ): Result<Unit> {
-        val requestHandler: IdpRequestHandler = idpRequestHandler ?: getRequestHandler(customizer)
+        val requestHandler: IdpRequestHandler = idpRequestHandler ?: getRequestHandler()
         try {
+            BrowserLauncher.logger = davinci.config.logger
             resumeRequest = requestHandler.authorize(link.toString())
             return Result.success(Unit)
         } catch (e: Exception) {
@@ -117,7 +116,7 @@ class IdpCollector : Collector, ContinueNodeAware, DaVinciAware, RequestIntercep
         }
     }
 
-    private fun getRequestHandler(customizer: CustomTabsIntent.Builder.() -> Unit = {}): IdpRequestHandler {
+    private fun getRequestHandler(): IdpRequestHandler {
 
         return when (idpType) {
             "GOOGLE" -> {
@@ -125,7 +124,7 @@ class IdpCollector : Collector, ContinueNodeAware, DaVinciAware, RequestIntercep
                     GoogleRequestHandler(
                         davinci.config.httpClient,
                         GoogleHandler()
-                    ), BrowserRequestHandler(continueNode, customizer)
+                    ), BrowserRequestHandler(continueNode)
                 )
             }
 
@@ -134,12 +133,12 @@ class IdpCollector : Collector, ContinueNodeAware, DaVinciAware, RequestIntercep
                     FacebookRequestHandler(
                         davinci.config.httpClient,
                         FacebookHandler()
-                    ), BrowserRequestHandler(continueNode, customizer)
+                    ), BrowserRequestHandler(continueNode)
                 )
             }
 
             else -> {
-                BrowserRequestHandler(continueNode, customizer)
+                BrowserRequestHandler(continueNode)
             }
         }
     }
