@@ -71,7 +71,7 @@ class FormFieldsTest {
         assertEquals ("Translatable Rich Text produce LABELs too!\n\n", labelCollector2.content)
     }
 
-    @TestRailCase(26032)
+    @TestRailCase(26032, 26031)
     @Test
     fun textCollectorTest() = runTest {
         // Go to the "Form Fields" form
@@ -86,10 +86,14 @@ class FormFieldsTest {
         // Assert the properties of the TextCollector
         assertEquals("Text Input Label", textCollector.label)
         assertEquals("text-input-key", textCollector.key)
+        assertEquals("default text", textCollector.value)
         assertEquals(true, textCollector.required)
         // TODO: The following 2 assertions may start failing if a bug in DaVinci gets fixed - see https://pingidentity.slack.com/archives/C06CCT3NSP5/p1736880115921099
         assertEquals("", textCollector.validation?.regex.toString())
         assertEquals("", textCollector.validation?.errorMessage ?: "")
+
+        // Clear the text field
+        textCollector.value = ""
 
         // Validate should return list with 2 validation errors since the value is empty
         // and does not match the configured regex
@@ -105,7 +109,7 @@ class FormFieldsTest {
         // assertTrue(validationResult2.isEmpty())
     }
 
-    @TestRailCase(26024)
+    @TestRailCase(26024, 26031)
     @Test
     fun checkboxCollectorTest() = runTest {
         // Go to the "Form Fields" form
@@ -128,6 +132,13 @@ class FormFieldsTest {
         assertEquals("option1 value", checkbox.options[0].value)
         assertEquals("option2 value", checkbox.options[1].value)
 
+        // Make sure that the correct checkbox values are set (default values)
+        assertEquals(2, checkbox.value.size)
+
+        // Remove the values from the checkbox
+        checkbox.value.remove("option1 value")
+        checkbox.value.remove("option2 value")
+
         // validate() should fail since the value is empty but required
         val validationResult = checkbox.validate()
         assertTrue(validationResult.isNotEmpty())
@@ -139,7 +150,7 @@ class FormFieldsTest {
         assertTrue(validationResult2.isEmpty())
     }
 
-    @TestRailCase(26025)
+    @TestRailCase(26025, 26031)
     @Test
     fun dropdownCollectorTest() = runTest {
         // Go to the "Form Fields" form
@@ -164,6 +175,12 @@ class FormFieldsTest {
         assertEquals("dropdown-option2-value", dropdown.options[1].value)
         assertEquals("dropdown-option3-value", dropdown.options[2].value)
 
+        // Make sure that dropdown default value is set
+        assertEquals("dropdown-option2-value", dropdown.value)
+
+        // Clear the value of the dropdown
+        dropdown.value = ""
+
         // validate() should fail since the value is empty but required
         val validationResult = dropdown.validate()
         assertTrue(validationResult.isNotEmpty())
@@ -175,7 +192,7 @@ class FormFieldsTest {
         assertTrue(validationResult2.isEmpty())
     }
 
-    @TestRailCase(26026)
+    @TestRailCase(26026, 26031)
     @Test
     fun radioCollectorTest() = runTest {
         // Go to the "Form Fields" form
@@ -200,6 +217,12 @@ class FormFieldsTest {
         assertEquals("option2 value", radio.options[1].value)
         assertEquals("option3 value", radio.options[2].value)
 
+        // Make sure that radio default value is set
+        assertEquals("option2 value", radio.value)
+
+        // Clear the value of the radio
+        radio.value = ""
+
         // validate() should fail since the value is empty but required
         val validationResult = radio.validate()
         assertTrue(validationResult.isNotEmpty())
@@ -211,7 +234,7 @@ class FormFieldsTest {
         assertTrue(validationResult2.isEmpty())
     }
 
-    @TestRailCase(26027)
+    @TestRailCase(26027, 26031)
     @Test
     fun comboboxCollectorTest() = runTest {
         // Go to the "Form Fields" form
@@ -235,6 +258,14 @@ class FormFieldsTest {
         assertEquals("option1 value", combobox.options[0].value)
         assertEquals("option2 value", combobox.options[1].value)
         assertEquals("option3 value", combobox.options[2].value)
+
+        // Make sure that default values are set
+        assertEquals(2, combobox.value.size)
+        assertEquals("option1 value", combobox.value[0])
+        assertEquals("option3 value", combobox.value[1])
+
+        // Clear the values of the combobox
+        combobox.value.clear()
 
         // validate() should fail since the value is empty but required
         val validationResult = combobox.validate()

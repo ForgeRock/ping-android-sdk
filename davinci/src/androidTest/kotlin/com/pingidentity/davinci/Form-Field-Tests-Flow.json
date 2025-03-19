@@ -9,14 +9,14 @@
         "pingOneAuthenticationConnector",
         "nodeConnector"
       ],
-      "createdDate": 1736876717377,
-      "currentVersion": 3,
+      "createdDate": 1737128383231,
+      "currentVersion": 5,
       "customerId": "46c98161556b2d3cac4715967b9603b1",
       "description": "Cloned on Tue Jan 14 2025 14:46:43 GMT+0000 (Coordinated Universal Time). \nCloned on Wed Nov 06 2024 21:20:51 GMT+0000 (Coordinated Universal Time). \nCloned on Mon Sep 30 2024 20:42:40 GMT+0000 (Coordinated Universal Time). \nLast Updated: September 17th, 2024",
       "flowStatus": "enabled",
       "isOutputSchemaSaved": false,
       "name": "Form Field Test - Main Flow",
-      "publishedVersion": 3,
+      "publishedVersion": 5,
       "settings": {
         "csp": "worker-src 'self' blob:; script-src 'self' https://cdn.jsdelivr.net https://code.jquery.com https://devsdk.singularkey.com http://cdnjs.cloudflare.com 'unsafe-inline' 'unsafe-eval';",
         "intermediateLoadingScreenCSS": "",
@@ -40,9 +40,9 @@
       "trigger": {
         "type": "AUTHENTICATION"
       },
-      "updatedDate": 1736876720777,
+      "updatedDate": 1737128391264,
       "flowId": "418df47d93959eeb3316d7c3e7295936",
-      "versionId": 3,
+      "versionId": 5,
       "graphData": {
         "elements": {
           "nodes": [
@@ -794,8 +794,8 @@
         "httpConnector",
         "variablesConnector"
       ],
-      "createdDate": 1737065465758,
-      "currentVersion": 49,
+      "createdDate": 1742333711380,
+      "currentVersion": 69,
       "customerId": "46c98161556b2d3cac4715967b9603b1",
       "description": "Cloned on Tue Jan 14 2025 14:50:52 GMT+0000 (Coordinated Universal Time). \nCloned on Wed Nov 06 2024 21:21:47 GMT+0000 (Coordinated Universal Time). \nCloned on Mon Sep 30 2024 22:50:55 GMT+0000 (Coordinated Universal Time). \nImported on Thu Sep 19 2024 15:40:15 GMT+0000 (Coordinated Universal Time)",
       "flowStatus": "enabled",
@@ -810,7 +810,7 @@
       "isInputSchemaSaved": false,
       "isOutputSchemaSaved": false,
       "name": "Form Field Tests",
-      "publishedVersion": 49,
+      "publishedVersion": 69,
       "settings": {
         "csp": "worker-src 'self' blob:; script-src 'self' https://cdn.jsdelivr.net https://code.jquery.com https://devsdk.singularkey.com http://cdnjs.cloudflare.com 'unsafe-inline' 'unsafe-eval';",
         "intermediateLoadingScreenCSS": "",
@@ -832,9 +832,9 @@
       },
       "timeouts": "null",
       "trigger": {},
-      "updatedDate": 1737123239654,
+      "updatedDate": 1742333714230,
       "flowId": "aae86ef62e4ece96021fc30ccd1ca784",
-      "versionId": 49,
+      "versionId": 69,
       "graphData": {
         "elements": {
           "nodes": [
@@ -964,6 +964,10 @@
                       {
                         "value": "[\n  {\n    \"children\": [\n      {\n        \"text\": \"\"\n      },\n      {\n        \"text\": \"Form Validation\"\n      }\n    ]\n  }\n]",
                         "id": "js0k5824y5"
+                      },
+                      {
+                        "value": "[\n  {\n    \"children\": [\n      {\n        \"text\": \"Error Node\"\n      }\n    ]\n  }\n]",
+                        "id": "odo6hua9ic"
                       }
                     ]
                   }
@@ -1000,23 +1004,23 @@
                     "value": [
                       {
                         "key": "checkbox-field-key",
-                        "value": "[\n  {\n    \"children\": [\n      {\n        \"text\": \"\"\n      },\n      {\n        \"text\": \"\"\n      }\n    ]\n  }\n]"
+                        "value": "[\n  {\n    \"children\": [\n      {\n        \"text\": \"[\\\"option1 value\\\", \\\"option2 value\\\"]\"\n      },\n      {\n        \"text\": \"\"\n      }\n    ]\n  }\n]"
                       },
                       {
                         "key": "text-input-key",
-                        "value": "[\n  {\n    \"children\": [\n      {\n        \"text\": \"\"\n      }\n    ]\n  }\n]"
+                        "value": "[\n  {\n    \"children\": [\n      {\n        \"text\": \"default text\"\n      }\n    ]\n  }\n]"
                       },
                       {
                         "key": "radio-group-key",
-                        "value": "[\n  {\n    \"children\": [\n      {\n        \"text\": \"\"\n      }\n    ]\n  }\n]"
+                        "value": "[\n  {\n    \"children\": [\n      {\n        \"text\": \"option2 value\"\n      }\n    ]\n  }\n]"
                       },
                       {
                         "key": "dropdown-field-key",
-                        "value": ""
+                        "value": "[\n  {\n    \"children\": [\n      {\n        \"text\": \"dropdown-option2-value\"\n      }\n    ]\n  }\n]"
                       },
                       {
                         "key": "combobox-field-key",
-                        "value": ""
+                        "value": "[\n  {\n    \"children\": [\n      {\n        \"text\": \"[\\\"option1 value\\\", \\\"option3 value\\\"]\"\n      }\n    ]\n  }\n]"
                       }
                     ]
                   },
@@ -1227,7 +1231,7 @@
                 "type": "trigger",
                 "properties": {
                   "customHTML": {
-                    "value": "[\n  {\n    \"children\": [\n      {\n        \"text\": \"<div\\n    class=\\\"bg-light d-flex flex-column justify-content-center align-items-center position-absolute top-0 start-0 bottom-0 end-0 overflow-auto\\\">\\n    <div style=\\\"max-width: 400px; min-width: 400px; width: 100%\\\">\\n        <div class=\\\"card shadow mb-5\\\">\\n            <div class=\\\"card-body p-5 d-flex flex-column\\\">\\n                <img class=\\\"companyLogo align-self-center mb-5\\\" alt=\\\"\\ncompanyName \"\n      },\n      {\n        \"text\": \"\"\n      },\n      {\n        \"type\": \"link\",\n        \"src\": \"variable.svg\",\n        \"url\": \"companyName\",\n        \"data\": \"{{global.variables.companyName}}\",\n        \"tooltip\": \"{{global.variables.companyName}}\",\n        \"children\": [\n          {\n            \"text\": \"{{global.variables.companyName}}\"\n          }\n        ]\n      },\n      {\n        \"text\": \"\"\n      },\n      {\n        \"text\": \"\\n✕\\\" />\\n                <h1 class=\\\"text-center mb-4\\\">S</h1>\\n                <p class=\\\"text-muted text-center\\\">Select Test Form</p>\\n                <p class=\\\"text-danger mdi mdi-alert-circle\\\" data-id=\\\"feedback\\\" data-skcomponent=\\\"skerror\\\"></p>\\n                <form id=\\\"success\\\" data-id=\\\"success\\\">\\n                    <div class=\\\"d-flex flex-column\\\">\\n                        <button data-id=\\\"button\\\" type=\\\"submit\\\" class=\\\"btn btn-primary mb-3\\\" data-skcomponent=\\\"skbutton\\\"\\n                            data-skbuttontype=\\\"form-submit\\\" data-skform=\\\"success\\\" id=\\\"btnFormFields\\\"\\n                            data-skbuttonvalue=\\\"Form Fields\\\">\\n                            Form Fields\\n                        </button>\\n                        <div class=\\\"d-flex flex-column\\\">\\n                            <button data-id=\\\"button\\\" class=\\\"btn btn-link\\\" data-skcomponent=\\\"skbutton\\\"\\n                                data-skbuttontype=\\\"form-submit\\\" data-skform=\\\"success\\\" id=\\\"\"\n      },\n      {\n        \"text\": \"btnFormValidation\"\n      },\n      {\n        \"text\": \"\\\"\\n                                data-skbuttonvalue=\\\"Form Validation\\\">\\n                                Form Validation\\n                            </button>\\n                        </div>\\n                </form>\\n            </div>\\n        </div>\\n    </div>\\n</div>\"\n      }\n    ]\n  }\n]"
+                    "value": "<div\n    class=\"bg-light d-flex flex-column justify-content-center align-items-center position-absolute top-0 start-0 bottom-0 end-0 overflow-auto\">\n    <div style=\"max-width: 400px; min-width: 400px; width: 100%\">\n        <div class=\"card shadow mb-5\">\n            <div class=\"card-body p-5 d-flex flex-column\">\n                <img class=\"companyLogo align-self-center mb-5\" alt=\"\ncompanyName {{global.variables.companyName}}\n✕\" />\n                <h1 class=\"text-center mb-4\">S</h1>\n                <p class=\"text-muted text-center\">Select Test Form</p>\n                <p class=\"text-danger mdi mdi-alert-circle\" data-id=\"feedback\" data-skcomponent=\"skerror\"></p>\n                <form id=\"success\" data-id=\"success\">\n                    <div class=\"d-flex flex-column\">\n                        <button data-id=\"button\" type=\"submit\" class=\"btn btn-primary mb-3\" data-skcomponent=\"skbutton\"\n                            data-skbuttontype=\"form-submit\" data-skform=\"success\" id=\"btnFormFields\"\n                            data-skbuttonvalue=\"Form Fields\">\n                            Form Fields\n                        </button>\n                        <div class=\"d-flex flex-column\">\n                            <button data-id=\"button\" class=\"btn btn-link\" data-skcomponent=\"skbutton\"\n                                data-skbuttontype=\"form-submit\" data-skform=\"success\" id=\"btnFormValidation\"\n                                data-skbuttonvalue=\"Form Validation\">\n                                Form Validation\n                            </button>\n                        </div>\n                        <div class=\"d-flex flex-column\">\n                            <button data-id=\"button\" class=\"btn btn-link\" data-skcomponent=\"skbutton\"\n                                data-skbuttontype=\"form-submit\" data-skform=\"success\" id=\"btnErrorNode\"\n                                data-skbuttonvalue=\"Error Node\">\n                                Error Node\n                            </button>\n                        </div>\n                </form>\n            </div>\n        </div>\n    </div>\n</div>"
                   },
                   "formFieldsList": {
                     "value": [
@@ -1367,26 +1371,8 @@
                 "idUnique": "1aqlz3fin0"
               },
               "position": {
-                "x": 1147,
-                "y": 656
-              },
-              "group": "nodes",
-              "removed": false,
-              "selected": false,
-              "selectable": true,
-              "locked": false,
-              "grabbable": true,
-              "pannable": false,
-              "classes": ""
-            },
-            {
-              "data": {
-                "id": "tvphkhi4nd",
-                "nodeType": "EVAL"
-              },
-              "position": {
-                "x": 982,
-                "y": 596
+                "x": 1140,
+                "y": 750
               },
               "group": "nodes",
               "removed": false,
@@ -1403,8 +1389,8 @@
                 "nodeType": "EVAL"
               },
               "position": {
-                "x": 1342,
-                "y": 671
+                "x": 1440,
+                "y": 780
               },
               "group": "nodes",
               "removed": false,
@@ -1431,15 +1417,15 @@
                     "value": [
                       {
                         "key": "user.username",
-                        "value": ""
+                        "value": "[\n  {\n    \"children\": [\n      {\n        \"text\": \"default username\"\n      }\n    ]\n  }\n]"
                       },
                       {
                         "key": "user.email",
-                        "value": ""
+                        "value": "[\n  {\n    \"children\": [\n      {\n        \"text\": \"default email\"\n      }\n    ]\n  }\n]"
                       },
                       {
                         "key": "user.password",
-                        "value": ""
+                        "value": "[\n  {\n    \"children\": [\n      {\n        \"text\": \"default password\"\n      }\n    ]\n  }\n]"
                       }
                     ]
                   },
@@ -1456,8 +1442,8 @@
                 "idUnique": "5uqz03599r"
               },
               "position": {
-                "x": 1147,
-                "y": 476
+                "x": 1140,
+                "y": 450
               },
               "group": "nodes",
               "removed": false,
@@ -1503,9 +1489,140 @@
               "grabbable": true,
               "pannable": false,
               "classes": ""
+            },
+            {
+              "data": {
+                "id": "2c7tgzkr2h",
+                "nodeType": "CONNECTION",
+                "connectionId": "53ab83a4a4ab919d9f2cb02d9e111ac8",
+                "connectorId": "errorConnector",
+                "name": "Error Message",
+                "label": "Error Message",
+                "status": "configured",
+                "capabilityName": "customErrorMessage",
+                "type": "action",
+                "properties": {
+                  "errorMessage": {
+                    "value": "[\n  {\n    \"children\": [\n      {\n        \"text\": \"Error message from error node\"\n      }\n    ]\n  }\n]"
+                  },
+                  "errorDescription": {
+                    "value": "[\n  {\n    \"children\": [\n      {\n        \"text\": \"Error description from error node\"\n      }\n    ]\n  }\n]"
+                  },
+                  "errorCode": {
+                    "value": "400"
+                  },
+                  "errorReason": {
+                    "value": "[\n  {\n    \"children\": [\n      {\n        \"text\": \"Error reason from error node\"\n      }\n    ]\n  }\n]"
+                  }
+                }
+              },
+              "position": {
+                "x": 1140,
+                "y": 600
+              },
+              "group": "nodes",
+              "removed": false,
+              "selected": false,
+              "selectable": true,
+              "locked": false,
+              "grabbable": true,
+              "pannable": false,
+              "classes": ""
+            },
+            {
+              "data": {
+                "id": "qrcjq4x4n5",
+                "nodeType": "EVAL"
+              },
+              "position": {
+                "x": 1008.5,
+                "y": 600
+              },
+              "group": "nodes",
+              "removed": false,
+              "selected": false,
+              "selectable": true,
+              "locked": false,
+              "grabbable": true,
+              "pannable": false,
+              "classes": ""
+            },
+            {
+              "data": {
+                "id": "3uwrwxh4r3",
+                "nodeType": "EVAL"
+              },
+              "position": {
+                "x": 1008.5,
+                "y": 750
+              },
+              "group": "nodes",
+              "removed": false,
+              "selected": false,
+              "selectable": true,
+              "locked": false,
+              "grabbable": true,
+              "pannable": false,
+              "classes": ""
+            },
+            {
+              "data": {
+                "id": "9utgyromn0",
+                "nodeType": "EVAL"
+              },
+              "position": {
+                "x": 1440,
+                "y": 660
+              },
+              "group": "nodes",
+              "removed": false,
+              "selected": false,
+              "selectable": true,
+              "locked": false,
+              "grabbable": true,
+              "pannable": false,
+              "classes": ""
             }
           ],
           "edges": [
+            {
+              "data": {
+                "id": "n16u4qzxmf",
+                "source": "vnm2x4yf2o",
+                "target": "chgzzrmad9"
+              },
+              "position": {
+                "x": 0,
+                "y": 0
+              },
+              "group": "edges",
+              "removed": false,
+              "selected": false,
+              "selectable": true,
+              "locked": false,
+              "grabbable": true,
+              "pannable": true,
+              "classes": ""
+            },
+            {
+              "data": {
+                "id": "0nqrb0l1u5",
+                "source": "chgzzrmad9",
+                "target": "pntgt5vbhu"
+              },
+              "position": {
+                "x": 0,
+                "y": 0
+              },
+              "group": "edges",
+              "removed": false,
+              "selected": false,
+              "selectable": true,
+              "locked": false,
+              "grabbable": true,
+              "pannable": true,
+              "classes": ""
+            },
             {
               "data": {
                 "id": "j2rw7ieefg",
@@ -1756,45 +1873,6 @@
             },
             {
               "data": {
-                "id": "lwsni7oboo",
-                "source": "nhsnrl9trd",
-                "target": "tvphkhi4nd",
-                "multiValueSourceId": "-1"
-              },
-              "position": {
-                "x": 64,
-                "y": 132
-              },
-              "group": "edges",
-              "removed": false,
-              "selected": false,
-              "selectable": true,
-              "locked": false,
-              "grabbable": true,
-              "pannable": true,
-              "classes": ""
-            },
-            {
-              "data": {
-                "id": "yd625fg4jz",
-                "source": "tvphkhi4nd",
-                "target": "jyqmgvds6s"
-              },
-              "position": {
-                "x": 0,
-                "y": 0
-              },
-              "group": "edges",
-              "removed": false,
-              "selected": false,
-              "selectable": true,
-              "locked": false,
-              "grabbable": true,
-              "pannable": true,
-              "classes": ""
-            },
-            {
-              "data": {
                 "id": "losvaq5tih",
                 "source": "jyqmgvds6s",
                 "target": "h82yssjmpl"
@@ -1872,9 +1950,29 @@
             },
             {
               "data": {
-                "id": "n16u4qzxmf",
-                "source": "vnm2x4yf2o",
-                "target": "chgzzrmad9"
+                "id": "c0vsf8wvsa",
+                "source": "nhsnrl9trd",
+                "target": "qrcjq4x4n5",
+                "multiValueSourceId": "odo6hua9ic"
+              },
+              "position": {
+                "x": 64,
+                "y": 132
+              },
+              "group": "edges",
+              "removed": false,
+              "selected": false,
+              "selectable": true,
+              "locked": false,
+              "grabbable": true,
+              "pannable": true,
+              "classes": ""
+            },
+            {
+              "data": {
+                "id": "6karrc9k9n",
+                "source": "qrcjq4x4n5",
+                "target": "2c7tgzkr2h"
               },
               "position": {
                 "x": 0,
@@ -1891,9 +1989,67 @@
             },
             {
               "data": {
-                "id": "0nqrb0l1u5",
-                "source": "chgzzrmad9",
-                "target": "pntgt5vbhu"
+                "id": "q0zgbm6l8n",
+                "source": "nhsnrl9trd",
+                "target": "3uwrwxh4r3",
+                "multiValueSourceId": "-1"
+              },
+              "position": {
+                "x": 64,
+                "y": 172
+              },
+              "group": "edges",
+              "removed": false,
+              "selected": false,
+              "selectable": true,
+              "locked": false,
+              "grabbable": true,
+              "pannable": true,
+              "classes": ""
+            },
+            {
+              "data": {
+                "id": "nq0my7pno5",
+                "source": "3uwrwxh4r3",
+                "target": "jyqmgvds6s"
+              },
+              "position": {
+                "x": 0,
+                "y": 0
+              },
+              "group": "edges",
+              "removed": false,
+              "selected": false,
+              "selectable": true,
+              "locked": false,
+              "grabbable": true,
+              "pannable": true,
+              "classes": ""
+            },
+            {
+              "data": {
+                "id": "7dzs2wdyk7",
+                "source": "2c7tgzkr2h",
+                "target": "9utgyromn0"
+              },
+              "position": {
+                "x": 0,
+                "y": 0
+              },
+              "group": "edges",
+              "removed": false,
+              "selected": false,
+              "selectable": true,
+              "locked": false,
+              "grabbable": true,
+              "pannable": true,
+              "classes": ""
+            },
+            {
+              "data": {
+                "id": "wnft3daoqp",
+                "source": "9utgyromn0",
+                "target": "dui3rgt1tj"
               },
               "position": {
                 "x": 0,
@@ -1928,7 +2084,7 @@
         }
       },
       "inputSchema": [],
-      "savedDate": 1737065465664,
+      "savedDate": 1742333711276,
       "variables": [
         {
           "context": "flowInstance",
