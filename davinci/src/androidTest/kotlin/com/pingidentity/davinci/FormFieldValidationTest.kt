@@ -22,6 +22,7 @@ import com.pingidentity.davinci.plugin.collectors
 import com.pingidentity.logger.Logger
 import com.pingidentity.logger.STANDARD
 import com.pingidentity.orchestrate.ContinueNode
+import com.pingidentity.orchestrate.ErrorNode
 import com.pingidentity.testrail.TestRailCase
 import com.pingidentity.testrail.TestRailWatcher
 import junit.framework.TestCase.assertFalse
@@ -55,7 +56,7 @@ class FormFieldValidationTest {
     fun setUp() = runTest {
     }
 
-    @TestRailCase(26028, 26030)
+    @TestRailCase(26028, 26030, 26031)
     @Test
     fun textFieldValidationTest() = runTest {
         // Go to the "Form Fields Validation" form
@@ -70,9 +71,13 @@ class FormFieldValidationTest {
         // Assert the properties of the Username field
         assertEquals("Username", username.label)
         assertEquals("user.username", username.key)
+        assertEquals("default username", username.value)
         assertEquals(true, username.required)
         assertEquals("^[a-zA-Z0-9]+$", username.validation?.regex.toString())
         assertEquals("Must be alphanumeric", username.validation?.errorMessage ?: "")
+
+        // Change the value of the username field to empty
+        username.value = ""
 
         // Validate should return list with 2 validation errors since the value is empty
         // and does not match the configured regex
@@ -92,9 +97,13 @@ class FormFieldValidationTest {
         // Assert the properties of the Username field
         assertEquals("Email Address", email.label)
         assertEquals("user.email", email.key)
+        assertEquals("default email", email.value)
         assertEquals(true, email.required)
         assertEquals("^[^@]+@[^@]+\\.[^@]+$", email.validation?.regex.toString())
         assertEquals("Not a valid email", email.validation?.errorMessage ?: "")
+
+        // Change the value of the email field to empty
+        email.value = ""
 
         // Validate should return list with 2 validation errors since the value is empty
         // and does not match the configured regex
@@ -113,7 +122,7 @@ class FormFieldValidationTest {
         assertTrue(emailValidationResult.isEmpty())
     }
 
-    @TestRailCase(26034)
+    @TestRailCase(26034, 26031)
     @Test
     fun passwordValidationTest() = runTest {
         // Go to the "Form Fields Validation" form
@@ -141,7 +150,11 @@ class FormFieldValidationTest {
         assertEquals("Password", password.label)
         assertEquals("PASSWORD_VERIFY", password.type)
         assertEquals("user.password", password.key)
+        assertEquals("default password", password.value)
         assertEquals(true, password.required)
+
+        // Clear the password field
+        password.value = ""
 
         // Validate should return list with 2 validation errors since the value is empty
         // and does not match the configured regex
@@ -176,5 +189,18 @@ class FormFieldValidationTest {
 
         // Should return empty list this time
         assertTrue(passwordValidationResult.isEmpty())
+    }
+
+    @TestRailCase(27507)
+    @Test
+    fun errorNodeTest() = runTest {
+        // Go to the "Error Node" form
+        var node = daVinci.start() as ContinueNode
+        (node.collectors[2] as? FlowCollector)?.value = "click"
+        val errorNode = node.next()
+        assertTrue(errorNode is ErrorNode)
+
+        assertEquals("400", errorNode.input["code"].toString())
+        assertEquals("Error message from error node", errorNode.message.trim())
     }
 }
