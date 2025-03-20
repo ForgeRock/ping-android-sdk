@@ -45,7 +45,8 @@ class PasswordCollector : ValidatedCollector(), ContinueNodeAware, Closeable {
     /**
      * Function to retrieve the password policy, if available.
      */
-    //TODO PasswordPolicy should be embedded in the collector
+    //TODO PasswordPolicy
+    /*
     fun passwordPolicy(): PasswordPolicy? {
         if (cachedPasswordPolicy == null) {
             cachedPasswordPolicy = continueNode.input["passwordPolicy"]?.jsonObject?.let {
@@ -56,6 +57,8 @@ class PasswordCollector : ValidatedCollector(), ContinueNodeAware, Closeable {
 
     }
 
+     */
+
     /**
      * Function to validate the password field.
      * @return A list of validation errors.
@@ -65,6 +68,8 @@ class PasswordCollector : ValidatedCollector(), ContinueNodeAware, Closeable {
         val result = super.validate()
         errors.addAll(result)
 
+        //TODO PasswordPolicy
+        /*
         passwordPolicy()?.let { policy ->
             if (value.length !in policy.length.min..policy.length.max) {
                 errors.add(InvalidLength(policy.length.min, policy.length.max))
@@ -84,6 +89,7 @@ class PasswordCollector : ValidatedCollector(), ContinueNodeAware, Closeable {
                 }
             }
         }
+         */
         return errors
     }
 }
