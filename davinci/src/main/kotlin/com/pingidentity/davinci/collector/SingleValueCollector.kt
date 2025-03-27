@@ -20,7 +20,7 @@ import kotlinx.serialization.json.jsonPrimitive
  * @property value The value to collect.
  *
  */
-open class SingleValueCollector : FieldCollector() {
+open class SingleValueCollector : FieldCollector<String?>() {
     var value: String = ""
 
     /**
@@ -30,5 +30,11 @@ open class SingleValueCollector : FieldCollector() {
     override fun init(input: JsonElement) {
         super.init(input)
         value = input.jsonPrimitive.content
+    }
+
+    override fun payload(): String? {
+        return value.ifEmpty {
+            null
+        }
     }
 }

@@ -11,12 +11,21 @@ import com.pingidentity.orchestrate.Action
 import com.pingidentity.orchestrate.ContinueNode
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
+import java.util.UUID
 
 /**
  * Interface representing a Collector.
  * A Collector is a type of Action that can be initialized with a JsonObject.
  */
-interface Collector : Action {
+interface Collector<T> : Action {
+
+    /**
+     * Function to get the id of the field collector.
+     */
+    fun id(): String {
+        return UUID.randomUUID().toString()
+    }
+
     /**
      * Initializes the Collector with the given input.
      *
@@ -31,6 +40,15 @@ interface Collector : Action {
     fun init(input: JsonElement) {
         //Default implementation for init with JsonElement
     }
+
+    /**
+     * Function to get the payload of the field collector that will post to the server.
+     * When the value is null, the field will not be posted to the server.
+     * @return The value of the field collector.
+     */
+    fun payload(): T? {
+        return null
+    }
 }
 
 /**
@@ -38,10 +56,10 @@ interface Collector : Action {
  *
  * @return A list of Collector instances.
  */
-val ContinueNode.collectors: List<Collector>
-    get() = this.actions.filterIsInstance<Collector>()
+val ContinueNode.collectors: List<Collector<*>>
+    get() = this.actions.filterIsInstance<Collector<*>>()
 
 /**
  * Type alias for a list of collectors.
  */
-typealias Collectors = List<Collector>
+typealias Collectors = List<Collector<*>>

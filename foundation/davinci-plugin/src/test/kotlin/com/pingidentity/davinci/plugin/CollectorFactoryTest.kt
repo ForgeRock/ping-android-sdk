@@ -16,7 +16,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-class CallbackFactoryTest {
+class CollectorFactoryTest {
 
     @BeforeTest
     fun setup() {
@@ -59,13 +59,13 @@ class CallbackFactoryTest {
     }
 }
 
-class DummyCallback : Collector {
+class DummyCallback : Collector<Nothing> {
     lateinit var value : String
     override fun init(input: JsonObject) {
         value = "dummy"
     }
 }
-class Dummy2Callback : Collector {
+class Dummy2Callback : Collector<Nothing> {
     lateinit var value : String
     override fun init(input: JsonObject) {
         value = "dummy2"

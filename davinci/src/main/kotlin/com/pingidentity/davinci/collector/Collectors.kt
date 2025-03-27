@@ -54,37 +54,17 @@ internal fun Collectors.request(context: FlowContext, request: Request): Request
  * @return A JSON object representing the list of collectors.
  */
 internal fun Collectors.asJson(): JsonObject {
-    return buildJsonObject {
-        forEach {
-            when (it) {
-                is SubmitCollector, is FlowCollector -> {
-                    if ((it as SingleValueCollector).value.isNotEmpty()) {
-                        put("actionKey", it.key)
-                    }
-                }
 
-                else -> {}
-            }
-        }
+    return buildJsonObject {
         val map = mutableMapOf<String, Any>()
         forEach {
-            when (it) {
-                is TextCollector, is PasswordCollector -> {
-                    if ((it as SingleValueCollector).value.isNotEmpty()) {
-                        map[it.key] = it.value
-                    }
+            if (it is SubmitCollector || it is FlowCollector) {
+                it.payload()?.let { _ ->
+                    put("actionKey", it.id())
                 }
-
-                is SingleSelectCollector -> {
-                    if (it.value.isNotEmpty()) {
-                        map[it.key] = it.value
-                    }
-                }
-
-                is MultiSelectCollector -> {
-                    if (it.value.isNotEmpty()) {
-                        map[it.key] = it.value
-                    }
+            } else {
+                it.payload()?.let { payload ->
+                    map[it.id()] = payload
                 }
             }
         }
@@ -96,6 +76,7 @@ internal fun Collectors.asJson(): JsonObject {
 fun mapToJsonObject(map: Map<String, Any>): JsonObject {
     return JsonObject(map.mapValues { (_, value) ->
         when (value) {
+            is JsonObject -> value
             is Map<*, *> -> mapToJsonObject(value as Map<String, Any>) // Recursive for nested maps
             is List<*> -> JsonArray(value.map { JsonPrimitive(it.toString()) }) // Convert List to JsonArray
             is String -> JsonPrimitive(value)
