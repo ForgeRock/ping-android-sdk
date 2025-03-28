@@ -86,11 +86,6 @@ class MavenCentralPublishConventionPlugin : Plugin<Project> {
                                         name.set("Stoyan Petrov")
                                         email.set("stoyan.petrov@pingidentity.com")
                                     }
-                                    developer {
-                                        id.set("jey.periyasamy")
-                                        name.set("Jey Periyasamy")
-                                        email.set("jey.periyasamy@pingidentity.com")
-                                    }
                                 }
                                 scm {
                                     connection.set("https://github.com/ForgeRock/ping-android-sdk.git")

@@ -14,7 +14,6 @@ updates:
       - "spetrov"
     reviewers:
       - "witrisna"
-      - "jeyanthanperiyasamy"
 
   - package-ecosystem: "gradle"
     directory: "/external-idp"
@@ -27,7 +26,6 @@ updates:
       - "spetrov"
     reviewers:
       - "witrisna"
-      - "jeyanthanperiyasamy"
 
   - package-ecosystem: "gradle"
     directory: "/foundation/davinci-plugin"
@@ -40,7 +38,6 @@ updates:
       - "spetrov"
     reviewers:
       - "witrisna"
-      - "jeyanthanperiyasamy"
 
   - package-ecosystem: "gradle"
     directory: "/foundation/oidc"
@@ -53,7 +50,6 @@ updates:
       - "spetrov"
     reviewers:
       - "witrisna"
-      - "jeyanthanperiyasamy"
 
   - package-ecosystem: "gradle"
     directory: "/foundation/orchestrate"
@@ -66,7 +62,6 @@ updates:
       - "spetrov"
     reviewers:
       - "witrisna"
-      - "jeyanthanperiyasamy"
 
   - package-ecosystem: "gradle"
     directory: "/foundation/storage"
@@ -79,4 +74,3 @@ updates:
       - "spetrov"
     reviewers:
       - "witrisna"
-      - "jeyanthanperiyasamy"
