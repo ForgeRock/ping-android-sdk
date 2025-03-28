@@ -16,7 +16,7 @@ class LogoutViewModel : ViewModel() {
         viewModelScope.launch {
             //If you are using DaVinci, you can use the DaVinci user object to logout
             User.user()?.logout()
+            onCompleted()
         }
-        onCompleted()
     }
 }
