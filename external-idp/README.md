@@ -21,7 +21,7 @@ and it provides the necessary configuration to authenticate with the External ID
 ```kotlin
 dependencies {
     implementation("com.pingidentity.sdks:davinci:<version>")
-    implementation("com.pingidentity.sdks:external-idp::<version>")
+    implementation("com.pingidentity.sdks:external-idp:<version>")
 }
 ```
 

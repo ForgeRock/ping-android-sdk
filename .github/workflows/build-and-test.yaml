@@ -90,7 +90,7 @@ jobs:
 
       - uses: 8398a7/action-slack@v3
         with:
-          mention: 'stoyan.petrov,andy.witrisna,jey.periyasamy'
+          mention: 'stoyan.petrov,andy.witrisna'
           if_mention: 'failure,cancelled'
           fields: repo,author,eventName,message,job,pullRequest,took
           status: ${{ job.status }}
