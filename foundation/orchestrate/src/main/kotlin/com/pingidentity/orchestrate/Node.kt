@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Ping Identity. All rights reserved.
+ * Copyright (c) 2024 - 2025 Ping Identity. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -21,7 +21,11 @@ sealed interface Node
  * @property input The input JSON object.
  * @property message The failure message.
  */
-data class ErrorNode(val input: JsonObject = buildJsonObject { }, val message: String) : Node
+data class ErrorNode(
+    val context: FlowContext,
+    val input: JsonObject = buildJsonObject { },
+    val message: String
+) : Node
 
 /**
  * Abstract class for a ContinueNode in the workflow.

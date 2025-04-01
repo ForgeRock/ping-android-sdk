@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 PingIdentity. All rights reserved.
+ * Copyright (c) 2024 - 2025 Ping Identity. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -60,7 +60,7 @@ internal val NodeTransform =
                         }
                     }
                     // If we're still here, we have a 4XX failure that should be recoverable
-                    return@transform ErrorNode(jsonResponse, message)
+                    return@transform ErrorNode(this, jsonResponse, message)
                 }
                 // Handle success (2XX) responses
                 200 -> {

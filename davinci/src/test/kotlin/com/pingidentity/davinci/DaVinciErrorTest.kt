@@ -13,6 +13,7 @@ import com.pingidentity.davinci.collector.PasswordCollector
 import com.pingidentity.davinci.collector.SubmitCollector
 import com.pingidentity.davinci.collector.TextCollector
 import com.pingidentity.davinci.module.Oidc
+import com.pingidentity.davinci.module.continueNode
 import com.pingidentity.davinci.module.details
 import com.pingidentity.davinci.plugin.collectors
 import com.pingidentity.logger.CONSOLE
@@ -361,6 +362,7 @@ class DaVinciErrorTest {
             assertEquals("", (node.collectors[1] as? PasswordCollector)?.value)
 
             assertTrue(next is ErrorNode)
+            assertEquals(next.continueNode(), node)
             assertEquals(" Invalid username and/or password", next.message)
             assertContains(
                 next.input.toString(),

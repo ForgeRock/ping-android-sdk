@@ -8,6 +8,7 @@
 package com.pingidentity.davinci
 
 import android.os.LocaleList
+import com.pingidentity.davinci.module.ContinueNode
 import com.pingidentity.davinci.module.NodeTransform
 import com.pingidentity.davinci.module.Oidc
 import com.pingidentity.davinci.plugin.DaVinci
@@ -56,6 +57,7 @@ fun DaVinci(block: DaVinciConfig.() -> Unit = {}): DaVinci {
         module(NodeTransform)
         //Module cookie has lower priority than Oidc, the Cookie module requires the request Url to be set
         //before it can be applied. The Oidc module will set the request Url
+        module(ContinueNode)
         module(Oidc) //Add this here Just to preserve the order
         module(Cookie) {//Depends on the Oidc module
             persist = mutableListOf("ST", "ST-NO-SS")
