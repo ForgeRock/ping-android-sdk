@@ -38,6 +38,18 @@ nexusPublishing {
     }
 }
 
+allprojects {
+    configurations.all {
+
+        resolutionStrategy {
+            // Due to vulnerability [WS-2022-0468] from dokka project.
+            force("com.fasterxml.jackson.module:jackson-module-kotlin:2.15.0")
+            force("com.fasterxml.jackson.dataformat:jackson-dataformat-xml:2.15.0")
+            force("com.fasterxml.jackson.core:jackson-databind:2.15.0")
+        }
+    }
+}
+
 subprojects {
 
     apply {
