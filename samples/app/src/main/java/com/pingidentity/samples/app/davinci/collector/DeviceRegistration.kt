@@ -36,7 +36,7 @@ import com.pingidentity.davinci.collector.DeviceRegistrationCollector
 @Composable
 fun DeviceRegistration(
     field: DeviceRegistrationCollector,
-    onNodeUpdated: () -> Unit,
+    onNext: () -> Unit,
 ) {
     var selectedType by remember { mutableStateOf<String?>(null) }
 
@@ -58,7 +58,7 @@ fun DeviceRegistration(
                     .clickable {
                         field.value = device
                         selectedType = device.type
-                        onNodeUpdated()
+                        onNext()
                     }
                     .padding(8.dp),
                 elevation = CardDefaults.cardElevation(

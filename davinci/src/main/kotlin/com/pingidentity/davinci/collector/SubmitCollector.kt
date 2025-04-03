@@ -7,6 +7,8 @@
 
 package com.pingidentity.davinci.collector
 
+import com.pingidentity.davinci.plugin.Submittable
+
 /**
  * Class representing a SUBMIT_BUTTON Type.
  *
@@ -15,4 +17,4 @@ package com.pingidentity.davinci.collector
  *
  * @constructor Creates a new SubmitCollector.
  */
-class SubmitCollector : SingleValueCollector()
+class SubmitCollector : SingleValueCollector(), Submittable

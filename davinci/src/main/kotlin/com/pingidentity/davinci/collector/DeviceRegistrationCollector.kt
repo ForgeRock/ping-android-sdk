@@ -7,12 +7,13 @@
 
 package com.pingidentity.davinci.collector
 
+import com.pingidentity.davinci.plugin.Submittable
 import kotlinx.serialization.json.JsonObject
 
 /**
  * A collector for device registration.
  */
-class DeviceRegistrationCollector : FieldCollector<String?>() {
+class DeviceRegistrationCollector : FieldCollector<String?>(), Submittable {
 
     // The list of devices available for registration.
     lateinit var devices: List<Device>

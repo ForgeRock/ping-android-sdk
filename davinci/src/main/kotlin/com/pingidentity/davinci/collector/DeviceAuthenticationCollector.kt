@@ -7,6 +7,7 @@
 
 package com.pingidentity.davinci.collector
 
+import com.pingidentity.davinci.plugin.Submittable
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -14,7 +15,7 @@ import kotlinx.serialization.json.put
 /**
  * A collector for device authentication.
  */
-class DeviceAuthenticationCollector : FieldCollector<JsonObject?>() {
+class DeviceAuthenticationCollector : FieldCollector<JsonObject?>(), Submittable {
 
     // The list of devices available for authentication.
     lateinit var devices: List<Device>

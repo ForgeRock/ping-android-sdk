@@ -120,8 +120,14 @@ fun ContinueNode(
                 }
 
                 is IdpCollector -> SocialLoginButton(it, onStart, onNext)
-                is DeviceRegistrationCollector -> DeviceRegistration(it, onNodeUpdated)
-                is DeviceAuthenticationCollector -> DeviceAuthentication(it, onNodeUpdated)
+                is DeviceRegistrationCollector -> {
+                    hasAction = true
+                    DeviceRegistration(it, onNext)
+                }
+                is DeviceAuthenticationCollector -> {
+                    hasAction = true
+                    DeviceAuthentication(it, onNext)
+                }
                 is PhoneNumberCollector -> PhoneNumber (it, onNodeUpdated)
 
             }

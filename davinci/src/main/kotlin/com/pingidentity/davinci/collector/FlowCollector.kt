@@ -7,6 +7,8 @@
 
 package com.pingidentity.davinci.collector
 
+import com.pingidentity.davinci.plugin.Submittable
+
 /**
  * Class representing a FLOW_BUTTON, FLOW_LINK Type.
  *
@@ -15,4 +17,4 @@ package com.pingidentity.davinci.collector
  *
  * @constructor Creates a new FlowCollector with the given input.
  */
-class FlowCollector : SingleValueCollector()
+class FlowCollector : SingleValueCollector(), Submittable

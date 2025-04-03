@@ -36,7 +36,7 @@ import com.pingidentity.davinci.collector.DeviceAuthenticationCollector
 @Composable
 fun DeviceAuthentication(
     field: DeviceAuthenticationCollector,
-    onNodeUpdated: () -> Unit,
+    onNext: () -> Unit,
 ) {
 
     var selectedId by remember { mutableStateOf<String?>(null) }
@@ -59,7 +59,7 @@ fun DeviceAuthentication(
                     .clickable {
                         field.value = device
                         selectedId = device.id
-                        onNodeUpdated()
+                        onNext()
                     }
                     .padding(8.dp),
                 elevation = CardDefaults.cardElevation(
