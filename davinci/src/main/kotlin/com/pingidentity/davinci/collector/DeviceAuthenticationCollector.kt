@@ -17,6 +17,8 @@ import kotlinx.serialization.json.put
  */
 class DeviceAuthenticationCollector : FieldCollector<JsonObject?>(), Submittable {
 
+    override fun eventType(): String = "submit"
+
     // The list of devices available for authentication.
     lateinit var devices: List<Device>
         private set

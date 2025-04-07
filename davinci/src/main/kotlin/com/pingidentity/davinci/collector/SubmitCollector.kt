@@ -17,4 +17,6 @@ import com.pingidentity.davinci.plugin.Submittable
  *
  * @constructor Creates a new SubmitCollector.
  */
-class SubmitCollector : SingleValueCollector(), Submittable
+class SubmitCollector : SingleValueCollector(), Submittable {
+    override fun eventType(): String = "submit"
+}

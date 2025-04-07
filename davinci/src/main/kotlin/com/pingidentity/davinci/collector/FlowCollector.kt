@@ -17,4 +17,6 @@ import com.pingidentity.davinci.plugin.Submittable
  *
  * @constructor Creates a new FlowCollector with the given input.
  */
-class FlowCollector : SingleValueCollector(), Submittable
+class FlowCollector : SingleValueCollector(), Submittable {
+    override fun eventType() = "action"
+}

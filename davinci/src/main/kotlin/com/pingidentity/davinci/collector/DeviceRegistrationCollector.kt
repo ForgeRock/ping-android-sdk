@@ -15,6 +15,8 @@ import kotlinx.serialization.json.JsonObject
  */
 class DeviceRegistrationCollector : FieldCollector<String?>(), Submittable {
 
+    override fun eventType(): String = "submit"
+
     // The list of devices available for registration.
     lateinit var devices: List<Device>
         private set

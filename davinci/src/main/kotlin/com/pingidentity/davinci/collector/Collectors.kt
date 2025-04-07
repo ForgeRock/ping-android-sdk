@@ -22,11 +22,11 @@ internal fun Collectors.eventType(): String? {
     forEach {
         when (it) {
             is Submittable -> {
-                it.payload().let {
-                    return "submit"
+                val eventType = it.eventType()
+                it.payload()?.let {
+                    return eventType
                 }
             }
-
             else -> {}
         }
     }
