@@ -20,7 +20,7 @@ import kotlinx.serialization.json.jsonPrimitive
  *
  * @constructor Creates a new MultiSelectCollector with the given input.
  */
-open class MultiSelectCollector : FieldCollector<MutableList<String>?>() {
+open class MultiSelectCollector : FieldCollector<MutableList<String>>() {
     lateinit var options: List<Option>
         private set
 

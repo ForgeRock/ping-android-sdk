@@ -15,7 +15,7 @@ import kotlinx.serialization.json.put
 /**
  * A collector for phone number.
  */
-class PhoneNumberCollector : FieldCollector<JsonObject?>(), Validator {
+class PhoneNumberCollector : FieldCollector<JsonObject>(), Validator {
 
     // default country code
     lateinit var defaultCountryCode: String

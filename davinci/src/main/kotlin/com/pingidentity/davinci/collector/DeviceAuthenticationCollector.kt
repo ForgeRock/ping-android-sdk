@@ -15,7 +15,7 @@ import kotlinx.serialization.json.put
 /**
  * A collector for device authentication.
  */
-class DeviceAuthenticationCollector : FieldCollector<JsonObject?>(), Submittable {
+class DeviceAuthenticationCollector : FieldCollector<JsonObject>(), Submittable {
 
     override fun eventType(): String = "submit"
 

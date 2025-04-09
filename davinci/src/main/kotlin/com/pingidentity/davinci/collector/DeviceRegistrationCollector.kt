@@ -13,7 +13,7 @@ import kotlinx.serialization.json.JsonObject
 /**
  * A collector for device registration.
  */
-class DeviceRegistrationCollector : FieldCollector<String?>(), Submittable {
+class DeviceRegistrationCollector : FieldCollector<String>(), Submittable {
 
     override fun eventType(): String = "submit"
 
