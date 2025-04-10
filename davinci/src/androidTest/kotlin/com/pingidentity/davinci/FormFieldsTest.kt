@@ -22,6 +22,7 @@ import com.pingidentity.logger.STANDARD
 import com.pingidentity.orchestrate.ContinueNode
 import com.pingidentity.testrail.TestRailCase
 import com.pingidentity.testrail.TestRailWatcher
+import junit.framework.TestCase.assertNull
 import kotlinx.coroutines.test.runTest
 import org.junit.Rule
 import org.junit.rules.TestWatcher
@@ -88,9 +89,7 @@ class FormFieldsTest {
         assertEquals("text-input-key", textCollector.key)
         assertEquals("default text", textCollector.value)
         assertEquals(true, textCollector.required)
-        // TODO: The following 2 assertions may start failing if a bug in DaVinci gets fixed - see https://pingidentity.slack.com/archives/C06CCT3NSP5/p1736880115921099
-        assertEquals("", textCollector.validation?.regex.toString())
-        assertEquals("", textCollector.validation?.errorMessage ?: "")
+        assertNull(textCollector.validation)
 
         // Clear the text field
         textCollector.value = ""
@@ -291,6 +290,7 @@ class FormFieldsTest {
         // Make sure that FlowButton is present
         assertTrue(node.collectors[7] is FlowCollector)
         val flowButton = (node.collectors[7] as FlowCollector)
+        flowButton.value = "action"
 
         // Assert the properties
         assertEquals("FLOW_BUTTON", flowButton.type)
