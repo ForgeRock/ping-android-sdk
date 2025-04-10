@@ -73,8 +73,17 @@ internal fun Collectors.asJson(): JsonObject {
     }
 }
 
+/**
+ * Converts a map to a JSON object.
+ *
+ *  This function takes a map of string keys and any values, and converts it to a JSON object.
+ *  It recursively converts nested maps to JSON objects, lists to JSON arrays, and other values to JSON primitives.
+ *
+ *  @param map The map to convert.
+ *  @return A JSON object representing the map.
+ */
 @Suppress("UNCHECKED_CAST")
-fun mapToJsonObject(map: Map<String, Any>): JsonObject {
+private fun mapToJsonObject(map: Map<String, Any>): JsonObject {
     return JsonObject(map.mapValues { (_, value) ->
         when (value) {
             is JsonObject -> value
