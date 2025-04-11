@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Ping Identity. All rights reserved.
+ * Copyright (c) 2024 - 2025 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -9,7 +9,10 @@ package com.pingidentity.davinci
 
 import com.pingidentity.android.ModuleInitializer
 import com.pingidentity.davinci.collector.FlowCollector
+import com.pingidentity.davinci.collector.LabelCollector
+import com.pingidentity.davinci.collector.MultiSelectCollector
 import com.pingidentity.davinci.collector.PasswordCollector
+import com.pingidentity.davinci.collector.SingleSelectCollector
 import com.pingidentity.davinci.collector.SubmitCollector
 import com.pingidentity.davinci.collector.TextCollector
 import com.pingidentity.davinci.plugin.CollectorFactory
@@ -31,11 +34,18 @@ internal class CollectorRegistry : ModuleInitializer() {
 
         // Register PasswordCollector with the CollectorFactory
         CollectorFactory.register("PASSWORD", ::PasswordCollector)
+        CollectorFactory.register("PASSWORD_VERIFY", ::PasswordCollector)
 
         // Register SubmitCollector with the CollectorFactory
         CollectorFactory.register("SUBMIT_BUTTON", ::SubmitCollector)
 
         // Register FlowCollector with the CollectorFactory
-        CollectorFactory.register("FLOW_BUTTON", ::FlowCollector)
+        CollectorFactory.register("ACTION", ::FlowCollector)
+
+        // Register LabelCollector with the CollectorFactory
+        CollectorFactory.register("LABEL", ::LabelCollector)
+
+        CollectorFactory.register("SINGLE_SELECT", ::SingleSelectCollector)
+        CollectorFactory.register("MULTI_SELECT", ::MultiSelectCollector)
     }
 }

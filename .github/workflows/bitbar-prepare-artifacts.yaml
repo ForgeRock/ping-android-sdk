@@ -1,0 +1,111 @@
+#
+# Copyright (c) 2024 - 2025 Ping Identity Corporation. All rights reserved.
+#
+# This software may be modified and distributed under the terms
+# of the MIT license. See the LICENSE file for details.
+#
+
+name: Prepare BitBar Artifacts
+on:
+  workflow_call:
+    secrets:
+      SIGNING_KEYSTORE:
+        description: 'Needed for signing the apk artifacts'
+        required: true
+      SIGNING_ALIAS:
+        description: 'Needed for signing the apk artifacts'
+        required: true
+      SIGNING_KEYSTORE_PASSWORD:
+        description: 'Needed for signing the apk artifacts'
+        required: true
+      SIGNING_KEY_PASSWORD:
+        description: 'Needed for signing the apk artifacts'
+        required: true
+      SLACK_WEBHOOK:
+        description: Slack Notifier Incoming Webhook
+        required: true
+jobs:
+  prepare-device-farm-artifacts:
+    runs-on: macos-latest
+
+    steps:
+      # Clone the repo
+      - name: Clone the repository
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          repository: ${{github.event.pull_request.head.repo.full_name}}
+          fetch-depth: 0
+
+      # Setup JDK and cache and restore dependencies.
+      - name: Set up JDK 17
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle'
+
+      # Build apk files
+      - name: Prepare device farm artifacts
+        run: ./gradlew assembleDebugAndroidTest --stacktrace --no-daemon
+
+      # List the available build tools versions see https://github.com/r0adkll/sign-android-release/issues/84
+      - name: List build tools versions
+        run: ls /Users/runner/Library/Android/sdk/build-tools/
+
+      # Sign app-debug-androidTest.apk
+      - name: Sign app-debug-androidTest.apk
+        uses: r0adkll/sign-android-release@v1
+        with:
+          releaseDirectory: samples/app/build/outputs/apk/androidTest/debug
+          signingKeyBase64: ${{ secrets.SIGNING_KEYSTORE }}
+          alias: ${{ secrets.SIGNING_ALIAS }}
+          keyStorePassword: ${{ secrets.SIGNING_KEYSTORE_PASSWORD }}
+          keyPassword: ${{ secrets.SIGNING_KEY_PASSWORD }}
+        env:
+          BUILD_TOOLS_VERSION: "35.0.0"
+
+      # Sign davinci-debug-androidTest.apk
+      - name: Sign davinci-debug-androidTest.apk
+        uses: r0adkll/sign-android-release@v1
+        with:
+          releaseDirectory: davinci/build/outputs/apk/androidTest/debug
+          signingKeyBase64: ${{ secrets.SIGNING_KEYSTORE }}
+          alias: ${{ secrets.SIGNING_ALIAS }}
+          keyStorePassword: ${{ secrets.SIGNING_KEYSTORE_PASSWORD }}
+          keyPassword: ${{ secrets.SIGNING_KEY_PASSWORD }}
+        env:
+          BUILD_TOOLS_VERSION: "35.0.0"
+
+      # Publish the signed APKs as build artifacts
+      - name: Publish app-debug-androidTest.apk
+        uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: app-debug-androidTest-signed.apk
+          path: samples/app/build/outputs/apk/androidTest/debug/app-debug-androidTest-signed.apk
+
+      - name: Publish davinci-debug-androidTest.apk
+        uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: davinci-debug-androidTest-signed.apk
+          path: davinci/build/outputs/apk/androidTest/debug/davinci-debug-androidTest-signed.apk
+
+      # Send slack notification ONLY if any of the steps above fail
+      - name: Send slack notification
+        uses: 8398a7/action-slack@v3
+        with:
+          status: custom
+          fields: all
+          custom_payload: |
+            {
+              attachments: [{
+                title: ':no_entry: Failed to prepare BitBar test artifacts',
+                color: 'danger',
+                text: `\nWorkflow: ${process.env.AS_WORKFLOW} -> ${process.env.AS_JOB}\nPull request: ${process.env.AS_PULL_REQUEST}\nCommit: ${process.env.AS_COMMIT} by ${process.env.AS_AUTHOR}`, 
+              }]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
+        if: failure()

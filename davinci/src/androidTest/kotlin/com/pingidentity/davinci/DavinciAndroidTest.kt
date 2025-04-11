@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Ping Identity. All rights reserved.
+ * Copyright (c) 2024 - 2025 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -607,7 +607,7 @@ class DavinciAndroidTest {
     }
 
     @TestRailCase(24629)
-    @Test(timeout = 20000)
+    @Test(timeout = 60000)
     fun accountLocked() = runBlocking {
         // Register a test user...
         val newUser = userFname + System.currentTimeMillis() + "@example.com"

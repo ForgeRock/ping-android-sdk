@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Ping Identity. All rights reserved.
+ * Copyright (c) 2024 - 2025 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentWidth
+import androidx.compose.material3.Button
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -30,17 +31,33 @@ fun FlowButton(
             .fillMaxWidth(),
     ) {
         field.value = ""
-        TextButton(
-            modifier =
-            Modifier
-                .fillMaxWidth()
-                .wrapContentWidth(Alignment.CenterHorizontally),
-            onClick = {
-                field.value = "action"
-                onNext()
-            },
-        ) {
-            androidx.compose.material3.Text(field.label)
+        if (field.type == "FLOW_LINK") {
+            TextButton(
+                modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .wrapContentWidth(Alignment.CenterHorizontally),
+                onClick = {
+                    field.value = "action"
+                    onNext()
+                },
+            ) {
+                androidx.compose.material3.Text(field.label)
+            }
+        } else {
+           Button(
+                modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .wrapContentWidth(Alignment.CenterHorizontally),
+                onClick = {
+                    field.value = "action"
+                    onNext()
+                },
+            ) {
+                androidx.compose.material3.Text(field.label)
+            }
+
         }
     }
 }

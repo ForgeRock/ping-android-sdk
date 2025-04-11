@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Ping Identity. All rights reserved.
+ * Copyright (c) 2024 - 2025 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -113,12 +113,14 @@ fun authorizeResponse() =
                 "                {\n" +
                 "                    \"type\": \"FLOW_BUTTON\",\n" +
                 "                    \"key\": \"TROUBLE\",\n" +
-                "                    \"label\": \"Having trouble signing on?\"\n" +
+                "                    \"label\": \"Having trouble signing on?\",\n" +
+                "                    \"inputType\": \"ACTION\"" +
                 "                },\n" +
                 "                {\n" +
                 "                    \"type\": \"FLOW_BUTTON\",\n" +
                 "                    \"key\": \"REGISTER\",\n" +
-                "                    \"label\": \"No account? Register now!\"\n" +
+                "                    \"label\": \"No account? Register now!\",\n" +
+                "                    \"inputType\": \"ACTION\"" +
                 "                }\n" +
                 "            ]\n" +
                 "        }\n" +

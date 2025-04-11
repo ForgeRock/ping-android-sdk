@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 PingIdentity. All rights reserved.
+ * Copyright (c) 2024 - 2025 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -34,11 +34,17 @@ internal object Form {
         json: JsonObject,
     ): Collectors {
         val collectors = mutableListOf<Collector>()
-        json["form"]?.jsonObject?.let {
-            it["components"]?.jsonObject?.get("fields")?.jsonArray?.let { array ->
-                collectors.addAll(CollectorFactory.collector(array))
+        json["form"]?.jsonObject?.get("components")?.jsonObject?.get("fields")?.jsonArray?.let { array ->
+            collectors.addAll(CollectorFactory.collector(array))
+        }
+
+        //Populate values for collectors
+        json["formData"]?.jsonObject?.get("value")?.jsonObject?.let { value ->
+            collectors.filterIsInstance<FieldCollector>().forEach { collector ->
+                value[collector.key]?.let(collector::init)
             }
         }
+
         return collectors
     }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Ping Identity. All rights reserved.
+ * Copyright (c) 2024 - 2025 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -18,10 +18,10 @@ android {
     namespace = "com.pingidentity.oidc"
 
     unitTestVariants.all {
-        this.mergedFlavor.manifestPlaceholders["appAuthRedirectScheme"] = "com.pingidentity.demo"
+        this.mergedFlavor.manifestPlaceholders["appRedirectUriScheme"] = "com.pingidentity.demo"
     }
     testVariants.all {
-        this.mergedFlavor.manifestPlaceholders["appAuthRedirectScheme"] = "com.pingidentity.demo"
+        this.mergedFlavor.manifestPlaceholders["appRedirectUriScheme"] = "com.pingidentity.demo"
     }
 }
 
@@ -30,13 +30,13 @@ dependencies {
     api(project(":foundation:logger"))
     implementation(project(":foundation:android"))
     implementation(project(":foundation:storage"))
+    implementation(project(":foundation:browser"))
 
     implementation(libs.androidx.datastore)
     implementation(libs.ktor.client.okhttp)
     implementation(libs.ktor.client.logging)
     implementation(libs.ktor.client.cio)
-    implementation(libs.androidx.appcompat)
-    compileOnly(libs.appauth)
+    implementation(libs.androidx.browser)
 
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.kotlinx.coroutines.core)
@@ -49,7 +49,6 @@ dependencies {
     testImplementation(libs.mockk)
     testImplementation(libs.ktor.client.mock)
     testImplementation(libs.robolectric)
-    testImplementation(libs.appauth)
     testImplementation(kotlin("reflect"))
 
     testImplementation(project(":foundation:testrail"))

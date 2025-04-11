@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Ping Identity. All rights reserved.
+ * Copyright (c) 2024 - 2025 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -8,12 +8,14 @@
 import com.pingidentity.davinci.collector.TextCollector
 import com.pingidentity.testrail.TestRailCase
 import com.pingidentity.testrail.TestRailWatcher
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import org.junit.Test
 import org.junit.Assert.*
 import org.junit.Rule
 import org.junit.rules.TestWatcher
+import kotlin.test.assertEquals
 
 class TextCollectorTest {
 
@@ -39,8 +41,8 @@ class TextCollectorTest {
 
         textCollector.init(jsonObject)
 
-        kotlin.test.assertEquals("testKey", textCollector.key)
-        kotlin.test.assertEquals("testLabel", textCollector.label)
+        assertEquals("testKey", textCollector.key)
+        assertEquals("testLabel", textCollector.label)
     }
 
     @TestRailCase(22558)
@@ -48,6 +50,14 @@ class TextCollectorTest {
     fun `should return value when value is set`() {
         val textCollector = TextCollector()
         textCollector.value = "test"
-        kotlin.test.assertEquals("test", textCollector.value)
+        assertEquals("test", textCollector.value)
+    }
+
+    @Test
+    fun `should initialize default value`() {
+        val input = JsonPrimitive("test")
+        val textCollector = TextCollector()
+        textCollector.init(input)
+        assertEquals("test", textCollector.value)
     }
 }

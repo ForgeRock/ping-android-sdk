@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Ping Identity. All rights reserved.
+ * Copyright (c) 2024 - 2025 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -13,6 +13,7 @@ import com.pingidentity.davinci.collector.PasswordCollector
 import com.pingidentity.davinci.collector.SubmitCollector
 import com.pingidentity.davinci.collector.TextCollector
 import com.pingidentity.davinci.module.Oidc
+import com.pingidentity.davinci.module.details
 import com.pingidentity.davinci.plugin.collectors
 import com.pingidentity.logger.CONSOLE
 import com.pingidentity.logger.Logger
@@ -31,15 +32,19 @@ import kotlin.test.Test
 import kotlin.test.assertTrue
 import com.pingidentity.orchestrate.ErrorNode
 import com.pingidentity.orchestrate.FailureNode
+import com.pingidentity.test.readFile
 import com.pingidentity.testrail.TestRailWatcher
 import io.ktor.http.headers
 import org.junit.Rule
 import org.junit.rules.TestWatcher
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
 import kotlin.test.BeforeTest
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 
+@RunWith(RobolectricTestRunner::class)
 class DaVinciErrorTest {
     @JvmField
     @Rule
@@ -639,7 +644,7 @@ class DaVinciErrorTest {
 
     @TestRailCase(23797)
     @Test
-    fun `DaVinci 4xx Error with Invalid Connector and  Redirect`() =
+    fun `DaVinci 4xx Error with Invalid Connector and Redirect`() =
         runTest {
             val randomErrorCode = listOf(400, 401, 403, 404, 405, 429, 417).random()
             mockEngine =
@@ -760,6 +765,78 @@ class DaVinciErrorTest {
             )
             val exception = node.cause as ApiException
             assertTrue { exception.status == HttpStatusCode.Found.value }
+
+        }
+
+    @Test
+    fun `DaVinci password policy failed`() =
+        runTest {
+
+            mockEngine =
+                MockEngine { request ->
+                    when (request.url.encodedPath) {
+                        "/.well-known/openid-configuration" -> {
+                            respond(openIdConfigurationResponse(), HttpStatusCode.OK, headers)
+                        }
+
+                        "/authorize" -> {
+                            respond(
+                                readFile("PasswordValidationError.json"),
+                                HttpStatusCode.BadRequest,
+                                authorizeResponseHeaders
+                            )
+                        }
+
+                        else -> {
+                            return@MockEngine respond(
+                                content =
+                                ByteReadChannel(""),
+                                status = HttpStatusCode.InternalServerError,
+                            )
+                        }
+                    }
+                }
+
+            val daVinci =
+                DaVinci {
+                    httpClient = HttpClient(mockEngine)
+                    // Oidc as module
+                    module(Oidc) {
+                        clientId = "test"
+                        discoveryEndpoint =
+                            "http://localhost/.well-known/openid-configuration"
+                        scopes = mutableSetOf("openid", "email", "address")
+                        redirectUri = "http://localhost:8080"
+                        storage = MemoryStorage()
+                        logger = Logger.STANDARD
+                    }
+                    module(Cookie) {
+                        storage = MemoryStorage()
+                        persist = mutableListOf("ST")
+                    }
+                }
+
+            val node = daVinci.start() // Return first Node
+            assertTrue(node is ErrorNode)
+            assertEquals(1, node.details().size)
+            node.details()[0].let {
+                assertEquals("ffbab117-06e6-44be-a17a-ae619d3d7334", it.rawResponse.id)
+                assertEquals("INVALID_DATA", it.rawResponse.code)
+                assertEquals("The request could not be completed. One or more validation errors were in the request.", it.rawResponse.message)
+
+                assertEquals(1, it.rawResponse.details?.size)
+                assertEquals("INVALID_VALUE", it.rawResponse.details?.get(0)?.code)
+                assertEquals("password", it.rawResponse.details?.get(0)?.target)
+                assertEquals("User password did not satisfy password policy requirements", it.rawResponse.details?.get(0)?.message)
+                assertEquals(5, it.rawResponse.details?.get(0)?.innerError?.errors?.size)
+                assertEquals("The provided password did not contain enough characters from the character set 'ZYXWVUTSRQPONMLKJIHGFEDCBA'.  The minimum number of characters from that set that must be present in user passwords is 1", it.rawResponse.details?.get(0)?.innerError?.errors?.get("minCharacters"))
+                assertEquals("The provided password (or a variant of that password) was found in a list of prohibited passwords", it.rawResponse.details?.get(0)?.innerError?.errors?.get("excludesCommonlyUsed"))
+                assertEquals("The provided password is shorter than the minimum required length of 8 characters", it.rawResponse.details?.get(0)?.innerError?.errors?.get("length"))
+                assertEquals("The provided password is not acceptable because it contains a character repeated more than 2 times in a row", it.rawResponse.details?.get(0)?.innerError?.errors?.get("maxRepeatedCharacters"))
+                assertEquals("The provided password does not contain enough unique characters.  The minimum number of unique characters that may appear in a user password is 5", it.rawResponse.details?.get(0)?.innerError?.errors?.get("minUniqueCharacters"))
+
+                assertEquals(400, it.statusCode)
+            }
 
         }
 }

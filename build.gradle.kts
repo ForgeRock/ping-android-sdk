@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Ping Identity. All rights reserved.
+ * Copyright (c) 2024 - 2025 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -34,6 +34,18 @@ nexusPublishing {
             stagingProfileId = System.getenv("OSS_STAGING_PROFILE_ID")
             nexusUrl.set(uri("https://oss.sonatype.org/service/local/"))
             snapshotRepositoryUrl.set(uri("https://oss.sonatype.org/content/repositories/snapshots/"))
+        }
+    }
+}
+
+allprojects {
+    configurations.all {
+
+        resolutionStrategy {
+            // Due to vulnerability [WS-2022-0468] from dokka project.
+            force("com.fasterxml.jackson.module:jackson-module-kotlin:2.15.0")
+            force("com.fasterxml.jackson.dataformat:jackson-dataformat-xml:2.15.0")
+            force("com.fasterxml.jackson.core:jackson-databind:2.15.0")
         }
     }
 }
