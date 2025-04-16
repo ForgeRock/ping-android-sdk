@@ -38,7 +38,7 @@ internal val NodeTransform =
 
             when (it.status()) {
                 400 -> {
-                    error(it.body().asJson())
+                    error(this, it.body().asJson())
                 }
 
                 200 -> {
@@ -56,8 +56,8 @@ private fun String.asJson(): JsonObject {
     return Json.parseToJsonElement(this).jsonObject
 }
 
-private fun error(json: JsonObject): ErrorNode {
-    return ErrorNode(json, json["message"]?.jsonPrimitive?.content ?: "" )
+private fun error(flowContext: FlowContext, json: JsonObject): ErrorNode {
+    return ErrorNode(flowContext, json, json["message"]?.jsonPrimitive?.content ?: "" )
 }
 
 private fun transform(

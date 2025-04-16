@@ -8,6 +8,7 @@
 package com.pingidentity.davinci.module
 
 import com.pingidentity.davinci.json
+import com.pingidentity.orchestrate.ContinueNode
 import com.pingidentity.orchestrate.ErrorNode
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
@@ -22,6 +23,14 @@ import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+
+/**
+ * Extension function to get the [ContinueNode] from an [ErrorNode].
+ * @return The [ContinueNode] from the [ErrorNode].
+ */
+fun ErrorNode.continueNode(): ContinueNode? {
+    return context.flowContext.getValue(CONTINUE_NODE) as? ContinueNode
+}
 
 fun ErrorNode.details(): List<Detail> {
     input["details"]?.jsonArray?.let {

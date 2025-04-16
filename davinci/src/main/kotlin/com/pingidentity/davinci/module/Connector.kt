@@ -13,6 +13,7 @@ import com.pingidentity.davinci.collector.eventType
 import com.pingidentity.davinci.plugin.Collectors
 import com.pingidentity.orchestrate.ContinueNode
 import com.pingidentity.orchestrate.FlowContext
+import com.pingidentity.orchestrate.Module
 import com.pingidentity.orchestrate.Request
 import com.pingidentity.orchestrate.Workflow
 import kotlinx.serialization.json.JsonObject
@@ -20,6 +21,8 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
+
+internal const val CONTINUE_NODE = "com.pingidentity.davinci.CONTINUE_NODE"
 
 /**
  * Extension property to get the id of a Connector.
@@ -126,3 +129,17 @@ internal class Connector(
     }
 
 }
+
+/**
+ * Module to set the [ContinueNode] in the [FlowContext].
+ */
+val ContinueNode =
+    Module.of {
+        node {
+            if (it is ContinueNode) {
+                flowContext[CONTINUE_NODE] = it
+            }
+            it
+        }
+    }
+

@@ -21,7 +21,11 @@ sealed interface Node
  * @property input The input JSON object.
  * @property message The failure message.
  */
-data class ErrorNode(val input: JsonObject = buildJsonObject { }, val message: String) : Node
+data class ErrorNode(
+    val context: FlowContext,
+    val input: JsonObject = buildJsonObject { },
+    val message: String
+) : Node
 
 /**
  * Abstract class for a ContinueNode in the workflow.

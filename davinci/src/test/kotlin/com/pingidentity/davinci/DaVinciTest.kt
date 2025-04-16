@@ -14,6 +14,7 @@ import com.pingidentity.davinci.collector.PasswordCollector
 import com.pingidentity.davinci.collector.SingleSelectCollector
 import com.pingidentity.davinci.collector.SubmitCollector
 import com.pingidentity.davinci.collector.TextCollector
+import com.pingidentity.davinci.module.ContinueNode
 import com.pingidentity.davinci.module.NodeTransform
 import com.pingidentity.davinci.module.Oidc
 import com.pingidentity.davinci.module.category
@@ -135,12 +136,13 @@ class DaVinciTest {
             }
         }
 
-        assertEquals(4, daVinci.config.modules.size)
+        assertEquals(5, daVinci.config.modules.size)
         val list = daVinci.config.modules
         assertEquals(list[0].module, CustomHeader)
         assertEquals(list[1].module, NodeTransform)
-        assertEquals(list[2].module, Oidc)
-        assertEquals(list[3].module, Cookie)
+        assertEquals(list[2].module, ContinueNode)
+        assertEquals(list[3].module, Oidc)
+        assertEquals(list[4].module, Cookie)
 
     }
 

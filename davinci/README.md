@@ -249,6 +249,7 @@ val node = daVinci.start() // Start the flow
 when (node) {
     is ContinueNode -> {}
     is ErrorNode -> {
+        node.continueNode() // Retrieve the previous ContinueNode
         node.message() // Retrieve the cause of the error
         node.details().forEach {  // Retrieve the details of the error
             it.rawResponse.let { rawResponse ->
