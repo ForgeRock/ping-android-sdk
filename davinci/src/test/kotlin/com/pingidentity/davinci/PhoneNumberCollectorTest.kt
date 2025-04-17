@@ -65,6 +65,30 @@ class PhoneNumberCollectorTest {
     }
 
     @Test
+    fun `init with validatePhoneNumber`() {
+        val input = buildJsonObject {
+            put("validatePhoneNumber", true)
+        }
+        val collector = PhoneNumberCollector()
+
+        collector.init(input)
+
+        assertTrue(collector.validatePhoneNumber)
+    }
+
+    @Test
+    fun `init with defaultCountryCode`() {
+        val input = buildJsonObject {
+            put("defaultCountryCode", "CA")
+        }
+        val collector = PhoneNumberCollector()
+
+        collector.init(input)
+
+        assertEquals("CA", collector.defaultCountryCode)
+    }
+
+    @Test
     fun `value returns properly formatted phone number`() {
         val collector = PhoneNumberCollector().apply {
             countryCode = "US"

@@ -37,7 +37,10 @@ import com.pingidentity.davinci.collector.PhoneNumberCollector
 @Composable
 fun PhoneNumber(field: PhoneNumberCollector, onNodeUpdated: () -> Unit) {
     var expanded by remember { mutableStateOf(false) }
-    var selectedCountryCode by remember { mutableStateOf(countryCodes.first()) }
+    var selectedCountryCode by remember {
+        mutableStateOf(countryCodes.firstOrNull { it.countryCode == field.defaultCountryCode }
+            ?: countryCodes.first())
+    }
     var phoneNumber by remember { mutableStateOf("") }
 
     var isValid by remember {
@@ -109,7 +112,7 @@ fun PhoneNumber(field: PhoneNumberCollector, onNodeUpdated: () -> Unit) {
                     phoneNumber = it.take(10).filter { it.isDigit() }
                     field.phoneNumber = phoneNumber
                 },
-                label = { androidx.compose.material3.Text("Phone Number") },
+                label = { androidx.compose.material3.Text(field.label) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                 modifier = Modifier.weight(1f)
@@ -142,6 +145,7 @@ val countryCodes = listOf(
     Country("MX", "Mexico", "52"),
     Country("ES", "Spain", "34"),
     Country("ZA", "South Africa", "27"),
+    Country("HK", "Hong Kong", "852"),
     // Add more countries as needed
 )
 
