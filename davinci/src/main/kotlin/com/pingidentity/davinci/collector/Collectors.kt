@@ -9,6 +9,7 @@ package com.pingidentity.davinci.collector
 
 import com.pingidentity.davinci.plugin.Collectors
 import com.pingidentity.davinci.plugin.RequestInterceptor
+import com.pingidentity.davinci.plugin.Submittable
 import com.pingidentity.orchestrate.FlowContext
 import com.pingidentity.orchestrate.Request
 import kotlinx.serialization.json.JsonArray
@@ -20,12 +21,12 @@ import kotlinx.serialization.json.put
 internal fun Collectors.eventType(): String? {
     forEach {
         when (it) {
-            is SubmitCollector, is FlowCollector -> {
-                if ((it as SingleValueCollector).value.isNotEmpty()) {
-                    return it.value
+            is Submittable -> {
+                val eventType = it.eventType()
+                it.payload()?.let {
+                    return eventType
                 }
             }
-
             else -> {}
         }
     }
@@ -54,37 +55,17 @@ internal fun Collectors.request(context: FlowContext, request: Request): Request
  * @return A JSON object representing the list of collectors.
  */
 internal fun Collectors.asJson(): JsonObject {
-    return buildJsonObject {
-        forEach {
-            when (it) {
-                is SubmitCollector, is FlowCollector -> {
-                    if ((it as SingleValueCollector).value.isNotEmpty()) {
-                        put("actionKey", it.key)
-                    }
-                }
 
-                else -> {}
-            }
-        }
+    return buildJsonObject {
         val map = mutableMapOf<String, Any>()
         forEach {
-            when (it) {
-                is TextCollector, is PasswordCollector -> {
-                    if ((it as SingleValueCollector).value.isNotEmpty()) {
-                        map[it.key] = it.value
-                    }
+            if (it is SubmitCollector || it is FlowCollector) {
+                it.payload()?.let { _ ->
+                    put("actionKey", it.id())
                 }
-
-                is SingleSelectCollector -> {
-                    if (it.value.isNotEmpty()) {
-                        map[it.key] = it.value
-                    }
-                }
-
-                is MultiSelectCollector -> {
-                    if (it.value.isNotEmpty()) {
-                        map[it.key] = it.value
-                    }
+            } else {
+                it.payload()?.let { payload ->
+                    map[it.id()] = payload
                 }
             }
         }
@@ -92,10 +73,20 @@ internal fun Collectors.asJson(): JsonObject {
     }
 }
 
+/**
+ * Converts a map to a JSON object.
+ *
+ *  This function takes a map of string keys and any values, and converts it to a JSON object.
+ *  It recursively converts nested maps to JSON objects, lists to JSON arrays, and other values to JSON primitives.
+ *
+ *  @param map The map to convert.
+ *  @return A JSON object representing the map.
+ */
 @Suppress("UNCHECKED_CAST")
-fun mapToJsonObject(map: Map<String, Any>): JsonObject {
+private fun mapToJsonObject(map: Map<String, Any>): JsonObject {
     return JsonObject(map.mapValues { (_, value) ->
         when (value) {
+            is JsonObject -> value
             is Map<*, *> -> mapToJsonObject(value as Map<String, Any>) // Recursive for nested maps
             is List<*> -> JsonArray(value.map { JsonPrimitive(it.toString()) }) // Convert List to JsonArray
             is String -> JsonPrimitive(value)

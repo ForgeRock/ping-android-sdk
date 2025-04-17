@@ -116,7 +116,7 @@ private fun transform(
         )
     }
 
-    val collectors = mutableListOf<Collector>()
+    val collectors = mutableListOf<Collector<*>>()
     if ("form" in json) collectors.addAll(Form.parse(json))
 
     return Connector(context, workflow, json, collectors.toList()).apply {

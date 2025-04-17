@@ -29,7 +29,7 @@ import java.net.URL
 /**
  * A collector class for handling Identity Provider (IdP) authorization.
  */
-class IdpCollector : Collector, ContinueNodeAware, DaVinciAware, RequestInterceptor {
+class IdpCollector : Collector<Nothing>, ContinueNodeAware, DaVinciAware, RequestInterceptor {
 
     /**
      * Indicates whether the IdP is enabled.

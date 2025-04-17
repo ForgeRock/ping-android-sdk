@@ -22,10 +22,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.pingidentity.davinci.collector.DeviceAuthenticationCollector
+import com.pingidentity.davinci.collector.DeviceRegistrationCollector
 import com.pingidentity.davinci.collector.FlowCollector
 import com.pingidentity.davinci.collector.LabelCollector
 import com.pingidentity.davinci.collector.MultiSelectCollector
 import com.pingidentity.davinci.collector.PasswordCollector
+import com.pingidentity.davinci.collector.PhoneNumberCollector
 import com.pingidentity.davinci.collector.SingleSelectCollector
 import com.pingidentity.davinci.collector.SubmitCollector
 import com.pingidentity.davinci.collector.TextCollector
@@ -117,6 +120,16 @@ fun ContinueNode(
                 }
 
                 is IdpCollector -> SocialLoginButton(it, onStart, onNext)
+                is DeviceRegistrationCollector -> {
+                    hasAction = true
+                    DeviceRegistration(it, onNext)
+                }
+                is DeviceAuthenticationCollector -> {
+                    hasAction = true
+                    DeviceAuthentication(it, onNext)
+                }
+                is PhoneNumberCollector -> PhoneNumber (it, onNodeUpdated)
+
             }
         }
 

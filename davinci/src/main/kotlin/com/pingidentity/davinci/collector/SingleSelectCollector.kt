@@ -23,6 +23,6 @@ class SingleSelectCollector : ValidatedCollector() {
 
     override fun init(input: JsonObject) {
         super.init(input)
-        options = input(input)
+        options = Option.options(input)
     }
 }
