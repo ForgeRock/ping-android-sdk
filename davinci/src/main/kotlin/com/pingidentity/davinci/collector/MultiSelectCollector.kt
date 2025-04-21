@@ -10,7 +10,6 @@ package com.pingidentity.davinci.collector
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.boolean
 import kotlinx.serialization.json.jsonPrimitive
 
 /**
@@ -21,19 +20,15 @@ import kotlinx.serialization.json.jsonPrimitive
  *
  * @constructor Creates a new MultiSelectCollector with the given input.
  */
-open class MultiSelectCollector : FieldCollector() {
+open class MultiSelectCollector : FieldCollector<MutableList<String>>() {
     lateinit var options: List<Option>
         private set
-    var required = false
-        private set
-
 
     var value: MutableList<String> = mutableListOf()
 
     override fun init(input: JsonObject) {
         super.init(input)
-        required = input["required"]?.jsonPrimitive?.boolean ?: false
-        options = input(input)
+        options = Option.options(input)
     }
 
     override fun init(input: JsonElement) {
@@ -45,16 +40,10 @@ open class MultiSelectCollector : FieldCollector() {
         }
     }
 
-    /**
-     * Function to validate the MultiSelectCollector.
-     * @return A list of Validation Error
-     */
-    open fun validate(): List<ValidationError> {
-        val errors = mutableListOf<ValidationError>()
-        if (required && value.isEmpty()) {
-            errors.add(Required)
+    override fun payload(): MutableList<String>? {
+        return value.ifEmpty {
+            null
         }
-        return errors.toList()
     }
 
 }

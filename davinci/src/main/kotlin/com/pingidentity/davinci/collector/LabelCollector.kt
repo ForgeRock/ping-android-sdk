@@ -18,7 +18,7 @@ import kotlinx.serialization.json.jsonPrimitive
  *
  * @constructor Creates a new LabelCollector.
  */
-class LabelCollector : Collector {
+class LabelCollector : Collector<Nothing> {
 
     var content = ""
         private set

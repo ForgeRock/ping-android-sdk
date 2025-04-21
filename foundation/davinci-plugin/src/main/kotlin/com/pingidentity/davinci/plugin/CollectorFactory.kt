@@ -19,14 +19,14 @@ import kotlinx.serialization.json.jsonPrimitive
  */
 object CollectorFactory {
     // A mutable map to hold the collector creation functions.
-    private val collectors: MutableMap<String, () -> Collector> = HashMap()
+    private val collectors: MutableMap<String, () -> Collector<*>> = HashMap()
 
     /**
      * Registers a new type of Collector.
      * @param type The type of the Collector.
      * @param block A function that creates a new instance of the Collector.
      */
-    fun register(type: String, block: () -> Collector) {
+    fun register(type: String, block: () -> Collector<*>) {
         collectors[type] = block
     }
 
@@ -36,8 +36,8 @@ object CollectorFactory {
      * @param array The JsonArray to create the Collectors from.
      * @return A list of Collector instances.
      */
-    fun collector(array: JsonArray): List<Collector> {
-        val list = mutableListOf<Collector>()
+    fun collector(array: JsonArray): List<Collector<*>> {
+        val list = mutableListOf<Collector<*>>()
         array.forEach { item ->
             val jsonObject = item.jsonObject
             val type = jsonObject["inputType"]?.jsonPrimitive?.content ?: jsonObject["type"]?.jsonPrimitive?.content

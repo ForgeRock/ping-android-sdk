@@ -8,10 +8,13 @@
 package com.pingidentity.davinci
 
 import com.pingidentity.android.ModuleInitializer
+import com.pingidentity.davinci.collector.DeviceAuthenticationCollector
+import com.pingidentity.davinci.collector.DeviceRegistrationCollector
 import com.pingidentity.davinci.collector.FlowCollector
 import com.pingidentity.davinci.collector.LabelCollector
 import com.pingidentity.davinci.collector.MultiSelectCollector
 import com.pingidentity.davinci.collector.PasswordCollector
+import com.pingidentity.davinci.collector.PhoneNumberCollector
 import com.pingidentity.davinci.collector.SingleSelectCollector
 import com.pingidentity.davinci.collector.SubmitCollector
 import com.pingidentity.davinci.collector.TextCollector
@@ -47,5 +50,9 @@ internal class CollectorRegistry : ModuleInitializer() {
 
         CollectorFactory.register("SINGLE_SELECT", ::SingleSelectCollector)
         CollectorFactory.register("MULTI_SELECT", ::MultiSelectCollector)
+
+        CollectorFactory.register("DEVICE_REGISTRATION", ::DeviceRegistrationCollector)
+        CollectorFactory.register("DEVICE_AUTHENTICATION", ::DeviceAuthenticationCollector)
+        CollectorFactory.register("PHONE_NUMBER", ::PhoneNumberCollector)
     }
 }
