@@ -7,6 +7,7 @@
 
 package com.pingidentity.davinci.collector
 
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.boolean
 import kotlinx.serialization.json.buildJsonObject
@@ -26,9 +27,9 @@ class PhoneNumberCollector : FieldCollector<JsonObject>(), Validator {
         private set
 
     // country code
-    var countryCode: String? = null
+    var countryCode: String = ""
     // phone number
-    var phoneNumber: String? = null
+    var phoneNumber: String = ""
 
     override fun init(input: JsonObject) {
         super.init(input)
@@ -36,8 +37,12 @@ class PhoneNumberCollector : FieldCollector<JsonObject>(), Validator {
         validatePhoneNumber = input["validatePhoneNumber"]?.jsonPrimitive?.boolean ?: false
     }
 
+    override fun init(input: JsonElement) {
+        phoneNumber = input.jsonPrimitive.content
+    }
+
     override fun payload(): JsonObject? {
-        return if (countryCode.isNullOrEmpty() || phoneNumber.isNullOrEmpty()) {
+        return if (countryCode.isEmpty() || phoneNumber.isEmpty()) {
             null
         } else {
             buildJsonObject {
