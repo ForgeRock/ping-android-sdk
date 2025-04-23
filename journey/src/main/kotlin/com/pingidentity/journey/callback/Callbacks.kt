@@ -12,6 +12,13 @@ import com.pingidentity.journey.plugin.RequestInterceptor
 import com.pingidentity.orchestrate.FlowContext
 import com.pingidentity.orchestrate.Request
 
+/**
+ * Intercepts the request and applies any transformations defined in the callbacks.
+ *
+ * @param context The flow context.
+ * @param request The request to be transformed.
+ * @return The transformed request.
+ */
 internal fun Callbacks.request(context: FlowContext, request: Request): Request {
     var result = request
     forEach { callback ->

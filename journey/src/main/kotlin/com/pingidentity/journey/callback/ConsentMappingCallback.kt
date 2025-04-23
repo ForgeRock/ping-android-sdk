@@ -15,8 +15,18 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonPrimitive
 
 /**
- * Callback to collect user's Consent.
+ * A callback for collecting consent mapping information from a user.
+ *
+ * @property name The name of the consent mapping.
+ * @property displayName The display name of the consent mapping.
+ * @property icon The icon associated with the consent mapping.
+ * @property accessLevel The access level required for the consent mapping.
+ * @property isRequired Whether the consent mapping is required.
+ * @property fields The list of fields associated with the consent mapping.
+ * @property message The message to be displayed to the user.
+ * @property accept Whether the user accepts the consent mapping.
  */
+
 class ConsentMappingCallback : AbstractCallback() {
     var name = ""
         private set
@@ -35,7 +45,7 @@ class ConsentMappingCallback : AbstractCallback() {
 
     var accept = false
 
-    override fun onAttribute(name: String, value: JsonElement) {
+    override fun init(name: String, value: JsonElement) {
         when (name) {
             "name" -> this.name = value.jsonPrimitive.content
             "displayName" -> this.displayName = value.jsonPrimitive.content
@@ -49,7 +59,7 @@ class ConsentMappingCallback : AbstractCallback() {
         }
     }
 
-    override fun asJson(): JsonObject {
+    override fun payload(): JsonObject {
         return input(accept)
     }
 

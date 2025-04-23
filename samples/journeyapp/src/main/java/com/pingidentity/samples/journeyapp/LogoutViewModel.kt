@@ -10,7 +10,7 @@ package com.pingidentity.samples.journeyapp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.pingidentity.journey.user
-import com.pingidentity.samples.journeyapp.journey.journey
+import com.pingidentity.samples.journeyapp.env.journey
 import kotlinx.coroutines.launch
 
 class LogoutViewModel : ViewModel() {

@@ -72,21 +72,25 @@ class Workflow(val config: WorkflowConfig) {
     /**
      * Starts the workflow with the provided request.
      * @param request The request to start the workflow with.
+     * @param context The flow context of the flow.
      * @return The resulting Node after processing the workflow.
      */
-    suspend fun start(request: Request): Node = lock.withLock {
+    suspend fun start(
+        request: Request,
+        context: SharedContext = SharedContext(mutableMapOf())
+    ): Node = lock.withLock {
         // Before we start, make sure all the module init has been completed
         return catch {
             init()
             config.logger.i("Starting...")
-            val sharedContext = FlowContext(SharedContext(mutableMapOf()))
+            val flowContext = FlowContext(context)
             val req =
                 start.asFlow()
-                    .scan(request) { result, value -> sharedContext.value(result) }.last()
-            val response = send(sharedContext, req)
-            val initialNode = sharedContext.transform(response)
-            return next(sharedContext, node.asFlow().scan(initialNode) { result, value ->
-                value(sharedContext, result)
+                    .scan(request) { result, value -> flowContext.value(result) }.last()
+            val response = send(flowContext, req)
+            val initialNode = flowContext.transform(response)
+            return next(flowContext, node.asFlow().scan(initialNode) { result, value ->
+                value(flowContext, result)
             }.last())
         }
     }
@@ -97,6 +101,17 @@ class Workflow(val config: WorkflowConfig) {
      */
     suspend fun start(): Node {
         return start(Request())
+    }
+
+    /**
+     * Starts the workflow with a block that allow to set attributes in [FlowContext].
+     * @param block The block to execute in the [FlowContext] of the workflow.
+     * @return The resulting Node after processing the workflow.
+     */
+    suspend fun start(block: SharedContext.() -> Unit): Node {
+        val map = SharedContext(mutableMapOf())
+        block(map)
+        return start(Request(), map)
     }
 
     /**

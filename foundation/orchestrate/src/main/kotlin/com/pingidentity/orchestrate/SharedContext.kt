@@ -12,6 +12,15 @@ package com.pingidentity.orchestrate
  * @property map The map that holds the shared context.
  */
 class SharedContext(val map: MutableMap<String, Any>) : MutableMap<String, Any> by map {
+
+    /**
+     * Sets a value in the shared context.
+     * @param key The key for which the value is to be set.
+     * @param value The value to be set for the key.
+     */
+    infix fun String.to(value: Any) {
+        this@SharedContext[this] = value
+    }
     /**
      * Returns the value of a specific key from the shared context.
      * @param key The key for which the value is to be returned.

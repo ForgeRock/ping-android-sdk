@@ -12,21 +12,21 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.int
 import kotlinx.serialization.json.jsonPrimitive
 
+/**
+ * A callback for polling the user for a response.
+ *
+ * @property waitTime The period of time in milliseconds that the client should wait before replying to this callback.
+ * @property message The message which should be displayed to the user
+ */
 class PollingWaitCallback : AbstractCallback() {
 
-    /**
-     * The period of time in milliseconds that the client should wait before replying to this callback.
-     */
     var waitTime: Int = 0
         private set
 
-    /**
-     * The message which should be displayed to the user
-     */
     var message: String = ""
         private set
 
-    override fun onAttribute(name: String, value: JsonElement) {
+    override fun init(name: String, value: JsonElement) {
         when (name) {
             "message" -> this.message = value.jsonPrimitive.content
             "waitTime" -> this.waitTime = value.jsonPrimitive.int

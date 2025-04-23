@@ -15,17 +15,20 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonPrimitive
 
 /**
- * Callback to retrieve the selected option from a list of options
+ * A callback for collecting a confirmation from a user.
+ *
+ * @property prompt The prompt message.
+ * @property options The list of options.
+ * @property defaultOption The default option index.
+ * @property optionType The type of options.
+ * @property messageType The type of message.
+ * @property selectedIndex The index of the selected option.
  */
 class ConfirmationCallback : AbstractCallback() {
 
     var prompt: String = ""
         private set
 
-    /**
-     * Get the list of options.
-     * @return the list of options.
-     */
     var options: List<String> = emptyList()
         private set
 
@@ -40,7 +43,7 @@ class ConfirmationCallback : AbstractCallback() {
 
     var selectedIndex = 0
 
-    override fun onAttribute(name: String, value: JsonElement) {
+    override fun init(name: String, value: JsonElement) {
         when (name) {
             "prompt" -> this.prompt = value.jsonPrimitive.content ?: ""
             "optionType" -> this.optionType = value.jsonPrimitive.int
@@ -56,7 +59,7 @@ class ConfirmationCallback : AbstractCallback() {
         }
     }
 
-    override fun asJson(): JsonObject {
+    override fun payload(): JsonObject {
         return input(selectedIndex)
     }
 

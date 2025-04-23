@@ -10,7 +10,7 @@ package com.pingidentity.samples.journeyapp.token
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.pingidentity.journey.user
-import com.pingidentity.samples.journeyapp.journey.journey
+import com.pingidentity.samples.journeyapp.env.journey
 import com.pingidentity.utils.Result.Failure
 import com.pingidentity.utils.Result.Success
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -26,14 +26,47 @@ class TokenViewModel : ViewModel() {
             journey.user()?.let {
                 when (val result = it.token()) {
                     is Failure -> {
-                        state.update {
-                            it.copy(token = null, error = result.value)
+                        state.update { state ->
+                            state.copy(token = null, error = result.value)
                         }
                     }
 
                     is Success -> {
-                        state.update {
-                            it.copy(token = result.value, error = null)
+                        state.update { state ->
+                            state.copy(token = result.value, error = null)
+                        }
+                    }
+                }
+            } ?: run {
+                state.update {
+                    it.copy(token = null, error = null)
+                }
+            }
+        }
+    }
+
+    fun revoke() {
+        viewModelScope.launch {
+            journey.user()?.revoke()
+            state.update {
+                it.copy(token = null, error = null)
+            }
+        }
+    }
+
+    fun refresh() {
+        viewModelScope.launch {
+            journey.user()?.let {
+                when (val result = it.refresh()) {
+                    is Failure -> {
+                        state.update { state ->
+                            state.copy(token = null, error = result.value)
+                        }
+                    }
+
+                    is Success -> {
+                        state.update { state ->
+                            state.copy(token = result.value, error = null)
                         }
                     }
                 }

@@ -32,6 +32,7 @@ dependencies {
     implementation(project(":foundation:davinci-plugin"))
     implementation(project(":foundation:journey-plugin"))
     implementation(libs.ktor.client.core)
+    implementation(libs.androidx.startup.runtime)
 
     //Make it optional for developer
     compileOnly(libs.googleid)

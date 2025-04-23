@@ -7,8 +7,17 @@
 
 package com.pingidentity.oidc
 
-import com.pingidentity.utils.Result
 import com.pingidentity.exception.ApiException
+import com.pingidentity.oidc.Constants.AUTHORIZATION_CODE
+import com.pingidentity.oidc.Constants.CLIENT_ID
+import com.pingidentity.oidc.Constants.CODE
+import com.pingidentity.oidc.Constants.CODE_VERIFIER
+import com.pingidentity.oidc.Constants.GRANT_TYPE
+import com.pingidentity.oidc.Constants.REDIRECT_URI
+import com.pingidentity.oidc.Constants.REFRESH_TOKEN
+import com.pingidentity.oidc.Constants.RESPONSE_TYPE
+import com.pingidentity.oidc.Constants.TOKEN
+import com.pingidentity.utils.Result
 import io.ktor.client.call.body
 import io.ktor.client.request.forms.submitForm
 import io.ktor.client.request.get
@@ -24,6 +33,7 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
+import java.lang.IllegalStateException
 import kotlin.coroutines.coroutineContext
 
 /**
@@ -38,16 +48,6 @@ inline fun OidcClient(block: OidcClientConfig.() -> Unit = {}): OidcClient {
 }
 
 internal typealias IdToken = String
-
-const val CLIENT_ID = "client_id"
-private const val GRANT_TYPE = "grant_type"
-private const val REFRESH_TOKEN = "refresh_token"
-private const val TOKEN = "token"
-private const val AUTHORIZATION_CODE = "authorization_code"
-private const val REDIRECT_URI = "redirect_uri"
-private const val CODE_VERIFIER = "code_verifier"
-private const val CODE = "code"
-const val ID_TOKEN_HINT = "id_token_hint"
 
 /**
  * Class representing an OpenID Connect client.
@@ -96,6 +96,32 @@ open class OidcClient(private val config: OidcClientConfig) {
 
     /**
      * Refreshes the access token.
+     * @return A Result containing the refreshed access token or an error.
+     */
+    suspend fun refresh(): Result<Token, OidcError> = lock.withLock {
+        return catch {
+            config.init()
+            logger.i("Refreshing access token")
+            val cached = config.storage.get()
+            config.storage.delete()
+            cached?.let {
+                if (!it.isExpired(config.refreshThreshold)) {
+                    logger.i("Token is not expired. Revoke the AccessToken.")
+                    revoke(cached.accessToken)
+                }
+                it.refreshToken?.let { refreshToken ->
+                    return@catch refreshToken(refreshToken)
+                } ?: throw IllegalStateException(
+                    "No Refresh token. Cannot refresh the access token."
+                )
+            } ?: throw IllegalStateException(
+                "No Access token. Cannot refresh the access token."
+            )
+        }
+    }
+
+    /**
+     * Refreshes the access token.
      *
      * @param refreshToken The refresh token to use for refreshing the access token.
      * @return The refreshed access token.
@@ -108,6 +134,7 @@ open class OidcClient(private val config: OidcClientConfig) {
                 append(GRANT_TYPE, REFRESH_TOKEN)
                 append(REFRESH_TOKEN, refreshToken)
                 append(CLIENT_ID, config.clientId)
+                append(RESPONSE_TYPE, CODE)
             }
 
         val response = config.httpClient.submitForm(config.openId.tokenEndpoint, params)
@@ -139,24 +166,29 @@ open class OidcClient(private val config: OidcClientConfig) {
      *
      * @param token The access token to revoke. If null, the currently stored token is revoked.
      */
-    private suspend fun revoke(token: Token? = null) =
+    private suspend fun revoke(token: Token? = null) {
+        val accessToken = token ?: config.storage.get()
+        accessToken?.let {
+            config.storage.delete()
+            config.init()
+            val t = it.refreshToken ?: it.accessToken
+            revoke(t)
+        }
+    }
+
+    private suspend fun revoke(token: String) {
         coroutineScope {
-            val accessToken = token ?: config.storage.get()
-            accessToken?.let {
-                config.storage.delete()
-                config.init()
-                val t = it.refreshToken ?: it.accessToken
-                val params =
-                    parameters {
-                        append(CLIENT_ID, config.clientId)
-                        append(TOKEN, t)
-                    }
-                // Run in the background, and we don't care about the result
-                launch {
-                    config.httpClient.submitForm(config.openId.revocationEndpoint, params)
+            val params =
+                parameters {
+                    append(CLIENT_ID, config.clientId)
+                    append(TOKEN, token)
                 }
+            // Run in the background, and we don't care about the result
+            launch {
+                config.httpClient.submitForm(config.openId.revocationEndpoint, params)
             }
         }
+    }
 
     /**
      * Ends the session. Best effort to end the session.
@@ -210,7 +242,10 @@ open class OidcClient(private val config: OidcClientConfig) {
                 is Result.Success -> {
                     val response =
                         config.httpClient.get(config.openId.userinfoEndpoint) {
-                            header(HttpHeaders.Authorization, "Bearer ${result.value.accessToken}")
+                            header(
+                                HttpHeaders.Authorization,
+                                "Bearer ${result.value.accessToken}"
+                            )
                         }
                     if (response.status.isSuccess()) {
                         return Result.Success(Json.parseToJsonElement(response.body()).jsonObject)

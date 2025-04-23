@@ -13,8 +13,21 @@ import androidx.browser.customtabs.CustomTabsIntent
 import com.pingidentity.browser.BrowserLauncher
 import com.pingidentity.oidc.Agent
 import com.pingidentity.oidc.AuthCode
-import com.pingidentity.oidc.CLIENT_ID
-import com.pingidentity.oidc.ID_TOKEN_HINT
+import com.pingidentity.oidc.Constants.CLIENT_ID
+import com.pingidentity.oidc.Constants.CODE
+import com.pingidentity.oidc.Constants.CODE_CHALLENGE
+import com.pingidentity.oidc.Constants.CODE_CHALLENGE_METHOD
+import com.pingidentity.oidc.Constants.DISPLAY
+import com.pingidentity.oidc.Constants.ID_TOKEN_HINT
+import com.pingidentity.oidc.Constants.LOGIN_HINT
+import com.pingidentity.oidc.Constants.NONCE
+import com.pingidentity.oidc.Constants.POST_LOGOUT_REDIRECT_URI
+import com.pingidentity.oidc.Constants.PROMPT
+import com.pingidentity.oidc.Constants.REDIRECT_URI
+import com.pingidentity.oidc.Constants.RESPONSE_TYPE
+import com.pingidentity.oidc.Constants.SCOPE
+import com.pingidentity.oidc.Constants.STATE
+import com.pingidentity.oidc.Constants.UI_LOCATES
 import com.pingidentity.oidc.OidcConfig
 import com.pingidentity.oidc.Pkce
 import com.pingidentity.utils.PingDsl
@@ -57,9 +70,9 @@ var browser =
             return if (oidcConfig.oidcClientConfig.signOutRedirectUri != null) {
                 val builder =
                     Uri.parse(oidcConfig.oidcClientConfig.openId.endSessionEndpoint).buildUpon()
-                        .appendQueryParameter("id_token_hint", idToken)
+                        .appendQueryParameter(ID_TOKEN_HINT, idToken)
                         .appendQueryParameter(
-                            "post_logout_redirect_uri",
+                            POST_LOGOUT_REDIRECT_URI,
                             oidcConfig.oidcClientConfig.signOutRedirectUri
                         )
                 val result = BrowserLauncher.launch(URL(builder.build().toString()))
@@ -97,30 +110,30 @@ var browser =
 
             val builder =
                 Uri.parse(oidcConfig.oidcClientConfig.openId.authorizationEndpoint).buildUpon()
-                    .appendQueryParameter("client_id", oidcConfig.oidcClientConfig.clientId)
-                    .appendQueryParameter("response_type", "code")
-                    .appendQueryParameter("redirect_uri", oidcConfig.oidcClientConfig.redirectUri)
+                    .appendQueryParameter(CLIENT_ID, oidcConfig.oidcClientConfig.clientId)
+                    .appendQueryParameter(RESPONSE_TYPE, CODE)
+                    .appendQueryParameter(REDIRECT_URI, oidcConfig.oidcClientConfig.redirectUri)
 
             oidcConfig.oidcClientConfig.scopes.let {
-                builder.appendQueryParameter("scope", it.joinToString(" "))
+                builder.appendQueryParameter(SCOPE, it.joinToString(" "))
             }
             oidcConfig.oidcClientConfig.state?.let {
-                builder.appendQueryParameter("state", it)
+                builder.appendQueryParameter(STATE, it)
             }
             oidcConfig.oidcClientConfig.nonce?.let {
-                builder.appendQueryParameter("nonce", it)
+                builder.appendQueryParameter(NONCE, it)
             }
             oidcConfig.oidcClientConfig.display?.let {
-                builder.appendQueryParameter("display", it)
+                builder.appendQueryParameter(DISPLAY, it)
             }
             oidcConfig.oidcClientConfig.prompt?.let {
-                builder.appendQueryParameter("prompt", it)
+                builder.appendQueryParameter(PROMPT, it)
             }
             oidcConfig.oidcClientConfig.uiLocales?.let {
-                builder.appendQueryParameter("ui_locales", it)
+                builder.appendQueryParameter(UI_LOCATES, it)
             }
             oidcConfig.oidcClientConfig.loginHint?.let {
-                builder.appendQueryParameter("login_hint", it)
+                builder.appendQueryParameter(LOGIN_HINT, it)
             }
             oidcConfig.oidcClientConfig.additionalParameters.let {
                 it.forEach { (key, value) ->
@@ -130,12 +143,12 @@ var browser =
 
             val pkce = Pkce.generate()
 
-            builder.appendQueryParameter("code_challenge", pkce.codeChallenge)
-                .appendQueryParameter("code_challenge_method", pkce.codeChallengeMethod);
+            builder.appendQueryParameter(CODE_CHALLENGE, pkce.codeChallenge)
+                .appendQueryParameter(CODE_CHALLENGE_METHOD, pkce.codeChallengeMethod);
 
             val result = BrowserLauncher.launch(URL(builder.build().toString()))
             val uri = result.getOrThrow()
-            val code = uri.getQueryParameter("code")
+            val code = uri.getQueryParameter(CODE)
                 ?: throw IllegalStateException("No authorization code found in response")
             return AuthCode(code, pkce.codeVerifier)
 

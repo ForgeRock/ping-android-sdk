@@ -18,6 +18,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.GeneratingTokens
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ModalDrawerSheet
@@ -30,6 +31,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import com.pingidentity.samples.journeyapp.Destinations.ENV_ROUTE
 import com.pingidentity.samples.journeyapp.Destinations.LAUNCH_ROUTE
 import com.pingidentity.samples.journeyapp.Destinations.TOKEN_ROUTE
 import com.pingidentity.samples.journeyapp.Destinations.USER_INFO
@@ -48,6 +50,16 @@ fun AppDrawer(
             .verticalScroll(scroll),
     ) {
         Logo(
+            modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
+        )
+        NavigationDrawerItem(
+            label = { Text("Environment") },
+            selected = false,
+            icon = { Icon(Icons.Filled.Home, null) },
+            onClick = {
+                navigateTo(ENV_ROUTE)
+                closeDrawer()
+            },
             modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
         )
         NavigationDrawerItem(

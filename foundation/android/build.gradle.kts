@@ -16,3 +16,7 @@ plugins {
 android {
     namespace = "com.pingidentity.android"
 }
+
+dependencies {
+    implementation(libs.androidx.startup.runtime)
+}

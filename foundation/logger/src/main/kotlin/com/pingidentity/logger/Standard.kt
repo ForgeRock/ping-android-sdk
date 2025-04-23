@@ -20,7 +20,16 @@ open class Standard : Logger {
      * @param message The message to log.
      */
     override fun d(message: String) {
-        Log.d(TAG, message)
+        if (message.length > 4000) {
+            var i = 0
+            while (i < message.length) {
+                val end = (i + 4000).coerceAtMost(message.length)
+                Log.d(TAG, message.substring(i, end))
+                i = end
+            }
+        } else {
+            Log.d(TAG, message)
+        }
     }
 
     /**

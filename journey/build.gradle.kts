@@ -33,11 +33,14 @@ dependencies {
     implementation(project(":foundation:android"))
     implementation(project(":foundation:storage"))
 
+    testImplementation(project(":foundation:testrail"))
     implementation(libs.androidx.datastore)
     implementation(libs.ktor.client.core)
     implementation(libs.kotlinx.serialization.json)
+    implementation(libs.androidx.startup.runtime)
 
     testImplementation(libs.kotlin.test)
+    testImplementation(libs.mockk)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.robolectric)
     testImplementation(libs.ktor.client.mock)

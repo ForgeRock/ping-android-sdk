@@ -10,19 +10,25 @@ package com.pingidentity.journey.callback
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.jsonPrimitive
 
+/**
+ * A callback for collecting a username.
+ *
+ * @property prompt The prompt for the username.
+ * @property username The username input by the user.
+ */
 class ValidatedUsernameCallback : AbstractValidatedCallback() {
     var prompt: String = ""
         private set
 
     var username: String = ""
 
-    override fun onAttribute(name: String, value: JsonElement) {
-        super.onAttribute(name, value)
+    override fun init(name: String, value: JsonElement) {
+        super.init(name, value)
         when (name) {
             "prompt" -> this.prompt = value.jsonPrimitive.content
         }
     }
 
-    override fun asJson() = input(username, inputValidateOnly)
+    override fun payload() = input(username, validateOnly)
 
 }

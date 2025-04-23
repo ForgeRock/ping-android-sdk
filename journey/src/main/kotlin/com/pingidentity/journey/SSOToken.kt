@@ -22,10 +22,3 @@ internal data class SSOTokenImpl(
     override val successUrl: String,
     override val realm: String
 ) : SSOToken
-
-
-internal data object EmptySSOToken : SSOToken {
-    override val value: String = ""
-    override val successUrl: String = ""
-    override val realm: String = ""
-}

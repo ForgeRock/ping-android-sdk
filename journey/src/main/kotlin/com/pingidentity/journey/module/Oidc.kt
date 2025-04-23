@@ -7,6 +7,7 @@
 
 package com.pingidentity.journey.module
 
+import com.pingidentity.journey.Constants.OIDC_CLIENT
 import com.pingidentity.journey.Journey
 import com.pingidentity.journey.SSOToken
 import com.pingidentity.journey.journey
@@ -21,56 +22,57 @@ import com.pingidentity.orchestrate.Module
 import com.pingidentity.orchestrate.SuccessNode
 import kotlin.collections.set
 
-private const val OIDC_CLIENT_CONFIG = "com.pingidentity.journey.OIDC_CLIENT_CONFIG"
 
+// Defines the OIDC module for handling OpenID Connect (OIDC) flows
 val Oidc =
     Module.of(::OidcClientConfig) {
 
         init {
-            // propagate the configuration from workflow to the module
+            // Propagate the HTTP client and logger configuration from the workflow to the module
             config.httpClient = journey.config.httpClient
             config.logger = journey.config.logger
-
-            sharedContext[OIDC_CLIENT_CONFIG] = config
             config.init()
+
+            val clone = config.clone().also {
+                // Update the session agent with the current session or an empty session
+                it.updateAgent(
+                    sessionAgent(
+                        journey.options.cookie,
+                        { journey.deleteSession() }) {
+                        journey.session() ?: EmptySession
+                    })
+            }
+
+            // Store the OIDC client in the shared context
+            sharedContext[OIDC_CLIENT] = OidcClient(clone)
         }
 
-        start { request ->
-
-            // When user starting the flow again, revoke previous token if exists
-            journey.user()?.revoke()
-            request
-        }
-
+        // Defines the behavior when the module successfully completes
         success { success ->
-            SuccessNode(success.input,
+            SuccessNode(
+                success.input,
                 prepareUser(
                     journey,
-                    OidcUser(journey.oidcClientConfig()),
+                    OidcUser(journey.oidcClient()),
                     success.session as SSOToken
                 )
             )
         }
 
+        // Defines the behavior for signing off the user
         signOff { request ->
-            request.url(config.openId.endSessionEndpoint)
-            OidcClient(config).endSession {
-                request.parameter("id_token_hint", it)
-                request.parameter("client_id", config.clientId)
-                true
-            }
+            // Use the OIDC client to end the session
+            journey.oidcClient().endSession()
             request
         }
     }
 
-fun Journey.oidcClientConfig(): OidcClientConfig {
-    sharedContext.getValue<OidcClientConfig>(OIDC_CLIENT_CONFIG)?.let {
-        it.clone().also { clone ->
-            clone.updateAgent(sessionAgent(options.cookie) {
-                session() ?: EmptySession
-            })
-            return clone
-        }
+/**
+ * Retrieves the OIDC client for the current journey.
+ */
+fun Journey.oidcClient(): OidcClient {
+    sharedContext.getValue<OidcClient>(OIDC_CLIENT)?.let {
+        return it
     }
     throw IllegalStateException("Oidc module is not initialized")
 }
