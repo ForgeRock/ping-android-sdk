@@ -18,6 +18,9 @@ import com.pingidentity.davinci.collector.Required
 import com.pingidentity.davinci.collector.TextCollector
 import com.pingidentity.davinci.collector.UniqueCharacter
 import com.pingidentity.davinci.module.Oidc
+import com.pingidentity.davinci.module.continueNode
+import com.pingidentity.davinci.module.description
+import com.pingidentity.davinci.module.name
 import com.pingidentity.davinci.plugin.collectors
 import com.pingidentity.logger.Logger
 import com.pingidentity.logger.STANDARD
@@ -26,6 +29,7 @@ import com.pingidentity.orchestrate.ErrorNode
 import com.pingidentity.testrail.TestRailCase
 import com.pingidentity.testrail.TestRailWatcher
 import junit.framework.TestCase.assertFalse
+import junit.framework.TestCase.assertNotNull
 import kotlinx.coroutines.test.runTest
 import org.junit.Rule
 import org.junit.rules.TestWatcher
@@ -205,5 +209,10 @@ class FormFieldValidationTest {
 
         assertEquals("400", errorNode.input["code"].toString())
         assertEquals("Error message from error node", errorNode.message.trim())
+
+        /// SDKS-3890 Access Previous Continue Node from ErrorNode
+        assertNotNull(errorNode.continueNode())
+        assertEquals("Select form for testing", errorNode.continueNode()?.description)
+        assertEquals("Select Test Form", errorNode.continueNode()?.name)
     }
 }
