@@ -30,7 +30,7 @@ pluginSserialization = "2.0.0"
 coreKtxVersion = "1.6.1"
 junitKtx = "1.2.1"
 androidx-test-runner = "1.6.2"
-androidx-credentials = "1.3.0" #May need to use 1.2.2, seem to have issues with 1.3.0-alpha04
+androidx-credentials = "1.5.0"
 robolectric = "4.12.2"
 composeBom = "2024.12.01"
 activity = "1.9.3"
@@ -45,8 +45,7 @@ browser = "1.8.0"
 nexus = "1.3.0"
 dokka = "1.9.20"
 googleid = "1.1.1"
-facebook-login = "17.0.2"
-credentials = "1.3.0"
+facebook-login = "18.0.3"
 
 coilCompose = "2.4.0"
 
@@ -107,7 +106,6 @@ android-gradlePlugin = { group = "com.android.tools.build", name = "gradle", ver
 kotlin-gradlePlugin = { group = "org.jetbrains.kotlin", name = "kotlin-gradle-plugin", version.ref = "kotlin" }
 dokka-gradlePlugin = { group = "org.jetbrains.dokka", name = "org.jetbrains.dokka.gradle.plugin", version.ref = "dokka" }
 googleid = { group = "com.google.android.libraries.identity.googleid", name = "googleid", version.ref = "googleid" }
-credentials = { group = "androidx.credentials", name = "credentials", version.ref = "credentials" }
 facebook-login = { module = "com.facebook.android:facebook-login", version.ref = "facebook-login" }
 
 [plugins]
