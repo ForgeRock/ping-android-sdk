@@ -192,15 +192,15 @@ app's `build.gradle.kts` file:
 ```gradle
 dependencies {
     // Google Sign-In
-    implementation("com.google.android.libraries.identity.googleid:googleid:<version>")
+    implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")
+    // optional - needed for credentials support from play services, for devices running
+    // Android 13 and below.
+    implementation("com.google.android.gms:play-services-auth:1.5.0")
 
     // Facebook Login
-    implementation("com.facebook.android:facebook-login:<version>")
+    implementation("com.facebook.android:facebook-login:18.0.3")
 }
 ```
-
-Replace `<version>` with the latest stable versions of the
-respective SDKs. You can find these on their respective developer portals or Maven Central.
 
 ### Google Developer Console Configuration for Native Integration
 
