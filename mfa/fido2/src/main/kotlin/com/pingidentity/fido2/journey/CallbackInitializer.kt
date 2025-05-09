@@ -31,14 +31,8 @@ class CallbackInitializer : Initializer<CallbackRegistry> {
      * @return The configured CallbackRegistry instance
      */
     override fun create(context: Context): CallbackRegistry {
-        CallbackRegistry.register(
-            "Fido2RegistrationCallback",
-            ::Fido2RegistrationCallback
-        )
-        CallbackRegistry.register(
-            "Fido2AuthenticationCallback",
-            ::Fido2AuthenticationCallback
-        )
+        CallbackRegistry.register("Fido2RegistrationCallback", ::Fido2RegistrationCallback)
+        CallbackRegistry.register("Fido2AuthenticationCallback", ::Fido2AuthenticationCallback)
         return CallbackRegistry
     }
 

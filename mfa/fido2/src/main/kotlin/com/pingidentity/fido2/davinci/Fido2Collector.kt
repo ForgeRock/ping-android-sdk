@@ -8,7 +8,11 @@
 package com.pingidentity.fido2.davinci
 
 import com.pingidentity.davinci.plugin.Collector
-import com.pingidentity.fido2.Constants
+import com.pingidentity.davinci.plugin.DaVinci
+import com.pingidentity.davinci.plugin.DaVinciAware
+import com.pingidentity.fido2.Constants.ACTION_AUTHENTICATE
+import com.pingidentity.fido2.Constants.ACTION_REGISTER
+import com.pingidentity.fido2.Constants.FIELD_ACTION
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
@@ -22,7 +26,9 @@ import kotlinx.serialization.json.jsonPrimitive
  * The collector examines the "action" field in the input JSON to determine whether
  * to create a [Fido2RegistrationCollector] or [Fido2AuthenticationCollector].
  */
-open class Fido2Collector : Collector<JsonObject> {
+open class Fido2Collector : Collector<JsonObject>, DaVinciAware {
+
+    override lateinit var davinci: DaVinci
 
     /**
      * Initializes and returns the appropriate FIDO2 collector based on the action type.
@@ -37,12 +43,16 @@ open class Fido2Collector : Collector<JsonObject> {
      * @throws IllegalArgumentException if the action field is missing or not supported
      */
     override fun init(input: JsonObject): Collector<JsonObject> {
-        val action = input[Constants.FIELD_ACTION]?.jsonPrimitive?.content
-            ?: throw IllegalArgumentException("${Constants.FIELD_ACTION} is required")
+        val action = input[FIELD_ACTION]?.jsonPrimitive?.content
+            ?: throw IllegalArgumentException("$FIELD_ACTION is required")
         return when (action) {
-            Constants.ACTION_REGISTER -> Fido2RegistrationCollector()
-            Constants.ACTION_AUTHENTICATE -> Fido2AuthenticationCollector()
-            else -> throw IllegalArgumentException("${Constants.FIELD_ACTION}: $action is not supported")
+            ACTION_REGISTER -> Fido2RegistrationCollector()
+            ACTION_AUTHENTICATE -> Fido2AuthenticationCollector()
+            else -> throw IllegalArgumentException("$FIELD_ACTION: $action is not supported")
+        }.apply {
+            this.davinci = this@Fido2Collector.davinci
+            init(input)
         }
     }
+
 }

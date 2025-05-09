@@ -9,14 +9,14 @@ package com.pingidentity.davinci.module
 
 import com.pingidentity.davinci.collector.Form
 import com.pingidentity.davinci.collector.asJson
-import com.pingidentity.davinci.collector.request
 import com.pingidentity.davinci.collector.eventType
+import com.pingidentity.davinci.collector.request
 import com.pingidentity.davinci.plugin.Collectors
+import com.pingidentity.davinci.plugin.DaVinci
 import com.pingidentity.orchestrate.ContinueNode
 import com.pingidentity.orchestrate.FlowContext
 import com.pingidentity.orchestrate.Module
 import com.pingidentity.orchestrate.Request
-import com.pingidentity.orchestrate.Workflow
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonObject
@@ -53,17 +53,17 @@ val ContinueNode.category: String
  * Class representing a Connector from Davinci which require client actions.
  *
  * @property context The FlowContext of the connector.
- * @property workflow The Workflow of the connector.
+ * @property daVinci The DaVinci instance of the connector.
  * @property input The input JsonObject of the connector.
  * @property collectors The collectors of the connector.
  */
 internal class Connector(
-    context: FlowContext, workflow: Workflow, input: JsonObject, private val collectors: Collectors
+    context: FlowContext, daVinci: DaVinci, input: JsonObject, private val collectors: Collectors
 ) : ContinueNode(
-    context, workflow, input, collectors
+    context, daVinci, input, collectors
 ) {
     init {
-        if ("form" in input) collectors.addAll(Form.parse(input, workflow, this))
+        if ("form" in input) collectors.addAll(Form.parse(daVinci, input))
     }
 
     /**

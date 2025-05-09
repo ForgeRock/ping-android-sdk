@@ -9,10 +9,15 @@ package com.pingidentity.fido2.journey
 
 import androidx.credentials.exceptions.CreateCredentialCancellationException
 import androidx.credentials.exceptions.CreateCredentialUnsupportedException
+import androidx.credentials.exceptions.GetCredentialCancellationException
+import androidx.credentials.exceptions.GetCredentialUnsupportedException
 import androidx.credentials.exceptions.publickeycredential.CreatePublicKeyCredentialDomException
+import androidx.credentials.exceptions.publickeycredential.GetPublicKeyCredentialDomException
 import com.pingidentity.fido2.Constants
 import com.pingidentity.journey.plugin.AbstractCallback
 import com.pingidentity.journey.plugin.ContinueNodeAware
+import com.pingidentity.journey.plugin.Journey
+import com.pingidentity.journey.plugin.JourneyAware
 import com.pingidentity.journey.plugin.ValueCallback
 import com.pingidentity.journey.plugin.callbacks
 import com.pingidentity.logger.Logger
@@ -30,7 +35,7 @@ import kotlin.io.encoding.Base64.PaddingOption
  * The class handles the conversion between different data formats used by FIDO2
  * specifications and the Journey framework, ensuring proper encoding and error handling.
  */
-abstract class Fido2Callback : ContinueNodeAware, AbstractCallback() {
+abstract class Fido2Callback : JourneyAware, ContinueNodeAware, AbstractCallback() {
 
     /**
      * The Journey continue node that this callback is associated with.
@@ -39,10 +44,15 @@ abstract class Fido2Callback : ContinueNodeAware, AbstractCallback() {
     override lateinit var continueNode: ContinueNode
 
     /**
+     * The Journey instance that this callback is associated with.
+     */
+    override lateinit var journey: Journey
+
+    /**
      * Logger instance for this callback, obtained from the workflow configuration.
      */
     val logger: Logger by lazy {
-        continueNode.workflow.config.logger
+        journey.config.logger
     }
 
     /**
@@ -62,9 +72,13 @@ abstract class Fido2Callback : ContinueNodeAware, AbstractCallback() {
      * @param value The value to set for the WebAuthn outcome
      */
     fun valueCallback(value: String) {
+        logger.d("Setting WebAuthn outcome value")
         continueNode.callbacks.filterIsInstance<ValueCallback>()
             .find { it.id == Constants.WEB_AUTHN_OUTCOME }
-            ?.let { it.value = value }
+            ?.let {
+                logger.d("Found WebAuthn outcome callback, setting value")
+                it.value = value
+            } ?: logger.w("WebAuthn outcome callback not found")
     }
 
     /**
@@ -76,11 +90,36 @@ abstract class Fido2Callback : ContinueNodeAware, AbstractCallback() {
      * @param error The throwable error to handle and convert
      */
     fun handleError(error: Throwable) {
+        logger.e("Handling FIDO2 error: ${error::class.simpleName} - ${error.message}", error)
         when (error) {
-            is CreateCredentialUnsupportedException -> valueCallback(Constants.ERROR_UNSUPPORTED)
-            is CreateCredentialCancellationException -> setError(Constants.ERROR_NOT_ALLOWED, error.message)
-            is CreatePublicKeyCredentialDomException -> setError(error.domError::class.simpleName, error.message)
-            else -> setError(Constants.ERROR_UNKNOWN, error.message)
+            is CreateCredentialUnsupportedException -> {
+                logger.d("Credential creation unsupported")
+                valueCallback(Constants.ERROR_UNSUPPORTED)
+            }
+            is GetCredentialUnsupportedException  -> {
+                logger.d("Get Credential unsupported")
+                valueCallback(Constants.ERROR_UNSUPPORTED)
+            }
+            is CreateCredentialCancellationException -> {
+                logger.d("Credential creation cancelled")
+                setError(Constants.ERROR_NOT_ALLOWED, error.message)
+            }
+            is GetCredentialCancellationException -> {
+                logger.d("Get Credential cancelled")
+                setError(Constants.ERROR_NOT_ALLOWED, error.message)
+            }
+            is CreatePublicKeyCredentialDomException -> {
+                logger.d("DOM exception occurred: ${error.domError::class.simpleName}")
+                setError(error.domError::class.simpleName, error.message)
+            }
+            is GetPublicKeyCredentialDomException -> {
+                logger.d("DOM exception occurred: ${error.domError::class.simpleName}")
+                setError(error.domError::class.simpleName, error.message)
+            }
+            else -> {
+                logger.d("Unknown error occurred")
+                setError(Constants.ERROR_UNKNOWN, error.message)
+            }
         }
     }
 
@@ -91,9 +130,14 @@ abstract class Fido2Callback : ContinueNodeAware, AbstractCallback() {
      * @param message The detailed error message
      */
     private fun setError(error: String?, message: String?) {
+        logger.d("Setting error - type: $error, message: $message")
         continueNode.callbacks.filterIsInstance<ValueCallback>()
             .find { it.id == Constants.WEB_AUTHN_OUTCOME }
-            ?.let { it.value = "${Constants.ERROR_PREFIX}$error:$message" }
+            ?.let {
+                val errorValue = "${Constants.ERROR_PREFIX}$error:$message"
+                logger.d("Setting error value: $errorValue")
+                it.value = errorValue
+            } ?: logger.w("WebAuthn outcome callback not found for error setting")
     }
 
     /**

@@ -7,9 +7,14 @@
 
 package com.pingidentity.journey.callback
 
+import com.pingidentity.journey.plugin.Journey
+import com.pingidentity.logger.CONSOLE
+import com.pingidentity.logger.Logger
+import com.pingidentity.orchestrate.WorkflowConfig
 import com.pingidentity.protect.journey.CallbackInitializer
 import com.pingidentity.protect.journey.PingOneProtectEvaluationCallback
 import com.pingidentity.protect.journey.PingOneProtectInitializeCallback
+import io.mockk.every
 import io.mockk.mockk
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
@@ -25,8 +30,16 @@ class MetadataCallbackTest {
 
     private lateinit var jsonObject: JsonObject
 
+    private val journey: Journey = mockk()
+    private val config: WorkflowConfig = mockk()
+    private val logger: Logger = Logger.CONSOLE
+
     @BeforeTest
     fun setUp() {
+
+        every { journey.config } returns config
+        every { config.logger } returns logger
+
         jsonObject = Json.parseToJsonElement(
             """
             {
@@ -55,6 +68,7 @@ class MetadataCallbackTest {
     @Test
     fun initializesCorrectly() {
         val callback = MetadataCallback()
+        callback.journey = journey
         callback.init(jsonObject)
 
         assertEquals("webauthn_authentication", callback.value["_action"]?.jsonPrimitive?.content)
@@ -71,6 +85,7 @@ class MetadataCallbackTest {
     @Test
     fun payloadReturnsCorrectly() {
         val callback = MetadataCallback()
+        callback.journey = journey
         callback.init(jsonObject)
 
         val payload = callback.payload()

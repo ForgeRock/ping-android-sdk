@@ -38,49 +38,43 @@ object CollectorFactory {
     /**
      * Creates a list of Collector instances from a JsonArray.
      * Each JsonObject in the array should have a "type" field that matches a registered Collector type.
+     *
+     * @param daVinci The DaVinci instance to be injected.
      * @param array The JsonArray to create the Collectors from.
      * @return A list of Collector instances.
      */
     fun collector(
+        daVinci: DaVinci,
         array: JsonArray,
-        davinci: DaVinci,
-        continueNode: ContinueNode,
     ): List<Collector<*>> {
-        return array.mapNotNull { item ->
+
+        val list = mutableListOf<Collector<*>>()
+        array.forEach { item ->
             val jsonObject = item.jsonObject
             val type = jsonObject["inputType"]?.jsonPrimitive?.content ?: jsonObject["type"]?.jsonPrimitive?.content
-
-            collectors[type]?.let { constructor ->
-                var currentCollector = constructor()
-                var isDerived: Boolean
-
-                do {
-                    inject(currentCollector, davinci, continueNode)
-                    val newCallback = currentCollector.init(jsonObject)
-                    isDerived = (newCallback !== currentCollector)
-
-                    if (isDerived) {
-                        currentCollector = newCallback
-                    }
-                } while (isDerived)
-
-                currentCollector
+            collectors[type]?.let {
+                val collector = it()
+                if (collector is DaVinciAware) {
+                    collector.davinci = daVinci
+                }
+                //collector.init may return a different collector, parents collector is responsible
+                //to init the child collector and inject required dependency
+                list.add(collector.init(jsonObject))
             }
         }
+        return list
     }
 
 
     /**
      * Injects the DaVinci and ContinueNode instances into the collectors.
-     * @param davinci The DaVinci instance to be injected.
      * @param continueNode The ContinueNode instance to be injected.
      */
-    private fun inject(collector: Collector<*>, davinci: DaVinci, continueNode: ContinueNode) {
-        if (collector is DaVinciAware) {
-            collector.davinci = davinci
-        }
-        if (collector is ContinueNodeAware) {
-            collector.continueNode = continueNode
+    fun inject(continueNode: ContinueNode) {
+        continueNode.collectors.forEach { collector ->
+            if (collector is ContinueNodeAware) {
+                collector.continueNode = continueNode
+            }
         }
     }
 

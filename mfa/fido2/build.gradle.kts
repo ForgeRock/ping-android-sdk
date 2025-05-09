@@ -24,7 +24,7 @@ dependencies {
     implementation(project(":foundation:logger"))
     implementation(project(":foundation:davinci-plugin"))
     implementation(project(":foundation:journey-plugin"))
-    implementation(libs.androidx.credentials)
+    api(libs.androidx.credentials)
     implementation(libs.androidx.startup.runtime)
 
     testImplementation(libs.kotlin.test)

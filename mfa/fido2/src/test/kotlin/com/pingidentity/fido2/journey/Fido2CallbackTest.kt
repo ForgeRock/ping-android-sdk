@@ -13,6 +13,7 @@ import androidx.credentials.exceptions.domerrors.AbortError
 import androidx.credentials.exceptions.publickeycredential.CreatePublicKeyCredentialDomException
 import com.pingidentity.fido2.Constants
 import com.pingidentity.journey.plugin.ValueCallback
+import com.pingidentity.logger.CONSOLE
 import com.pingidentity.logger.Logger
 import com.pingidentity.orchestrate.ContinueNode
 import com.pingidentity.orchestrate.FlowContext
@@ -37,7 +38,6 @@ class Fido2CallbackTest {
     private lateinit var mockContinueNode: ContinueNode
     private lateinit var mockWorkflow: Workflow
     private lateinit var mockWorkflowConfig: WorkflowConfig
-    private lateinit var mockLogger: Logger
     private lateinit var mockValueCallback: ValueCallback
 
     private inner class TestFido2Callback : Fido2Callback() {
@@ -50,7 +50,6 @@ class Fido2CallbackTest {
     fun setUp() {
         mockWorkflow = mockk<Workflow>()
         mockWorkflowConfig = mockk<WorkflowConfig>()
-        mockLogger = mockk<Logger>()
         mockValueCallback = mockk<ValueCallback>(relaxed = true)
 
         mockContinueNode = object: ContinueNode(
@@ -65,11 +64,12 @@ class Fido2CallbackTest {
         }
 
         every { mockWorkflow.config } returns mockWorkflowConfig
-        every { mockWorkflowConfig.logger } returns mockLogger
+        every { mockWorkflowConfig.logger } returns Logger.CONSOLE
         every { mockValueCallback.id } returns Constants.WEB_AUTHN_OUTCOME
 
         testCallback = TestFido2Callback()
         testCallback.continueNode = mockContinueNode
+        testCallback.journey = mockWorkflow
     }
 
     @Test

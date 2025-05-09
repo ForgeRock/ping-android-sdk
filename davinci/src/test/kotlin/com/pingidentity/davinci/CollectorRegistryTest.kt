@@ -5,7 +5,6 @@
  * of the MIT license. See the LICENSE file for details.
  */
 
-import com.pingidentity.testrail.TestRailCase
 import com.pingidentity.davinci.CollectorRegistry
 import com.pingidentity.davinci.collector.FlowCollector
 import com.pingidentity.davinci.collector.LabelCollector
@@ -15,6 +14,7 @@ import com.pingidentity.davinci.collector.SingleSelectCollector
 import com.pingidentity.davinci.collector.SubmitCollector
 import com.pingidentity.davinci.collector.TextCollector
 import com.pingidentity.davinci.plugin.CollectorFactory
+import com.pingidentity.testrail.TestRailCase
 import com.pingidentity.testrail.TestRailWatcher
 import io.mockk.mockk
 import kotlinx.serialization.json.buildJsonArray
@@ -63,7 +63,7 @@ class CollectorRegistryTest {
             add(buildJsonObject { put("inputType", "MULTI_SELECT") })
         }
 
-        val collectors = CollectorFactory.collector(jsonArray, mockk(), mockk())
+        val collectors = CollectorFactory.collector(mockk(), jsonArray)
         assertEquals(TextCollector::class.java, collectors[0]::class.java)
         assertEquals(PasswordCollector::class.java, collectors[1]::class.java)
         assertEquals(PasswordCollector::class.java, collectors[2]::class.java)
@@ -90,7 +90,7 @@ class CollectorRegistryTest {
             add(buildJsonObject { put("type", "UNKNOWN") })
         }
 
-        val collectors = CollectorFactory.collector(jsonArray, mockk(), mockk())
+        val collectors = CollectorFactory.collector(mockk(), jsonArray)
         assertEquals(4, collectors.size)
     }
 

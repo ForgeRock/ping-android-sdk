@@ -79,6 +79,7 @@ abstract class AbstractFido2Collector : Collector<JsonObject>, DaVinciAware, Sub
      * @throws IllegalArgumentException if required fields are missing or invalid
      */
     override fun init(input: JsonObject): Collector<JsonObject> {
+        logger.d("Initializing FIDO2 collector with input: $input")
         key = input[Constants.FIELD_KEY]?.jsonPrimitive?.content ?: ""
         label = input[Constants.FIELD_LABEL]?.jsonPrimitive?.content ?: ""
         trigger = input[Constants.FIELD_TRIGGER]?.jsonPrimitive?.content ?: ""

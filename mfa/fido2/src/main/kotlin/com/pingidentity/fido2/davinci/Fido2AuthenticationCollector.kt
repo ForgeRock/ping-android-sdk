@@ -7,8 +7,11 @@
 
 package com.pingidentity.fido2.davinci
 
+import androidx.credentials.GetPublicKeyCredentialOption
 import com.pingidentity.davinci.plugin.Collector
 import com.pingidentity.fido2.Constants
+import com.pingidentity.fido2.Constants.FIELD_ALLOW_CREDENTIALS
+import com.pingidentity.fido2.Constants.FIELD_CHALLENGE
 import com.pingidentity.fido2.Fido2
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
@@ -18,7 +21,6 @@ import kotlinx.serialization.json.int
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlin.io.encoding.Base64
-import kotlin.io.encoding.ExperimentalEncodingApi
 
 /**
  * DaVinci collector for FIDO2 authentication operations.
@@ -54,9 +56,12 @@ class Fido2AuthenticationCollector : AbstractFido2Collector() {
      */
     override fun init(input: JsonObject): Collector<JsonObject> {
         super.init(input)
-        publicKeyCredentialRequestOptions = input[Constants.FIELD_PUBLIC_KEY_CREDENTIAL_REQUEST_OPTIONS]?.jsonObject
-            ?.let { transform(it) }
-            ?: throw IllegalArgumentException("Missing ${Constants.FIELD_PUBLIC_KEY_CREDENTIAL_REQUEST_OPTIONS}")
+        logger.d("Initializing FIDO2 authentication collector")
+        publicKeyCredentialRequestOptions =
+            input[Constants.FIELD_PUBLIC_KEY_CREDENTIAL_REQUEST_OPTIONS]?.jsonObject
+                ?.let { transform(it) }
+                ?: throw IllegalArgumentException("Missing ${Constants.FIELD_PUBLIC_KEY_CREDENTIAL_REQUEST_OPTIONS}")
+        logger.d("FIDO2 authentication collector initialized with request options")
         return this
     }
 
@@ -68,8 +73,10 @@ class Fido2AuthenticationCollector : AbstractFido2Collector() {
      */
     override fun payload(): JsonObject? {
         return if (::assertionValue.isInitialized) {
+            logger.d("Returning assertion payload for FIDO2 authentication")
             buildJsonObject { put(Constants.FIELD_ASSERTION_VALUE, assertionValue) }
         } else {
+            logger.d("No assertion value available, returning null payload")
             null
         }
     }
@@ -81,12 +88,23 @@ class Fido2AuthenticationCollector : AbstractFido2Collector() {
      * Credential Manager. Upon successful authentication, the assertion value
      * is stored and will be automatically included in the workflow payload.
      *
+     * @param block A lambda function that transforms the public key credential request options
      * @return A [Result] containing the assertion response as a [JsonObject] on success,
      *         or an exception on failure
      */
-    suspend fun authenticate(): Result<JsonObject> {
-        return Fido2.authenticate(publicKeyCredentialRequestOptions).onSuccess {
+    suspend fun authenticate(
+        block: (JsonObject) -> GetPublicKeyCredentialOption = {
+            GetPublicKeyCredentialOption(
+                it.toString()
+            )
+        }
+    ): Result<JsonObject> {
+        logger.d("Starting FIDO2 authentication")
+        return Fido2.authenticate(block(publicKeyCredentialRequestOptions)).onSuccess {
+            logger.d("FIDO2 authentication successful")
             assertionValue = it
+        }.onFailure { exception ->
+            logger.e("FIDO2 authentication failed", exception)
         }
     }
 
@@ -101,33 +119,36 @@ class Fido2AuthenticationCollector : AbstractFido2Collector() {
      * @param inputJson The input JSON object in DaVinci format
      * @return The transformed JSON object compatible with WebAuthn standards
      */
-    @OptIn(ExperimentalEncodingApi::class)
     private fun transform(inputJson: JsonObject): JsonObject {
+        logger.d("Transforming FIDO2 authentication request options")
         val map = inputJson.toMutableMap()
 
         // Convert challenge array to Base64 string
-        (map[Constants.FIELD_CHALLENGE] as? JsonArray)?.let { challenge ->
+        (map[FIELD_CHALLENGE] as? JsonArray)?.let { challenge ->
             val byteArray = challenge.map { it.jsonPrimitive.int.toByte() }.toByteArray()
-            map[Constants.FIELD_CHALLENGE] = JsonPrimitive(Base64.UrlSafe.encode(byteArray).trimEnd('='))
+            map[FIELD_CHALLENGE] =
+                JsonPrimitive(Base64.UrlSafe.encode(byteArray).trimEnd('='))
         }
 
         // Convert allowCredentials IDs to Base64 strings
-        (map[Constants.FIELD_ALLOW_CREDENTIALS] as? JsonArray)?.let { allowCredentials ->
+        (map[FIELD_ALLOW_CREDENTIALS] as? JsonArray)?.let { allowCredentials ->
             val updated = allowCredentials.map { credential ->
                 if (credential is JsonObject && credential.containsKey(Constants.FIELD_ID)) {
                     val credentialMap = credential.toMutableMap()
                     (credentialMap[Constants.FIELD_ID] as? JsonArray)?.let { id ->
                         val byteArray = id.map { it.jsonPrimitive.int.toByte() }.toByteArray()
-                        credentialMap[Constants.FIELD_ID] = JsonPrimitive(Base64.UrlSafe.encode(byteArray).trimEnd('='))
+                        credentialMap[Constants.FIELD_ID] =
+                            JsonPrimitive(Base64.UrlSafe.encode(byteArray).trimEnd('='))
                     }
                     JsonObject(credentialMap)
                 } else {
                     credential
                 }
             }
-            map[Constants.FIELD_ALLOW_CREDENTIALS] = JsonArray(updated)
+            map[FIELD_ALLOW_CREDENTIALS] = JsonArray(updated)
         }
 
+        logger.d("FIDO2 authentication request options transformed successfully")
         return JsonObject(map)
     }
 }

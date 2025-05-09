@@ -87,7 +87,7 @@ class Fido2Test {
         } returns mockCreateResponse
 
         // When
-        val result = Fido2.register(creationOptions)
+        val result = Fido2.register(CreatePublicKeyCredentialRequest(creationOptions.toString()))
 
         // Then
         assertTrue(result.isSuccess)
@@ -124,7 +124,7 @@ class Fido2Test {
         } throws expectedException
 
         // When
-        val result = Fido2.register(creationOptions)
+        val result = Fido2.register(CreatePublicKeyCredentialRequest(creationOptions.toString()))
 
         // Then
         assertTrue(result.isFailure)
@@ -152,7 +152,7 @@ class Fido2Test {
         } returns unexpectedResponse
 
         // When
-        val result = Fido2.register(creationOptions)
+        val result = Fido2.register(CreatePublicKeyCredentialRequest(creationOptions.toString()))
 
         // Then
         assertTrue(result.isFailure)
@@ -191,7 +191,7 @@ class Fido2Test {
         } returns mockGetResponse
 
         // When
-        val result = Fido2.authenticate(requestOptions)
+        val result = Fido2.authenticate(GetPublicKeyCredentialOption(requestOptions.toString()))
 
         // Then
         assertTrue(result.isSuccess)
@@ -223,7 +223,7 @@ class Fido2Test {
         } throws expectedException
 
         // When
-        val result = Fido2.authenticate(requestOptions)
+        val result = Fido2.authenticate(GetPublicKeyCredentialOption(requestOptions.toString()))
 
         // Then
         assertTrue(result.isFailure)
@@ -246,11 +246,10 @@ class Fido2Test {
         } returns mockGetResponse
 
         // When
-        val result = Fido2.authenticate(requestOptions)
+        val result = Fido2.authenticate(GetPublicKeyCredentialOption(requestOptions.toString()))
 
         // Then
         assertTrue(result.isFailure)
         assertTrue(result.exceptionOrNull() is IllegalStateException)
     }
 }
-

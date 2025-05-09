@@ -75,6 +75,7 @@ object Constants {
     const val DEFAULT_ATTESTATION = "none"
     const val DEFAULT_USER_VERIFICATION = "required"
     const val DEFAULT_RESIDENT_KEY_REQUIRED = "required"
+    const val RESIDENT_KEY_DISCOURAGED = "discouraged"
     const val DEFAULT_RELYING_PARTY_ID = "credential-manager-test.example.com"
 
     // Separators

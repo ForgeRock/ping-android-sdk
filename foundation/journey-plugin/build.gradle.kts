@@ -25,4 +25,5 @@ dependencies {
     api(libs.kotlinx.serialization.json)
 
     testImplementation(libs.kotlin.test)
+    testImplementation(libs.mockk)
 }

@@ -25,6 +25,7 @@ import kotlin.coroutines.coroutineContext
  *
  * This singleton object provides the main FIDO2 functionality including credential
  * registration and authentication using the Android Credential Manager API.
+ * https://developer.android.com/identity/sign-in/credential-manager
  * It handles the conversion between JSON-based FIDO2 specifications and Android's
  * credential management system.
  */
@@ -37,15 +38,13 @@ internal object Fido2 {
      * Android Credential Manager. The credential can be stored locally on the device
      * or synced across devices depending on the platform capabilities.
      *
-     * @param publicKeyCredentialCreationOptions JSON object containing the credential
-     *        creation parameters as specified by the WebAuthn standard
+     * @param credentialRequest The creation options for the FIDO2 credential
      * @return A [Result] containing the attestation response as a [JsonObject] on success,
      *         or an exception on failure
      */
-    suspend fun register(publicKeyCredentialCreationOptions: JsonObject): Result<JsonObject> {
+    suspend fun register(credentialRequest: CreatePublicKeyCredentialRequest): Result<JsonObject> {
         val credentialManager = CredentialManager.create(ContextProvider.context)
-        val credentialRequest =
-            CreatePublicKeyCredentialRequest(publicKeyCredentialCreationOptions.toString())
+
         try {
             val result = credentialManager.createCredential(
                 context = ContextProvider.context,
@@ -74,15 +73,12 @@ internal object Fido2 {
      * It prompts the user to select and verify their identity using biometrics, PIN,
      * or other verification methods supported by the authenticator.
      *
-     * @param publicKeyCredentialRequestOptions JSON object containing the authentication
-     *        request parameters as specified by the WebAuthn standard
+     * @param credentialOption The authentication options for the FIDO2 credential
      * @return A [Result] containing the assertion response as a [JsonObject] on success,
      *         or an exception on failure
      */
-    suspend fun authenticate(publicKeyCredentialRequestOptions: JsonObject): Result<JsonObject> {
+    suspend fun authenticate(credentialOption: GetPublicKeyCredentialOption): Result<JsonObject> {
         val credentialManager = CredentialManager.create(ContextProvider.context)
-        val credentialOption =
-            GetPublicKeyCredentialOption(publicKeyCredentialRequestOptions.toString())
         val credentialRequest = GetCredentialRequest(listOf(credentialOption))
         try {
             val result = credentialManager.getCredential(

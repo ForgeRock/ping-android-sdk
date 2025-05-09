@@ -7,6 +7,7 @@
 
 package com.pingidentity.fido2.journey
 
+import androidx.credentials.GetPublicKeyCredentialOption
 import com.pingidentity.fido2.Constants
 import com.pingidentity.fido2.Fido2
 import kotlinx.serialization.json.Json
@@ -63,16 +64,49 @@ class Fido2AuthenticationCallback : Fido2Callback() {
      * to verify their identity using available authenticators. Upon successful
      * authentication, it formats and submits the response to the Journey workflow.
      *
+     * **Sample callbackValue Results:**
+     *
+     * **Legacy String Format (when supportsJsonResponse = false):**
+     * ```
+     * {"type":"webauthn.get","challenge":"test-challenge"}::dGVzdC1hdXRoZW50aWNhdG9yLWRhdGE::dGVzdC1zaWduYXR1cmU::dGVzdC1yYXctaWQ::dGVzdC11c2VyLWhhbmRsZQ
+     * ```
+     *
+     * **JSON Format (when supportsJsonResponse = true):**
+     * ```json
+     * {
+     *   "authenticatorType": "PLATFORM",
+     *   "response": "{\"type\":\"webauthn.get\",\"challenge\":\"test-challenge\"}::dGVzdC1hdXRoZW50aWNhdG9yLWRhdGE::dGVzdC1zaWduYXR1cmU::dGVzdC1yYXctaWQ::dGVzdC11c2VyLWhhbmRsZQ"
+     * }
+     * ```
+     *
+     * The data components are separated by "::" and include:
+     * 1. Client data JSON (Base64)
+     * 2. Authenticator data (Base64 converted to integer string)
+     * 3. Signature (Base64 converted to integer string)
+     * 4. Raw credential ID
+     * 5. User handle (if present)
+     *
+     * @param block A lambda function that transforms the public key credential request options
      * @return A [Result] containing the authentication response as a [JsonObject] on success,
      *         or an exception on failure. The response is automatically submitted to the workflow.
      */
-    suspend fun authenticate(): Result<JsonObject> {
-        return Fido2.authenticate(publicKeyCredentialRequestOptions).onSuccess { response ->
-            val authResponse = response[Constants.FIELD_RESPONSE]?.jsonObject ?: JsonObject(emptyMap())
+    suspend fun authenticate(
+        block: (JsonObject) -> GetPublicKeyCredentialOption = {
+            GetPublicKeyCredentialOption(
+                it.toString()
+            )
+        }
+    ): Result<JsonObject> {
+        return Fido2.authenticate(block(publicKeyCredentialRequestOptions)).onSuccess { response ->
+            val authResponse =
+                response[Constants.FIELD_RESPONSE]?.jsonObject ?: JsonObject(emptyMap())
             val data = listOf(
-                authResponse[Constants.FIELD_CLIENT_DATA_JSON]?.jsonPrimitive?.content?.base64ToJson() ?: "",
-                authResponse[Constants.FIELD_AUTHENTICATOR_DATA]?.jsonPrimitive?.content?.base64ToIntStr() ?: "",
-                authResponse[Constants.FIELD_SIGNATURE]?.jsonPrimitive?.content?.base64ToIntStr() ?: "",
+                authResponse[Constants.FIELD_CLIENT_DATA_JSON]?.jsonPrimitive?.content?.base64ToJson()
+                    ?: "",
+                authResponse[Constants.FIELD_AUTHENTICATOR_DATA]?.jsonPrimitive?.content?.base64ToIntStr()
+                    ?: "",
+                authResponse[Constants.FIELD_SIGNATURE]?.jsonPrimitive?.content?.base64ToIntStr()
+                    ?: "",
                 response[Constants.FIELD_RAW_ID]?.jsonPrimitive?.content ?: "",
                 authResponse[Constants.FIELD_USER_HANDLE]?.jsonPrimitive?.content ?: ""
             ).joinToString(Constants.DATA_SEPARATOR)
@@ -97,15 +131,76 @@ class Fido2AuthenticationCallback : Fido2Callback() {
      * - Transforming allowed credentials with proper ID encoding
      * - Setting appropriate timeout and user verification requirements
      *
+     * **Sample Input JSON:**
+     * ```json
+     * {
+     *   "_action": "webauthn_authentication",
+     *   "challenge": "IrmRP2U3shw3plwrICzAkw/yupRI60s2dnGhfwExd/o=",
+     *   "allowCredentials": "",
+     *   "_allowCredentials": [
+     *     {
+     *       "type": "public-key",
+     *       "id": [-26, -52, 96, 28, 18, -70, -54, -114, 41, -46, -27, 45, -87, -125, 111, -36]
+     *     },
+     *     {
+     *       "type": "public-key",
+     *       "id": [1, 51, -83, -20, 75, 95, 57, 33, 40, 72, -112, -69, 123, 71, 12, -43]
+     *     }
+     *   ],
+     *   "timeout": "60000",
+     *   "userVerification": "required",
+     *   "relyingPartyId": "rpId: \"idc.petrov.ca\",",
+     *   "_relyingPartyId": "idc.petrov.ca",
+     *   "extensions": {},
+     *   "_type": "WebAuthn",
+     *   "supportsJsonResponse": true
+     * }
+     * ```
+     *
+     * **Sample Output JSON:**
+     * ```json
+     * {
+     *   "challenge": "IrmRP2U3shw3plwrICzAkw_yupRI60s2dnGhfwExd_o",
+     *   "timeout": 60000,
+     *   "userVerification": "required",
+     *   "rpId": "idc.petrov.ca",
+     *   "allowCredentials": [
+     *     {
+     *       "type": "public-key",
+     *       "id": "5sxgHBK6yo4p0uctqYNv3A=="
+     *     },
+     *     {
+     *       "type": "public-key",
+     *       "id": "ATO97EtfOSEoSJC7e0cM0w=="
+     *     }
+     *   ]
+     * }
+     * ```
+     *
      * @param input The input JSON object from the Journey workflow
      * @return The transformed JSON object compatible with WebAuthn standards
      */
     private fun transform(input: JsonObject): JsonObject {
         return buildJsonObject {
-            put(Constants.FIELD_CHALLENGE, input[Constants.FIELD_CHALLENGE]?.jsonPrimitive?.content?.base64DefaultToUrlSafe() ?: "")
-            put(Constants.FIELD_TIMEOUT, input[Constants.FIELD_TIMEOUT]?.jsonPrimitive?.content?.toIntOrNull() ?: Constants.DEFAULT_TIMEOUT)
-            put(Constants.FIELD_USER_VERIFICATION, input[Constants.FIELD_USER_VERIFICATION]?.jsonPrimitive?.content ?: Constants.DEFAULT_USER_VERIFICATION)
-            put(Constants.FIELD_RP_ID, input[Constants.FIELD_RELYING_PARTY_ID]?.jsonPrimitive?.content ?: "")
+            put(
+                Constants.FIELD_CHALLENGE,
+                input[Constants.FIELD_CHALLENGE]?.jsonPrimitive?.content?.base64DefaultToUrlSafe()
+                    ?: ""
+            )
+            put(
+                Constants.FIELD_TIMEOUT,
+                input[Constants.FIELD_TIMEOUT]?.jsonPrimitive?.content?.toIntOrNull()
+                    ?: Constants.DEFAULT_TIMEOUT
+            )
+            put(
+                Constants.FIELD_USER_VERIFICATION,
+                input[Constants.FIELD_USER_VERIFICATION]?.jsonPrimitive?.content
+                    ?: Constants.DEFAULT_USER_VERIFICATION
+            )
+            put(
+                Constants.FIELD_RP_ID,
+                input[Constants.FIELD_RELYING_PARTY_ID]?.jsonPrimitive?.content ?: ""
+            )
 
             putJsonArray(Constants.FIELD_ALLOW_CREDENTIALS) {
                 input[Constants.FIELD_ALLOW_CREDENTIALS_INTERNAL]?.jsonArray?.forEach { element ->

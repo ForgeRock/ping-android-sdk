@@ -7,6 +7,7 @@
 
 package com.pingidentity.fido2.davinci
 
+import androidx.credentials.CreatePublicKeyCredentialRequest
 import com.pingidentity.davinci.plugin.Collector
 import com.pingidentity.fido2.Constants
 import com.pingidentity.fido2.Fido2
@@ -36,16 +37,24 @@ class Fido2RegistrationCollector : AbstractFido2Collector() {
     override fun init(input: JsonObject): Collector<JsonObject> {
         return super.init(input)
             .also {
+                logger.d("Initializing FIDO2 registration collector")
                 publicKeyCredentialCreationOptions =
-                    input[Constants.FIELD_PUBLIC_KEY_CREDENTIAL_CREATION_OPTIONS]?.jsonObject?.let { transform(it) }
+                    input[Constants.FIELD_PUBLIC_KEY_CREDENTIAL_CREATION_OPTIONS]?.jsonObject?.let {
+                        transform(
+                            it
+                        )
+                    }
                         ?: throw IllegalArgumentException("Missing ${Constants.FIELD_PUBLIC_KEY_CREDENTIAL_CREATION_OPTIONS}")
+                logger.d("FIDO2 registration collector initialized with creation options")
             }
     }
 
     override fun payload(): JsonObject? {
         return if (!this::attestationValue.isInitialized) {
+            logger.d("No attestation value available, returning null payload")
             null
         } else {
+            logger.d("Returning attestation payload for FIDO2 registration")
             buildJsonObject {
                 put(Constants.FIELD_ATTESTATION_VALUE, attestationValue)
             }
@@ -58,9 +67,19 @@ class Fido2RegistrationCollector : AbstractFido2Collector() {
      * @return A [Result] containing the attestation value as a [JsonObject] or an error.
      * the attestation value will be automatically injected to the registration flow.
      */
-    suspend fun register(): Result<JsonObject> {
-        return Fido2.register(publicKeyCredentialCreationOptions).onSuccess {
+    suspend fun register(
+        block: (JsonObject) -> CreatePublicKeyCredentialRequest = {
+            CreatePublicKeyCredentialRequest(
+                it.toString()
+            )
+        }
+    ): Result<JsonObject> {
+        logger.d("Starting FIDO2 registration")
+        return Fido2.register(block(publicKeyCredentialCreationOptions)).onSuccess {
+            logger.d("FIDO2 registration successful")
             attestationValue = it
+        }.onFailure { exception ->
+            logger.e("FIDO2 registration failed", exception)
         }
     }
 
@@ -71,6 +90,7 @@ class Fido2RegistrationCollector : AbstractFido2Collector() {
      * @return The transformed JSON object with encoded user ID and challenge values.
      */
     private fun transform(inputJson: JsonObject): JsonObject {
+        logger.d("Transforming FIDO2 registration creation options")
         val map = inputJson.toMutableMap()
 
         map[Constants.FIELD_USER]?.let { user ->
@@ -80,7 +100,10 @@ class Fido2RegistrationCollector : AbstractFido2Collector() {
                         val byteArray =
                             id.map { it.jsonPrimitive.int.toByte() }.toByteArray()
                         map[Constants.FIELD_USER] = buildJsonObject {
-                            put(Constants.FIELD_ID, JsonPrimitive(Base64.UrlSafe.encode(byteArray).trimEnd('=')))
+                            put(
+                                Constants.FIELD_ID,
+                                JsonPrimitive(Base64.UrlSafe.encode(byteArray).trimEnd('='))
+                            )
                             user.forEach { key, value ->
                                 if (key != Constants.FIELD_ID) {
                                     put(key, value)
@@ -100,6 +123,7 @@ class Fido2RegistrationCollector : AbstractFido2Collector() {
             }
         }
 
+        logger.d("FIDO2 registration creation options transformed successfully")
         return JsonObject(map)
     }
 }
