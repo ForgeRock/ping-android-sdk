@@ -34,11 +34,12 @@ class ProtectCollector : Collector<String> {
      *
      * @param input The JSON object containing initialization data.
      */
-    override fun init(input: JsonObject) {
+    override fun init(input: JsonObject): Collector<String> {
         key = input["key"]?.jsonPrimitive?.content ?: ""
         behavioralDataCollection = input["behavioralDataCollection"]?.jsonPrimitive?.boolean ?: true
         universalDeviceIdentification =
             input["universalDeviceIdentification"]?.jsonPrimitive?.boolean ?: false
+        return this
     }
 
     override fun id() = key

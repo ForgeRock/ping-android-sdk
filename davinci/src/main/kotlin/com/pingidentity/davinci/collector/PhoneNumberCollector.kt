@@ -31,10 +31,11 @@ class PhoneNumberCollector : FieldCollector<JsonObject>(), Validator {
     // phone number
     var phoneNumber: String = ""
 
-    override fun init(input: JsonObject) {
+    override fun init(input: JsonObject) : PhoneNumberCollector {
         super.init(input)
         defaultCountryCode = input["defaultCountryCode"]?.jsonPrimitive?.content ?: ""
         validatePhoneNumber = input["validatePhoneNumber"]?.jsonPrimitive?.boolean ?: false
+        return this
     }
 
     override fun init(input: JsonElement) {

@@ -10,6 +10,8 @@ package com.pingidentity.davinci.collector
 import com.pingidentity.davinci.plugin.Collector
 import com.pingidentity.davinci.plugin.CollectorFactory
 import com.pingidentity.davinci.plugin.Collectors
+import com.pingidentity.davinci.plugin.DaVinci
+import com.pingidentity.orchestrate.ContinueNode
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
@@ -32,10 +34,12 @@ internal object Form {
      */
     fun parse(
         json: JsonObject,
+        davinci: DaVinci,
+        continueNode: ContinueNode
     ): Collectors {
         val collectors = mutableListOf<Collector<*>>()
         json["form"]?.jsonObject?.get("components")?.jsonObject?.get("fields")?.jsonArray?.let { array ->
-            collectors.addAll(CollectorFactory.collector(array))
+            collectors.addAll(CollectorFactory.collector(array, davinci, continueNode))
         }
 
         //Populate values for collectors
