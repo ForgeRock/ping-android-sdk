@@ -24,7 +24,7 @@ abstract class ValidatedCollector : SingleValueCollector() {
         private set
 
 
-    override fun init(input: JsonObject) {
+    override fun init(input: JsonObject) : ValidatedCollector {
         super.init(input)
         validation = input["validation"]?.jsonObject?.let {
             Validation(
@@ -32,6 +32,7 @@ abstract class ValidatedCollector : SingleValueCollector() {
                 it["errorMessage"]?.jsonPrimitive?.content ?: ""
             )
         }
+        return this
     }
 
     /**

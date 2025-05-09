@@ -10,6 +10,7 @@ package com.pingidentity.journey.callback
 import com.pingidentity.journey.plugin.AbstractCallback
 import com.pingidentity.journey.plugin.Callback
 import com.pingidentity.journey.plugin.CallbackRegistry
+import com.pingidentity.journey.plugin.CallbackRegistry.callbacks
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
@@ -59,8 +60,14 @@ class MetadataCallback : AbstractCallback() {
                     it().init(jsonObject)
                 } ?: this
             }
+            isFidoRegistration() -> callbacks()["Fido2RegistrationCallback"]?.invoke()
+                ?: this
+
+            isFidoAuthentication() -> callbacks()["Fido2AuthenticationCallback"]?.invoke()
+                ?: this
+
+            else -> this
         }
-        return this
     }
 
     private fun isFidoRegistration(): Boolean {

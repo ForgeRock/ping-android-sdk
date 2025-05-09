@@ -34,7 +34,10 @@ import com.pingidentity.davinci.collector.SubmitCollector
 import com.pingidentity.davinci.collector.TextCollector
 import com.pingidentity.davinci.module.description
 import com.pingidentity.davinci.module.name
+import com.pingidentity.davinci.plugin.Submittable
 import com.pingidentity.davinci.plugin.collectors
+import com.pingidentity.fido2.davinci.Fido2AuthenticationCollector
+import com.pingidentity.fido2.davinci.Fido2RegistrationCollector
 import com.pingidentity.idp.davinci.IdpCollector
 import com.pingidentity.orchestrate.ContinueNode
 import com.pingidentity.protect.davinci.ProtectCollector
@@ -48,9 +51,9 @@ fun ContinueNode(
 ) {
     Row(
         modifier =
-        Modifier
-            .padding(4.dp)
-            .fillMaxWidth()
+            Modifier
+                .padding(4.dp)
+                .fillMaxWidth()
     ) {
         Spacer(Modifier.width(8.dp))
         Text(
@@ -64,9 +67,9 @@ fun ContinueNode(
     }
     Row(
         modifier =
-        Modifier
-            .padding(4.dp)
-            .fillMaxWidth(),
+            Modifier
+                .padding(4.dp)
+                .fillMaxWidth(),
     ) {
         Spacer(Modifier.width(8.dp))
         Text(
@@ -80,31 +83,19 @@ fun ContinueNode(
 
     Column(
         modifier =
-        Modifier
-            .padding(4.dp)
-            .fillMaxWidth(),
+            Modifier
+                .padding(4.dp)
+                .fillMaxWidth(),
     ) {
         var hasAction = false
 
         continueNode.collectors.forEach {
             when (it) {
-                is FlowCollector -> {
-                    hasAction = true
-                    FlowButton(it, onNext)
-                }
-
-                is PasswordCollector -> {
-                    Password(it, onNodeUpdated)
-                }
-                is SubmitCollector -> {
-                    hasAction = true
-                    SubmitButton(it, onNext)
-                }
-
+                is FlowCollector -> FlowButton(it, onNext)
+                is PasswordCollector -> Password(it, onNodeUpdated)
+                is SubmitCollector -> SubmitButton(it, onNext)
                 is TextCollector -> Text(it, onNodeUpdated)
-
                 is LabelCollector -> Label(it)
-
                 is MultiSelectCollector -> {
                     if (it.type == "COMBOBOX") {
                         ComboBox(it, onNodeUpdated)
@@ -112,6 +103,7 @@ fun ContinueNode(
                         CheckBox(it, onNodeUpdated)
                     }
                 }
+
                 is SingleSelectCollector -> {
                     if (it.type == "DROPDOWN") {
                         Dropdown(it, onNodeUpdated)
@@ -121,17 +113,16 @@ fun ContinueNode(
                 }
 
                 is IdpCollector -> SocialLoginButton(it, onStart, onNext)
-                is DeviceRegistrationCollector -> {
-                    hasAction = true
-                    DeviceRegistration(it, onNext)
-                }
-                is DeviceAuthenticationCollector -> {
-                    hasAction = true
-                    DeviceAuthentication(it, onNext)
-                }
-                is PhoneNumberCollector -> PhoneNumber (it, onNodeUpdated)
+                is DeviceRegistrationCollector -> DeviceRegistration(it, onNext)
+                is DeviceAuthenticationCollector -> DeviceAuthentication(it, onNext)
+                is Fido2RegistrationCollector -> Fido2Registration(it, onStart, onNext)
+                is Fido2AuthenticationCollector -> Fido2Authentication(it, onStart, onNext)
+                is PhoneNumberCollector -> PhoneNumber(it, onNodeUpdated)
                 is ProtectCollector -> Protect(it, onNodeUpdated)
 
+            }
+            if (it is Submittable) {
+                hasAction = true
             }
         }
 
