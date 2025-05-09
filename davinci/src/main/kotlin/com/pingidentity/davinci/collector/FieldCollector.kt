@@ -30,18 +30,17 @@ abstract class FieldCollector<T> : Collector<T>, Validator {
     var required = false
         private set
 
-
     /**
      * Function to initialize the field collector.
      * @param input The input JSON object to parse.
      */
-    override fun init(input: JsonObject) {
+    override fun init(input: JsonObject): Collector<T> {
         type = input["type"]?.jsonPrimitive?.content ?: ""
         key = input["key"]?.jsonPrimitive?.content ?: ""
         label = input["label"]?.jsonPrimitive?.content ?: ""
         required = input["required"]?.jsonPrimitive?.boolean ?: false
+        return this
     }
-
 
     override fun validate(): List<ValidationError> {
         val errors = mutableListOf<ValidationError>()

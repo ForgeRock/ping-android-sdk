@@ -34,15 +34,28 @@ import kotlinx.coroutines.launch
 
 val test by lazy {
     DaVinci {
-        timeout = 30
         logger = Logger.STANDARD
         module(Oidc) {
-            clientId = "dummy"
+            clientId = "c12743f9-08e8-4420-a624-71bbb08e9fe1"
             discoveryEndpoint =
-                "https://auth.test-one-pingone.com/dummy/as/.well-known/openid-configuration"
+                "https://auth.pingone.ca/02fb4743-189a-4bc7-9d6c-a919edfe6447/as/.well-known/openid-configuration"
             scopes = mutableSetOf("openid", "email", "address")
             redirectUri = "org.forgerock.demo://oauth2redirect"
+            //acrValues = "22eb75b5d31d371afe089d6e4a824f5c" //MFA Authentication
+            //acrValues = "10acbb8fcc64eb479c47481d92786b3b" //MFA registration
+            //acrValues = "93928296ac55765e57e30b99da8ddabe" //MFA Multiple Registration
+            //acrValues = "9c15f567441c03e6d89f7f32f430ddc4" //OOTB Session Main with HTML
+            //acrValues = "6eddf678ec495ad7f27c7eeea2a83936" // MFA FIDO2 Multiple Registration
+            //acrValues = "75962e1d55fc0e621c80c42aa9118955" // PingOne Adaptive Authentication with Protect and MFA via OTP
+            //acrValues = "2c233c3222e1eaf0686a3c063f05384b" // SDK Automation - MFA Device Registration/Authentication
+            acrValues = "9da1b93991bcd577947da228ad4c741f" // Andy - MFA Device Registration/Authentication (PingOne Forms)
         }
+        /*
+        module(ProtectLifecycle) {
+            pauseBehavioralDataOnSuccess = true
+            resumeBehavioralDataOnStart = true
+        }
+         */
     }
 }
 
@@ -50,11 +63,11 @@ val prod by lazy {
     DaVinci {
         logger = Logger.STANDARD
         module(Oidc) {
-            clientId = "dummy"
-            discoveryEndpoint =
-                "https://auth.pingone.ca/dummy/as/.well-known/openid-configuration"
+            clientId = "3172d977-8fdc-4e8b-b3c5-4f3a34cb7262"
+            discoveryEndpoint = "https://auth.test-one-pingone.com/0c6851ed-0f12-4c9a-a174-9b1bf8b438ae/as/.well-known/openid-configuration"
             scopes = mutableSetOf("openid", "email", "address", "phone", "profile")
-            redirectUri = "org.forgerock.demo://oauth2redirect"
+            redirectUri = "com.pingidentity.demo://oauth2redirect"
+            acrValues = "10acbb8fcc64eb479c47481d92786b3b"
         }
     }
 }
@@ -63,14 +76,39 @@ val social by lazy {
     DaVinci {
         logger = Logger.STANDARD
         module(Oidc) {
-            clientId = "dummy"
+            clientId = "6044ba2a-e4b1-477f-babc-9f622b6e0ff3" /// HTML
+//            clientId = "60de77d5-dd2c-41ef-8c40-f8bb2381a359"   /// FORMS
+            discoveryEndpoint = "https://auth.pingone.com/c2a669c0-c396-4544-994d-9c6eb3fb1602/as/.well-known/openid-configuration"
+            scopes = mutableSetOf("openid", "email", "address", "phone", "profile")
+            redirectUri = "org.forgerock.demo://oauth2redirect"
+
+            /*
+            clientId = "9c7767b5-3a9d-4e9c-9d65-9fc77ccfd284"
             discoveryEndpoint =
-                "https://auth.pingone.com/dummy/as/.well-known/openid-configuration"
+                "https://auth.pingone.com/c2a669c0-c396-4544-994d-9c6eb3fb1602/as/.well-known/openid-configuration"
             scopes = mutableSetOf("openid", "email", "address")
             redirectUri = "com.pingidentity.demo://oauth2redirect"
+
+             */
         }
     }
 }
+
+
+val fido by lazy {
+    // android:apk-key-hash:J_FvtrE54Atz0eAala6Oy2M9bhBK2LYIpMUZJVTdSZ0
+    DaVinci {
+        logger = Logger.STANDARD
+        module(Oidc) {
+            clientId = "1507c80c-5f06-4c2e-a401-94dd77908047" /// HTML
+            discoveryEndpoint = "https://skreddy-test.p14cqa.com/as/.well-known/openid-configuration"
+            scopes = mutableSetOf("openid", "email", "address", "phone", "profile")
+            redirectUri = "org.forgerock.demo://oauth2redirect"
+        }
+    }
+}
+
+
 
 lateinit var daVinci: DaVinci
 lateinit var web: OidcWeb
@@ -78,8 +116,8 @@ lateinit var redirectUri: Uri //For Social Login redirect parameter using Auth T
 
 class EnvViewModel : ViewModel() {
 
-    private val servers = listOf(test, prod, social)
-    val oidcConfigs = listOf(test.oidcConfig(), prod.oidcConfig(), social.oidcConfig())
+    private val servers = listOf(test, prod, social, fido)
+    val oidcConfigs = listOf(test.oidcConfig(), prod.oidcConfig(), social.oidcConfig(), fido.oidcConfig())
 
     var current by mutableStateOf(prod.oidcConfig())
         private set

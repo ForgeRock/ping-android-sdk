@@ -23,9 +23,10 @@ class DeviceRegistrationCollector : FieldCollector<String>(), Submittable {
 
     var value: Device? = null
 
-   override fun init(input: JsonObject) {
+    override fun init(input: JsonObject): DeviceRegistrationCollector {
         super.init(input)
         devices = Device.devices(input)
+        return this
     }
 
     override fun payload(): String? {

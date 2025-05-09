@@ -49,13 +49,13 @@ val forgeblock =  Journey {
 val localhost =  Journey {
     logger = Logger.STANDARD
 
-    serverUrl = "http://192.168.86.32:8080/openam"
+    serverUrl = "http://192.168.86.41:8080/openam"
     realm = "root"
     // Oidc as module
     module(Oidc) {
         clientId = "AndroidTest2"
         discoveryEndpoint =
-            "http://192.168.86.32:8080/openam/oauth2/.well-known/openid-configuration"
+            "http://192.168.86.41:8080/openam/oauth2/.well-known/openid-configuration"
         scopes = mutableSetOf("openid", "email", "address", "profile", "phone")
         redirectUri = "org.forgerock.demo:/oauth2redirect"
         //storage = dataStore

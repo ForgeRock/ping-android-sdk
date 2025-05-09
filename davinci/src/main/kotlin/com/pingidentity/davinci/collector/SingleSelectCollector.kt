@@ -21,8 +21,9 @@ class SingleSelectCollector : ValidatedCollector() {
     lateinit var options: List<Option>
         private set
 
-    override fun init(input: JsonObject) {
+    override fun init(input: JsonObject) : SingleSelectCollector{
         super.init(input)
         options = Option.options(input)
+        return this
     }
 }

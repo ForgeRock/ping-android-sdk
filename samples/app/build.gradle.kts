@@ -78,6 +78,9 @@ dependencies {
 
     implementation(libs.facebook.login)
 
+    // FIDO2
+    implementation(project(":mfa:fido2"))
+
     //Protect
     implementation(project(":protect"))
 

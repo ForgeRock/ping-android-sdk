@@ -25,9 +25,10 @@ class DeviceAuthenticationCollector : FieldCollector<JsonObject>(), Submittable 
 
     var value: Device? = null
 
-    override fun init(input: JsonObject) {
+    override fun init(input: JsonObject) : DeviceAuthenticationCollector{
         super.init(input)
         devices = Device.devices(input)
+        return this
     }
 
     override fun payload(): JsonObject? {

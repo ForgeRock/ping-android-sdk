@@ -25,9 +25,10 @@ class LabelCollector : Collector<Nothing> {
         private set
 
 
-    override fun init(input: JsonObject) {
+    override fun init(input: JsonObject) : LabelCollector{
         content = input["content"]?.jsonPrimitive?.content ?: ""
         key = input["key"]?.jsonPrimitive?.content ?: ""
+        return this
     }
 
     override fun id(): String {
