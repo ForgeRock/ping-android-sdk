@@ -43,6 +43,6 @@ open class Fido2Collector : Collector<JsonObject> {
             Constants.ACTION_REGISTER -> Fido2RegistrationCollector()
             Constants.ACTION_AUTHENTICATE -> Fido2AuthenticationCollector()
             else -> throw IllegalArgumentException("${Constants.FIELD_ACTION}: $action is not supported")
-        }
+        }.apply { init(input) }
     }
 }

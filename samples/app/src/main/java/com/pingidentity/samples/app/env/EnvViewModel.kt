@@ -28,6 +28,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
+
 val test by lazy {
     DaVinci {
         logger = Logger.STANDARD
@@ -40,11 +41,11 @@ val test by lazy {
             //acrValues = "22eb75b5d31d371afe089d6e4a824f5c" //MFA Authentication
             //acrValues = "10acbb8fcc64eb479c47481d92786b3b" //MFA registration
             //acrValues = "93928296ac55765e57e30b99da8ddabe" //MFA Multiple Registration
-            //acrValues = "9c15f567441c03e6d89f7f32f430ddc4" //OOTB Session Main with HTML
+            acrValues = "9c15f567441c03e6d89f7f32f430ddc4" //OOTB Session Main with HTML
             //acrValues = "6eddf678ec495ad7f27c7eeea2a83936" // MFA FIDO2 Multiple Registration
             //acrValues = "75962e1d55fc0e621c80c42aa9118955" // PingOne Adaptive Authentication with Protect and MFA via OTP
             //acrValues = "2c233c3222e1eaf0686a3c063f05384b" // SDK Automation - MFA Device Registration/Authentication
-            acrValues = "9da1b93991bcd577947da228ad4c741f" // Andy - MFA Device Registration/Authentication (PingOne Forms)
+            //acrValues = "9da1b93991bcd577947da228ad4c741f" // Andy - MFA Device Registration/Authentication (PingOne Forms)
         }
         /*
         module(ProtectLifecycle) {

@@ -10,6 +10,8 @@ package com.pingidentity.journey.callback
 import com.pingidentity.journey.plugin.AbstractCallback
 import com.pingidentity.journey.plugin.Callback
 import com.pingidentity.journey.plugin.CallbackRegistry.callbacks
+import com.pingidentity.journey.plugin.Journey
+import com.pingidentity.journey.plugin.JourneyAware
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
@@ -19,6 +21,9 @@ import kotlinx.serialization.json.jsonPrimitive
 
 private const val PING_ONE_PROTECT_INITIALIZE_CALLBACK = "PingOneProtectInitializeCallback"
 private const val PING_ONE_PROTECT_EVALUATION_CALLBACK = "PingOneProtectEvaluationCallback"
+private const val FIDO_2_REGISTRATION_CALLBACK = "Fido2RegistrationCallback"
+private const val FIDO_2_AUTHENTICATION_CALLBACK = "Fido2AuthenticationCallback"
+
 private const val ACTION = "_action"
 private const val TYPE = "_type"
 private const val WEBAUTHN_REGISTRATION = "webauthn_registration"
@@ -35,7 +40,15 @@ private const val PROTECT_RISK_EVALUATION = "protect_risk_evaluation"
  *
  * @property value The metadata value.
  */
-class MetadataCallback : AbstractCallback() {
+class MetadataCallback : AbstractCallback(), JourneyAware {
+
+    /**
+     * Reference to the parent journey.
+     * Required by the [JourneyAware] interface.
+     */
+    override lateinit var journey: Journey
+
+    private val logger by lazy { journey.config.logger }
 
     var value: JsonObject = buildJsonObject { }
         private set
@@ -52,18 +65,34 @@ class MetadataCallback : AbstractCallback() {
             isProtectInitialize() -> {
                 return callbacks()[PING_ONE_PROTECT_INITIALIZE_CALLBACK]?.let {
                     it().init(jsonObject)
-                } ?: this
+                } ?: run {
+                    logger.w("Callback not found for $PING_ONE_PROTECT_INITIALIZE_CALLBACK")
+                    this
+                }
             }
+
             isProtectEvaluation() -> {
                 return callbacks()[PING_ONE_PROTECT_EVALUATION_CALLBACK]?.let {
                     it().init(jsonObject)
-                } ?: this
+                } ?: run {
+                    logger.w("Callback not found for $PING_ONE_PROTECT_EVALUATION_CALLBACK")
+                    this
+                }
             }
-            isFidoRegistration() -> return callbacks()["Fido2RegistrationCallback"]?.invoke()
-                ?: this
 
-            isFidoAuthentication() -> return callbacks()["Fido2AuthenticationCallback"]?.invoke()
-                ?: this
+            isFidoRegistration() -> return callbacks()[FIDO_2_REGISTRATION_CALLBACK]?.let {
+                it().init(jsonObject)
+            } ?: run {
+                logger.w("Callback not found for $FIDO_2_REGISTRATION_CALLBACK")
+                this
+            }
+
+            isFidoAuthentication() -> return callbacks()[FIDO_2_AUTHENTICATION_CALLBACK]?.let {
+                it().init(jsonObject)
+            } ?: run {
+                logger.w("Callback not found for $FIDO_2_AUTHENTICATION_CALLBACK")
+                this
+            }
 
             else -> return this
         }
@@ -102,4 +131,5 @@ class MetadataCallback : AbstractCallback() {
         return value[TYPE]?.jsonPrimitive?.contentOrNull == PING_ONE_PROTECT &&
                 value[ACTION]?.jsonPrimitive?.contentOrNull == PROTECT_RISK_EVALUATION
     }
+
 }

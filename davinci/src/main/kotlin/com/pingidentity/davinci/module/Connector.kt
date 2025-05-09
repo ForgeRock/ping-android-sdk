@@ -9,8 +9,8 @@ package com.pingidentity.davinci.module
 
 import com.pingidentity.davinci.collector.Form
 import com.pingidentity.davinci.collector.asJson
-import com.pingidentity.davinci.collector.request
 import com.pingidentity.davinci.collector.eventType
+import com.pingidentity.davinci.collector.request
 import com.pingidentity.davinci.plugin.Collectors
 import com.pingidentity.orchestrate.ContinueNode
 import com.pingidentity.orchestrate.FlowContext
@@ -63,7 +63,7 @@ internal class Connector(
     context, workflow, input, collectors
 ) {
     init {
-        if ("form" in input) collectors.addAll(Form.parse(input, workflow, this))
+        if ("form" in input) collectors.addAll(Form.parse(input))
     }
 
     /**

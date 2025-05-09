@@ -39,49 +39,32 @@ object CallbackRegistry {
      * @param journey The Journey instance to be injected.
      * @param continueNode The ContinueNode instance.
      */
-    private fun inject(callback: Callback, journey: Journey, continueNode: ContinueNode) {
-        if (callback is JourneyAware) {
-            callback.journey = journey
-        }
-        if (callback is ContinueNodeAware) {
-            callback.continueNode = continueNode
+    fun inject(journey: Journey, continueNode: ContinueNode) {
+        continueNode.callbacks.forEach { callback ->
+            if (callback is JourneyAware) {
+                callback.journey = journey
+            }
+            if (callback is ContinueNodeAware) {
+                callback.continueNode = continueNode
+            }
         }
     }
-
 
     /**
      * Retrieves a list of callbacks based on the provided JSON array.
      * @param array The JSON array containing the callback types.
      *   * @return A list of initialized Callback instances.
      */
-
-    fun callback(
-        array: JsonArray,
-        journey: Journey,
-        continueNode: ContinueNode,
-    ): List<Callback> {
-        return array.mapNotNull { item ->
+    fun callback(array: JsonArray): List<Callback> {
+        val list = mutableListOf<Callback>()
+        array.forEach { item ->
             val jsonObject = item.jsonObject
             val type = jsonObject["type"]?.jsonPrimitive?.content
-
-            callbacks[type]?.let { constructor ->
-                var currentCallback = constructor()
-                var isDerived: Boolean
-
-                do {
-                    inject(currentCallback, journey, continueNode)
-                    val newCallback = currentCallback.init(jsonObject)
-                    isDerived = (newCallback !== currentCallback)
-
-                    if (isDerived) {
-                        currentCallback = newCallback
-                    }
-                } while (isDerived)
-
-                currentCallback
+            callbacks[type]?.let {
+                list.add(it().init(jsonObject))
             }
         }
+        return list
     }
-
 
 }

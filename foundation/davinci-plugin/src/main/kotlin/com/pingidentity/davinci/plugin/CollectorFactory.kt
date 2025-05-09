@@ -43,30 +43,17 @@ object CollectorFactory {
      */
     fun collector(
         array: JsonArray,
-        davinci: DaVinci,
-        continueNode: ContinueNode,
     ): List<Collector<*>> {
-        return array.mapNotNull { item ->
+
+        val list = mutableListOf<Collector<*>>()
+        array.forEach { item ->
             val jsonObject = item.jsonObject
             val type = jsonObject["inputType"]?.jsonPrimitive?.content ?: jsonObject["type"]?.jsonPrimitive?.content
-
-            collectors[type]?.let { constructor ->
-                var currentCollector = constructor()
-                var isDerived: Boolean
-
-                do {
-                    inject(currentCollector, davinci, continueNode)
-                    val newCallback = currentCollector.init(jsonObject)
-                    isDerived = (newCallback !== currentCollector)
-
-                    if (isDerived) {
-                        currentCollector = newCallback
-                    }
-                } while (isDerived)
-
-                currentCollector
+            collectors[type]?.let {
+                list.add(it().init(jsonObject))
             }
         }
+        return list
     }
 
 
@@ -75,12 +62,14 @@ object CollectorFactory {
      * @param davinci The DaVinci instance to be injected.
      * @param continueNode The ContinueNode instance to be injected.
      */
-    private fun inject(collector: Collector<*>, davinci: DaVinci, continueNode: ContinueNode) {
-        if (collector is DaVinciAware) {
-            collector.davinci = davinci
-        }
-        if (collector is ContinueNodeAware) {
-            collector.continueNode = continueNode
+    fun inject(davinci: DaVinci, continueNode: ContinueNode) {
+        continueNode.collectors.forEach { collector ->
+            if (collector is DaVinciAware) {
+                collector.davinci = davinci
+            }
+            if (collector is ContinueNodeAware) {
+                collector.continueNode = continueNode
+            }
         }
     }
 

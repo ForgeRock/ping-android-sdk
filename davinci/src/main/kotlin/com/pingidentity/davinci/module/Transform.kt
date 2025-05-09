@@ -7,10 +7,8 @@
 
 package com.pingidentity.davinci.module
 
-import com.pingidentity.exception.ApiException
-import com.pingidentity.davinci.collector.Form
-import com.pingidentity.davinci.plugin.Collector
 import com.pingidentity.davinci.plugin.CollectorFactory
+import com.pingidentity.exception.ApiException
 import com.pingidentity.oidc.exception.AuthorizeException
 import com.pingidentity.orchestrate.ErrorNode
 import com.pingidentity.orchestrate.FailureNode
@@ -116,6 +114,8 @@ private fun transform(
         )
     }
 
-    return Connector(context, workflow, json, mutableListOf())
+    return Connector(context, workflow, json, mutableListOf()).apply {
+        CollectorFactory.inject(workflow, this)
+    }
 
 }
