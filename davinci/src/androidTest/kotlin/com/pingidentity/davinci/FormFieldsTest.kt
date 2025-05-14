@@ -70,6 +70,11 @@ class FormFieldsTest {
         // TODO: Update the following assertion to be more specific when the bug in DaVinci is fixed - see: https://pingidentity.slack.com/archives/C06CCT3NSP5/p1736897937860359
         assertTrue(labelCollector1.content.contains("Rich Text fields produce LABELs"))
         assertEquals ("Translatable Rich Text produce LABELs too!\n\n", labelCollector2.content)
+
+        // SDKS-3957 Add support for key attribute in Label Collectors
+        assertEquals("translatable-rich-text-key", labelCollector2.key)
+        // Note that the Rich Text component has been deprecated, so the key is not set
+        assertEquals("", labelCollector1.key)
     }
 
     @TestRailCase(26032, 26031)
