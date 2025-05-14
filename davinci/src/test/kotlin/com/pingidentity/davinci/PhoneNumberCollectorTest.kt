@@ -10,6 +10,7 @@ package com.pingidentity.davinci
 
 import com.pingidentity.davinci.collector.PhoneNumberCollector
 import com.pingidentity.davinci.collector.Required
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import kotlin.test.Test
@@ -86,6 +87,16 @@ class PhoneNumberCollectorTest {
         collector.init(input)
 
         assertEquals("CA", collector.defaultCountryCode)
+    }
+
+    @Test
+    fun `default with  Phone Number`() {
+        val input = JsonPrimitive("1234567")
+        val collector = PhoneNumberCollector()
+
+        collector.init(input)
+
+        assertEquals("1234567", collector.phoneNumber)
     }
 
     @Test
