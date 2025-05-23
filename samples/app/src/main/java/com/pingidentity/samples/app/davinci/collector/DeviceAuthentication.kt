@@ -96,7 +96,7 @@ fun DeviceAuthentication(
                             fontSize = 18.sp,
                         )
                         androidx.compose.material3.Text(
-                            text = device.value ?: "",
+                            text = device.description ?: "",
                             fontSize = 14.sp,
                         )
                     }

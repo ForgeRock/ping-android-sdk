@@ -35,7 +35,7 @@ class DeviceAuthenticationCollector : FieldCollector<JsonObject>(), Submittable 
             return buildJsonObject {
                 put("type", it.type)
                 put("id", it.id)
-                put("value", it.value)
+                put("description", it.description)
             }
         } ?: return null
     }

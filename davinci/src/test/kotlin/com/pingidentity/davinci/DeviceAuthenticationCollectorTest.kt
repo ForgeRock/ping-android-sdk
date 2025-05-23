@@ -32,14 +32,13 @@ class DeviceAuthenticationCollectorTest {
     @Test
     fun `init sets devices and required flag from input`() {
         val input = buildJsonObject {
-            put("devices", buildJsonArray {
+            put("options", buildJsonArray {
                 addJsonObject {
                     put("id", "device1")
                     put("type", "EMAIL")
                     put("title", "Email")
                     put("description", "Email Description")
                     put("iconSrc", "Email icon")
-                    put("value", "Email Value")
                 }
             })
             put("required", true)
@@ -54,7 +53,6 @@ class DeviceAuthenticationCollectorTest {
         assertEquals("Email", collector.devices[0].title)
         assertEquals("Email Description", collector.devices[0].description)
         assertEquals("Email icon", collector.devices[0].iconSrc)
-        assertEquals("Email Value", collector.devices[0].value)
 
     }
     @Test
@@ -78,13 +76,13 @@ class DeviceAuthenticationCollectorTest {
 
     @Test
     fun `value returns device details when device selected`() {
-        collector.value = Device(id = "device1", type = "fingerprint", value = "someValue")
+        collector.value = Device(id = "device1", type = "fingerprint", description = "someValue")
 
         val result = collector.payload()
 
         assertEquals("fingerprint", result?.get("type")?.toString()?.trim('"'))
         assertEquals("device1", result?.get("id")?.toString()?.trim('"'))
-        assertEquals("someValue", result?.get("value")?.toString()?.trim('"'))
+        assertEquals("someValue", result?.get("description")?.toString()?.trim('"'))
     }
 
     @Test

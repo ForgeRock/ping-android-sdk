@@ -21,7 +21,7 @@ class DeviceRegistrationCollectorTest {
     @Test
     fun `init with valid input initializes devices list`() {
         val input = buildJsonObject {
-            put("devices", buildJsonArray {
+            put("options", buildJsonArray {
                 addJsonObject {
                     put("type", "EMAIL")
                     put("title", "Email")
@@ -52,7 +52,7 @@ class DeviceRegistrationCollectorTest {
     @Test
     fun `init with malformed input throws JsonException`() {
         val input = buildJsonObject {
-            put("devices", "invalid")
+            put("options", "invalid")
         }
         val collector = DeviceRegistrationCollector()
 
