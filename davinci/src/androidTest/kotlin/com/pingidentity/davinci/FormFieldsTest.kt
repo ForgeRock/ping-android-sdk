@@ -37,10 +37,11 @@ class FormFieldsTest {
         logger = Logger.STANDARD
 
         module(Oidc) {
-            clientId = "60de77d5-dd2c-41ef-8c40-f8bb2381a359"
+            clientId = "021b83ce-a9b1-4ad4-8c1d-79e576eeab76"
             discoveryEndpoint = "https://auth.pingone.ca/02fb4743-189a-4bc7-9d6c-a919edfe6447/as/.well-known/openid-configuration"
             scopes = mutableSetOf("openid", "email", "address", "phone", "profile")
             redirectUri = "org.forgerock.demo://oauth2redirect"
+            acrValues = "210f6b876da11c836ffc1c5fb38f3938"
             //storage = dataStore
         }
     }
