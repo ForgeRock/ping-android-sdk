@@ -21,7 +21,6 @@ import kotlinx.serialization.json.jsonArray
  * @property description The description of the device.
  * @property iconSrc The icon source of the device.
  * @property default Use this device as default.
- * @property value The value of the device.
  */
 @Serializable
 data class Device(
@@ -31,7 +30,6 @@ data class Device(
     val description: String = "",
     val iconSrc: String = "",
     val default: Boolean = false,
-    val value:String? = null
 ) {
 
     companion object {
@@ -42,7 +40,7 @@ data class Device(
          * @return A list of devices.
          */
         fun devices(input: JsonObject): List<Device> {
-            return input["devices"]?.jsonArray?.map { jsonElement ->
+            return input["options"]?.jsonArray?.map { jsonElement ->
                 json.decodeFromJsonElement<Device>(jsonElement)
             } ?: emptyList()
         }
