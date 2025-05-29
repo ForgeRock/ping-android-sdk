@@ -45,6 +45,7 @@ class DavinciAndroidTest {
             discoveryEndpoint = "https://auth.pingone.ca/02fb4743-189a-4bc7-9d6c-a919edfe6447/as/.well-known/openid-configuration"
             scopes = mutableSetOf("openid", "email", "address", "phone", "profile")
             redirectUri = "org.forgerock.demo://oauth2redirect"
+            acrValues = " 79220c5e3a217a3d9b6739585cb160aa"
             //storage = dataStore
         }
     }
