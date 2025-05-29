@@ -11,19 +11,21 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.double
 import kotlinx.serialization.json.jsonPrimitive
 
+/**
+ * A callback for collecting a number attribute.
+ *
+ * @property value The number input by the user.
+ */
 class NumberAttributeInputCallback : AttributeInputCallback() {
     var value: Double = 0.0
-    private set
 
-    var inputValue : Double = 0.0
-
-    override fun onAttribute(name: String, value: JsonElement) {
-        super.onAttribute(name, value)
+    override fun init(name: String, value: JsonElement) {
+        super.init(name, value)
         if ("value" == name) {
             this.value = value.jsonPrimitive.double
         }
     }
 
-    override fun asJson() = input(inputValue, inputValidateOnly)
+    override fun payload() = input(value, validateOnly)
 
 }

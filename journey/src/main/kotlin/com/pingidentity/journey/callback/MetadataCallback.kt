@@ -14,26 +14,20 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonObject
 
-
-class MetadataCallback : AbstractCallback(), DerivableCallback {
+/**
+ * A callback for providing metadata.
+ *
+ * @property value The metadata value.
+ */
+class MetadataCallback : AbstractCallback() {
 
     var value: JsonObject = buildJsonObject { }
         private set
 
-    override fun onAttribute(name: String, value: JsonElement) {
+    override fun init(name: String, value: JsonElement) {
         when (name) {
             "data" -> this.value = value.jsonObject
         }
     }
-
-    override val derivedCallback: String?
-        get() {
-            CallbackRegistry.derivedCallbacks.forEach {
-                it(value)?.let {
-                    return it
-                }
-            }
-            return null
-        }
 
 }

@@ -11,37 +11,38 @@ import com.pingidentity.journey.plugin.AbstractCallback
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.int
 import kotlinx.serialization.json.jsonPrimitive
 
+/**
+ * A callback for displaying text output.
+ *
+ * @property messageType The type of message (e.g., information, warning, error).
+ * @property message The message to be displayed.
+ */
 open class TextOutputCallback : AbstractCallback() {
-    /**
-     * The message type
-     */
     var messageType = 0
+        private set
 
-    /**
-     * The message
-     */
-    var message: String? = null
+    var message: String = ""
+        private set
 
-    override fun onAttribute(name: String, value: JsonElement) {
+    override fun init(name: String, value: JsonElement) {
         when (name) {
-            "messageType" -> this.messageType = value.jsonPrimitive.content.toInt()
+            "messageType" -> this.messageType = value.jsonPrimitive.int
             "message" -> this.message = value.jsonPrimitive.content
         }
     }
 
-    //TODO Make sure not to post back javascript
-    override fun asJson(): JsonObject {
-        if (messageType == 4) {
-            return buildJsonObject {};
+    override fun payload(): JsonObject {
+        return if (messageType == 4) {
+            buildJsonObject {};
         } else {
-            return super.asJson();
+            super.payload();
         }
     }
 
     companion object {
-        //Message Type
         /**
          * Information message.
          */

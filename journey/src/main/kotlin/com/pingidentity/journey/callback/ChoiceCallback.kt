@@ -13,6 +13,13 @@ import kotlinx.serialization.json.int
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonPrimitive
 
+/**
+ * A callback for collecting a choice from a user.
+ * @property choices The list of choices.
+ * @property defaultChoice The default choice index.
+ * @property prompt The prompt message.
+ * @property selectedIndex The index of the selected choice.
+ */
 class ChoiceCallback : AbstractCallback() {
 
     var choices: List<String> = listOf()
@@ -24,19 +31,21 @@ class ChoiceCallback : AbstractCallback() {
     var prompt: String = ""
         private set
 
-    //Input
-    var selectIndex: Int = 0
+    var selectedIndex: Int = 0
 
-    override fun onAttribute(name: String, value: JsonElement) {
+    override fun init(name: String, value: JsonElement) {
         when (name) {
             "prompt" -> this.prompt = value.jsonPrimitive.content ?: ""
-            "defaultChoice" -> this.defaultChoice = value.jsonPrimitive.int
+            "defaultChoice" -> {
+                this.defaultChoice = value.jsonPrimitive.int
+                selectedIndex = defaultChoice
+            }
             "choices" -> this.choices = value.jsonArray.map {
                 it.jsonPrimitive.content
             }
         }
     }
 
-    override fun asJson() = input(selectIndex)
+    override fun payload() = input(selectedIndex)
 
 }

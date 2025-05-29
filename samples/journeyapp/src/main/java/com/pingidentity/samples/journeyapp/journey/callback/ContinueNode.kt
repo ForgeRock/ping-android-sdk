@@ -18,8 +18,22 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.pingidentity.idp.journey.IdpCallback
 import com.pingidentity.idp.journey.SelectIdpCallback
+import com.pingidentity.journey.callback.BooleanAttributeInputCallback
+import com.pingidentity.journey.callback.ChoiceCallback
+import com.pingidentity.journey.callback.ConfirmationCallback
+import com.pingidentity.journey.callback.ConsentMappingCallback
+import com.pingidentity.journey.callback.KbaCreateCallback
 import com.pingidentity.journey.callback.NameCallback
+import com.pingidentity.journey.callback.NumberAttributeInputCallback
 import com.pingidentity.journey.callback.PasswordCallback
+import com.pingidentity.journey.callback.PollingWaitCallback
+import com.pingidentity.journey.callback.StringAttributeInputCallback
+import com.pingidentity.journey.callback.SuspendedTextOutputCallback
+import com.pingidentity.journey.callback.TermsAndConditionsCallback
+import com.pingidentity.journey.callback.TextInputCallback
+import com.pingidentity.journey.callback.TextOutputCallback
+import com.pingidentity.journey.callback.ValidatedPasswordCallback
+import com.pingidentity.journey.callback.ValidatedUsernameCallback
 import com.pingidentity.journey.plugin.callbacks
 import com.pingidentity.orchestrate.ContinueNode
 
@@ -31,21 +45,47 @@ fun ContinueNode(
 ) {
     Column(
         modifier =
-        Modifier
-            .padding(4.dp)
-            .fillMaxWidth(),
+            Modifier
+                .padding(4.dp)
+                .fillMaxWidth(),
     ) {
         var showNext = true
 
         continueNode.callbacks.forEach {
             when (it) {
-                is NameCallback -> NameCallback(it, onNodeUpdated)
+                is BooleanAttributeInputCallback -> BooleanAttributeInputCallback(it, onNodeUpdated)
+                is ChoiceCallback -> ChoiceCallback(it, onNodeUpdated)
+                is ConfirmationCallback -> {
+                    showNext = false
+                    ConfirmationCallback(it, onNext)
+                }
+                is ConsentMappingCallback -> ConsentMappingCallback(it, onNodeUpdated)
+                is KbaCreateCallback -> KbaCreateCallback(it, onNodeUpdated)
+                is NumberAttributeInputCallback -> NumberAttributeInputCallback(it, onNodeUpdated)
                 is PasswordCallback -> PasswordCallback(it, onNodeUpdated)
+                is PollingWaitCallback -> PollingWaitCallback(it, onNext)
+                is StringAttributeInputCallback -> StringAttributeInputCallback(it, onNodeUpdated)
+                is TermsAndConditionsCallback -> {
+                    TermsAndConditionsCallback(it, onNodeUpdated)
+                }
+                is TextInputCallback -> TextInputCallback(it, onNodeUpdated)
+                is TextOutputCallback -> TextOutputCallback(it)
+                is SuspendedTextOutputCallback -> {
+                    TextOutputCallback(it)
+                    showNext = false
+                }
+                is NameCallback -> NameCallback(it, onNodeUpdated)
+
+                //External IdP
                 is SelectIdpCallback -> SelectIdpCallback(it, onNext)
                 is IdpCallback -> {
                     showNext = false
                     IdPCallback(it, onNext)
                 }
+                is ValidatedUsernameCallback -> ValidatedUsernameCallback(it, onNodeUpdated)
+                is ValidatedPasswordCallback -> ValidatedPasswordCallback(it, onNodeUpdated)
+
+
             }
         }
         if (showNext) {

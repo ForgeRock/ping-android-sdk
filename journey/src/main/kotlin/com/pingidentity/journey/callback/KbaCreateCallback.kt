@@ -13,17 +13,28 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonPrimitive
 
-class KbaCreateCallback: AbstractCallback() {
+/**
+ * A callback for collecting knowledge-based authentication (KBA) information from a user.
+ *
+ * @property prompt The prompt message.
+ * @property predefinedQuestions The list of predefined questions.
+ * @property selectedQuestion The selected question.
+ * @property selectedAnswer The answer to the selected question.
+ */
+class KbaCreateCallback : AbstractCallback() {
 
+    var prompt: String = ""
+        private set
     var predefinedQuestions: List<String> = emptyList()
         private set
 
     var selectedQuestion = ""
     var selectedAnswer = ""
 
-    override fun onAttribute(name: String, value: JsonElement) {
-        if ("predefinedQuestions" == name) {
-            prepareQuestions(value.jsonArray)
+    override fun init(name: String, value: JsonElement) {
+        when (name) {
+            "prompt" -> prompt = value.jsonPrimitive.content
+            "predefinedQuestions" -> prepareQuestions(value.jsonArray)
         }
     }
 
@@ -33,5 +44,5 @@ class KbaCreateCallback: AbstractCallback() {
         }
     }
 
-    override fun asJson() = input(selectedQuestion, selectedAnswer)
+    override fun payload() = input(selectedQuestion, selectedAnswer)
 }

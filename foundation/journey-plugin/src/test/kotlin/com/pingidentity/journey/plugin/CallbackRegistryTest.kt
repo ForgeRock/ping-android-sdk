@@ -58,20 +58,20 @@ class CallbackRegistryTest {
 }
 
 class DummyCallback : Callback {
-    override fun init(jsonObject: JsonObject) {
-        // Do nothing
+    override fun init(jsonObject: JsonObject): Callback {
+        return this
     }
 
-    override fun asJson(): JsonObject {
+    override fun payload(): JsonObject {
         return buildJsonObject { }
     }
 }
 class Dummy2Callback : Callback {
-    override fun init(jsonObject: JsonObject) {
-        // Do nothing
+    override fun init(jsonObject: JsonObject): Callback {
+        return this
     }
 
-    override fun asJson(): JsonObject {
+    override fun payload(): JsonObject {
         return buildJsonObject { }
     }
 }

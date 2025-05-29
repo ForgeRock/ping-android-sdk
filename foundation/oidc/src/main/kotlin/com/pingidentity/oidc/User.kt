@@ -27,6 +27,12 @@ interface User {
     suspend fun revoke()
 
     /**
+     * Refreshes the token.
+     * @return A Result object containing either the refreshed Token or an OidcError.
+     */
+    suspend fun refresh(): Result<Token, OidcError>
+
+    /**
      * Retrieves the user's information.
      * @param cache Whether to cache the user information.
      * @return A Result object containing either the user information as a JsonObject or an OidcError.

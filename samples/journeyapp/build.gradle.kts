@@ -61,9 +61,11 @@ dependencies {
 
     val composeBom = platform(libs.androidx.compose.bom)
     implementation(composeBom)
+    implementation(project(":foundation:android"))
     implementation(project(":journey"))
     implementation(project(":external-idp"))
     //implementation("com.pingidentity.sdks:davinci:0.9.0-SNAPSHOT")
+    implementation(libs.androidx.datastore.preferences)
 
     //To enable Native Google Sign-In and Facebook Login
     implementation(libs.googleid)

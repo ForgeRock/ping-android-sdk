@@ -42,6 +42,14 @@ class OidcUser(private val oidcClient: OidcClient) : User {
     }
 
     /**
+     * Refreshes the user's token.
+     * @return The refreshed token.
+     */
+    override suspend fun refresh(): Result<Token, OidcError> {
+        return oidcClient.refresh()
+    }
+
+    /**
      * Gets the user information.
      * @param cache Whether to cache the user information.
      * @return The user information.

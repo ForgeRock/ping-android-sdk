@@ -7,49 +7,82 @@
 
 package com.pingidentity.journey.module
 
+import com.pingidentity.journey.Constants.ACCEPT_API_VERSION
+import com.pingidentity.journey.Constants.RESOURCE31
+import com.pingidentity.journey.Constants.SESSION_CONFIG
 import com.pingidentity.journey.Journey
 import com.pingidentity.journey.SSOToken
-import com.pingidentity.orchestrate.EmptySession
+import com.pingidentity.journey.journey
+import com.pingidentity.journey.options
 import com.pingidentity.orchestrate.Module
 
-
-private const val SESSION_CONFIG = "com.pingidentity.journey.SESSION_CONFIG"
-
+/**
+ * The Session module is responsible for managing the session state during the authentication journey.
+ * It handles the initialization, storage, and retrieval of the session token.
+ **/
 val Session = Module.of(::SessionConfig) {
 
     init {
         sharedContext[SESSION_CONFIG] = config
         config.init()
     }
+    start { request ->
+        journey.session()?.let { ssoToken ->
+            // If the session is not empty, set it to the existing session
+            request.header(journey.options.cookie, ssoToken.value)
+        }
+        request
+    }
+
+    next { _, request ->
+        // If the session is empty, set it to the empty session
+        journey.session()?.let { ssoToken ->
+            // If the session is not empty, set it to the existing session
+            request.header(journey.options.cookie, ssoToken.value)
+        }
+        request
+    }
 
     success {
         //The session may be empty due to NoSession or reuse existing session
-        if (it.session != EmptySession) { // If the session is not empty, save it
+        if (it.session.value.isNotEmpty()) { // If the session is not empty, save it
             config.storage.save(it.session as SSOToken)
         }
         it
     }
 
-    signOff {
-        config.storage.delete()
-        it
+    signOff { request ->
+        val ssoToken = config.storage.get()
+        //Sign off the session
+
+        ssoToken?.let {
+            request.url("${journey.options.serverUrl}/json/realms/${journey.options.realm}/sessions")
+            request.parameter("_action", "logout")
+            request.header(journey.options.cookie, it.value)
+            request.header(ACCEPT_API_VERSION, RESOURCE31)
+            request.body()
+            config.storage.delete()
+        } ?: throw IllegalStateException("Session not found")
+        request
     }
 }
 
-suspend fun Journey.session(): SSOToken? {
-    try {
-        init()
-    } catch (e: Exception) {
-        config.logger.e("Failed to initialize Journey", e)
-    }
-
-    sharedContext[SESSION_CONFIG]?.let { config ->
-        config as SessionConfig
-        config.storage.get()?.let {
-            return it
-        }
+/**
+ * Function to retrieve the session token.
+ * @return The session token if found, otherwise null.
+ */
+internal suspend fun Journey.session(): SSOToken? {
+    sharedContext.getValue<SessionConfig>(SESSION_CONFIG)?.let {
+        return it.storage.get()
     }
     return null
+}
+
+/**
+ * Function to delete the session token.
+ */
+internal suspend fun Journey.deleteSession() {
+    sharedContext.getValue<SessionConfig>(SESSION_CONFIG)?.storage?.delete()
 }
 
 

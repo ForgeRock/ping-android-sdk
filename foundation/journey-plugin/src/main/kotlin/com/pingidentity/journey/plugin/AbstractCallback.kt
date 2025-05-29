@@ -9,6 +9,7 @@ package com.pingidentity.journey.plugin
 
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
@@ -17,25 +18,39 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 
+/**
+ * Abstract class for callbacks.
+ *
+ * @property json The JSON object representing the callback.
+ */
 abstract class AbstractCallback : Callback {
 
     lateinit var json: JsonObject
         protected set
 
-    protected abstract fun onAttribute(name: String, value: JsonElement)
+    protected abstract fun init(name: String, value: JsonElement)
 
-    override fun init(jsonObject: JsonObject) {
+    override fun init(jsonObject: JsonObject) : Callback {
         this.json = jsonObject
         jsonObject["output"]?.jsonArray?.forEach { outputItem ->
             val outputObject = outputItem.jsonObject
             outputObject["name"]?.jsonPrimitive?.content?.let { name ->
                 outputObject["value"]?.let { value ->
-                    onAttribute(name, value)
+                    if (value !is JsonNull) {
+                        init(name, value)
+                    }
                 }
             }
         }
+        return this
     }
 
+    /**
+     * Sets the input value for the callback.
+     *
+     * @param value The value to set.
+     * @return The updated JsonObject.
+     */
     fun input(vararg value: Any): JsonObject {
         val orig = json["input"]?.jsonArray
 
@@ -70,32 +85,6 @@ abstract class AbstractCallback : Callback {
         return update(updated)
     }
 
-    /*
-    fun input(suffix: String, value: Any): JsonObject {
-        val orig = json["input"]?.jsonArray
-
-        val updated = buildJsonArray {
-            orig?.forEach {
-                val inputName = it.jsonObject["name"]?.jsonPrimitive?.content ?: ""
-                if (inputName.endsWith(suffix)) {
-                    add(buildJsonObject {
-                        put("name", inputName)
-                        when (value) {
-                            is Int -> put("value", value)
-                            is String -> put("value", value)
-                            is Boolean -> put("value", value)
-                            is Double -> put("value", value)
-                        }
-                    })
-                } else {
-                    add(it)
-                }
-            }
-        }
-        return update(updated)
-    }
-     */
-
     private fun update(input: JsonArray): JsonObject {
         // Convert the JsonObject to a mutable map
         val mutableMap = json.toMutableMap()
@@ -112,5 +101,5 @@ abstract class AbstractCallback : Callback {
         return json
     }
 
-    override fun asJson(): JsonObject = json
+    override fun payload(): JsonObject = json
 }
