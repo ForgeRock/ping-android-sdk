@@ -79,6 +79,9 @@ dependencies {
 
     implementation(libs.facebook.login)
 
+    //Protect
+    implementation(project(":protect"))
+
     implementation(libs.androidx.datastore.preferences)
 
     implementation(libs.compose.ui)
