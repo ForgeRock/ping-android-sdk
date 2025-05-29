@@ -8,6 +8,7 @@
 package com.pingidentity.journey.callback
 
 import com.pingidentity.journey.plugin.AbstractCallback
+import com.pingidentity.journey.plugin.ValueCallback
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.jsonPrimitive
 
@@ -17,12 +18,12 @@ import kotlinx.serialization.json.jsonPrimitive
  * @property id The ID of the hidden value.
  * @property value The value of the hidden value.
  */
-class HiddenValueCallback : AbstractCallback() {
+class HiddenValueCallback : ValueCallback, AbstractCallback() {
 
-    var id = ""
+    override var id = ""
         private set
 
-    var value = ""
+    override var value = ""
 
     override fun init(name: String, value: JsonElement) {
         when (name) {

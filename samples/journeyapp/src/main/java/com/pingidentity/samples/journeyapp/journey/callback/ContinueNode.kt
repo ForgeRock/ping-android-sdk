@@ -36,6 +36,8 @@ import com.pingidentity.journey.callback.ValidatedPasswordCallback
 import com.pingidentity.journey.callback.ValidatedUsernameCallback
 import com.pingidentity.journey.plugin.callbacks
 import com.pingidentity.orchestrate.ContinueNode
+import com.pingidentity.protect.journey.PingOneProtectEvaluationCallback
+import com.pingidentity.protect.journey.PingOneProtectInitializeCallback
 
 @Composable
 fun ContinueNode(
@@ -59,6 +61,7 @@ fun ContinueNode(
                     showNext = false
                     ConfirmationCallback(it, onNext)
                 }
+
                 is ConsentMappingCallback -> ConsentMappingCallback(it, onNodeUpdated)
                 is KbaCreateCallback -> KbaCreateCallback(it, onNodeUpdated)
                 is NumberAttributeInputCallback -> NumberAttributeInputCallback(it, onNodeUpdated)
@@ -68,12 +71,14 @@ fun ContinueNode(
                 is TermsAndConditionsCallback -> {
                     TermsAndConditionsCallback(it, onNodeUpdated)
                 }
+
                 is TextInputCallback -> TextInputCallback(it, onNodeUpdated)
                 is TextOutputCallback -> TextOutputCallback(it)
                 is SuspendedTextOutputCallback -> {
                     TextOutputCallback(it)
                     showNext = false
                 }
+
                 is NameCallback -> NameCallback(it, onNodeUpdated)
 
                 //External IdP
@@ -82,8 +87,17 @@ fun ContinueNode(
                     showNext = false
                     IdPCallback(it, onNext)
                 }
+
                 is ValidatedUsernameCallback -> ValidatedUsernameCallback(it, onNodeUpdated)
                 is ValidatedPasswordCallback -> ValidatedPasswordCallback(it, onNodeUpdated)
+                is PingOneProtectInitializeCallback -> {
+                    PingOneProtectInitialize(it, onNext)
+                    showNext = false
+                }
+                is PingOneProtectEvaluationCallback -> {
+                    PingOneProtectEvaluation(it, onNext)
+                    showNext = false
+                }
 
 
             }

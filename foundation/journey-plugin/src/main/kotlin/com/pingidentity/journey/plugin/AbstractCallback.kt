@@ -69,19 +69,6 @@ abstract class AbstractCallback : Callback {
                 })
             }
         }
-
-        // Convert the JsonObject to a mutable map
-        val mutableMap = json.toMutableMap()
-
-        // Modify the map
-        mutableMap["input"] = updated
-
-        // Convert the map back to a JsonObject
-        json = buildJsonObject {
-            mutableMap.forEach { (key, value) ->
-                put(key, value)
-            }
-        }
         return update(updated)
     }
 

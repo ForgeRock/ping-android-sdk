@@ -37,6 +37,7 @@ import com.pingidentity.davinci.module.name
 import com.pingidentity.davinci.plugin.collectors
 import com.pingidentity.idp.davinci.IdpCollector
 import com.pingidentity.orchestrate.ContinueNode
+import com.pingidentity.protect.davinci.ProtectCollector
 
 @Composable
 fun ContinueNode(
@@ -129,6 +130,7 @@ fun ContinueNode(
                     DeviceAuthentication(it, onNext)
                 }
                 is PhoneNumberCollector -> PhoneNumber (it, onNodeUpdated)
+                is ProtectCollector -> Protect(it, onNodeUpdated)
 
             }
         }

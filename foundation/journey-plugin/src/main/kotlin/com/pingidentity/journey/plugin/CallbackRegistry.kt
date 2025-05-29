@@ -18,7 +18,12 @@ import kotlinx.serialization.json.jsonPrimitive
  * callbacks based on a JSON array.
  */
 object CallbackRegistry {
-    private val callbacks: MutableMap<String, () -> Callback> = HashMap()
+    private val callbacks: MutableMap<String, () -> Callback> = mutableMapOf()
+
+    /**
+     * Returns a map of registered callbacks.
+     */
+    fun callbacks() = callbacks.toMap()
 
     /**
      * Registers a callback with the specified type.
@@ -38,6 +43,9 @@ object CallbackRegistry {
         continueNode.callbacks.forEach { callback ->
             if (callback is JourneyAware) {
                 callback.journey = journey
+            }
+            if (callback is ContinueNodeAware) {
+                callback.continueNode = continueNode
             }
         }
     }

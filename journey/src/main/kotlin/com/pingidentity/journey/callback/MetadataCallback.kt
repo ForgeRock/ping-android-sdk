@@ -8,11 +8,27 @@
 package com.pingidentity.journey.callback
 
 import com.pingidentity.journey.plugin.AbstractCallback
+import com.pingidentity.journey.plugin.Callback
 import com.pingidentity.journey.plugin.CallbackRegistry
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+
+private const val PING_ONE_PROTECT_INITIALIZE_CALLBACK = "PingOneProtectInitializeCallback"
+private const val PING_ONE_PROTECT_EVALUATION_CALLBACK = "PingOneProtectEvaluationCallback"
+private const val ACTION = "_action"
+private const val TYPE = "_type"
+private const val WEBAUTHN_REGISTRATION = "webauthn_registration"
+private const val WEB_AUTHN = "WebAuthn"
+private const val _PUB_KEY_CRED_PARAMS = "_pubKeyCredParams"
+private const val PUB_KEY_CRED_PARAMS = "pubKeyCredParams"
+private const val WEBAUTHN_AUTHENTICATION = "webauthn_authentication"
+private const val PING_ONE_PROTECT = "PingOneProtect"
+private const val PROTECT_INITIALIZE = "protect_initialize"
+private const val PROTECT_RISK_EVALUATION = "protect_risk_evaluation"
 
 /**
  * A callback for providing metadata.
@@ -30,4 +46,54 @@ class MetadataCallback : AbstractCallback() {
         }
     }
 
+    override fun init(jsonObject: JsonObject): Callback {
+        super.init(jsonObject)
+        when {
+            isProtectInitialize() -> {
+                return CallbackRegistry.callbacks()[PING_ONE_PROTECT_INITIALIZE_CALLBACK]?.let {
+                    it().init(jsonObject)
+                } ?: this
+            }
+            isProtectEvaluation() -> {
+                return CallbackRegistry.callbacks()[PING_ONE_PROTECT_EVALUATION_CALLBACK]?.let {
+                    it().init(jsonObject)
+                } ?: this
+            }
+        }
+        return this
+    }
+
+    private fun isFidoRegistration(): Boolean {
+        // _action is provided AM version >= AM 7.1
+        if (value[ACTION]?.jsonPrimitive?.contentOrNull == WEBAUTHN_REGISTRATION) {
+            return true
+        }
+
+        // Checking for existence and content of _TYPE and either PUB_KEY_CRED_PARAMS
+        // or _PUB_KEY_CRED_PARAMS
+        return value[TYPE]?.jsonPrimitive?.contentOrNull == WEB_AUTHN &&
+                (value.containsKey(PUB_KEY_CRED_PARAMS) || value.containsKey(_PUB_KEY_CRED_PARAMS))
+    }
+
+    private fun isFidoAuthentication(): Boolean {
+        // _action is provided AM version >= AM 7.1
+        if (value[ACTION]?.jsonPrimitive?.contentOrNull == WEBAUTHN_AUTHENTICATION) {
+            return true
+        }
+
+        // Checking for existence and content of _TYPE and either PUB_KEY_CRED_PARAMS
+        // or _PUB_KEY_CRED_PARAMS
+        return value[TYPE]?.jsonPrimitive?.contentOrNull == WEB_AUTHN &&
+                (value.containsKey(PUB_KEY_CRED_PARAMS) || value.containsKey(_PUB_KEY_CRED_PARAMS))
+    }
+
+    private fun isProtectInitialize(): Boolean {
+        return value[TYPE]?.jsonPrimitive?.contentOrNull == PING_ONE_PROTECT &&
+                value[ACTION]?.jsonPrimitive?.contentOrNull == PROTECT_INITIALIZE
+    }
+
+    private fun isProtectEvaluation(): Boolean {
+        return value[TYPE]?.jsonPrimitive?.contentOrNull == PING_ONE_PROTECT &&
+                value[ACTION]?.jsonPrimitive?.contentOrNull == PROTECT_RISK_EVALUATION
+    }
 }
