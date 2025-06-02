@@ -9,6 +9,7 @@ package com.pingidentity.oidc
 
 import android.content.Context
 import androidx.datastore.core.DataStore
+import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
 import androidx.datastore.dataStore
 import com.pingidentity.android.ContextProvider
 import com.pingidentity.exception.ApiException
@@ -17,7 +18,7 @@ import com.pingidentity.logger.None
 import com.pingidentity.oidc.agent.browser
 import com.pingidentity.storage.DataStoreStorage
 import com.pingidentity.storage.EncryptedDataToJsonSerializer
-import com.pingidentity.storage.StorageDelegate
+import com.pingidentity.storage.Storage
 import com.pingidentity.storage.encrypt.SecretKeyEncryptor
 import com.pingidentity.utils.PingDsl
 import io.ktor.client.HttpClient
@@ -38,7 +39,7 @@ private val Context.defaultOidcTokenDataStore: DataStore<Token?> by dataStore(
     COM_PING_SDK_V_1_TOKENS,
     EncryptedDataToJsonSerializer(SecretKeyEncryptor {
         keyAlias = COM_PING_SDK_V_1_TOKENS
-    })
+    }), ReplaceFileCorruptionHandler { null }
 )
 
 /**
@@ -83,9 +84,9 @@ class OidcClientConfig {
     var logger: Logger = Logger.logger
 
     /**
-     * Storage delegate for storing tokens.
+     * Storage for storing tokens.
      */
-    lateinit var storage: StorageDelegate<Token>
+    lateinit var storage: Storage<Token>
 
     /**
      * Discovery endpoint URL.

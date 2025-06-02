@@ -111,17 +111,21 @@ There are configuration options for `SecretKeyEncryptor`:
     secretKeyStorage = keyStorage // The storage for the secret key.
     throwWhenEncryptError =
         true // Flag to throw an exception when an error occurs during encryption. default is true
+    strongBoxPrefered = false // Flag to prefer StrongBox for key storage. default is true
 }
 ```
 
+**Note:** StrongBox offers the strongest security, best for apps truly at risk of physical attacks. But it's slower and consume more resources.
+
+
 ### Creating a Custom Storage
 
-You can create a custom repository by implementing the `Repository` interface. This could be useful
-for creating file-based storage, cloud storage, etc... 
+You can create a custom repository by implementing the `Storage` interface. This could be useful
+for creating file-based storage, cloud storage, etc...
 Here is an example of creating a custom memory storage:
 
 ```kotlin
-class MemoryRepository<T : @Serializable Any> : Repository<T> {
+class Memory<T : @Serializable Any> : Storage<T> {
     private var data: T? = null
 
     override suspend fun save(item: T?) {
@@ -135,8 +139,8 @@ class MemoryRepository<T : @Serializable Any> : Repository<T> {
     }
 }
 
-// Delegate the MemoryRepository to the Storage
-inline fun <reified T : @Serializable Any> MemoryStorage(): Storage<T> = Storage(MemoryRepository())
+// Delegate the MemoryStorage to the Storage
+inline fun <reified T : @Serializable Any> MemoryStorage(): Storage<T> = StorageDelegate(Memory())
 ```
 
 ## Available Storage Solutions

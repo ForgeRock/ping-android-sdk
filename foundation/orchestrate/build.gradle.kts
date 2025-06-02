@@ -24,6 +24,7 @@ dependencies {
     implementation(project(":foundation:utils"))
 
     implementation(libs.androidx.datastore)
+    implementation(libs.androidx.datastore.core)
     implementation(libs.ktor.client.logging)
     implementation(libs.ktor.client.cio)
     implementation(libs.kotlinx.serialization.json)

@@ -9,6 +9,7 @@ package com.pingidentity.orchestrate.module
 
 import android.content.Context
 import androidx.datastore.core.DataStore
+import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
 import androidx.datastore.dataStore
 import com.pingidentity.storage.EncryptedDataToJsonSerializer
 import com.pingidentity.storage.encrypt.SecretKeyEncryptor
@@ -22,5 +23,5 @@ internal val Context.defaultCookieDataStore: DataStore<Cookies?> by dataStore(
     COM_PING_SDK_V_1_COOKIES,
     EncryptedDataToJsonSerializer(SecretKeyEncryptor {
         keyAlias = COM_PING_SDK_V_1_COOKIES
-    })
+    }), ReplaceFileCorruptionHandler { null }
 )
