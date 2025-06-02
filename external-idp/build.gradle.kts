@@ -5,6 +5,8 @@
  * of the MIT license. See the LICENSE file for details.
  */
 
+description = "External IDP library"
+
 plugins {
     id("com.pingidentity.convention.android.library")
     id("com.pingidentity.convention.centralPublish")
