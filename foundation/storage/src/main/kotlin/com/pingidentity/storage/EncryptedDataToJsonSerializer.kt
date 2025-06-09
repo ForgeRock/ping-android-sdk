@@ -7,13 +7,16 @@
 
 package com.pingidentity.storage
 
+import androidx.datastore.core.CorruptionException
 import androidx.datastore.core.Serializer
 import com.pingidentity.storage.encrypt.Encryptor
+import kotlinx.coroutines.ensureActive
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.serializer
 import java.io.InputStream
 import java.io.OutputStream
+import kotlin.coroutines.coroutineContext
 
 /**
  * Creates an encrypted serializer for the given type.
@@ -39,11 +42,16 @@ inline fun <reified T : Any> EncryptedDataToJsonSerializer(
          * @return The object if it exists, null otherwise.
          */
         override suspend fun readFrom(input: InputStream): T? {
-            return if (input.isNotEmpty()) {
-                val result = encryptor.decrypt(input.readBytes())
-                return if (result.isEmpty()) null else json.decodeFromString(String(result))
-            } else {
-                null
+            try {
+                return if (input.isNotEmpty()) {
+                    val result = encryptor.decrypt(input.readBytes())
+                    return if (result.isEmpty()) null else json.decodeFromString(String(result))
+                } else {
+                    null
+                }
+            } catch (e: Exception) {
+                coroutineContext.ensureActive()
+                throw CorruptionException("Failed to decrypt data", e)
             }
         }
 

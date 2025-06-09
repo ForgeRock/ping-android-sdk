@@ -13,12 +13,16 @@ import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
 import org.junit.runner.RunWith
+import java.security.KeyStore
 import java.security.KeyStore.PrivateKeyEntry
 import java.security.KeyStore.SecretKeyEntry
+import kotlin.system.measureTimeMillis
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
+import kotlin.time.DurationUnit
+import kotlin.time.toDuration
 
 @RunWith(AndroidJUnit4::class)
 @SmallTest
@@ -29,9 +33,16 @@ class SecretKeyEncryptorTest {
     private val testDispatcher = StandardTestDispatcher()
     private val testCoroutineScope = TestScope(testDispatcher + Job())
 
+    private val keyStore: KeyStore
+        get() {
+            val keyStore = KeyStore.getInstance("AndroidKeyStore")
+            keyStore.load(null)
+            return keyStore
+        }
+
     @AfterTest
     fun tearDown() {
-        SecretKeyEncryptor.keyStore.deleteEntry(alias)
+        keyStore.deleteEntry(alias)
     }
 
     @Test
@@ -47,7 +58,7 @@ class SecretKeyEncryptorTest {
             assertEquals("test", decrypted.toString(Charsets.UTF_8))
 
             //Make sure the key is stored in the keystore as a private key
-            assertTrue(SecretKeyEncryptor.keyStore.getEntry(alias, null) is PrivateKeyEntry)
+            assertTrue(keyStore.getEntry(alias, null) is PrivateKeyEntry)
         }
     }
 
@@ -63,7 +74,7 @@ class SecretKeyEncryptorTest {
             assertEquals("test", decrypted.toString(Charsets.UTF_8))
 
             //Make sure the secret key is not generated
-            assertTrue(SecretKeyEncryptor.keyStore.getEntry(alias, null) is SecretKeyEntry)
+            assertTrue(keyStore.getEntry(alias, null) is SecretKeyEntry)
         }
     }
 
@@ -90,7 +101,35 @@ class SecretKeyEncryptorTest {
 
             encryptor2.encrypt("test".toByteArray())
             //The key is now stored as a private key after encrypt
-            assertTrue(SecretKeyEncryptor.keyStore.getEntry(alias, null) is PrivateKeyEntry)
+            assertTrue(keyStore.getEntry(alias, null) is PrivateKeyEntry)
+        }
+    }
+
+    @Test
+    fun testPerformance() = runTest(timeout = 3.toDuration(DurationUnit.SECONDS)) {
+        val runs = 10
+        val encryptor = SecretKeyEncryptor {
+            symmetricKeySize = 256
+            keyAlias = alias
+            strongBoxPreferred = false
+        }
+        val dataStr =
+            "R)I~'xM&<F8^K*]!+@b{s;v#?q9tU[oG3z/Hl.D-j4yC=eP{aXwV`{uN7}gS6iBT%d}0^rW>k5E2mLf,Y;Q!jF7h<4]A?{g(0Zt9\"p\"c\"2R5O:3mN-`z6_U<b`X'I(>G)vB@qK_J?|eYd]P.CxH8yW(T=S:V_L]!w+o".toByteArray()
+
+        var totalEncryptTime = 0L
+        var totalDecryptTime = 0L
+
+        repeat(runs) {
+            var output: ByteArray
+            val encryptTime = measureTimeMillis {
+                output = encryptor.encrypt(dataStr)
+            }
+            val decryptTime = measureTimeMillis {
+                output = encryptor.decrypt(output)
+            }
+            totalEncryptTime += encryptTime
+            totalDecryptTime += decryptTime
+            assertEquals(String(dataStr), String(output))
         }
     }
 }

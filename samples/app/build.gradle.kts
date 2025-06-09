@@ -79,6 +79,8 @@ dependencies {
 
     implementation(libs.facebook.login)
 
+    implementation(project(":foundation:storage"))
+
     implementation(libs.androidx.datastore.preferences)
 
     implementation(libs.compose.ui)

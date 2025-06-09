@@ -33,6 +33,7 @@ dependencies {
     implementation(project(":foundation:browser"))
 
     implementation(libs.androidx.datastore)
+    implementation(libs.androidx.datastore.core)
     implementation(libs.ktor.client.okhttp)
     implementation(libs.ktor.client.logging)
     implementation(libs.ktor.client.cio)

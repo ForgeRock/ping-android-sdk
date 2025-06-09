@@ -9,12 +9,13 @@ package com.pingidentity.journey.module
 
 import android.content.Context
 import androidx.datastore.core.DataStore
+import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
 import androidx.datastore.dataStore
 import com.pingidentity.android.ContextProvider
 import com.pingidentity.journey.SSOToken
 import com.pingidentity.storage.DataStoreStorage
 import com.pingidentity.storage.EncryptedDataToJsonSerializer
-import com.pingidentity.storage.StorageDelegate
+import com.pingidentity.storage.Storage
 import com.pingidentity.storage.encrypt.SecretKeyEncryptor
 import com.pingidentity.utils.PingDsl
 
@@ -25,12 +26,15 @@ private val Context.defaultSessionDataStore: DataStore<SSOToken?> by dataStore(
     COM_PING_SDK_V_1_SESSION,
     EncryptedDataToJsonSerializer(SecretKeyEncryptor {
         keyAlias = COM_PING_SDK_V_1_SESSION
-    })
+    }), ReplaceFileCorruptionHandler { null }
 )
 
 @PingDsl
 class SessionConfig {
-    lateinit var storage: StorageDelegate<SSOToken>
+    /**
+     * Storage for storing SSOToken.
+     */
+    lateinit var storage: Storage<SSOToken>
     internal fun init() {
         if (!::storage.isInitialized) {
             storage = DataStoreStorage(ContextProvider.context.defaultSessionDataStore, false)
