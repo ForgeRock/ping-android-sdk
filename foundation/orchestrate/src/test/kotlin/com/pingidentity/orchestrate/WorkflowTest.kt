@@ -5,21 +5,13 @@
  * of the MIT license. See the LICENSE file for details.
  */
 
-package com.pingidentity.divinci
+package com.pingidentity.orchestrate
 
 import com.pingidentity.testrail.TestRailCase
 import com.pingidentity.logger.CONSOLE
 import com.pingidentity.logger.Logger
-import com.pingidentity.orchestrate.ContinueNode
-import com.pingidentity.orchestrate.EmptySession
-import com.pingidentity.orchestrate.ErrorNode
-import com.pingidentity.orchestrate.FailureNode
-import com.pingidentity.orchestrate.Module
 import com.pingidentity.orchestrate.OverrideMode.APPEND
 import com.pingidentity.orchestrate.OverrideMode.IGNORE
-import com.pingidentity.orchestrate.Request
-import com.pingidentity.orchestrate.SuccessNode
-import com.pingidentity.orchestrate.Workflow
 import com.pingidentity.testrail.TestRailWatcher
 import com.pingidentity.utils.PingDsl
 import io.ktor.client.HttpClient

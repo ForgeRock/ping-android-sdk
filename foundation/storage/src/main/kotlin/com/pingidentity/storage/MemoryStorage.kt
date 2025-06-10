@@ -46,4 +46,4 @@ class Memory<T : Any> : Storage<T> {
  *
  * @return A new Storage instance.
  */
-inline fun <reified T : Any> MemoryStorage(): StorageDelegate<T> = StorageDelegate(Memory())
+inline fun <reified T : Any> MemoryStorage(): Storage<T> = StorageDelegate(Memory())

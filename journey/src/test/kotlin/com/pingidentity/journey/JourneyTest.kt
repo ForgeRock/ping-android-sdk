@@ -172,7 +172,7 @@ class JourneyTest {
                     followRedirects = false
                 }
                 module(Session) {
-                    storage = sessionStorage
+                    storage = { sessionStorage }
                 }
             }
 
@@ -194,7 +194,7 @@ class JourneyTest {
                     followRedirects = false
                 }
                 module(Session) {
-                    storage = sessionStorage
+                    storage = { sessionStorage }
                 }
             }
 
@@ -241,10 +241,10 @@ class JourneyTest {
                         "http://localhost/.well-known/openid-configuration"
                     scopes = mutableSetOf("openid", "email", "address")
                     redirectUri = "http://localhost:8080"
-                    storage = tokenStorage
+                    storage = { tokenStorage }
                 }
                 module(Session) {
-                    storage = sessionStorage
+                    storage = { sessionStorage }
                 }
             }
 
@@ -338,7 +338,7 @@ class JourneyTest {
                             "http://localhost/.well-known/openid-configuration"
                         scopes = mutableSetOf("openid", "email", "address")
                         redirectUri = "http://localhost:8080"
-                        storage = MemoryStorage()
+                        storage = { MemoryStorage() }
                         logger = Logger.STANDARD
                         acrValues = "acrValues"
                         display = "display"
@@ -349,7 +349,7 @@ class JourneyTest {
                         additionalParameters = mutableMapOf("apKey" to "apValue")
                     }
                     module(Session) {
-                        storage = MemoryStorage()
+                        storage = { MemoryStorage() }
                     }
                 }
 
@@ -400,11 +400,11 @@ class JourneyTest {
                             "http://localhost/.well-known/openid-configuration"
                         scopes = mutableSetOf("openid", "email", "address")
                         redirectUri = "http://localhost:8080"
-                        storage = tokenStorage
+                        storage = { tokenStorage }
                         logger = Logger.STANDARD
                     }
                     module(Session) {
-                        storage = sessionStorage
+                        storage = { sessionStorage }
                     }
                 }
 
@@ -437,7 +437,7 @@ class JourneyTest {
                         followRedirects = false
                     }
                     module(Session) {
-                        storage = sessionStorage
+                        storage = { sessionStorage }
                     }
                 }
 
@@ -473,7 +473,7 @@ class JourneyTest {
                     followRedirects = false
                 }
                 module(Session) {
-                    storage = sessionStorage
+                    storage = { sessionStorage }
                 }
             }
 
@@ -495,7 +495,7 @@ class JourneyTest {
                     followRedirects = false
                 }
                 module(Session) {
-                    storage = sessionStorage
+                    storage = { sessionStorage }
                 }
             }
 
@@ -523,12 +523,12 @@ class JourneyTest {
                     followRedirects = false
                 }
                 module(Session) {
-                    storage = sessionStorage
+                    storage = { sessionStorage }
                 }
             }
 
         val node = journey.start() // Return first Node
         assertTrue(node is ErrorNode)
-        assertEquals("error",node.message)
+        assertEquals("error", node.message)
     }
 }

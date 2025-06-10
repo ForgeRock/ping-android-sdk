@@ -35,7 +35,6 @@ import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlin.test.AfterTest
@@ -110,7 +109,7 @@ class CustomCallbackTest {
                     followRedirects = false
                 }
                 module(Session) {
-                    storage = sessionStorage
+                    tokenStorage = sessionStorage
                 }
             }
 

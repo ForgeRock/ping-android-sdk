@@ -74,7 +74,7 @@ class DaVinciErrorTest {
                         "/.well-known/openid-configuration" -> {
                             return@MockEngine respond(
                                 content =
-                                ByteReadChannel("Not Found"),
+                                    ByteReadChannel("Not Found"),
                                 status = HttpStatusCode.NotFound,
                             )
                         }
@@ -82,7 +82,7 @@ class DaVinciErrorTest {
                         else -> {
                             return@MockEngine respond(
                                 content =
-                                ByteReadChannel(""),
+                                    ByteReadChannel(""),
                                 status = HttpStatusCode.InternalServerError,
                             )
                         }
@@ -99,11 +99,11 @@ class DaVinciErrorTest {
                             "http://localhost/.well-known/openid-configuration"
                         scopes = mutableSetOf("openid", "email", "address")
                         redirectUri = "http://localhost:8080"
-                        storage = MemoryStorage()
+                        storage = { MemoryStorage() }
                         logger = Logger.STANDARD
                     }
                     module(Cookie) {
-                        storage = MemoryStorage()
+                        storage = { MemoryStorage() }
                         persist = mutableListOf("ST")
                     }
                 }
@@ -144,7 +144,7 @@ class DaVinciErrorTest {
                         else -> {
                             return@MockEngine respond(
                                 content =
-                                ByteReadChannel(""),
+                                    ByteReadChannel(""),
                                 status = HttpStatusCode.InternalServerError,
                             )
                         }
@@ -161,11 +161,11 @@ class DaVinciErrorTest {
                             "http://localhost/.well-known/openid-configuration"
                         scopes = mutableSetOf("openid", "email", "address")
                         redirectUri = "http://localhost:8080"
-                        storage = MemoryStorage()
+                        storage = { MemoryStorage() }
                         logger = Logger.STANDARD
                     }
                     module(Cookie) {
-                        storage = MemoryStorage()
+                        storage = { MemoryStorage() }
                         persist = mutableListOf("ST")
                     }
                 }
@@ -207,7 +207,7 @@ class DaVinciErrorTest {
                         else -> {
                             return@MockEngine respond(
                                 content =
-                                ByteReadChannel(""),
+                                    ByteReadChannel(""),
                                 status = HttpStatusCode.InternalServerError,
                             )
                         }
@@ -224,11 +224,11 @@ class DaVinciErrorTest {
                             "http://localhost/.well-known/openid-configuration"
                         scopes = mutableSetOf("openid", "email", "address")
                         redirectUri = "http://localhost:8080"
-                        storage = MemoryStorage()
+                        storage = { MemoryStorage() }
                         logger = Logger.STANDARD
                     }
                     module(Cookie) {
-                        storage = MemoryStorage()
+                        storage = { MemoryStorage() }
                         persist = mutableListOf("ST")
                     }
                 }
@@ -263,7 +263,7 @@ class DaVinciErrorTest {
                         else -> {
                             return@MockEngine respond(
                                 content =
-                                ByteReadChannel(""),
+                                    ByteReadChannel(""),
                                 status = HttpStatusCode.InternalServerError,
                             )
                         }
@@ -280,11 +280,11 @@ class DaVinciErrorTest {
                             "http://localhost/.well-known/openid-configuration"
                         scopes = mutableSetOf("openid", "email", "address")
                         redirectUri = "http://localhost:8080"
-                        storage = MemoryStorage()
+                        storage = { MemoryStorage() }
                         logger = Logger.STANDARD
                     }
                     module(Cookie) {
-                        storage = MemoryStorage()
+                        storage = { MemoryStorage() }
                         persist = mutableListOf("ST")
                     }
                 }
@@ -325,7 +325,7 @@ class DaVinciErrorTest {
                         else -> {
                             return@MockEngine respond(
                                 content =
-                                ByteReadChannel(""),
+                                    ByteReadChannel(""),
                                 status = HttpStatusCode.InternalServerError,
                             )
                         }
@@ -342,11 +342,11 @@ class DaVinciErrorTest {
                             "http://localhost/.well-known/openid-configuration"
                         scopes = mutableSetOf("openid", "email", "address")
                         redirectUri = "http://localhost:8080"
-                        storage = MemoryStorage()
+                        storage = { MemoryStorage() }
                         logger = Logger.STANDARD
                     }
                     module(Cookie) {
-                        storage = MemoryStorage()
+                        storage = { MemoryStorage() }
                         persist = mutableListOf("ST")
                     }
                 }
@@ -402,7 +402,7 @@ class DaVinciErrorTest {
                         else -> {
                             return@MockEngine respond(
                                 content =
-                                ByteReadChannel(""),
+                                    ByteReadChannel(""),
                                 status = HttpStatusCode.InternalServerError,
                             )
                         }
@@ -419,11 +419,11 @@ class DaVinciErrorTest {
                             "http://localhost/.well-known/openid-configuration"
                         scopes = mutableSetOf("openid", "email", "address")
                         redirectUri = "http://localhost:8080"
-                        storage = MemoryStorage()
+                        storage = { MemoryStorage() }
                         logger = Logger.STANDARD
                     }
                     module(Cookie) {
-                        storage = MemoryStorage()
+                        storage = { MemoryStorage() }
                         persist = mutableListOf("ST")
                     }
                 }
@@ -469,7 +469,7 @@ class DaVinciErrorTest {
                         else -> {
                             return@MockEngine respond(
                                 content =
-                                ByteReadChannel(""),
+                                    ByteReadChannel(""),
                                 status = HttpStatusCode.InternalServerError,
                             )
                         }
@@ -486,11 +486,11 @@ class DaVinciErrorTest {
                             "http://localhost/.well-known/openid-configuration"
                         scopes = mutableSetOf("openid", "email", "address")
                         redirectUri = "http://localhost:8080"
-                        storage = MemoryStorage()
+                        storage = { MemoryStorage() }
                         logger = Logger.STANDARD
                     }
                     module(Cookie) {
-                        storage = MemoryStorage()
+                        storage = { MemoryStorage() }
                         persist = mutableListOf("ST")
                     }
                 }
@@ -538,7 +538,7 @@ class DaVinciErrorTest {
                         else -> {
                             return@MockEngine respond(
                                 content =
-                                ByteReadChannel(""),
+                                    ByteReadChannel(""),
                                 status = HttpStatusCode.InternalServerError,
                             )
                         }
@@ -555,11 +555,11 @@ class DaVinciErrorTest {
                             "http://localhost/.well-known/openid-configuration"
                         scopes = mutableSetOf("openid", "email", "address")
                         redirectUri = "http://localhost:8080"
-                        storage = MemoryStorage()
+                        storage = { MemoryStorage() }
                         logger = Logger.STANDARD
                     }
                     module(Cookie) {
-                        storage = MemoryStorage()
+                        storage = { MemoryStorage() }
                         persist = mutableListOf("ST")
                     }
                 }
@@ -610,7 +610,7 @@ class DaVinciErrorTest {
                         else -> {
                             return@MockEngine respond(
                                 content =
-                                ByteReadChannel(""),
+                                    ByteReadChannel(""),
                                 status = HttpStatusCode.InternalServerError,
                             )
                         }
@@ -627,11 +627,11 @@ class DaVinciErrorTest {
                             "http://localhost/.well-known/openid-configuration"
                         scopes = mutableSetOf("openid", "email", "address")
                         redirectUri = "http://localhost:8080"
-                        storage = MemoryStorage()
+                        storage = { MemoryStorage() }
                         logger = Logger.STANDARD
                     }
                     module(Cookie) {
-                        storage = MemoryStorage()
+                        storage = { MemoryStorage() }
                         persist = mutableListOf("ST")
                     }
                 }
@@ -675,7 +675,7 @@ class DaVinciErrorTest {
                         else -> {
                             return@MockEngine respond(
                                 content =
-                                ByteReadChannel(""),
+                                    ByteReadChannel(""),
                                 status = HttpStatusCode.InternalServerError,
                             )
                         }
@@ -692,11 +692,11 @@ class DaVinciErrorTest {
                             "http://localhost/.well-known/openid-configuration"
                         scopes = mutableSetOf("openid", "email", "address")
                         redirectUri = "http://localhost:8080"
-                        storage = MemoryStorage()
+                        storage = { MemoryStorage() }
                         logger = Logger.STANDARD
                     }
                     module(Cookie) {
-                        storage = MemoryStorage()
+                        storage = { MemoryStorage() }
                         persist = mutableListOf("ST")
                     }
                 }
@@ -718,8 +718,10 @@ class DaVinciErrorTest {
                         "/.well-known/openid-configuration" -> {
                             respond(openIdConfigurationResponse(), HttpStatusCode.OK, headers)
                         }
+
                         "/authorize" -> {
-                            respond(content = ByteReadChannel(""),
+                            respond(
+                                content = ByteReadChannel(""),
                                 status = HttpStatusCode.Found,
                                 headers = headers {
                                     append(
@@ -728,10 +730,11 @@ class DaVinciErrorTest {
                                     )
                                 })
                         }
+
                         else -> {
                             return@MockEngine respond(
                                 content =
-                                ByteReadChannel(""),
+                                    ByteReadChannel(""),
                                 status = HttpStatusCode.InternalServerError,
                             )
                         }
@@ -751,10 +754,10 @@ class DaVinciErrorTest {
                             "http://localhost/.well-known/openid-configuration"
                         scopes = mutableSetOf("openid", "email", "address")
                         redirectUri = "http://localhost:8080"
-                        storage = MemoryStorage()
+                        storage = { MemoryStorage() }
                     }
                     module(Cookie) {
-                        storage = MemoryStorage()
+                        storage = { MemoryStorage() }
                         persist = mutableListOf("ST")
                     }
                 }
@@ -792,7 +795,7 @@ class DaVinciErrorTest {
                         else -> {
                             return@MockEngine respond(
                                 content =
-                                ByteReadChannel(""),
+                                    ByteReadChannel(""),
                                 status = HttpStatusCode.InternalServerError,
                             )
                         }
@@ -809,11 +812,11 @@ class DaVinciErrorTest {
                             "http://localhost/.well-known/openid-configuration"
                         scopes = mutableSetOf("openid", "email", "address")
                         redirectUri = "http://localhost:8080"
-                        storage = MemoryStorage()
+                        storage = { MemoryStorage() }
                         logger = Logger.STANDARD
                     }
                     module(Cookie) {
-                        storage = MemoryStorage()
+                        storage = { MemoryStorage() }
                         persist = mutableListOf("ST")
                     }
                 }
@@ -824,18 +827,39 @@ class DaVinciErrorTest {
             node.details()[0].let {
                 assertEquals("ffbab117-06e6-44be-a17a-ae619d3d7334", it.rawResponse.id)
                 assertEquals("INVALID_DATA", it.rawResponse.code)
-                assertEquals("The request could not be completed. One or more validation errors were in the request.", it.rawResponse.message)
+                assertEquals(
+                    "The request could not be completed. One or more validation errors were in the request.",
+                    it.rawResponse.message
+                )
 
                 assertEquals(1, it.rawResponse.details?.size)
                 assertEquals("INVALID_VALUE", it.rawResponse.details?.get(0)?.code)
                 assertEquals("password", it.rawResponse.details?.get(0)?.target)
-                assertEquals("User password did not satisfy password policy requirements", it.rawResponse.details?.get(0)?.message)
+                assertEquals(
+                    "User password did not satisfy password policy requirements",
+                    it.rawResponse.details?.get(0)?.message
+                )
                 assertEquals(5, it.rawResponse.details?.get(0)?.innerError?.errors?.size)
-                assertEquals("The provided password did not contain enough characters from the character set 'ZYXWVUTSRQPONMLKJIHGFEDCBA'.  The minimum number of characters from that set that must be present in user passwords is 1", it.rawResponse.details?.get(0)?.innerError?.errors?.get("minCharacters"))
-                assertEquals("The provided password (or a variant of that password) was found in a list of prohibited passwords", it.rawResponse.details?.get(0)?.innerError?.errors?.get("excludesCommonlyUsed"))
-                assertEquals("The provided password is shorter than the minimum required length of 8 characters", it.rawResponse.details?.get(0)?.innerError?.errors?.get("length"))
-                assertEquals("The provided password is not acceptable because it contains a character repeated more than 2 times in a row", it.rawResponse.details?.get(0)?.innerError?.errors?.get("maxRepeatedCharacters"))
-                assertEquals("The provided password does not contain enough unique characters.  The minimum number of unique characters that may appear in a user password is 5", it.rawResponse.details?.get(0)?.innerError?.errors?.get("minUniqueCharacters"))
+                assertEquals(
+                    "The provided password did not contain enough characters from the character set 'ZYXWVUTSRQPONMLKJIHGFEDCBA'.  The minimum number of characters from that set that must be present in user passwords is 1",
+                    it.rawResponse.details?.get(0)?.innerError?.errors?.get("minCharacters")
+                )
+                assertEquals(
+                    "The provided password (or a variant of that password) was found in a list of prohibited passwords",
+                    it.rawResponse.details?.get(0)?.innerError?.errors?.get("excludesCommonlyUsed")
+                )
+                assertEquals(
+                    "The provided password is shorter than the minimum required length of 8 characters",
+                    it.rawResponse.details?.get(0)?.innerError?.errors?.get("length")
+                )
+                assertEquals(
+                    "The provided password is not acceptable because it contains a character repeated more than 2 times in a row",
+                    it.rawResponse.details?.get(0)?.innerError?.errors?.get("maxRepeatedCharacters")
+                )
+                assertEquals(
+                    "The provided password does not contain enough unique characters.  The minimum number of unique characters that may appear in a user password is 5",
+                    it.rawResponse.details?.get(0)?.innerError?.errors?.get("minUniqueCharacters")
+                )
 
                 assertEquals(400, it.statusCode)
             }

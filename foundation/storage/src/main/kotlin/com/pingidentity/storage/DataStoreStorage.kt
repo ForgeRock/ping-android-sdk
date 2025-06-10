@@ -61,7 +61,7 @@ class DataStoreStorage<T : @Serializable Any>(
 inline fun <reified T : @Serializable Any> DataStoreStorage(
     dataStore: DataStore<T?>,
     cacheable: Boolean = false,
-): StorageDelegate<T> {
+): Storage<T> {
 
 
     return StorageDelegate(

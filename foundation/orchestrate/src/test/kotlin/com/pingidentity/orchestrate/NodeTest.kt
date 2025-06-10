@@ -5,19 +5,8 @@
  * of the MIT license. See the LICENSE file for details.
  */
 
-package com.pingidentity.divinci
+package com.pingidentity.orchestrate
 
-import com.pingidentity.orchestrate.Action
-import com.pingidentity.orchestrate.Closeable
-import com.pingidentity.orchestrate.ContinueNode
-import com.pingidentity.orchestrate.EmptySession
-import com.pingidentity.orchestrate.FailureNode
-import com.pingidentity.orchestrate.FlowContext
-import com.pingidentity.orchestrate.Node
-import com.pingidentity.orchestrate.Request
-import com.pingidentity.orchestrate.SuccessNode
-import com.pingidentity.orchestrate.Workflow
-import com.pingidentity.orchestrate.catch
 import com.pingidentity.testrail.TestRailCase
 import com.pingidentity.testrail.TestRailWatcher
 import io.mockk.coEvery

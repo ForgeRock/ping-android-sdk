@@ -7,19 +7,14 @@
 
 package com.pingidentity.oidc
 
-import android.content.Context
-import androidx.datastore.core.DataStore
-import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
-import androidx.datastore.dataStore
-import com.pingidentity.android.ContextProvider
 import com.pingidentity.exception.ApiException
 import com.pingidentity.logger.Logger
 import com.pingidentity.logger.None
 import com.pingidentity.oidc.agent.browser
-import com.pingidentity.storage.DataStoreStorage
-import com.pingidentity.storage.EncryptedDataToJsonSerializer
+import com.pingidentity.storage.EncryptedDataStoreStorage
+import com.pingidentity.storage.EncryptedDataStoreStorageConfig
+import com.pingidentity.storage.EncryptedDataStoreStorageFactory
 import com.pingidentity.storage.Storage
-import com.pingidentity.storage.encrypt.SecretKeyEncryptor
 import com.pingidentity.utils.PingDsl
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
@@ -33,14 +28,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 private const val COM_PING_SDK_V_1_TOKENS = "com.pingidentity.sdk.v1.tokens"
-
-// Default DataStore for OIDC tokens
-private val Context.defaultOidcTokenDataStore: DataStore<Token?> by dataStore(
-    COM_PING_SDK_V_1_TOKENS,
-    EncryptedDataToJsonSerializer(SecretKeyEncryptor {
-        keyAlias = COM_PING_SDK_V_1_TOKENS
-    }), ReplaceFileCorruptionHandler { null }
-)
 
 /**
  * Configuration class for OIDC client.
@@ -86,7 +73,38 @@ class OidcClientConfig {
     /**
      * Storage for storing tokens.
      */
-    lateinit var storage: Storage<Token>
+    internal lateinit var tokenStorage: Storage<Token>
+
+    fun isTokenStorageInitialized(): Boolean {
+        return ::tokenStorage.isInitialized
+    }
+
+    /**
+     * Storage function to create a DataStoreStorage instance.
+     */
+    var storage: () -> Storage<Token> = {
+        EncryptedDataStoreStorage(storageOption)
+    }
+
+    /**
+     * Default DataStore for OIDC tokens.
+     */
+    internal var storageOption: EncryptedDataStoreStorageConfig.() -> Unit = {
+        fileName = COM_PING_SDK_V_1_TOKENS
+        keyAlias = COM_PING_SDK_V_1_TOKENS
+    }
+
+    /**
+     * Configures the storage for tokens.
+     * @param block A lambda to configure the DataStoreStorageConfig.
+     */
+    fun storage(block: EncryptedDataStoreStorageConfig.() -> Unit) {
+        val previous = storageOption
+        storageOption = {
+            previous()
+            block()
+        }
+    }
 
     /**
      * Discovery endpoint URL.
@@ -189,8 +207,8 @@ class OidcClientConfig {
                 }
             }
         }
-        if (!::storage.isInitialized) {
-            storage = DataStoreStorage(ContextProvider.context.defaultOidcTokenDataStore, false)
+        if (!::tokenStorage.isInitialized) {
+            tokenStorage = storage()
         }
         if (!::openId.isInitialized) {
             openId = discover()
@@ -239,7 +257,9 @@ class OidcClientConfig {
         this.refreshThreshold = other.refreshThreshold
         this.agent = other.agent
         this.logger = other.logger
+        if (other.isTokenStorageInitialized()) this.tokenStorage = other.tokenStorage
         this.storage = other.storage
+        this.storageOption = other.storageOption
         this.discoveryEndpoint = other.discoveryEndpoint
         this.clientId = other.clientId
         this.scopes = other.scopes

@@ -78,7 +78,7 @@ val daVinci = DaVinci {
     logger = Logger.STANDARD // Use the standard logger which logs to the Logcat
     module(Oidc) {
         //...
-        storage = MemoryStorage<Token>() // Default DataStoreStorage, you can override the storage to store the tokens
+        storage = { MemoryStorage<Token>() } // Default DataStoreStorage, you can override the storage to store the tokens
     }
 }
 ```
