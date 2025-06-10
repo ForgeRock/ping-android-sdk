@@ -4,6 +4,7 @@
 - Support for PingOne Forms MFA OTP components `DEVICE_REGISTRATION`, `DEVICE_AUTHENTICATION`, and `PHONE_NUMBER` [SDKS-3562]
 - Support for accessing the previous `ContinueNode` node from `ErrorNode` [SDKS-3890]
 - Support for accessing the `key` attribute of `LabelCollector` [SDKS-3957]
+- Support for using StrongBox during key generation [SDKS-4098]
 
 ## [1.1.0]
 #### Added
