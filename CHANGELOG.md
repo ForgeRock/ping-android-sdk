@@ -1,7 +1,14 @@
-## [1.1.0]
-
+## [1.2.0]
 #### Added
-- Support for PingOne Forms field types LABEL, CHECKBOX, DROPDOWN, COMBOBOX, RADIO, PASSWORD, PASSWORD_VERIFY, FLOWLINK [SDKS-3649]
+- Support for native social login with Google and Facebook [SDKS-3449]
+- Support for PingOne Forms MFA OTP components `DEVICE_REGISTRATION`, `DEVICE_AUTHENTICATION`, and `PHONE_NUMBER` [SDKS-3562]
+- Support for accessing the previous `ContinueNode` node from `ErrorNode` [SDKS-3890]
+- Support for accessing the `key` attribute of `LabelCollector` [SDKS-3957]
+- Support for using StrongBox during key generation [SDKS-4098]
+
+## [1.1.0]
+#### Added
+- Support for PingOne Forms field types `LABEL`, `CHECKBOX`, `DROPDOWN`, `COMBOBOX`, `RADIO`, `PASSWORD`, `PASSWORD_VERIFY`, `FLOWLINK` [SDKS-3649]
 - Support for validation of PingOne Forms fields [SDKS-3649]
 - Handling default values for PingOne Forms fields [SDKS-3649]
 - Interface for access of ErrorNode with validation error [SDKS-3649]
