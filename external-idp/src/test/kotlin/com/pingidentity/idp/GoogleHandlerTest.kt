@@ -55,7 +55,6 @@ class GoogleHandlerTest {
 
         mockkObject(ContextProvider)
         every { ContextProvider.context } returns mockContext
-        every { ContextProvider.currentActivity } returns mockActivity
     }
 
     @AfterTest

@@ -18,15 +18,11 @@ import android.content.Context
  * It is initialized with the application context.
  *
  * @property context The application context.
- * @property currentActivity The current activity.
  */
 @SuppressLint("StaticFieldLeak")
 object ContextProvider {
 
     lateinit var context: Context
-        internal set
-
-    lateinit var currentActivity: Activity
         internal set
 
     /**
