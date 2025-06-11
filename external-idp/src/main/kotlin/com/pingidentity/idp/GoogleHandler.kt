@@ -42,7 +42,7 @@ internal class GoogleHandler : IdpHandler {
         val credentialManager = CredentialManager.create(ContextProvider.context)
         val result = credentialManager.getCredential(
             request = request,
-            context = ContextProvider.currentActivity,
+            context = ContextProvider.context,
         )
 
         when (val credential = result.credential) {
