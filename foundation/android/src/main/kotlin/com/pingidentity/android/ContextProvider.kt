@@ -22,7 +22,18 @@ import android.content.Context
 @SuppressLint("StaticFieldLeak")
 object ContextProvider {
 
+    /**
+     * The application context.
+     *
+     * This context is initialized when the application is created and can be used to access application-level resources.
+     */
     lateinit var context: Context
+        internal set
+
+    /**
+     * The current activity in the application.
+     */
+    lateinit var currentActivity: Activity
         internal set
 
     /**
