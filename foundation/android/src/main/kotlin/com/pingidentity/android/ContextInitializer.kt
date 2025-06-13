@@ -7,7 +7,11 @@
 
 package com.pingidentity.android
 
+import android.app.Activity
+import android.app.Application
+import android.app.Application.ActivityLifecycleCallbacks
 import android.content.Context
+import android.os.Bundle
 import androidx.startup.Initializer
 
 /**
@@ -18,6 +22,26 @@ class ContextInitializer : Initializer<ContextProvider> {
 
     override fun create(context: Context): ContextProvider {
         ContextProvider.init(context)
+        (context.applicationContext as? Application)?.registerActivityLifecycleCallbacks(
+            object : ActivityLifecycleCallbacks {
+                override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {
+                    ContextProvider.currentActivity = activity
+                }
+
+                override fun onActivityStarted(activity: Activity) {
+                    ContextProvider.currentActivity = activity
+                }
+
+                override fun onActivityResumed(activity: Activity) {
+                    ContextProvider.currentActivity = activity
+                }
+
+                override fun onActivityPaused(activity: Activity) {}
+                override fun onActivityStopped(activity: Activity) {}
+                override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) {}
+                override fun onActivityDestroyed(activity: Activity) {}
+            })
+
         return ContextProvider
     }
 
