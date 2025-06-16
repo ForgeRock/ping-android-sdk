@@ -10,19 +10,21 @@ package com.pingidentity.journey.callback
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.jsonPrimitive
 
+/**
+ * A callback for collecting a string attribute.
+ *
+ * @property value The string attribute input by the user.
+ */
 class StringAttributeInputCallback : AttributeInputCallback() {
     var value: String = ""
-    private set
 
-    var inputValue = ""
-
-    override fun onAttribute(name: String, value: JsonElement) {
-        super.onAttribute(name, value)
+    override fun init(name: String, value: JsonElement) {
+        super.init(name, value)
         if ("value" == name) {
             this.value = value.jsonPrimitive.content
         }
     }
 
-    override fun asJson() = input(inputValue, inputValidateOnly)
+    override fun payload() = input(value, validateOnly)
 
 }

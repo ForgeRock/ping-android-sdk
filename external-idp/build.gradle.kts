@@ -5,6 +5,8 @@
  * of the MIT license. See the LICENSE file for details.
  */
 
+description = "External IDP library"
+
 plugins {
     id("com.pingidentity.convention.android.library")
     id("com.pingidentity.convention.centralPublish")
@@ -32,6 +34,7 @@ dependencies {
     implementation(project(":foundation:davinci-plugin"))
     implementation(project(":foundation:journey-plugin"))
     implementation(libs.ktor.client.core)
+    implementation(libs.androidx.startup.runtime)
 
     //Make it optional for developer
     compileOnly(libs.googleid)

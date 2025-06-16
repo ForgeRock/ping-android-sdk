@@ -17,10 +17,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-// Use DataStore to store the AccessToken
-//val Context.dataStore: androidx.datastore.core.DataStore<AccessToken?> by dataStore("test", DataStoreSerializer())
-//val dataStore = DataStoreStorage(ContextProvider.context.dataStore)
-
 class DaVinciViewModel : ViewModel() {
     var state = MutableStateFlow(DaVinciState())
         private set
@@ -39,7 +35,7 @@ class DaVinciViewModel : ViewModel() {
         viewModelScope.launch {
             val next = current.next()
             state.update {
-                it.copy(prev = current, node = next)
+                it.copy(node = next)
             }
             loading.update {
                 false
@@ -57,7 +53,7 @@ class DaVinciViewModel : ViewModel() {
             val next = daVinci.start()
 
             state.update {
-                it.copy(prev = next, node = next)
+                it.copy(node = next)
             }
             loading.update {
                 false
@@ -67,7 +63,7 @@ class DaVinciViewModel : ViewModel() {
 
     fun refresh() {
         state.update {
-            it.copy(prev = it.prev, node = it.node)
+            it.copy(node = it.node)
         }
     }
 }

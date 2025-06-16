@@ -24,7 +24,11 @@ class FieldCollectorTest {
     @TestRailCase(21257)
     @Test
     fun `should initialize key and label from JsonObject`() {
-        val fieldCollector = object : FieldCollector() {}
+        val fieldCollector = object : FieldCollector<String?>() {
+            override fun payload(): String? {
+                return null
+            }
+        }
         val jsonObject = buildJsonObject {
             put("type", "testType")
             put("key", "testKey")

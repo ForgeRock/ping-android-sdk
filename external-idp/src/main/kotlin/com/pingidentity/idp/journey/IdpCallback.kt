@@ -40,7 +40,7 @@ class IdpCallback : AbstractCallback(), JourneyAware, RequestInterceptor {
 
     override lateinit var journey: Journey
 
-    override fun onAttribute(name: String, value: JsonElement) {
+    override fun init(name: String, value: JsonElement) {
         when (name) {
             "provider" -> this.provider = value.jsonPrimitive.content
             "clientId" -> this.clientId = value.jsonPrimitive.content
@@ -53,7 +53,7 @@ class IdpCallback : AbstractCallback(), JourneyAware, RequestInterceptor {
         }
     }
 
-    override fun asJson() = input(result.token, tokenType)
+    override fun payload() = input(result.token, tokenType)
 
     /**
      * Overrides the request with the resume request if initialized, else return the input request.

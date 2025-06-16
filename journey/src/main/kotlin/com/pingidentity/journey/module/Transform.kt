@@ -7,22 +7,27 @@
 
 package com.pingidentity.journey.module
 
-import com.pingidentity.exception.ApiException
+import com.pingidentity.journey.Constants.APPLICATION_JSON
+import com.pingidentity.journey.Constants.AUTH_ID
+import com.pingidentity.journey.Constants.CALLBACKS
+import com.pingidentity.journey.Constants.CONTENT_TYPE
+import com.pingidentity.journey.Constants.REALM_NAME
+import com.pingidentity.journey.Constants.SUCCESS_URL
+import com.pingidentity.journey.Constants.TOKEN_ID
 import com.pingidentity.journey.Journey
-import com.pingidentity.journey.options
 import com.pingidentity.journey.SSOTokenImpl
 import com.pingidentity.journey.callback.request
+import com.pingidentity.journey.options
 import com.pingidentity.journey.plugin.Callback
 import com.pingidentity.journey.plugin.CallbackRegistry
 import com.pingidentity.orchestrate.ContinueNode
-import com.pingidentity.orchestrate.EmptySession
 import com.pingidentity.orchestrate.ErrorNode
-import com.pingidentity.orchestrate.FailureNode
 import com.pingidentity.orchestrate.FlowContext
 import com.pingidentity.orchestrate.Module
 import com.pingidentity.orchestrate.Node
 import com.pingidentity.orchestrate.Request
 import com.pingidentity.orchestrate.SuccessNode
+import com.pingidentity.orchestrate.catch
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
@@ -35,18 +40,17 @@ import kotlinx.serialization.json.putJsonArray
 internal val NodeTransform =
     Module.of {
         transform {
-
             when (it.status()) {
-                400 -> {
-                    error(it.body().asJson())
-                }
-
                 200 -> {
                     transform(this, workflow, it.body().asJson())
                 }
 
                 else -> {
-                    FailureNode(ApiException(it.status(), it.body()))
+                    //For Network errors, unexpected errors like parsing response, return FailureNode
+                    //For api errors, return ErrorNode
+                    catch {
+                        error(this, it.body().asJson())
+                    }
                 }
             }
         }
@@ -56,9 +60,10 @@ private fun String.asJson(): JsonObject {
     return Json.parseToJsonElement(this).jsonObject
 }
 
-private fun error(json: JsonObject): ErrorNode {
-    return ErrorNode(json, json["message"]?.jsonPrimitive?.content ?: "" )
+private fun error(flowContext: FlowContext, json: JsonObject): ErrorNode {
+    return ErrorNode(flowContext, json, json["message"]?.jsonPrimitive?.content ?: "")
 }
+
 
 private fun transform(
     context: FlowContext,
@@ -66,17 +71,19 @@ private fun transform(
     json: JsonObject,
 ): Node {
     val callbacks = mutableListOf<Callback>()
-    if ("authId" in json) {
-        json["callbacks"]?.jsonArray?.let {
+    if (AUTH_ID in json) {
+        json[CALLBACKS]?.jsonArray?.let {
             callbacks.addAll(CallbackRegistry.callback(it))
         }
         return object : ContinueNode(context, journey, json, callbacks) {
             private fun asJson(): JsonObject {
                 return buildJsonObject {
-                    put("authId", json["authId"]?.jsonPrimitive?.content ?: "")
-                    putJsonArray("callbacks") {
+                    put(AUTH_ID, json[AUTH_ID]?.jsonPrimitive?.content ?: "")
+                    putJsonArray(CALLBACKS) {
                         callbacks.forEach {
-                            add(it.asJson())
+                            if (it.payload().isNotEmpty()) {
+                                add(it.payload())
+                            }
                         }
                     }
                 }
@@ -87,8 +94,7 @@ private fun transform(
                     url(
                         "${journey.options.serverUrl}/json/realms/${journey.options.realm}/authenticate"
                     )
-                    header("Content-Type", "application/json")
-                    if (journey.options.noSession) parameter("noSession", "true")
+                    header(CONTENT_TYPE, APPLICATION_JSON)
                     body(asJson())
                 }
                 return callbacks.request(context, request)
@@ -96,15 +102,13 @@ private fun transform(
         }.apply {
             CallbackRegistry.inject(journey, this)
         }
-    }
-    if ("tokenId" in json && json["tokenId"]?.jsonPrimitive?.content?.isNotEmpty() == true) {
+    } else {
+        // Expect success
         val ssoToken = SSOTokenImpl(
-            value = json["tokenId"]?.jsonPrimitive?.content ?: "",
-            successUrl = json["successUrl"]?.jsonPrimitive?.content ?: "",
-            realm = json["realm"]?.jsonPrimitive?.content ?: "",
+            value = json[TOKEN_ID]?.jsonPrimitive?.content ?: "",
+            successUrl = json[SUCCESS_URL]?.jsonPrimitive?.content ?: "",
+            realm = json[REALM_NAME]?.jsonPrimitive?.content ?: "",
         )
         return SuccessNode(json, ssoToken)
-    } else {
-        return SuccessNode(json, EmptySession)
     }
 }

@@ -22,13 +22,10 @@ abstract class ValidatedCollector : SingleValueCollector() {
 
     var validation: Validation? = null
         private set
-    var required = false
-        private set
 
 
     override fun init(input: JsonObject) {
         super.init(input)
-        required = input["required"]?.jsonPrimitive?.boolean ?: false
         validation = input["validation"]?.jsonObject?.let {
             Validation(
                 Regex(it["regex"]?.jsonPrimitive?.content ?: ""),
@@ -41,11 +38,9 @@ abstract class ValidatedCollector : SingleValueCollector() {
      * Function to validate the collector.
      * @return A list of validation errors, if any.
      */
-    open fun validate(): List<ValidationError> {
+    override fun validate(): List<ValidationError> {
         val errors = mutableListOf<ValidationError>()
-        if (required && value.isEmpty()) {
-            errors.add(Required)
-        }
+        errors.addAll(super.validate())
         if (validation?.regex?.matches(value) == false) {
             errors.add(RegexError(validation?.errorMessage ?: ""))
         }

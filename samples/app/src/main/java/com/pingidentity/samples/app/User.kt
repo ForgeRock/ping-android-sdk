@@ -57,7 +57,7 @@ object User {
                         OidcUser(oidcClient)
                     }
                 }
-            } ?: daVinci.user()
+            }
         }.first()
 
     private object PreferencesKeys {

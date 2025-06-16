@@ -44,6 +44,39 @@ class TokenViewModel : ViewModel() {
         }
     }
 
+    fun revoke() {
+        viewModelScope.launch {
+            User.user()?.revoke()
+            state.update {
+                it.copy(token = null, error = null)
+            }
+        }
+    }
+
+    fun refresh() {
+        viewModelScope.launch {
+            User.user()?.let {
+                when (val result = it.refresh()) {
+                    is Failure -> {
+                        state.update { state ->
+                            state.copy(token = null, error = result.value)
+                        }
+                    }
+
+                    is Success -> {
+                        state.update { state ->
+                            state.copy(token = result.value, error = null)
+                        }
+                    }
+                }
+            } ?: run {
+                state.update {
+                    it.copy(token = null, error = null)
+                }
+            }
+        }
+    }
+
     fun reset() {
         state.update {
             it.copy(null, null)

@@ -11,6 +11,12 @@ import com.pingidentity.journey.plugin.AbstractCallback
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.jsonPrimitive
 
+/**
+ * A callback for collecting a name.
+ *
+ * @property prompt The prompt for the name.
+ * @property name The name input by the user.
+ */
 class NameCallback : AbstractCallback() {
     var prompt: String = ""
         private set
@@ -18,12 +24,12 @@ class NameCallback : AbstractCallback() {
     //Input
     var name: String = ""
 
-    override fun onAttribute(name: String, value: JsonElement) {
+    override fun init(name: String, value: JsonElement) {
         when (name) {
             "prompt" -> this.prompt = value.jsonPrimitive.content
         }
     }
 
-    override fun asJson() = input(name)
+    override fun payload() = input(name)
 
 }

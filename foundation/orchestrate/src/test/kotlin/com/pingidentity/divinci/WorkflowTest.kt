@@ -713,7 +713,7 @@ class WorkflowTest {
 
         val dummy = Module.of {
             transform {
-                ErrorNode(Json.parseToJsonElement("{}").jsonObject, "Invalid request")
+                ErrorNode(this, Json.parseToJsonElement("{}").jsonObject, "Invalid request")
             }
         }
         val workflow = Workflow {

@@ -12,6 +12,12 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
+/**
+ * A callback for collecting a password.
+ *
+ * @property prompt The prompt for the password.
+ * @property password The password input by the user.
+ */
 class PasswordCallback : AbstractCallback() {
     var prompt: String = ""
         private set
@@ -19,13 +25,13 @@ class PasswordCallback : AbstractCallback() {
     //Input
     var password: String = ""
 
-    override fun onAttribute(name: String, value: JsonElement) {
+    override fun init(name: String, value: JsonElement) {
         when (name) {
             "prompt" -> this.prompt = value.jsonPrimitive.content
         }
     }
 
 
-    override fun asJson(): JsonObject = input(password)
+    override fun payload(): JsonObject = input(password)
 
 }

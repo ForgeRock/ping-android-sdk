@@ -9,6 +9,7 @@ package com.pingidentity.davinci.collector
 
 import com.pingidentity.davinci.plugin.Collector
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.boolean
 import kotlinx.serialization.json.jsonPrimitive
 
 /**
@@ -19,13 +20,16 @@ import kotlinx.serialization.json.jsonPrimitive
  * @property label The label of the field collector.
  *
  */
-abstract class FieldCollector : Collector {
+abstract class FieldCollector<T> : Collector<T>, Validator {
     var type = ""
         private set
     var key = ""
         private set
     var label = ""
         private set
+    var required = false
+        private set
+
 
     /**
      * Function to initialize the field collector.
@@ -35,6 +39,20 @@ abstract class FieldCollector : Collector {
         type = input["type"]?.jsonPrimitive?.content ?: ""
         key = input["key"]?.jsonPrimitive?.content ?: ""
         label = input["label"]?.jsonPrimitive?.content ?: ""
+        required = input["required"]?.jsonPrimitive?.boolean ?: false
+    }
+
+
+    override fun validate(): List<ValidationError> {
+        val errors = mutableListOf<ValidationError>()
+        if (required && payload() == null) {
+            errors.add(Required)
+        }
+        return errors.toList()
+    }
+
+    override fun id(): String {
+        return key
     }
 }
 

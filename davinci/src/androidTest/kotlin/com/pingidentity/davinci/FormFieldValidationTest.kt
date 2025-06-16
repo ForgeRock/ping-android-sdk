@@ -18,6 +18,9 @@ import com.pingidentity.davinci.collector.Required
 import com.pingidentity.davinci.collector.TextCollector
 import com.pingidentity.davinci.collector.UniqueCharacter
 import com.pingidentity.davinci.module.Oidc
+import com.pingidentity.davinci.module.continueNode
+import com.pingidentity.davinci.module.description
+import com.pingidentity.davinci.module.name
 import com.pingidentity.davinci.plugin.collectors
 import com.pingidentity.logger.Logger
 import com.pingidentity.logger.STANDARD
@@ -26,6 +29,7 @@ import com.pingidentity.orchestrate.ErrorNode
 import com.pingidentity.testrail.TestRailCase
 import com.pingidentity.testrail.TestRailWatcher
 import junit.framework.TestCase.assertFalse
+import junit.framework.TestCase.assertNotNull
 import kotlinx.coroutines.test.runTest
 import org.junit.Rule
 import org.junit.rules.TestWatcher
@@ -40,10 +44,11 @@ class FormFieldValidationTest {
         logger = Logger.STANDARD
 
         module(Oidc) {
-            clientId = "60de77d5-dd2c-41ef-8c40-f8bb2381a359"
+            clientId = "021b83ce-a9b1-4ad4-8c1d-79e576eeab76"
             discoveryEndpoint = "https://auth.pingone.ca/02fb4743-189a-4bc7-9d6c-a919edfe6447/as/.well-known/openid-configuration"
             scopes = mutableSetOf("openid", "email", "address", "phone", "profile")
             redirectUri = "org.forgerock.demo://oauth2redirect"
+            acrValues = "210f6b876da11c836ffc1c5fb38f3938"
             //storage = dataStore
         }
     }
@@ -205,5 +210,10 @@ class FormFieldValidationTest {
 
         assertEquals("400", errorNode.input["code"].toString())
         assertEquals("Error message from error node", errorNode.message.trim())
+
+        /// SDKS-3890 Access Previous Continue Node from ErrorNode
+        assertNotNull(errorNode.continueNode())
+        assertEquals("Select form for testing", errorNode.continueNode()?.description)
+        assertEquals("Select Test Form", errorNode.continueNode()?.name)
     }
 }
