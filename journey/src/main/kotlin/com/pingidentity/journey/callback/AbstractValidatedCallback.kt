@@ -8,6 +8,7 @@
 package com.pingidentity.journey.callback
 
 import com.pingidentity.journey.plugin.AbstractCallback
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
@@ -39,12 +40,15 @@ abstract class AbstractValidatedCallback : AbstractCallback() {
     var failedPolicies: List<FailedPolicy> = emptyList()
         private set
 
+    /**
+     * Return whether the node should only validate the input or
+     * should advance the journey if validation succeeds.
+     *
+     * @return true if the tree should not advance when validation passes
+     */
     var validateOnly: Boolean = false
-        private set
 
-    var inputValidateOnly: Boolean = true
-
-    override fun onAttribute(name: String, value: JsonElement) {
+    override fun init(name: String, value: JsonElement) {
         when (name) {
             "policies" -> policies = value.jsonObject
             "failedPolicies" -> parseFailedPolicy(value.jsonArray)
@@ -53,14 +57,11 @@ abstract class AbstractValidatedCallback : AbstractCallback() {
         }
     }
 
-    fun validateOnly(validateOnly: Boolean) {
-        inputValidateOnly = validateOnly
-    }
-
     private fun parseFailedPolicy(array: JsonArray) {
         val result = mutableListOf<FailedPolicy>()
         array.forEach {
-            val failedPolicy = it.jsonObject
+            //The failedPolicy is a Stringified json string
+            val failedPolicy = Json.parseToJsonElement(it.jsonPrimitive.content) as JsonObject
             val params = failedPolicy["params"]?.jsonObject ?: buildJsonObject {}
             result.add(
                 FailedPolicy(

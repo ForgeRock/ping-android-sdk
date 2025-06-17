@@ -19,11 +19,13 @@ class LabelCollectorTest {
     @Test
     fun initializesContentWithProvidedValue() {
         val input = buildJsonObject {
+            put("key", "Test id")
             put("content", "Test Content")
         }
         val collector = LabelCollector()
         collector.init(input)
         assertEquals("Test Content", collector.content)
+        assertEquals("Test id", collector.key)
     }
 
     @Test

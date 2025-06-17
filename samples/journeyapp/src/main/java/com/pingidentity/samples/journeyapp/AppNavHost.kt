@@ -15,6 +15,7 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import com.pingidentity.samples.journeyapp.env.Env
 import com.pingidentity.samples.journeyapp.journey.Journey
 import com.pingidentity.samples.journeyapp.journey.JourneyRoute
 import com.pingidentity.samples.journeyapp.journey.JourneyViewModel
@@ -22,15 +23,19 @@ import com.pingidentity.samples.journeyapp.token.Token
 import com.pingidentity.samples.journeyapp.userprofile.UserProfile
 import com.pingidentity.samples.journeyapp.userprofile.UserProfileViewModel
 
+
 @Composable
 fun AppNavHost(
     navController: NavHostController,
-    startDestination: String = Destinations.TOKEN_ROUTE,
+    startDestination: String = Destinations.ENV_ROUTE,
 ) {
     NavHost(
         navController = navController,
         startDestination = startDestination,
     ) {
+        composable(Destinations.ENV_ROUTE) {
+            Env()
+        }
         composable(Destinations.TOKEN_ROUTE) {
             Token()
         }

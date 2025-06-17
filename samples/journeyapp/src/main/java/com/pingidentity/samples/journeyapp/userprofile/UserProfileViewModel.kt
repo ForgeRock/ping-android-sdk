@@ -10,7 +10,7 @@ package com.pingidentity.samples.journeyapp.userprofile
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.pingidentity.journey.user
-import com.pingidentity.samples.journeyapp.journey.journey
+import com.pingidentity.samples.journeyapp.env.journey
 import com.pingidentity.utils.Result
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update

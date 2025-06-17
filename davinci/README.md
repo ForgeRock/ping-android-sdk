@@ -202,6 +202,27 @@ singleSelectCollector.options //To access the options attribute
 singleSelectCollector.value = "option1" //To set the value
 ```
 
+#### DeviceRegistrationCollector
+
+```kotlin
+deviceRegistrationCollector.devices //To access the MFA Devices for registration
+deviceRegistrationCollector.value = device//To set the Device which used for MFA Registration
+```
+
+#### DeviceAuthenticationCollector
+
+```kotlin
+deviceAuthenticationCollector.devices //To access the MFA Devices for authentication
+deviceAuthenticationCollector.value = device//To set the Device which used for MFA Authentication
+```
+
+#### PhoneNumberCollector
+```kotlin
+phoneNumberCollector.defaultCountryCode //To access the default country code
+phoneNumberCollector.countryCode = "IA" //To set the Country Code for the phone number
+phoneNumberCollector.phoneNumber = "1234567" //To set the Phone Number
+```
+
 ### Collector Validation
 
 Collectors have a `validate()` function to validate the input value. The `validate()` function will return `Success`
@@ -249,6 +270,7 @@ val node = daVinci.start() // Start the flow
 when (node) {
     is ContinueNode -> {}
     is ErrorNode -> {
+        node.continueNode() // Retrieve the previous ContinueNode
         node.message() // Retrieve the cause of the error
         node.details().forEach {  // Retrieve the details of the error
             it.rawResponse.let { rawResponse ->

@@ -25,7 +25,7 @@ class SelectIdpCallback : AbstractCallback() {
 
     var value: String= ""
 
-    override fun onAttribute(name: String, value: JsonElement) {
+    override fun init(name: String, value: JsonElement) {
         when (name) {
             "providers" -> {
                 providers = value.jsonArray.map {
@@ -35,7 +35,7 @@ class SelectIdpCallback : AbstractCallback() {
         }
     }
 
-    override fun asJson(): JsonObject {
+    override fun payload(): JsonObject {
         return input(value)
     }
 

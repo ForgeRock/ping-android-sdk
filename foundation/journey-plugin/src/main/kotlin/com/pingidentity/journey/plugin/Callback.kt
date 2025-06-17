@@ -11,11 +11,21 @@ import com.pingidentity.orchestrate.Action
 import com.pingidentity.orchestrate.ContinueNode
 import kotlinx.serialization.json.JsonObject
 
+/**
+ * Callback interface for handling actions in the journey plugin.
+ */
 interface Callback : Action {
-    fun init(jsonObject: JsonObject)
+    /**
+     * Initializes the callback with the provided JSON object.
+     * @param jsonObject The JSON object containing the callback configuration.
+     * @return The initialized Callback instance.
+     */
+    fun init(jsonObject: JsonObject): Callback
 
-    //Callback is more self-contained, it created its own json without depending on other Callback
-    fun asJson(): JsonObject
+    /**
+     * Returns the payload of the callback.
+     */
+    fun payload(): JsonObject
 }
 
 /**

@@ -33,15 +33,15 @@ internal object Form {
     fun parse(
         json: JsonObject,
     ): Collectors {
-        val collectors = mutableListOf<Collector>()
+        val collectors = mutableListOf<Collector<*>>()
         json["form"]?.jsonObject?.get("components")?.jsonObject?.get("fields")?.jsonArray?.let { array ->
             collectors.addAll(CollectorFactory.collector(array))
         }
 
         //Populate values for collectors
         json["formData"]?.jsonObject?.get("value")?.jsonObject?.let { value ->
-            collectors.filterIsInstance<FieldCollector>().forEach { collector ->
-                value[collector.key]?.let(collector::init)
+            collectors.forEach { collector ->
+                value[collector.id()]?.let(collector::init)
             }
         }
 

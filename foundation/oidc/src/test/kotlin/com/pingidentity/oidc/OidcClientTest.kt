@@ -7,13 +7,13 @@
 
 package com.pingidentity.oidc
 
-import com.pingidentity.utils.Result.Failure
-import com.pingidentity.utils.Result.Success
 import com.pingidentity.oidc.agent.BrowserConfig
 import com.pingidentity.oidc.agent.browser
 import com.pingidentity.storage.MemoryStorage
 import com.pingidentity.testrail.TestRailCase
 import com.pingidentity.testrail.TestRailWatcher
+import com.pingidentity.utils.Result.Failure
+import com.pingidentity.utils.Result.Success
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
@@ -34,6 +34,7 @@ import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.time.DurationUnit
@@ -235,6 +236,93 @@ class OidcClientTest {
             assertNull(tokenInStorage)
         }
 
+    @Test
+    fun `refresh should failed if no AccessToken`() =
+        runTest {
+            val httpClient = HttpClient(mockEngine)
+            val oidcClientConfig =
+                OidcClientConfig().apply {
+                    this.httpClient = httpClient
+                    discoveryEndpoint = "http://localhost/openid-configuration"
+                    redirectUri = "http://localhost/redirect"
+                    clientId = "test-client-id"
+                    storage = MemoryStorage()
+                    updateAgent(testAgent)
+                }
+            val oidcClient = OidcClient(oidcClientConfig)
+
+            val result = oidcClient.refresh()
+            assertTrue(result is Failure<OidcError>)
+            assertTrue(result.value is OidcError.Unknown)
+
+            assertEquals(
+                "No Access token. Cannot refresh the access token.",
+                (result.value as OidcError.Unknown).cause.message
+            )
+        }
+
+    @Test
+    fun `refresh should refresh token and revoke non expired access token`() =
+        runTest {
+            val httpClient = HttpClient(mockEngine)
+            val oidcClientConfig =
+                OidcClientConfig().apply {
+                    this.httpClient = httpClient
+                    discoveryEndpoint = "http://localhost/openid-configuration"
+                    redirectUri = "http://localhost/redirect"
+                    clientId = "test-client-id"
+                    storage = MemoryStorage()
+                    updateAgent(testAgent)
+                }
+            val oidcClient = OidcClient(oidcClientConfig)
+
+            // First, get an access token
+            val result = oidcClient.token()
+            assertTrue(result is Success<Token>)
+
+            // Then, refresh the access token
+            oidcClient.refresh()
+
+            // Check that the token is no longer in storage
+            val tokenInStorage = oidcClientConfig.storage.get()
+            assertNotNull(tokenInStorage)
+
+            val requestTokenCount =
+                mockEngine.requestHistory.count { request ->
+                    request.url.encodedPath == "/token"
+                }
+
+            val revokeTokenCount = mockEngine.requestHistory.count { request ->
+                request.url.encodedPath == "/revoke"
+            }
+
+            val refreshRequest =
+                mockEngine.requestHistory.lastOrNull { request -> request.url.encodedPath == "/token" }
+
+            // Access the request body
+            val requestBody = refreshRequest?.body
+            assertNotNull(requestBody, "Request body should not be null.")
+            val formData = (requestBody as FormDataContent).formData
+
+            // Assert that the required parameters are present with the correct values
+            assertEquals(
+                "refresh_token",
+                formData["grant_type"],
+                "grant_type should be refresh_token."
+            )
+            assertEquals(
+                "Dummy RefreshToken",
+                formData["refresh_token"],
+                "refresh_token should be present."
+            )
+            assertEquals("test-client-id", formData["client_id"], "client_id should be present.")
+            assertEquals("code", formData["response_type"], "response_type should be code.")
+
+            assertEquals(2, requestTokenCount, "The /token endpoint was not called twice.")
+            assertEquals(1, revokeTokenCount, "The /revoke endpoint was not called.")
+        }
+
+
     @TestRailCase(22087)
     @Test
     fun `userinfo should return user info`() =
@@ -322,7 +410,7 @@ class OidcClientTest {
                         else -> {
                             return@MockEngine respond(
                                 content =
-                                ByteReadChannel(""),
+                                    ByteReadChannel(""),
                                 status = HttpStatusCode.InternalServerError,
                             )
                         }
@@ -366,7 +454,8 @@ class OidcClientTest {
                         }
 
                         "/idp/signoff" -> {
-                            respond("", HttpStatusCode.Found,
+                            respond(
+                                "", HttpStatusCode.Found,
                                 headersOf("location" to listOf("http://localhost/signoff?error=some_error"))
                             )
                         }
@@ -374,7 +463,7 @@ class OidcClientTest {
                         else -> {
                             return@MockEngine respond(
                                 content =
-                                ByteReadChannel(""),
+                                    ByteReadChannel(""),
                                 status = HttpStatusCode.InternalServerError,
                             )
                         }

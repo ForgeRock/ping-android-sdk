@@ -11,20 +11,22 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.boolean
 import kotlinx.serialization.json.jsonPrimitive
 
+/**
+ * A callback for collecting a boolean attribute from a user.
+ * @property value The value of the attribute.
+ * @property validateOnly Whether to validate only or not.
+ */
 class BooleanAttributeInputCallback : AttributeInputCallback() {
     var value = false
-    private set
 
-    var inputValue = false
-
-    override fun onAttribute(name: String, value: JsonElement) {
-        super.onAttribute(name, value)
+    override fun init(name: String, value: JsonElement) {
+        super.init(name, value)
         if ("value" == name) {
             this.value = value.jsonPrimitive.boolean
         }
     }
 
-    override fun asJson() = input(inputValue, inputValidateOnly)
+    override fun payload() = input(value, validateOnly)
 
 
 }

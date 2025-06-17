@@ -132,3 +132,52 @@ sequenceDiagram
         end
     end
 ```
+
+## How to override the default storage
+To override the default storage used by the DaVinci SDK, you can create a custom storage implementation that adheres to the
+`Storage` interface. This allows you to define how data is stored and retrieved within the DaVinci framework.
+
+### Include the Storage Dependency
+To use the custom storage implementation, ensure you have the `foundation:storage` dependency included in your project:
+
+```gradle
+dependencies {
+    implementation("com.pingidentity.sdks:storage:<version>")
+}
+```
+
+### Define Datastore
+```kotlin
+private val Context.MyCustomOidcTokenDataStore: DataStore<Token?> by dataStore(
+    "com.example.app.v1.tokens",
+    EncryptedDataToJsonSerializer(SecretKeyEncryptor {
+        keyAlias = "com.example.app.v1.tokens.key"
+        strongBoxPreferred = false
+    })
+)
+
+private val Context.MyCustomCookieDataStore: DataStore<Cookies?> by dataStore(
+    "com.example.app.v1.cookies",
+    EncryptedDataToJsonSerializer(SecretKeyEncryptor {
+        keyAlias = "com.example.app.v1.cookies.key"
+        strongBoxPreferred = false
+    })
+)
+```
+
+### Override Storage in DaVinci
+
+```kotlin
+ DaVinci {
+        logger = Logger.STANDARD
+        module(Oidc) {
+            ...
+            storage = DataStoreStorage(context.MyCustomOidcTokenDataStore, false)
+        }
+
+        module(Cookie) {//Depends on the Oidc module
+            persist = mutableListOf("ST", "ST-NO-SS")
+            storage = DataStoreStorage(context.MyCustomCookieDataStore, false)
+        }
+    }
+```

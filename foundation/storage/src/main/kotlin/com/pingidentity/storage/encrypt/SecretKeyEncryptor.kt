@@ -51,6 +51,8 @@ private const val IV_LENGTH = 12
  * @property throwWhenEncryptError Flag to throw an exception when an encryption/decryption error occurs.
  * @property symmetricKeySize The size of the symmetric key.
  * @property invalidatedByBiometricEnrollment Flag to invalidate the key by biometric enrollment.
+ * @property strongBoxPreferred Flag to prefer StrongBox for key storage if available.
+ * For detail please refer to https://developer.android.com/privacy-and-security/keystore
  * @property logger The logger instance for logging.
  */
 class SecretKeyEncryptorConfig {
@@ -60,6 +62,7 @@ class SecretKeyEncryptorConfig {
     var throwWhenEncryptError = true
     var symmetricKeySize = 256
     var invalidatedByBiometricEnrollment = true
+    var strongBoxPreferred = true
     var logger = Logger.logger
 
     /**
@@ -89,6 +92,21 @@ class SecretKeyEncryptor(block: SecretKeyEncryptorConfig.() -> Unit = {}) : Encr
         }
     }
 
+    // Cache the cipher, has to use the [lock] to ensure thread safety
+    private val cipher: Cipher by lazy {
+        Cipher.getInstance(AES_GCM_NO_PADDING)
+    }
+    private val keyStore: KeyStore by lazy {
+        KeyStore.getInstance(ANDROID_KEYSTORE).apply {
+            load(null)
+        }
+    }
+
+    // Cache the rsaCipher, has to use the [lock] to ensure thread safety
+    private val rsaCipher: Cipher by lazy {
+        Cipher.getInstance(RSA_ECB_OAEP_PADDING)
+    }
+
     init {
         config.init()
         mac = Mac.getInstance(HMAC_SHA256)
@@ -111,7 +129,6 @@ class SecretKeyEncryptor(block: SecretKeyEncryptorConfig.() -> Unit = {}) : Encr
                 keyStore.deleteEntry(config.keyAlias)
             }) {
                 logger.d("Encrypting data...")
-                val cipher = Cipher.getInstance(AES_GCM_NO_PADDING)
                 val symmetricKey = secretKey()
                 cipher.init(Cipher.ENCRYPT_MODE, symmetricKey.secretKey)
                 val iv = cipher.iv
@@ -132,8 +149,6 @@ class SecretKeyEncryptor(block: SecretKeyEncryptorConfig.() -> Unit = {}) : Encr
         lock.withLock {
             try {
                 logger.d("Decrypting data...")
-                val cipher =
-                    Cipher.getInstance(AES_GCM_NO_PADDING)
                 val macFromMessage = data.copyOfRange(0, macLength)
                 val iv = data.copyOfRange(macLength, macLength + IV_LENGTH)
                 val encryptedData = data.copyOfRange(macLength + IV_LENGTH, data.size)
@@ -191,7 +206,7 @@ class SecretKeyEncryptor(block: SecretKeyEncryptorConfig.() -> Unit = {}) : Encr
             try {
                 SymmetricKey(generateAndroidKeyStoreSecretKey())
             } catch (e: Throwable) {
-                logger.w("Falling back to asymmetric key", e)
+                logger.w("Fall back to asymmetric key", e)
                 //If failed to generate Android keystore secret key, generate file-based secret key
                 generateEmbeddedSecretKey()
             }
@@ -222,7 +237,7 @@ class SecretKeyEncryptor(block: SecretKeyEncryptorConfig.() -> Unit = {}) : Encr
                     }
 
                     else -> throw IllegalStateException("KeyStore entry is not a SecretKeyEntry or PrivateKeyEntry")
-               }
+                }
             } ?: run {
                 throw IllegalStateException("SecretKey not found")
             }
@@ -242,7 +257,7 @@ class SecretKeyEncryptor(block: SecretKeyEncryptorConfig.() -> Unit = {}) : Encr
             generateAndroidKeyStoreAsymmetricKey()
             keyStore.getCertificate(config.keyAlias).publicKey
         }
-        val cipher = Cipher.getInstance(RSA_ECB_OAEP_PADDING).apply {
+        val cipher = rsaCipher.apply {
             init(
                 Cipher.ENCRYPT_MODE,
                 key,
@@ -286,7 +301,10 @@ class SecretKeyEncryptor(block: SecretKeyEncryptorConfig.() -> Unit = {}) : Encr
         //Allow access the data during screen lock
         //Add in Level 28
         keyGenParameterSpec.setUnlockedDeviceRequired(false)
-        if (config.context.packageManager.hasSystemFeature(PackageManager.FEATURE_STRONGBOX_KEYSTORE)) {
+        if (config.strongBoxPreferred &&
+            config.context.packageManager.hasSystemFeature(PackageManager.FEATURE_STRONGBOX_KEYSTORE)
+        ) {
+            logger.d("StrongBox is available, using StrongBox for key generation")
             keyGenParameterSpec.setIsStrongBoxBacked(true)
         }
 
@@ -322,7 +340,7 @@ class SecretKeyEncryptor(block: SecretKeyEncryptorConfig.() -> Unit = {}) : Encr
         val encryptedSecretKey = encryptedData.copyOfRange(4, 4 + encryptedSecretKeyLength)
 
         // Initialize the cipher for decryption using RSA/ECB/OAEPPadding
-        val cipher = Cipher.getInstance(RSA_ECB_OAEP_PADDING).apply {
+        val cipher = rsaCipher.apply {
             init(
                 Cipher.DECRYPT_MODE,
                 privateKey,
@@ -372,7 +390,10 @@ class SecretKeyEncryptor(block: SecretKeyEncryptorConfig.() -> Unit = {}) : Encr
         //Allow access the data during screen lock
         //Add in Level 28
         specBuilder.setUnlockedDeviceRequired(false)
-        if (config.context.packageManager.hasSystemFeature(PackageManager.FEATURE_STRONGBOX_KEYSTORE)) {
+        if (config.strongBoxPreferred &&
+            config.context.packageManager.hasSystemFeature(PackageManager.FEATURE_STRONGBOX_KEYSTORE)
+        ) {
+            logger.d("StrongBox is available, using StrongBox for key generation")
             specBuilder.setIsStrongBoxBacked(true)
         }
 
@@ -386,19 +407,6 @@ class SecretKeyEncryptor(block: SecretKeyEncryptorConfig.() -> Unit = {}) : Encr
             keyGenerator.init(specBuilder.build())
             return keyGenerator.generateKey()
         }
-    }
-
-    companion object {
-        /**
-         * Returns the Android keystore.
-         * @return The Android keystore.
-         */
-        internal val keyStore: KeyStore
-            get() {
-                val keyStore = KeyStore.getInstance(ANDROID_KEYSTORE)
-                keyStore.load(null)
-                return keyStore
-            }
     }
 
     /**

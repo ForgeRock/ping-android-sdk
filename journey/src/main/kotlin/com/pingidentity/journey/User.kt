@@ -7,10 +7,12 @@
 
 package com.pingidentity.journey
 
-import com.pingidentity.journey.module.oidcClientConfig
+import com.pingidentity.journey.module.oidcClient
 import com.pingidentity.journey.module.session
 import com.pingidentity.oidc.OidcUser
 import com.pingidentity.oidc.User
+import kotlinx.coroutines.ensureActive
+import kotlin.coroutines.coroutineContext
 
 private const val USER = "com.pingidentity.journey.User"
 
@@ -26,6 +28,7 @@ suspend fun Journey.user(): User? {
     try {
         init()
     } catch (e: Exception) {
+        coroutineContext.ensureActive()
         config.logger.e("Failed to initialize Journey", e)
     }
 
@@ -35,18 +38,13 @@ suspend fun Journey.user(): User? {
     }
 
     session()?.let {
-        return prepareUser(this, OidcUser(oidcClientConfig()), it)
+        return prepareUser(this, OidcUser(oidcClient()), it)
     } ?: return null
 }
 
 fun User.session(): SSOToken {
     return (this as SSOToken)
 }
-
-suspend fun Journey.session(): SSOToken? {
-    return session()
-}
-
 
 /**
  * Function to prepare the user.
@@ -91,7 +89,7 @@ internal class UserDelegate(
      * This function removes the cached user from the context and signs off the user.
      */
     override suspend fun logout() {
-        // instead of calling [OidcClient.endSession] directly, we call [DaVinci.signOff] to signoff the user
+        // instead of calling [OidcClient.endSession] directly, we call [Journey.signOff] to signoff the user
         journey.sharedContext.remove(USER)
         journey.signOff()
     }

@@ -73,6 +73,14 @@ dependencies {
     // Social Login
     implementation(project(":external-idp"))
 
+    //To enable Native Google Sign-In, fall back to browser if Google SDK is not available.
+    implementation(libs.googleid)
+    implementation(libs.androidx.credentials.play.services.auth)
+
+    implementation(libs.facebook.login)
+
+    implementation(project(":foundation:storage"))
+
     implementation(libs.androidx.datastore.preferences)
 
     implementation(libs.compose.ui)
@@ -91,6 +99,9 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
+
+    implementation(libs.coil.compose)
+    implementation(libs.coil.svg)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
