@@ -42,5 +42,10 @@ internal object Constants {
     // Constant key used to store and retrieve the OIDC client from the shared context
     const val OIDC_CLIENT = "com.pingidentity.journey.OIDC_CLIENT"
 
+    const val REQUESTED_WITH_KEY = "x-requested-with"
+    const val REQUESTED_WITH_VALUE = "ping-sdk"
+    const val REQUESTED_PLATFORM_KEY = "x-requested-platform"
+    const val REQUESTED_PLATFORM_VALUE = "android"
+
 
 }

@@ -15,6 +15,10 @@ import com.pingidentity.journey.Constants.COOKIE
 import com.pingidentity.journey.Constants.FORCE_AUTH
 import com.pingidentity.journey.Constants.NO_SESSION
 import com.pingidentity.journey.Constants.REALM
+import com.pingidentity.journey.Constants.REQUESTED_PLATFORM_KEY
+import com.pingidentity.journey.Constants.REQUESTED_PLATFORM_VALUE
+import com.pingidentity.journey.Constants.REQUESTED_WITH_KEY
+import com.pingidentity.journey.Constants.REQUESTED_WITH_VALUE
 import com.pingidentity.journey.Constants.RESOURCE_2_1_PROTOCOL_1_0
 import com.pingidentity.journey.Constants.SERVICE
 import com.pingidentity.journey.Constants.START_REQUEST
@@ -112,6 +116,8 @@ fun Journey(block: JourneyConfig.() -> Unit = {}): Journey {
     config.apply {
         module(CustomHeader) {
             header(ACCEPT_API_VERSION, RESOURCE_2_1_PROTOCOL_1_0)
+            header(REQUESTED_WITH_KEY, REQUESTED_WITH_VALUE)
+            header(REQUESTED_PLATFORM_KEY, REQUESTED_PLATFORM_VALUE)
         }
         module(RequestUrl)
         module(Session) // Persist the Session after success

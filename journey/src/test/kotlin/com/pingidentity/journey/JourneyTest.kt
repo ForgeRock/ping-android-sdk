@@ -283,6 +283,8 @@ class JourneyTest {
 
         // Assert the headers are set
         assertEquals("resource=2.1, protocol=1.0", startRequest.headers["Accept-API-Version"])
+        assertEquals("ping-sdk", startRequest.headers["x-requested-with"])
+        assertEquals("android", startRequest.headers["x-requested-platform"])
         assertEquals("resource=2.1, protocol=1.0", request.headers["Accept-API-Version"])
 
         assertEquals("Dummy Session Token", node.session.value)
