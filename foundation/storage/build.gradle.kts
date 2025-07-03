@@ -35,7 +35,14 @@ dependencies {
     implementation(libs.androidx.datastore)
     implementation(libs.androidx.datastore.core)
 
+    // Google BlockStore for cloud-backed secure storage
+    implementation(libs.play.services.auth.blockstore)
+
     compileOnly(libs.androidx.datastore.preferences) //Make it optional for developer
+
+    // SQL Cipher for encrypted database
+    compileOnly(libs.sqlcipher)
+    compileOnly(libs.androidx.sqlite)
 
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.serialization.json)
@@ -54,4 +61,8 @@ dependencies {
     androidTestImplementation(libs.androidx.test.runner)
     androidTestImplementation(libs.androidx.datastore.preferences) //Make it optional for developer
     androidTestImplementation(project(":foundation:testrail"))
+    
+    // Add SQLCipher for tests
+    androidTestImplementation(libs.sqlcipher)
+    androidTestImplementation(libs.androidx.sqlite)
 }
