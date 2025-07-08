@@ -5,10 +5,8 @@
  * of the MIT license. See the LICENSE file for details.
  */
 
-package com.pingidentity.divinci
+package com.pingidentity.orchestrate
 
-import com.pingidentity.orchestrate.EmptySession
-import com.pingidentity.orchestrate.Session
 import com.pingidentity.testrail.TestRailCase
 import com.pingidentity.testrail.TestRailWatcher
 import org.junit.Rule

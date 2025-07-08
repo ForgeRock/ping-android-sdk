@@ -5,8 +5,7 @@
  * of the MIT license. See the LICENSE file for details.
  */
 
-package com.pingidentity.divinci
-import com.pingidentity.orchestrate.Request
+package com.pingidentity.orchestrate
 import com.pingidentity.testrail.TestRailCase
 import com.pingidentity.testrail.TestRailWatcher
 import io.ktor.client.request.forms.FormDataContent

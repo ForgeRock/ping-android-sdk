@@ -33,7 +33,6 @@ typealias FormBuilder = ParametersBuilder
  * Class for a Request. A Request represents a request to be sent over the network.
  */
 class Request {
-    @VisibleForTesting
     val builder = HttpRequestBuilder()
     var hasUrl = false
 

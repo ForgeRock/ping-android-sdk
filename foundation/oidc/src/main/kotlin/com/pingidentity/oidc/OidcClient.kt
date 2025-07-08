@@ -68,7 +68,7 @@ open class OidcClient(private val config: OidcClientConfig) {
         return catch {
             config.init()
             logger.i("Getting access token")
-            val cached = config.storage.get()
+            val cached = config.tokenStorage.get()
             cached?.let {
                 if (!it.isExpired(config.refreshThreshold)) {
                     logger.i("Token is not expired. Returning cached token.")
@@ -89,7 +89,7 @@ open class OidcClient(private val config: OidcClientConfig) {
             // authenticate the user
             val code = config.agent.authenticate()
             val token = exchangeToken(code)
-            config.storage.save(token)
+            config.tokenStorage.save(token)
             return@catch token
         }
     }
@@ -102,8 +102,8 @@ open class OidcClient(private val config: OidcClientConfig) {
         return catch {
             config.init()
             logger.i("Refreshing access token")
-            val cached = config.storage.get()
-            config.storage.delete()
+            val cached = config.tokenStorage.get()
+            config.tokenStorage.delete()
             cached?.let {
                 if (!it.isExpired(config.refreshThreshold)) {
                     logger.i("Token is not expired. Revoke the AccessToken.")
@@ -142,7 +142,7 @@ open class OidcClient(private val config: OidcClientConfig) {
             val token = with(response) {
                 json.decodeFromString<Token>(call.body())
             }
-            config.storage.save(token)
+            config.tokenStorage.save(token)
             return token
         } else {
             throw ApiException(response.status.value, response.body())
@@ -167,9 +167,9 @@ open class OidcClient(private val config: OidcClientConfig) {
      * @param token The access token to revoke. If null, the currently stored token is revoked.
      */
     private suspend fun revoke(token: Token? = null) {
-        val accessToken = token ?: config.storage.get()
+        val accessToken = token ?: config.tokenStorage.get()
         accessToken?.let {
-            config.storage.delete()
+            config.tokenStorage.delete()
             config.init()
             val t = it.refreshToken ?: it.accessToken
             revoke(t)
@@ -211,7 +211,7 @@ open class OidcClient(private val config: OidcClientConfig) {
         val result =
             catch {
                 config.init()
-                val accessToken = config.storage.get()
+                val accessToken = config.tokenStorage.get()
                 accessToken?.let {
                     revoke(it)
                     it.idToken?.let { idToken ->

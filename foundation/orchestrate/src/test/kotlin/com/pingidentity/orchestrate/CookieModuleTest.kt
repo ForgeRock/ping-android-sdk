@@ -5,14 +5,8 @@
  * of the MIT license. See the LICENSE file for details.
  */
 
-package com.pingidentity.divinci
+package com.pingidentity.orchestrate
 
-import com.pingidentity.orchestrate.ContinueNode
-import com.pingidentity.orchestrate.EmptySession
-import com.pingidentity.orchestrate.Module
-import com.pingidentity.orchestrate.Request
-import com.pingidentity.orchestrate.SuccessNode
-import com.pingidentity.orchestrate.Workflow
 import com.pingidentity.orchestrate.module.Cookie
 import com.pingidentity.orchestrate.module.Cookies
 import com.pingidentity.storage.MemoryStorage
@@ -75,7 +69,7 @@ class CookieModuleTest {
             httpClient = HttpClient(mockEngine)
             module(dummy)
             module(Cookie) {
-                storage = memory
+                storage = { memory }
                 persist = mutableListOf("interactionId", "interactionToken")
             }
         }
@@ -118,7 +112,7 @@ class CookieModuleTest {
             httpClient = HttpClient(mockEngine)
             module(dummy)
             module(Cookie) {
-                storage = memory
+                storage = { memory }
                 //We only want to persist interactionId
                 persist = mutableListOf("interactionId")
             }
@@ -174,7 +168,7 @@ class CookieModuleTest {
             httpClient = HttpClient(mockEngine)
             module(dummy)
             module(Cookie) {
-                storage = memory
+                storage = { memory }
                 //We only want to persist interactionId
                 persist = mutableListOf("interactionId")
             }
@@ -238,7 +232,7 @@ class CookieModuleTest {
             httpClient = HttpClient(mockEngine)
             module(dummy)
             module(Cookie) {
-                storage = memory
+                storage = { memory }
                 persist = mutableListOf("interactionId", "interactionToken")
             }
         }

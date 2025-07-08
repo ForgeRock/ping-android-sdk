@@ -13,6 +13,7 @@ import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import com.pingidentity.android.ContextProvider
 import com.pingidentity.logger.Logger
+import com.pingidentity.utils.PingDsl
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -55,7 +56,7 @@ private const val IV_LENGTH = 12
  * For detail please refer to https://developer.android.com/privacy-and-security/keystore
  * @property logger The logger instance for logging.
  */
-class SecretKeyEncryptorConfig {
+open class SecretKeyEncryptorConfig {
     lateinit var context: Context
     lateinit var keyAlias: String
     var enforceAsymmetricKey = false
@@ -79,8 +80,10 @@ class SecretKeyEncryptorConfig {
  * An encryptor that uses Android's SecretKey to encrypt and decrypt data.
  * It uses AES/GCM/NoPadding as the cipher and HmacSHA256 for the MAC.
  */
-class SecretKeyEncryptor(block: SecretKeyEncryptorConfig.() -> Unit = {}) : Encryptor {
-    val config = SecretKeyEncryptorConfig().apply(block)
+class SecretKeyEncryptor(val config: SecretKeyEncryptorConfig) : Encryptor {
+    constructor(block: SecretKeyEncryptorConfig.() -> Unit = {}) :
+            this(SecretKeyEncryptorConfig().apply(block))
+
     private val lock = Mutex()
     private val logger = config.logger
     private val mac: Mac

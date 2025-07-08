@@ -30,6 +30,7 @@ android {
 dependencies {
     api(project(":foundation:logger"))
     implementation(project(":foundation:android"))
+    implementation(project(":foundation:utils"))
 
     implementation(libs.androidx.datastore)
     implementation(libs.androidx.datastore.core)

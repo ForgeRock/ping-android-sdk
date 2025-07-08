@@ -46,13 +46,13 @@ val Session = Module.of(::SessionConfig) {
     success {
         //The session may be empty due to NoSession or reuse existing session
         if (it.session.value.isNotEmpty()) { // If the session is not empty, save it
-            config.storage.save(it.session as SSOToken)
+            config.tokenStorage.save(it.session as SSOToken)
         }
         it
     }
 
     signOff { request ->
-        val ssoToken = config.storage.get()
+        val ssoToken = config.tokenStorage.get()
         //Sign off the session
 
         ssoToken?.let {
@@ -61,7 +61,7 @@ val Session = Module.of(::SessionConfig) {
             request.header(journey.options.cookie, it.value)
             request.header(ACCEPT_API_VERSION, RESOURCE31)
             request.body()
-            config.storage.delete()
+            config.tokenStorage.delete()
         } ?: throw IllegalStateException("Session not found")
         request
     }
@@ -73,7 +73,7 @@ val Session = Module.of(::SessionConfig) {
  */
 internal suspend fun Journey.session(): SSOToken? {
     sharedContext.getValue<SessionConfig>(SESSION_CONFIG)?.let {
-        return it.storage.get()
+        return it.tokenStorage.get()
     }
     return null
 }
@@ -82,7 +82,7 @@ internal suspend fun Journey.session(): SSOToken? {
  * Function to delete the session token.
  */
 internal suspend fun Journey.deleteSession() {
-    sharedContext.getValue<SessionConfig>(SESSION_CONFIG)?.storage?.delete()
+    sharedContext.getValue<SessionConfig>(SESSION_CONFIG)?.tokenStorage?.delete()
 }
 
 

@@ -34,7 +34,7 @@ class AgentTest {
             discoveryEndpoint = "http://localhost/openid-configuration"
             redirectUri = "http://localhost/redirect"
             clientId = "test-client-id"
-            storage = MemoryStorage()
+            storage = { MemoryStorage() }
             updateAgent(DefaultAgent)
         }
         val result = DefaultAgent.endSession(OidcConfig(Unit, oidcClientConfig), "dummy-id-token")
@@ -49,7 +49,7 @@ class AgentTest {
             discoveryEndpoint = "http://localhost/openid-configuration"
             redirectUri = "http://localhost/redirect"
             clientId = "test-client-id"
-            storage = MemoryStorage()
+            storage = { MemoryStorage() }
             updateAgent(DefaultAgent)
         }
         val exception = assertFailsWith<AuthorizeException> {

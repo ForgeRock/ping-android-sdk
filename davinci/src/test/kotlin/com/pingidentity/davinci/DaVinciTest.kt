@@ -131,7 +131,7 @@ class DaVinciTest {
                 redirectUri = "http://localhost:8080"
             }
             module(Cookie) {
-                storage = MemoryStorage()
+                storage = { MemoryStorage() }
                 persist = mutableListOf("ST")
             }
         }
@@ -162,11 +162,11 @@ class DaVinciTest {
                             "http://localhost/.well-known/openid-configuration"
                         scopes = mutableSetOf("openid", "email", "address")
                         redirectUri = "http://localhost:8080"
-                        storage = tokenStorage
+                        storage = { tokenStorage }
                         logger = Logger.STANDARD
                     }
                     module(Cookie) {
-                        storage = cookieStorage
+                        storage = { cookieStorage }
                         persist = mutableListOf("ST")
                     }
                 }
@@ -256,7 +256,7 @@ class DaVinciTest {
                             "http://localhost/.well-known/openid-configuration"
                         scopes = mutableSetOf("openid", "email", "address")
                         redirectUri = "http://localhost:8080"
-                        storage = MemoryStorage()
+                        storage = { MemoryStorage() }
                         logger = Logger.STANDARD
                         acrValues = "acrValues"
                         display = "display"
@@ -266,7 +266,7 @@ class DaVinciTest {
                         uiLocales = "ui_locales"
                     }
                     module(Cookie) {
-                        storage = MemoryStorage()
+                        storage = { MemoryStorage() }
                     }
                 }
 
@@ -313,11 +313,11 @@ class DaVinciTest {
                             "http://localhost/.well-known/openid-configuration"
                         scopes = mutableSetOf("openid", "email", "address")
                         redirectUri = "http://localhost:8080"
-                        storage = tokenStorage
+                        storage = { tokenStorage }
                         logger = Logger.STANDARD
                     }
                     module(Cookie) {
-                        storage = cookieStorage
+                        storage = { cookieStorage }
                         persist = mutableListOf("ST")
                     }
                 }
@@ -372,10 +372,10 @@ class DaVinciTest {
                     "http://localhost/.well-known/openid-configuration"
                 scopes = mutableSetOf("openid", "email", "address")
                 redirectUri = "http://localhost:8080"
-                storage = MemoryStorage()
+                storage = { MemoryStorage() }
             }
             module(Cookie) {
-                storage = MemoryStorage()
+                storage = { MemoryStorage() }
                 persist = mutableListOf("ST")
             }
         }

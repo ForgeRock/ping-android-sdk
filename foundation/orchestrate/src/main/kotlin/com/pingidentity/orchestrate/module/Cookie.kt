@@ -7,12 +7,13 @@
 
 package com.pingidentity.orchestrate.module
 
-import com.pingidentity.android.ContextProvider
 import com.pingidentity.orchestrate.Module
 import com.pingidentity.orchestrate.Request
 import com.pingidentity.orchestrate.SharedContext
 import com.pingidentity.orchestrate.Workflow
-import com.pingidentity.storage.DataStoreStorage
+import com.pingidentity.storage.EncryptedDataStoreStorage
+import com.pingidentity.storage.EncryptedDataStoreStorageConfig
+import com.pingidentity.storage.EncryptedDataStoreStorageFactory
 import com.pingidentity.storage.Storage
 import com.pingidentity.utils.PingDsl
 import io.ktor.client.plugins.cookies.AcceptAllCookiesStorage
@@ -28,6 +29,7 @@ import io.ktor.util.date.GMTDate
 
 internal const val TEMP_COOKIE = "TEMP_COOKIE"
 internal const val COOKIE_STORAGE = "COOKIE_STORAGE"
+internal const val COM_PING_SDK_V_1_COOKIES = "com.pingidentity.sdk.v1.cookies"
 
 typealias Cookies = List<String>
 
@@ -68,7 +70,7 @@ fun HttpMessageBuilder.cookie(
 @PingDsl
 class CookieConfig {
 
-    lateinit var storage: Storage<Cookies>
+    internal lateinit var cookieStorage: Storage<Cookies>
 
     /**
      * A list of Cookies name that should be persisted to the storage.
@@ -76,9 +78,36 @@ class CookieConfig {
      */
     var persist = mutableListOf<String>()
 
+    /**
+     * storage function to create a DataStoreStorage instance.
+     */
+    var storage: () -> Storage<Cookies> = {
+        EncryptedDataStoreStorage(storageOption)
+    }
+
+    /**
+     * Default DataStore for [Cookies].
+     */
+    internal var storageOption: EncryptedDataStoreStorageConfig.() -> Unit = {
+        fileName = COM_PING_SDK_V_1_COOKIES
+        keyAlias = COM_PING_SDK_V_1_COOKIES
+    }
+
+    /**
+     * Configures the storage for SSOToken.
+     * @param block A lambda to configure the DataStoreStorageConfig.
+     */
+    fun storage(block: EncryptedDataStoreStorageConfig.() -> Unit) {
+        val previous = storageOption
+        storageOption = {
+            previous()
+            block()
+        }
+    }
+
     fun init() {
-        if (!this::storage.isInitialized) {
-            storage = DataStoreStorage(ContextProvider.context.defaultCookieDataStore, false)
+        if (!this::cookieStorage.isInitialized) {
+            cookieStorage = storage()
         }
     }
 }
@@ -113,12 +142,12 @@ val Cookie =
 
         init {
             config.init()
-            sharedContext[COOKIE_STORAGE] = config.storage
+            sharedContext[COOKIE_STORAGE] = config.cookieStorage
         }
 
         start {
             val url = it.builder.url.build()
-            config.storage.get()?.let { cookies ->
+            config.cookieStorage.get()?.let { cookies ->
                 inject(url, cookies, it)
             }
             it
@@ -127,7 +156,7 @@ val Cookie =
         next { _, request ->
             val url = request.builder.url.build()
             inject(flowContext, url, request)
-            config.storage.get()?.let { cookies ->
+            config.cookieStorage.get()?.let { cookies ->
                 inject(url, cookies, request)
             }
             request
@@ -148,7 +177,7 @@ val Cookie =
             if (persistCookies.isNotEmpty()) {
                 val storage = AcceptAllCookiesStorage()
                 // Store existing cookies to temp storage
-                config.storage.get()?.let { cookies ->
+                config.cookieStorage.get()?.let { cookies ->
                     cookies.map {
                         parseServerSetCookieHeader(it)
                     }.forEach {
@@ -156,7 +185,7 @@ val Cookie =
                     }
                 }
                 // Clear existing cookies
-                config.storage.delete()
+                config.cookieStorage.delete()
 
                 // Add new cookies to temp storage
                 persistCookies.map {
@@ -167,7 +196,7 @@ val Cookie =
                 storage.get(url).map { cookie ->
                     renderSetCookieHeader(cookie)
                 }.also { s ->
-                    config.storage.save(s)
+                    config.cookieStorage.save(s)
                 }
             }
 
@@ -179,11 +208,11 @@ val Cookie =
 
         signOff {
             //Inject stored cookies to the request
-            config.storage.get()?.let { cookies ->
+            config.cookieStorage.get()?.let { cookies ->
                 it.cookies(cookies)
             }
             //Delete stored cookies
-            config.storage.delete()
+            config.cookieStorage.delete()
             it
         }
     }
