@@ -48,6 +48,20 @@ class CallbackRegistryTest {
     }
 
     @Test
+    fun `Should override existing callback when same type is registered again`() {
+        CallbackRegistry.register("type1", ::Dummy2Callback)
+
+        val jsonArray = buildJsonArray {
+            add(buildJsonObject { put("type", "type1") })
+        }
+
+        val callbacks = CallbackRegistry.callback(jsonArray)
+
+        assertEquals(1, callbacks.size)
+        assertTrue(callbacks.first() is Dummy2Callback)
+    }
+
+    @Test
     fun `Should return empty list when jsonArray is empty`() {
         val jsonArray = buildJsonArray { }
 

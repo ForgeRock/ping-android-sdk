@@ -79,6 +79,9 @@ dependencies {
 
     implementation(libs.facebook.login)
 
+    //Protect
+    implementation(project(":protect"))
+
     implementation(project(":foundation:storage"))
 
     implementation(libs.androidx.datastore.preferences)

@@ -51,9 +51,7 @@ abstract class FieldCollector<T> : Collector<T>, Validator {
         return errors.toList()
     }
 
-    override fun id(): String {
-        return key
-    }
+    override fun id() = key
 }
 
 /**

@@ -19,7 +19,12 @@ import kotlinx.serialization.json.jsonPrimitive
  */
 object CollectorFactory {
     // A mutable map to hold the collector creation functions.
-    private val collectors: MutableMap<String, () -> Collector<*>> = HashMap()
+    private val collectors: MutableMap<String, () -> Collector<*>> = mutableMapOf()
+
+    /**
+     * Returns a map of registered collectors.
+     */
+    fun collectors() = collectors.toMap()
 
     /**
      * Registers a new type of Collector.
