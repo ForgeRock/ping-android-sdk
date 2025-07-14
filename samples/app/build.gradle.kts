@@ -82,8 +82,6 @@ dependencies {
     //Protect
     implementation(project(":protect"))
 
-    implementation(project(":foundation:storage"))
-
     implementation(libs.androidx.datastore.preferences)
 
     implementation(libs.compose.ui)

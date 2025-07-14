@@ -54,18 +54,17 @@ class DataStoreStorage<T : @Serializable Any>(
  *
  * @param T The type of the object to be stored. Must be serializable.
  * @param dataStore The DataStore instance to use for storing the object.
- * @param cacheable Whether the storage should cache the object in memory.
+ * @param cacheStrategy Cache strategy to use for caching the item in memory.
  *
  * @return A new Storage instance.
  */
 inline fun <reified T : @Serializable Any> DataStoreStorage(
     dataStore: DataStore<T?>,
-    cacheable: Boolean = false,
+    cacheStrategy: CacheStrategy = CacheStrategy.NO_CACHE,
 ): Storage<T> {
-
 
     return StorageDelegate(
         DataStoreStorage(dataStore = dataStore),
-        cacheable,
+        cacheStrategy,
     )
 }

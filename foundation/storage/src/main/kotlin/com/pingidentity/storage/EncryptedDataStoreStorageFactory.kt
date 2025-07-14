@@ -56,7 +56,7 @@ object EncryptedDataStoreStorageFactory {
                         )
                     },
                     corruptionHandler = ReplaceFileCorruptionHandler { null }
-                ), config.cache
+                ), config.cacheStrategy
             )
             dataStoreMap[fileName] = storage
             return storage
