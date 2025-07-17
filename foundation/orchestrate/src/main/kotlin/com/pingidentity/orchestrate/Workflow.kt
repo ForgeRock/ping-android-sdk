@@ -57,6 +57,10 @@ class Workflow(val config: WorkflowConfig) {
     internal val success = mutableListOf<suspend FlowContext.(SuccessNode) -> SuccessNode>()
     internal val signOff = mutableListOf<suspend (Request) -> Request>()
 
+    internal var transport: suspend FlowContext.(Request) -> Response = { request ->
+        send(this, request)
+    }
+
     // Transform response to Node, we can only have one transform
     internal lateinit var transform: suspend FlowContext.(Response) -> Node
 
@@ -84,10 +88,9 @@ class Workflow(val config: WorkflowConfig) {
             init()
             config.logger.i("Starting...")
             val flowContext = FlowContext(context)
-            val req =
-                start.asFlow()
-                    .scan(request) { result, value -> flowContext.value(result) }.last()
-            val response = send(flowContext, req)
+            start.asFlow()
+                .scan(request) { result, value -> flowContext.value(result) }.last()
+            val response = flowContext.transport(request)
             val initialNode = flowContext.transform(response)
             return next(flowContext, node.asFlow().scan(initialNode) { result, value ->
                 value(flowContext, result)
@@ -150,7 +153,7 @@ class Workflow(val config: WorkflowConfig) {
                     .scan(initialRequest) { result, value -> context.value(current, result) }
                     .last()
             current.close()
-            val initialNode = context.transform(send(context, request))
+            val initialNode = context.transform(context.transport(request))
             return next(
                 context,
                 node.asFlow().scan(initialNode) { result, value -> value(context, result) }.last(),
@@ -200,7 +203,7 @@ class Workflow(val config: WorkflowConfig) {
         context: FlowContext,
         request: Request,
     ): Response {
-        val resp = Response(request, config.httpClient.request(request.builder))
+        val resp = HttpResponse(request, config.httpClient.request(request.builder))
         response(context, resp)
         return resp
     }
@@ -210,8 +213,8 @@ class Workflow(val config: WorkflowConfig) {
      * @param request The request to be sent.
      * @return The response received.
      */
-    private suspend fun send(request: Request): Response {
-        return Response(request, config.httpClient.request(request.builder))
+    suspend fun send(request: Request): Response {
+        return HttpResponse(request, config.httpClient.request(request.builder))
     }
 
     /**

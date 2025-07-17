@@ -11,8 +11,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.pingidentity.samples.app.Mode
 import com.pingidentity.samples.app.User
-import com.pingidentity.samples.app.env.oidcClient
-import com.pingidentity.utils.Result
+import com.pingidentity.samples.app.env.web
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -24,25 +23,16 @@ class CentralizeLoginViewModel : ViewModel() {
     fun login() {
         viewModelScope.launch {
             User.current(Mode.CENTRALIZE)
-            when (val result = oidcClient.token()) {
-                is Result.Failure -> {
-                    state.update {
-                        it.copy(token = null, error = result.value)
-                    }
+            web.authorize {
+            }.onSuccess { user ->
+                state.update {
+                    it.copy(user = user, error = null)
                 }
-
-                is Result.Success -> {
-                    state.update {
-                        it.copy(token = result.value, error = null)
-                    }
+            }.onFailure { throwable ->
+                state.update {
+                    it.copy(user = null, error = throwable)
                 }
             }
-        }
-    }
-
-    fun reset() {
-        state.update {
-            it.copy(null, null)
         }
     }
 }

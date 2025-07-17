@@ -5,34 +5,42 @@
   <hr/>
 </p>
 
-# This Module is currently under development, do not apply this module directly to your project.
+# Oidc Module
 
-`oidc` module provides OIDC client for PingOne and ForgeRock platform.
+`Oidc module` provides OIDC client for PingOne and ForgeRock platform.
 
-The `oidc` module follows the [OIDC](https://openid.net/specs/openid-connect-core-1_0.html) specification and
-provides a simple and easy-to-use API to interact with the OIDC server. It allows you to authenticate, retrieve the
+The `oidc` module follows the [OIDC](https://openid.net/specs/openid-connect-core-1_0.html)
+specification and
+provides a simple and easy-to-use API to interact with the OIDC server. It allows you to
+authenticate, retrieve the
 access token, revoke the token, and sign out from the OIDC server.
 
 ## Add dependency to your project
 
 ```kotlin
 dependencies {
-    implementation(project(":foundation:oidc"))
+    implementation("com.pingidentity.sdks:oidc:<version>")
+    //Use the browser agent to launch the browser for the authorization request
+    implementation("com.pingidentity.sdks:browser:<version>")
 }
 ```
 
 ## Set scheme in AndroidManifest.xml
 
-By default, the Ping SDK uses the `Browser` agent to launch the browser for the authorization request.
-The SDK uses the Custom Tabs to launch the browser, you can customize the browser agent by providing the `customTab`
-properties. To receive the redirect from the browser, you need to define the `scheme`.
+With the `browser` module dependency, the Ping SDK's OIDC module uses a Browser agent to launch the
+authorization request in a browser. By default, it uses Custom Tabs, but you can customize the
+browser behavior through the customTab properties.
 
-Define `scheme` to receive redirect from browser, the `scheme` should match the `redirect uri` scheme.
+To handle the redirect after authentication, you must define a scheme. This scheme must match the
+scheme used in your redirect URI.
 
-In the following example, the `scheme` is `com.pingidentity.demo`. You can define multiple schemes
-to receive the redirect from the browser.
+For example, if your redirect URI is `com.pingidentity.demo://callback`, then
+`com.pingidentity.demo`
+should be defined as your scheme. You can also define multiple schemes if needed to support various
+redirect URIs.
 
-In the App `gradle.build.kts` file, add the following `manifestPlaceholders` to the `android.defaultConfig`:
+In the App `gradle.build.kts` file, add the following `manifestPlaceholders` to the
+`android.defaultConfig`:
 
 ```kotlin
 android {
@@ -47,15 +55,34 @@ android {
 Basic Configuration, use `discoveryEndpoint` to lookup OIDC endpoints
 
 ```kotlin
-val ping = OidcClient {
-    discoveryEndpoint =
-        "https://auth.pingone.ca/02fb4743-189a-4bc7-9d6c-a919edfe6447/as/.well-known/openid-configuration"
-    clientId = "c12743f9-08e8-4420-a624-71bbb08e9fe1"
-    redirectUri = "org.forgerock.demo://oauth2redirect"
-    scopes = mutableSetOf("openid", "email", "address", "profile", "phone")
+
+// Create an OIDC client with the discovery endpoint, and other configurations
+val web = OidcWeb {
+    logger = Logger.STANDARD
+    module(com.pingidentity.oidc.module.Oidc) {
+        discoveryEndpoint =
+            "https://example.com/envId/as/.well-known/openid-configuration"
+        clientId = "client-id"
+        redirectUri = "org.pingidentity.demo://callback"
+        scopes = mutableSetOf("openid", "email", "address", "profile", "phone")
+    }
 }
 
-when (val result = ping.accessToken()) { // Retrieve the access token
+//Start the OIDC authentication flow
+web.authorize()
+    .onSuccess { user ->
+        ...
+    }.onFailure { throwable ->
+        ...
+    }
+
+
+// To retieve the existing user
+val user = web.user()
+
+
+//To retrieve the access token
+when (val result = user.token()) { // Retrieve the access token
     is Result.Failure -> {
         when (result.value) {
             is OidcError.ApiError -> TODO()
@@ -70,20 +97,26 @@ when (val result = ping.accessToken()) { // Retrieve the access token
     }
 }
 
-ping.revoke() // Revoke the access token
-ping.endSession() // End the session
+user.revoke() // Revoke the access token
+user.logout() // Logout
 ```
 
-By default, the SDK use `DataStoreStorage` (With `EncryptedSerializer` ) to stores the token and `None` Logger is set,
+By default, the SDK use `EncryptedDataStoreStorage` to stores the token and `None` Logger is set,
 however developers can override the storage and logger settings.
 
 Basic Configuration with custom `storage` and `logger`
 
 ```kotlin
-val ping = OidcClient {
-    storage = encryptedStorage(clientId) // Store the token in the encrypted storage
-    logger = Logger.Standard // Log to Logcat
-    //...
+val web = OidcWeb {
+    logger = Logger.STANDARD
+    module(com.pingidentity.oidc.module.Oidc) {
+        discoveryEndpoint =
+            "https://example.com/envId/as/.well-known/openid-configuration"
+        clientId = "client-id"
+        redirectUri = "org.pingidentity.demo://callback"
+        scopes = mutableSetOf("openid", "email", "address", "profile", "phone")
+    }
+    storage = { MemoryStorage() }
 }
 ```
 
@@ -91,84 +124,30 @@ More OidcClient configuration, configurable attribute can be found under
 [OIDC Spec](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest)
 
 ```kotlin
-
-val ping = OidcClient {
-    acrValues = "urn:acr:form"
-    loginHint = "test"
-    display = "test"
-    //...
+val web = OidcWeb {
+    module(com.pingidentity.oidc.module.Oidc) {
+        discoveryEndpoint =
+            "https://example.com/envId/as/.well-known/openid-configuration"
+        clientId = "client-id"
+        redirectUri = "org.pingidentity.demo://callback"
+        acrValues = "urn:acr:form"
+        loginHint = "test"
+        display = "test"
+        ...
+    }
 }
 ```
 
-## Customize the browser agent
-
-The SDK provides [custom tab](https://developer.chrome.com/docs/android/custom-tabs/guide-get-started) as agent to
-launch the browser for the authorization request. You can customize the browser agent by providing
-the [customTab property](https://developer.android.com/reference/androidx/browser/customtabs/CustomTabsIntent.Builder).
+Provide parameters to the `authorize` method to override the default configuration
 
 ```kotlin
-val ping = OidcClient {
-
-    agent(browser) {
-
-        // Customize the CustomTab
-        customTab = {
-            setColorScheme(CustomTabsIntent.COLOR_SCHEME_DARK)
-            setShowTitle(false)
-            setShareState(CustomTabsIntent.SHARE_STATE_OFF)
-            setUrlBarHidingEnabled(true)
-        }
-    }
-    //...
-
-}
-```
-
-## Custom Agent
-
-Other than using the Custom Tabs, you can also provide a custom agent to launch the authorization request.
-You can implement the `Agent` interface to create a custom agent.
-
-```kotlin
-interface Agent<T> {
-    fun config(): () -> T
-    suspend fun endSession(oidcConfig: OidcConfig<T>, idToken: String): Boolean
-    suspend fun authenticate(oidcConfig: OidcConfig<T>): AuthCode
-}
-```
-
-Here is an example of creating a custom agent.
-
-```kotlin
-// Create a custom agent configuration
-@OidcDsl
-class CustomAgentConfig {
-    var config1 = "config1Value"
-    var config2 = "config2Value"
-}
-
-var customAgent = object : Agent<CustomAgentConfig> {
-    override fun config() = ::CustomAgentConfig
-    override suspend fun authenticate(oidcConfig: OidcConfig<CustomAgentConfig>): AuthCode {
-        oidcConfig.config.config2 //Access the agent configuration
-        oidcConfig.oidcClientConfig.openId.endSessionEndpoint //Access the oidcClientConfig
-        return AuthCode("TestAgent", "", "", "", "")
-    }
-
-    override suspend fun endSession(oidcConfig: OidcConfig<CustomAgentConfig>, idToken: String):
-            Boolean {
-        //Logout session with idToken
-        oidcConfig.config.config1 // Access the agent configuration
-        oidcConfig.oidcClientConfig.openId.endSessionEndpoint // Access the oidcClientConfig
-        return true
-    }
-}
-
-val ping = OidcClient {
-    agent(customAgent) {
-        config1 = "customConfig1"
-        config2 = "customConfig2"
-    }
-    //...
-}
-```
+web.authorize(
+    "acrValues" to "urn:acr:form",
+    "loginHint" to "test",
+    "custom" to "custom_value"
+).onSuccess { user ->
+    ...
+  }.onFailure { throwable ->
+    ...
+  }
+``` 

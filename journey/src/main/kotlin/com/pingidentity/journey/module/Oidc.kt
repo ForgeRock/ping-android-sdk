@@ -13,7 +13,6 @@ import com.pingidentity.journey.SSOToken
 import com.pingidentity.journey.journey
 import com.pingidentity.journey.options
 import com.pingidentity.journey.prepareUser
-import com.pingidentity.journey.user
 import com.pingidentity.oidc.OidcClient
 import com.pingidentity.oidc.OidcClientConfig
 import com.pingidentity.oidc.OidcUser

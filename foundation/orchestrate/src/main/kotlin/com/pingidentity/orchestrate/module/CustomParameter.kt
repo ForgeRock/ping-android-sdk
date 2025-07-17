@@ -8,6 +8,8 @@
 package com.pingidentity.orchestrate.module
 
 import com.pingidentity.orchestrate.Module
+import com.pingidentity.orchestrate.module.CustomParameterConfig.Companion.NEXT
+import com.pingidentity.orchestrate.module.CustomParameterConfig.Companion.START
 import com.pingidentity.utils.PingDsl
 
 /**
@@ -16,6 +18,15 @@ import com.pingidentity.utils.PingDsl
  */
 @PingDsl
 class CustomParameterConfig {
+
+    companion object {
+        const val START = 1
+        const val NEXT = 2
+        const val BOTH = START or NEXT
+    }
+
+    var phase = BOTH
+
     internal val parameters = mutableListOf<Pair<String, String>>()
 
     /**
@@ -39,8 +50,10 @@ val CustomParameter =
          * @return The modified request with custom parameters.
          */
         next { _, request ->
-            config.parameters.forEach { (name, value) ->
-                request.parameter(name, value)
+            if (config.phase and NEXT != 0) {
+                config.parameters.forEach { (name, value) ->
+                    request.parameter(name, value)
+                }
             }
             request
         }
@@ -50,8 +63,10 @@ val CustomParameter =
          * @return The modified request with custom parameters.
          */
         start {
-            config.parameters.forEach { (name, value) ->
-                it.parameter(name, value)
+            if (config.phase and START != 0) {
+                config.parameters.forEach { (name, value) ->
+                    it.parameter(name, value)
+                }
             }
             it
         }

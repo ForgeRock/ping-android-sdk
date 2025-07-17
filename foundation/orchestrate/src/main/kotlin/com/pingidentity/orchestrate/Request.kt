@@ -7,7 +7,6 @@
 
 package com.pingidentity.orchestrate
 
-import androidx.annotation.VisibleForTesting
 import com.pingidentity.orchestrate.module.Cookies
 import com.pingidentity.orchestrate.module.cookie
 import io.ktor.client.request.HttpRequestBuilder
@@ -21,6 +20,7 @@ import io.ktor.http.HttpMethod.Companion.Post
 import io.ktor.http.ParametersBuilder
 import io.ktor.http.contentType
 import io.ktor.http.parseServerSetCookieHeader
+import io.ktor.http.toURI
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 
@@ -34,7 +34,8 @@ typealias FormBuilder = ParametersBuilder
  */
 class Request {
     val builder = HttpRequestBuilder()
-    var hasUrl = false
+    private val formBuilder = ParametersBuilder()
+    private var hasUrl = false
 
     /**
      * Sets the URL of the request.
@@ -55,7 +56,7 @@ class Request {
         value: String,
     ) {
         builder.url {
-            parameters.append(name, value)
+            parameters[name] = value
         }
     }
 
@@ -141,7 +142,9 @@ class Request {
     fun form(formBuilder: FormBuilder.() -> Unit) {
         builder.method = Post
         builder.setBody(
-            FormDataContent(ParametersBuilder().apply(formBuilder).build()),
+            FormDataContent(this.formBuilder.apply(formBuilder).build()),
         )
     }
+
+    fun toUrl() = builder.url.build().toURI().toURL()
 }

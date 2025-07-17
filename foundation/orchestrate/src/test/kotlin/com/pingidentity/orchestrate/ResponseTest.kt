@@ -32,7 +32,7 @@ class ResponseTest {
         val mockHttpResponse = mockk<HttpResponse> {
             coEvery { body<String>() } returns "response body"
         }
-        val response = Response(mockk(), mockHttpResponse)
+        val response = HttpResponse(mockk(), mockHttpResponse)
         assertEquals("response body", response.body())
     }
 
@@ -42,7 +42,7 @@ class ResponseTest {
         val mockHttpResponse = mockk<HttpResponse> {
             every { status.value } returns 200
         }
-        val response = Response(mockk(), mockHttpResponse)
+        val response = HttpResponse(mockk(), mockHttpResponse)
         assertEquals(200, response.status())
     }
 
@@ -52,7 +52,7 @@ class ResponseTest {
         val mockHttpResponse = mockk<HttpResponse> {
             every { headers.getAll("Set-Cookie") } returns listOf("cookie1=value1", "cookie2=value2")
         }
-        val response = Response(mockk(), mockHttpResponse)
+        val response = HttpResponse(mockk(), mockHttpResponse)
         assertEquals(listOf("cookie1=value1", "cookie2=value2"), response.cookies())
     }
 
@@ -62,7 +62,7 @@ class ResponseTest {
         val mockHttpResponse = mockk<HttpResponse> {
             every { headers["Content-Type"] } returns "application/json"
         }
-        val response = Response(mockk(), mockHttpResponse)
+        val response = HttpResponse(mockk(), mockHttpResponse)
         assertEquals("application/json", response.header("Content-Type"))
     }
 
@@ -72,7 +72,7 @@ class ResponseTest {
         val mockHttpResponse = mockk<HttpResponse> {
             every { headers["Non-Existent-Header"] } returns null
         }
-        val response = Response(mockk(), mockHttpResponse)
+        val response = HttpResponse(mockk(), mockHttpResponse)
         assertNull(response.header("Non-Existent-Header"))
     }
 }

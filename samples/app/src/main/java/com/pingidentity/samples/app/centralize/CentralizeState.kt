@@ -7,10 +7,9 @@
 
 package com.pingidentity.samples.app.centralize
 
-import com.pingidentity.oidc.Token
-import com.pingidentity.oidc.OidcError
+import com.pingidentity.oidc.User
 
 data class CentralizeState(
-    var token: Token? = null,
-    var error: OidcError? = null,
+    var user: User? = null,
+    var error: Throwable? = null,
 )
