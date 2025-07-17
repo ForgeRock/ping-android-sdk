@@ -15,7 +15,10 @@ import com.pingidentity.android.ContextProvider
 import com.pingidentity.mfa.oath.OathAlgorithm
 import com.pingidentity.mfa.oath.OathCredential
 import com.pingidentity.mfa.oath.OathType
-import com.pingidentity.utils.TestModeDetector
+import com.pingidentity.storage.sqlite.passphrase.FixedPassphraseProvider
+import com.pingidentity.storage.passphrase.TestPassphraseProvider
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -43,22 +46,13 @@ class SQLOathStorageTest {
     private lateinit var appContext: Context
     private lateinit var storage: SQLOathStorage
     private val testDbName = "test_oath_storage_${System.currentTimeMillis()}.db"
+    private val testPassphraseProvider = TestPassphraseProvider()
 
-    companion object {
-        // Initialize test mode early to ensure it's enabled before any database operations
-        init {
-            println("Enabling test mode for SQLOathStorageTest")
-            TestModeDetector.enableTestMode()
-        }
-    }
-
+    @OptIn(ExperimentalCoroutinesApi::class)
     @Before
-    fun setup() {
+    fun setup() = runTest {
         // Get the application context
         appContext = InstrumentationRegistry.getInstrumentation().targetContext
-        
-        // Ensure test mode is enabled
-        TestModeDetector.enableTestMode()
         
         // Initialize ContextProvider with the actual app context
         ContextProvider.init(appContext)
@@ -68,7 +62,7 @@ class SQLOathStorageTest {
             context = appContext
             databaseName = testDbName
             encryptionEnabled = false
-            blockStorePreferred = false
+            passphraseProvider = testPassphraseProvider
         }
 
         // Initialize the storage to ensure tables are created
@@ -78,8 +72,9 @@ class SQLOathStorageTest {
         cleanupTestData()
     }
     
+    @OptIn(ExperimentalCoroutinesApi::class)
     @After
-    fun tearDown() {
+    fun tearDown() = runTest {
         // Ensure storage is closed after each test
         try {
             storage.close()
@@ -91,7 +86,7 @@ class SQLOathStorageTest {
     /**
      * Helper method to clean up any test data
      */
-    private fun cleanupTestData() {
+    private suspend fun cleanupTestData() {
         try {
             // Clear all OATH credentials from the database
             storage.clearOathCredentials()
@@ -134,11 +129,17 @@ class SQLOathStorageTest {
     /**
      * Test that database and tables are created successfully during initialization
      */
+    @OptIn(ExperimentalCoroutinesApi::class)
     @Test
-    fun testDatabaseInitialization() {
+    fun testDatabaseInitialization() = runTest {
         // Create a new storage instance with a different database name
         val initDbName = "init_test_db_${System.currentTimeMillis()}.db"
-        val initStorage = SQLOathStorage(appContext, initDbName, false)
+        val initStorage = SQLOathStorage {
+            context = appContext
+            databaseName = initDbName
+            encryptionEnabled = false
+            passphraseProvider = testPassphraseProvider
+        }
         
         try {
             // Initialize the storage - this should create the database and tables
@@ -172,8 +173,9 @@ class SQLOathStorageTest {
     /**
      * Test storing and retrieving a credential
      */
+    @OptIn(ExperimentalCoroutinesApi::class)
     @Test
-    fun testStoreAndRetrieveCredential() {
+    fun testStoreAndRetrieveCredential() = runTest {
         // Create a test credential
         val testCred = createTestCredential()
         
@@ -197,8 +199,9 @@ class SQLOathStorageTest {
     /**
      * Test retrieving all credentials
      */
+    @OptIn(ExperimentalCoroutinesApi::class)
     @Test
-    fun testGetAllCredentials() {
+    fun testGetAllCredentials() = runTest {
         // Ensure we start with an empty database
         val initialCredentials = storage.getAllOathCredentials()
         assertEquals("Database should be empty initially", 0, initialCredentials.size)
@@ -231,8 +234,9 @@ class SQLOathStorageTest {
     /**
      * Test removing a credential
      */
+    @OptIn(ExperimentalCoroutinesApi::class)
     @Test
-    fun testRemoveCredential() {
+    fun testRemoveCredential() = runTest {
         // Create and store a test credential
         val testCred = createTestCredential()
         storage.storeOathCredential(testCred)
@@ -253,10 +257,11 @@ class SQLOathStorageTest {
     }
     
     /**
-     * Test removing a non-existent credential
+     * Test removing a credential that doesn't exist
      */
+    @OptIn(ExperimentalCoroutinesApi::class)
     @Test
-    fun testRemoveNonExistentCredential() {
+    fun testRemoveNonExistentCredential() = runTest {
         // Attempt to remove a credential with a non-existent ID
         val removed = storage.removeOathCredential("non_existent_id")
         
@@ -267,8 +272,9 @@ class SQLOathStorageTest {
     /**
      * Test clearing all credentials
      */
+    @OptIn(ExperimentalCoroutinesApi::class)
     @Test
-    fun testClearCredentials() {
+    fun testClearCredentials() = runTest {
         // Create and store multiple test credentials
         val credential1 = createTestCredential()
         val credential2 = createTestCredential()
@@ -289,10 +295,11 @@ class SQLOathStorageTest {
     }
     
     /**
-     * Test updating an existing credential
+     * Test updating a credential
      */
+    @OptIn(ExperimentalCoroutinesApi::class)
     @Test
-    fun testUpdateCredential() {
+    fun testUpdateCredential() = runTest {
         // Create and store a test credential
         val originalCred = createTestCredential(issuer = "Original Issuer")
         storage.storeOathCredential(originalCred)
@@ -318,10 +325,11 @@ class SQLOathStorageTest {
     }
     
     /**
-     * Test database behavior with different OATH types (TOTP and HOTP)
+     * Test different oath types
      */
+    @OptIn(ExperimentalCoroutinesApi::class)
     @Test
-    fun testDifferentOathTypes() {
+    fun testDifferentOathTypes() = runTest {
         // Create TOTP and HOTP credentials
         val totpCred = createTestCredential(issuer = "TOTP Test")
         
@@ -352,8 +360,9 @@ class SQLOathStorageTest {
     /**
      * Test database behavior with different OATH algorithms
      */
+    @OptIn(ExperimentalCoroutinesApi::class)
     @Test
-    fun testDifferentAlgorithms() {
+    fun testDifferentAlgorithms() = runTest {
         // Create credentials with different algorithms
         val sha1Cred = createTestCredential(issuer = "SHA1 Test")
         
@@ -382,10 +391,11 @@ class SQLOathStorageTest {
     }
     
     /**
-     * Test reopening and reusing the database
+     * Test reopening the database works correctly
      */
+    @OptIn(ExperimentalCoroutinesApi::class)
     @Test
-    fun testReopenDatabase() {
+    fun testReopenDatabase() = runTest {
         // Create and store a test credential
         val testCred = createTestCredential()
         storage.storeOathCredential(testCred)
@@ -394,7 +404,12 @@ class SQLOathStorageTest {
         storage.close()
         
         // Create a new storage instance with the same database name
-        val reopenedStorage = SQLOathStorage(appContext, testDbName, false)
+        val reopenedStorage = SQLOathStorage {
+            context = appContext
+            databaseName = testDbName
+            encryptionEnabled = false
+            passphraseProvider = testPassphraseProvider
+        }
         
         try {
             // Initialize the storage
@@ -414,18 +429,16 @@ class SQLOathStorageTest {
     }
     
     /**
-     * Test database table creation directly
+     * Test direct table creation with raw SQL
      */
+    @OptIn(ExperimentalCoroutinesApi::class)
     @Test
-    fun testDirectTableCreation() {
+    fun testDirectTableCreation() = runTest {
         // This test verifies that SQLOathStorage can directly create its tables
         println("Starting testDirectTableCreation")
         
         // Get application context
         val context = InstrumentationRegistry.getInstrumentation().targetContext
-        
-        // Enable test mode
-        TestModeDetector.enableTestMode()
         
         // Create a unique test database name
         val testDbName = "direct_table_test_${System.currentTimeMillis()}.db"
@@ -438,7 +451,12 @@ class SQLOathStorageTest {
         
         try {
             // Create the storage instance
-            storage = SQLOathStorage(context, testDbName, false)
+            storage = SQLOathStorage {
+                this.context = context
+                databaseName = testDbName
+                encryptionEnabled = false
+                passphraseProvider = testPassphraseProvider
+            }
             
             // Initialize the storage (this should create tables)
             storage.initialize()
@@ -462,20 +480,17 @@ class SQLOathStorageTest {
     }
     
     /**
-     * Test minimal database operations after direct initialization
+     * Test minimal operations to verify database functionality
      */
+    @OptIn(ExperimentalCoroutinesApi::class)
     @Test
-    fun testMinimalDatabaseOperations() {
+    fun testMinimalDatabaseOperations() = runTest {
         // This test performs a minimal database operation after initializing
         // SQLOathStorage to verify the tables are properly created
         println("Starting testMinimalDatabaseOperations")
         
         // Get application context
         val context = InstrumentationRegistry.getInstrumentation().targetContext
-        
-        // Enable test mode
-        TestModeDetector.enableTestMode()
-        println("Test mode enabled for testMinimalDatabaseOperations")
         
         // Create a unique test database name
         val testDbName = "minimal_ops_test_${System.currentTimeMillis()}.db"
@@ -491,7 +506,12 @@ class SQLOathStorageTest {
         try {
             // Create the storage instance
             println("Creating SQLOathStorage instance")
-            storage = SQLOathStorage(context, testDbName, false)
+            storage = SQLOathStorage {
+                this.context = context
+                databaseName = testDbName
+                encryptionEnabled = false
+                passphraseProvider = testPassphraseProvider
+            }
             
             // Initialize the storage (this should create tables)
             println("Initializing SQLOathStorage")
@@ -565,17 +585,18 @@ class SQLOathStorageTest {
     }
     
     /**
-     * Test creating storage with the builder
+     * Test storage builder pattern
      */
+    @OptIn(ExperimentalCoroutinesApi::class)
     @Test
-    fun testStorageBuilder() {
+    fun testStorageBuilder() = runTest {
         // Create a new storage instance with the builder
         val builderStorage = SQLOathStorage {
             context = appContext
             databaseName = "builder_test_db_${System.currentTimeMillis()}.db"
             encryptionEnabled = false
-            secretKey = "test-secret-key"
-            blockStorePreferred = false
+            initialPassphrase = "test-secret-key"
+            passphraseProvider = testPassphraseProvider
         }
         
         try {
@@ -604,15 +625,17 @@ class SQLOathStorageTest {
     /**
      * Test creating storage with a custom passphrase
      */
+    @OptIn(ExperimentalCoroutinesApi::class)
     @Test
-    fun testStorageWithCustomPassphrase() {
+    fun testStorageWithCustomPassphrase() = runTest {
         // Create a new storage instance with a custom passphrase
         val customPassphrase = "my-custom-passphrase-for-testing"
         val passphraseStorage = SQLOathStorage {
             context = appContext
             databaseName = "passphrase_test_db_${System.currentTimeMillis()}.db"
             encryptionEnabled = true
-            secretKey = customPassphrase
+            // Use a custom fixed passphrase provider instead of the default test provider
+            passphraseProvider = FixedPassphraseProvider(customPassphrase)
         }
         
         try {

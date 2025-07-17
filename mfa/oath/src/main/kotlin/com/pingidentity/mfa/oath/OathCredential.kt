@@ -95,7 +95,7 @@ data class OathCredential(
          * @throws IllegalArgumentException if the URI is invalid.
          */
         @JvmStatic
-        fun fromUri(uri: String): OathCredential {
+        suspend fun fromUri(uri: String): OathCredential {
             return OathUriParser.parse(uri)
         }
         
@@ -121,7 +121,7 @@ data class OathCredential(
      *
      * @return A URI string for this credential.
      */
-    fun toUri(): String {
+    suspend fun toUri(): String {
         return OathUriParser.format(this)
     }
 

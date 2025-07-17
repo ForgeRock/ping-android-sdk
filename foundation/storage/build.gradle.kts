@@ -45,6 +45,7 @@ dependencies {
     compileOnly(libs.androidx.sqlite)
 
     implementation(libs.kotlinx.coroutines.core)
+    implementation(libs.kotlinx.coroutines.play.services)
     implementation(libs.kotlinx.serialization.json)
 
     testImplementation(libs.core.ktx)

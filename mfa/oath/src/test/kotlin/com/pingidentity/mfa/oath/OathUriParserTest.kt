@@ -10,6 +10,8 @@ package com.pingidentity.mfa.oath
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Test
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.runTest
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
@@ -19,10 +21,11 @@ import org.robolectric.annotation.Config
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [30])
+@ExperimentalCoroutinesApi
 class OathUriParserTest {
 
     @Test
-    fun `test parse basic TOTP URI`() {
+    fun `test parse basic TOTP URI`() = runTest {
         val uri = "otpauth://totp/Example:alice@example.com?secret=JBSWY3DPEHPK3PXP&issuer=Example"
         val credential = OathUriParser.parse(uri)
         
@@ -37,7 +40,7 @@ class OathUriParserTest {
     }
 
     @Test
-    fun `test parse with base64 encoded userId and resourceId`() {
+    fun `test parse with base64 encoded userId and resourceId`() = runTest {
         // Parameters uid and oid are Base64-encoded
         val uri = "otpauth://totp/Example:alice@example.com?secret=JBSWY3DPEHPK3PXP&issuer=Example" +
                 "&uid=YWxpY2VAdGVzdC5jb20=&oid=ZGV2aWNlLTEyMzQ1"
@@ -51,7 +54,7 @@ class OathUriParserTest {
     }
 
     @Test
-    fun `test format with userId and resourceId base64 encoding`() {
+    fun `test format with userId and resourceId base64 encoding`() = runTest {
         val credential = OathCredential(
             issuer = "Example",
             displayIssuer = "Example",
@@ -75,7 +78,7 @@ class OathUriParserTest {
     }
 
     @Test
-    fun `test parse and format with mfauth scheme`() {
+    fun `test parse and format with mfauth scheme`() = runTest {
         val uri = "mfauth://totp/Example:alice@example.com?secret=JBSWY3DPEHPK3PXP&issuer=RXhhbXBsZQ" +
                 "&uid=YWxpY2VAdGVzdC5jb20=&oid=ZGV2aWNlLTEyMzQ1"
         
@@ -94,7 +97,7 @@ class OathUriParserTest {
     }
 
     @Test
-    fun `test parse URI with background color parameter`() {
+    fun `test parse URI with background color parameter`() = runTest {
         val uri = "otpauth://totp/Example:alice@example.com?secret=JBSWY3DPEHPK3PXP&issuer=Example&b=FF5500"
         val credential = OathUriParser.parse(uri)
         
@@ -107,7 +110,7 @@ class OathUriParserTest {
     }
 
     @Test
-    fun `test parse URI with background color parameter with hash`() {
+    fun `test parse URI with background color parameter with hash`() = runTest {
         val uri = "otpauth://totp/Example:alice@example.com?secret=JBSWY3DPEHPK3PXP&issuer=Example&b=%23FF5500"
         val credential = OathUriParser.parse(uri)
         
@@ -120,7 +123,7 @@ class OathUriParserTest {
     }
 
     @Test
-    fun `verify parsing and formatting of URI with Base64 encoded parameters`() {
+    fun `verify parsing and formatting of URI with Base64 encoded parameters`() = runTest {
         // Using standard Java Base64 for test data preparation
         val encodedUserId = java.util.Base64.getUrlEncoder().withoutPadding()
             .encodeToString("test-user@example.com".toByteArray())

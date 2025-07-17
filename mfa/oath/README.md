@@ -109,56 +109,64 @@ val isDeleted = oathClient.deleteCredential(credentialId)
 ```kotlin
 class OathAuthActivity : AppCompatActivity() {
     private lateinit var oathClient: OathClient
-    
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_oath_auth)
-        
+
         // Initialize OATH client
         oathClient = OathClient {
             encryptionEnabled = false
             enableCredentialCache = true
         }
-        
+
         // Load all credentials
         loadCredentials()
-        
+
         // Set up button to add new credential
         btnAddCredential.setOnClickListener {
             val uri = editTextUri.text.toString()
-            try {
-                val credential = oathClient.addCredentialFromUri(uri)
-                showMessage("Credential added: ${credential.issuer}")
-                loadCredentials() // Refresh list
-            } catch (e: Exception) {
-                showError("Failed to add credential: ${e.message}")
+            lifecycleScope.launch {
+                try {
+                    val credential = oathClient.addCredentialFromUri(uri)
+                    showMessage("Credential added: ${credential.issuer}")
+                    loadCredentials() // Refresh list
+                } catch (e: Exception) {
+                    showError("Failed to add credential: ${e.message}")
+                }
             }
         }
     }
-    
+
     private fun loadCredentials() {
-        try {
-            val credentials = oathClient.getAllCredentials()
-            // Update UI with credentials list
-            credentialsAdapter.submitList(credentials)
-        } catch (e: Exception) {
-            showError("Failed to load credentials: ${e.message}")
+        lifecycleScope.launch {
+            try {
+                val credentials = oathClient.getAllCredentials()
+                // Update UI with credentials list
+                credentialsAdapter.submitList(credentials)
+            } catch (e: Exception) {
+                showError("Failed to load credentials: ${e.message}")
+            }
         }
     }
-    
+
     private fun generateCodeForCredential(credentialId: String) {
-        try {
-            val code = oathClient.generateCode(credentialId)
-            // Display code to user
-            textViewCode.text = code
-        } catch (e: Exception) {
-            showError("Failed to generate code: ${e.message}")
+        lifecycleScope.launch {
+            try {
+                val code = oathClient.generateCode(credentialId)
+                // Display code to user
+                textViewCode.text = code
+            } catch (e: Exception) {
+                showError("Failed to generate code: ${e.message}")
+            }
         }
     }
-    
+
     override fun onDestroy() {
         super.onDestroy()
-        oathClient.close()
+        lifecycleScope.launch {
+            oathClient.close()
+        }
     }
 }
 ```
@@ -179,10 +187,8 @@ You can customize the storage behavior by creating a custom instance of SQLOathS
 // Create a custom storage instance with specific parameters
 val customStorage = SQLOathStorage {
     context = applicationContext
-    encryptionEnabled = true
     databaseName = "my_custom_oath_db.db"
-    secretKey = "your-custom-encryption-key"
-    blockStorePreferred = true 
+    passphraseProvider = NonePassphraseProvider()
 }
 
 // Create the client with the custom storage
@@ -228,10 +234,10 @@ try {
 
 ### Custom Storage Implementation
 
-You can implement a custom storage solution as alternative to the default `SQLOathStorage` by implementing the `OathMfaStorage` interface:
+You can implement a custom storage solution as alternative to the default `SQLOathStorage` by implementing the `OathStorage` interface:
 
 ```kotlin
-class MyCustomStorage : OathMfaStorage {
+class MyCustomStorage : OathStorage {
     override fun initialize() {
         // Initialize your custom storage
     }
@@ -269,7 +275,7 @@ class MyCustomStorage : OathMfaStorage {
 }
 ```
 
-The [`SharedPrefsOathStorage`](kotlin/com/pingidentity/mfa/oath/storage/SharedPrefsOathStorage.kt) is a simple reference implementation that uses Android's SharedPreferences for storage, but it is not recommended for sensitive data like OATH credentials.
+The [`SharedPrefsOathStorage`](/mfa/oath/src/androidTest/kotlin/com/pingidentity/mfa/oath/storage/SharedPrefsOathStorage.kt) is a simple reference implementation that uses Android's SharedPreferences for storage, but it is not recommended for sensitive data like OATH credentials.
 
 ## License
 

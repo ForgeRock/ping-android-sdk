@@ -14,6 +14,11 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
+/**
+ * Unit tests for the OathCodeInfo class.
+ *
+ * These tests verify the creation and conversion of OathCodeInfo objects,
+ */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [30])
 class OathCodeInfoTest {

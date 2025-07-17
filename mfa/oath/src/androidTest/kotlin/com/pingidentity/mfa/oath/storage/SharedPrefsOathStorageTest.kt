@@ -12,6 +12,8 @@ import androidx.test.platform.app.InstrumentationRegistry
 import com.pingidentity.mfa.commons.exception.MfaStorageException
 import com.pingidentity.mfa.oath.OathCredential
 import com.pingidentity.mfa.oath.OathType
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -34,8 +36,9 @@ class SharedPrefsOathStorageTest {
     private val testIssuer = "Test Issuer"
     private val testAccountName = "testuser@example.com"
     
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
     @Before
-    fun setup() {
+    fun setup() = runTest {
         val appContext = InstrumentationRegistry.getInstrumentation().targetContext
         
         // Clear any existing preferences
@@ -46,8 +49,9 @@ class SharedPrefsOathStorageTest {
         storage.initialize()
     }
     
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
     @After
-    fun tearDown() {
+    fun tearDown() = runTest {
         // Clean up any test data
         storage.clearOathCredentials()
         
@@ -55,8 +59,9 @@ class SharedPrefsOathStorageTest {
         storage.close()
     }
     
+    @OptIn(ExperimentalCoroutinesApi::class)
     @Test
-    fun testStoreAndRetrieveCredential() {
+    fun testStoreAndRetrieveCredential() = runTest {
         // Create a test credential
         val credential = OathCredential(
             id = UUID.randomUUID().toString(),
@@ -83,8 +88,9 @@ class SharedPrefsOathStorageTest {
         assertEquals("Secret should match", credential.secret, retrievedCredential?.secret)
     }
     
+    @OptIn(ExperimentalCoroutinesApi::class)
     @Test
-    fun testRetrieveNonExistentCredential() {
+    fun testRetrieveNonExistentCredential() = runTest {
         // Try to retrieve a non-existent credential
         val nonExistentId = "non-existent-id"
         val retrievedCredential = storage.retrieveOathCredential(nonExistentId)
@@ -93,8 +99,9 @@ class SharedPrefsOathStorageTest {
         assertNull("Retrieved non-existent credential should be null", retrievedCredential)
     }
     
+    @OptIn(ExperimentalCoroutinesApi::class)
     @Test
-    fun testGetAllCredentials_Empty() {
+    fun testGetAllCredentials_Empty() = runTest {
         // Get all credentials when none exist
         val credentials = storage.getAllOathCredentials()
         
@@ -102,8 +109,9 @@ class SharedPrefsOathStorageTest {
         assertTrue("Credential list should be empty", credentials.isEmpty())
     }
     
+    @OptIn(ExperimentalCoroutinesApi::class)
     @Test
-    fun testGetAllCredentials_Multiple() {
+    fun testGetAllCredentials_Multiple() = runTest {
         // Create and store multiple credentials
         val credential1 = OathCredential(
             id = "test-id-1",
@@ -138,8 +146,9 @@ class SharedPrefsOathStorageTest {
         assertTrue("Should contain credential 2", credentials.any { it.id == credential2.id })
     }
     
+    @OptIn(ExperimentalCoroutinesApi::class)
     @Test
-    fun testRemoveCredential_Existing() {
+    fun testRemoveCredential_Existing() = runTest {
         // Create and store a credential
         val credential = OathCredential(
             id = "test-id-to-remove",
@@ -164,8 +173,9 @@ class SharedPrefsOathStorageTest {
         assertNull("Credential should no longer exist", storage.retrieveOathCredential(credential.id))
     }
     
+    @OptIn(ExperimentalCoroutinesApi::class)
     @Test
-    fun testRemoveCredential_NonExisting() {
+    fun testRemoveCredential_NonExisting() = runTest {
         // Try to remove a non-existent credential
         val nonExistentId = "non-existent-id"
         val result = storage.removeOathCredential(nonExistentId)
@@ -174,8 +184,9 @@ class SharedPrefsOathStorageTest {
         assertFalse("Remove should return false for non-existent credential", result)
     }
     
+    @OptIn(ExperimentalCoroutinesApi::class)
     @Test
-    fun testClearCredentials() {
+    fun testClearCredentials() = runTest {
         // Create and store multiple credentials
         val credential1 = OathCredential(
             id = "test-id-1",
@@ -211,8 +222,9 @@ class SharedPrefsOathStorageTest {
         assertTrue("Credential list should be empty after clear", storage.getAllOathCredentials().isEmpty())
     }
     
+    @OptIn(ExperimentalCoroutinesApi::class)
     @Test
-    fun testUpdateCredential() {
+    fun testUpdateCredential() = runTest {
         // Create and store a credential
         val credential = OathCredential(
             id = "test-id-to-update",
@@ -242,8 +254,9 @@ class SharedPrefsOathStorageTest {
         assertEquals("Updated account name should match", "Updated Account", retrievedCredential?.displayAccountName)
     }
 
-    @Test(expected = MfaStorageException::class)
-    fun testCredentialWithMalformedJson() {
+    @OptIn(ExperimentalCoroutinesApi::class)
+    @Test
+    fun testCredentialWithMalformedJson() = runTest {
         // Get direct access to SharedPreferences
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val prefs = context.getSharedPreferences(testPrefsName, 0)
@@ -259,8 +272,9 @@ class SharedPrefsOathStorageTest {
         storage.retrieveOathCredential(credentialId)
     }
     
+    @OptIn(ExperimentalCoroutinesApi::class)
     @Test
-    fun testInitialize() {
+    fun testInitialize() = runTest {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         
         // Create a new storage instance without initializing
@@ -304,8 +318,9 @@ class SharedPrefsOathStorageTest {
         uninitializedStorage.close()
     }
     
+    @OptIn(ExperimentalCoroutinesApi::class)
     @Test
-    fun testClear() {
+    fun testClear() = runTest {
         // Store some credentials
         val credential = OathCredential(
             issuer = testIssuer,

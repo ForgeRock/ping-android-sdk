@@ -24,12 +24,12 @@ interface MfaClient {
      *
      * @return True if initialization was successful, false otherwise.
      */
-    fun initialize(): Boolean
+    suspend fun initialize(): Boolean
     
     /**
      * Clean up any resources used by the MFA client.
      * This method should be called when the client is no longer needed to ensure
      * proper cleanup of resources.
      */
-    fun close()
+    suspend fun close()
 }

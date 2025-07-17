@@ -13,7 +13,6 @@ import android.util.Log
 import com.pingidentity.mfa.commons.exception.MfaStorageException
 import com.pingidentity.mfa.oath.OathCredential
 import com.pingidentity.mfa.oath.OathStorage
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import androidx.core.content.edit
 
@@ -29,10 +28,10 @@ class SharedPrefsOathStorage(context: Context, prefName: String = DEFAULT_PREFS_
     
     companion object {
         private const val TAG = "SharedPrefsOathStorage"
-        private const val DEFAULT_PREFS_NAME = "com.pingidentity.mfa.oath.prefs"
-        private const val KEY_CREDENTIALS_PREFIX = "oath_credential_"
+        private const val DEFAULT_PREFS_NAME = "oath_storage_prefs"
         private const val KEY_METADATA = "oath_metadata"
-        private const val KEY_INITIALIZED = "storage_initialized"
+        private const val KEY_CREDENTIAL_PREFIX = "credential_"
+        private const val KEY_INITIALIZED = "initialized"
     }
     
     private val sharedPreferences: SharedPreferences = context.getSharedPreferences(
@@ -52,21 +51,23 @@ class SharedPrefsOathStorage(context: Context, prefName: String = DEFAULT_PREFS_
      * Get all credential IDs from the metadata.
      */
     private fun getCredentialIds(): Set<String> {
-        return sharedPreferences.getStringSet(KEY_METADATA, emptySet()) ?: emptySet()
+        return sharedPreferences.getStringSet(KEY_METADATA, emptySet())?.toSet() ?: emptySet()
     }
     
     /**
      * Update the credential IDs in the metadata.
      */
     private fun updateCredentialIds(ids: Set<String>) {
-        sharedPreferences.edit { putStringSet(KEY_METADATA, ids) }
+        // Create a deep copy to prevent concurrent modification issues
+        val idsCopy = HashSet(ids)
+        sharedPreferences.edit { putStringSet(KEY_METADATA, idsCopy) }
     }
     
     /**
      * Generate the key for a credential in SharedPreferences.
      */
     private fun getCredentialKey(credentialId: String): String {
-        return "$KEY_CREDENTIALS_PREFIX$credentialId"
+        return "$KEY_CREDENTIAL_PREFIX$credentialId"
     }
     
     /**
@@ -78,7 +79,7 @@ class SharedPrefsOathStorage(context: Context, prefName: String = DEFAULT_PREFS_
         }
     }
     
-    override fun initialize() {
+    override suspend fun initialize() {
         try {
             // Check if already initialized
             if (sharedPreferences.contains(KEY_INITIALIZED)) {
@@ -102,7 +103,7 @@ class SharedPrefsOathStorage(context: Context, prefName: String = DEFAULT_PREFS_
         }
     }
     
-    override fun clear() {
+    override suspend fun clear() {
         try {
             checkInitialized()
             
@@ -120,20 +121,25 @@ class SharedPrefsOathStorage(context: Context, prefName: String = DEFAULT_PREFS_
         }
     }
     
-    override fun storeOathCredential(credential: OathCredential) {
+    override suspend fun storeOathCredential(credential: OathCredential) {
         try {
             checkInitialized()
             
             val json = credential.toJson()
             val credentialKey = getCredentialKey(credential.id)
             
-            // Store the credential
-            sharedPreferences.edit { putString(credentialKey, json) }
-            
-            // Update metadata
-            val ids = getCredentialIds().toMutableSet()
-            ids.add(credential.id)
-            updateCredentialIds(ids)
+            // Use a synchronized block to prevent race conditions
+            synchronized(this) {
+                // Store the credential first to ensure it exists
+                sharedPreferences.edit(commit = true) { 
+                    putString(credentialKey, json) 
+                }
+                
+                // Update metadata with proper synchronization
+                val ids = getCredentialIds().toMutableSet()
+                ids.add(credential.id)
+                updateCredentialIds(ids)
+            }
             
             Log.d(TAG, "Stored credential with ID: ${credential.id}")
         } catch (e: Exception) {
@@ -142,7 +148,7 @@ class SharedPrefsOathStorage(context: Context, prefName: String = DEFAULT_PREFS_
         }
     }
     
-    override fun retrieveOathCredential(credentialId: String): OathCredential? {
+    override suspend fun retrieveOathCredential(credentialId: String): OathCredential? {
         try {
             checkInitialized()
             
@@ -156,7 +162,7 @@ class SharedPrefsOathStorage(context: Context, prefName: String = DEFAULT_PREFS_
         }
     }
     
-    override fun getAllOathCredentials(): List<OathCredential> {
+    override suspend fun getAllOathCredentials(): List<OathCredential> {
         try {
             checkInitialized()
             
@@ -168,24 +174,27 @@ class SharedPrefsOathStorage(context: Context, prefName: String = DEFAULT_PREFS_
         }
     }
     
-    override fun removeOathCredential(credentialId: String): Boolean {
+    override suspend fun removeOathCredential(credentialId: String): Boolean {
         try {
             checkInitialized()
             
             val credentialKey = getCredentialKey(credentialId)
             
-            // Check if credential exists
-            if (!sharedPreferences.contains(credentialKey)) {
-                return false
+            // Use a synchronized block to prevent race conditions
+            synchronized(this) {
+                // Check if credential exists
+                if (!sharedPreferences.contains(credentialKey)) {
+                    return false
+                }
+                
+                // Remove the credential with a committed edit to ensure it's removed before updating metadata
+                sharedPreferences.edit(commit = true) { remove(credentialKey) }
+                
+                // Update metadata atomically
+                val ids = getCredentialIds().toMutableSet()
+                ids.remove(credentialId)
+                updateCredentialIds(ids)
             }
-            
-            // Remove the credential
-            sharedPreferences.edit { remove(credentialKey) }
-            
-            // Update metadata
-            val ids = getCredentialIds().toMutableSet()
-            ids.remove(credentialId)
-            updateCredentialIds(ids)
             
             Log.d(TAG, "Removed credential with ID: $credentialId")
             return true
@@ -195,24 +204,27 @@ class SharedPrefsOathStorage(context: Context, prefName: String = DEFAULT_PREFS_
         }
     }
     
-    override fun clearOathCredentials() {
+    override suspend fun clearOathCredentials() {
         try {
             checkInitialized()
             
-            val ids = getCredentialIds()
-            
-            // Remove all credentials
-            sharedPreferences.edit {
-                for (id in ids) {
-                    remove(getCredentialKey(id))
+            synchronized(this) {
+                val ids = getCredentialIds()
+                
+                // Use a single committed edit operation to remove all credentials atomically
+                sharedPreferences.edit(commit = true) {
+                    // Remove all credentials
+                    for (id in ids) {
+                        remove(getCredentialKey(id))
+                    }
+                    
+                    // Clear metadata but keep initialization flag
+                    remove(KEY_METADATA)
                 }
-
-                // Clear metadata but keep initialization flag
-                remove(KEY_METADATA)
+                
+                // Reset metadata
+                updateCredentialIds(emptySet())
             }
-            
-            // Reset metadata
-            updateCredentialIds(emptySet())
             
             Log.i(TAG, "Cleared all OATH credentials")
         } catch (e: Exception) {
@@ -221,7 +233,7 @@ class SharedPrefsOathStorage(context: Context, prefName: String = DEFAULT_PREFS_
         }
     }
     
-    override fun close() {
+    override suspend fun close() {
         // No resources to close for SharedPreferences
         isInitialized = false
     }

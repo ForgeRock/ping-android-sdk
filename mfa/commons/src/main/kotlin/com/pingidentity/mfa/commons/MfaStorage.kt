@@ -22,21 +22,19 @@ interface MfaStorage {
      *
      * @throws MfaStorageException if initialization fails.
      */
-    @Throws(MfaStorageException::class)
-    fun initialize()
+    suspend fun initialize()
     
     /**
      * Clear all data from all storage.
      *
      * @throws MfaStorageException if the storage cannot be cleared.
      */
-    @Throws(MfaStorageException::class)
-    fun clear()
+    suspend fun clear()
     
     /**
      * Close the storage and release any resources.
      * This method should be called when the storage is no longer needed.
      */
-    fun close()
+    suspend fun close()
 
 }

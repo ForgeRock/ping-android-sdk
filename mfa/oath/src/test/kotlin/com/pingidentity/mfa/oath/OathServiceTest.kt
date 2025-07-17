@@ -8,18 +8,21 @@
 package com.pingidentity.mfa.oath
 
 import com.pingidentity.mfa.commons.exception.MfaException
+import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.runs
 import io.mockk.slot
-import io.mockk.verify
 import io.mockk.clearMocks
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.runTest
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
@@ -31,6 +34,7 @@ import java.util.UUID
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [30])
+@ExperimentalCoroutinesApi
 class OathServiceTest {
     
     // Mock objects
@@ -87,7 +91,7 @@ class OathServiceTest {
     }
     
     @Test
-    fun `test parse URI creates valid credential`() {
+    fun `test parse URI creates valid credential`() = runTest {
         // Given
         val uri = "otpauth://totp/Test%20Issuer:test@example.com?secret=JBSWY3DPEHPK3PXP&issuer=Test%20Issuer&algorithm=SHA1&digits=6&period=30"
         
@@ -105,7 +109,7 @@ class OathServiceTest {
     }
     
     @Test
-    fun `test format URI creates valid URI string`() {
+    fun `test format URI creates valid URI string`() = runTest {
         // When
         val uri = oathServiceWithCache.formatUri(testCredential)
         
@@ -117,11 +121,11 @@ class OathServiceTest {
     }
     
     @Test
-    fun `test add credential stores to storage with cache enabled`() {
+    fun `test add credential stores to storage with cache enabled`() = runTest {
         // Given
         val credentialSlot = slot<OathCredential>()
         
-        every {
+        coEvery {
             mockStorage.storeOathCredential(capture(credentialSlot))
         } just runs
         
@@ -132,16 +136,16 @@ class OathServiceTest {
         assertEquals(testCredential, result)
         assertEquals(testCredential.id, credentialSlot.captured.id)
         assertEquals(testCredential.secret, credentialSlot.captured.secret)
-        verify(exactly = 1) { 
+        coVerify(exactly = 1) { 
             mockStorage.storeOathCredential(any()) 
         }
     }
     
     @Test
-    fun `test get credential returns from cache when caching enabled`() {
+    fun `test get credential returns from cache when caching enabled`() = runTest {
         // Setup credential in cache first by adding it
         // Given
-        every {
+        coEvery {
             mockStorage.storeOathCredential(any())
         } just runs
         
@@ -157,7 +161,7 @@ class OathServiceTest {
     }
     
     @Test
-    fun `test generate code returns valid code`() {
+    fun `test generate code returns valid code`() = runTest {
         // When
         val codeInfo = oathServiceWithCache.generateCode(testCredential)
         
@@ -168,14 +172,14 @@ class OathServiceTest {
     }
     
     @Test
-    fun `test generate code for credential updates HOTP counter when caching enabled`() {
+    fun `test generate code for credential updates HOTP counter when caching enabled`() = runTest {
         // Given
         val hotpCredential = testCredential.copy(
             oathType = OathType.HOTP,
             counter = 1L
         )
         
-        every {
+        coEvery {
             mockStorage.storeOathCredential(any<OathCredential>())
         } just runs
         
@@ -183,7 +187,7 @@ class OathServiceTest {
         oathServiceWithCache.addCredential(hotpCredential)
         
         // Mock retrieveOathCredential to return our test credential
-        every {
+        coEvery {
             mockStorage.retrieveOathCredential(hotpCredential.id)
         } returns hotpCredential
         
@@ -194,7 +198,7 @@ class OathServiceTest {
         assertNotNull(codeInfo)
         assertNotNull(codeInfo.code)
         assertEquals(2L, codeInfo.counter) // Counter should be incremented
-        verify { 
+        coVerify { 
             mockStorage.storeOathCredential(match { 
                 it.id == hotpCredential.id && it.counter == 2L 
             })
@@ -202,11 +206,11 @@ class OathServiceTest {
     }
     
     @Test(expected = MfaException::class)
-    fun `test generate code for missing credential throws exception`() {
+    fun `test generate code for missing credential throws exception`() = runTest {
         // Given
         val nonExistentId = "non-existent-id"
         
-        every {
+        coEvery {
             mockStorage.retrieveOathCredential(nonExistentId)
         } returns null
         
@@ -215,9 +219,9 @@ class OathServiceTest {
     }
     
     @Test
-    fun `test credential is not cached when caching disabled`() {
+    fun `test credential is not cached when caching disabled`() = runTest {
         // Given
-        every {
+        coEvery {
             mockStorage.storeOathCredential(any<OathCredential>())
         } just runs
         
@@ -228,7 +232,7 @@ class OathServiceTest {
         clearMocks(mockStorage)
         
         // Setup credential retrieval from storage
-        every {
+        coEvery {
             mockStorage.retrieveOathCredential(testCredentialId)
         } returns testCredential
         
@@ -237,7 +241,7 @@ class OathServiceTest {
         
         // Then
         // Verify storage was accessed (would not happen if credential was cached)
-        verify(exactly = 1) {
+        coVerify(exactly = 1) {
             mockStorage.retrieveOathCredential(testCredentialId)
         }
     }

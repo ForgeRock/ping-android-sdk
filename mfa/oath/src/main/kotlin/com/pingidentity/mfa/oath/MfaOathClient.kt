@@ -23,7 +23,7 @@ interface MfaOathClient : MfaClient {
      * @return The created OathCredential.
      * @throws MfaException if the credential cannot be created.
      */
-    fun addCredentialFromUri(uri: String): OathCredential
+    suspend fun addCredentialFromUri(uri: String): OathCredential
     
     /**
      * Save an OATH credential.
@@ -32,7 +32,7 @@ interface MfaOathClient : MfaClient {
      * @return The created OathCredential.
      * @throws MfaException if the credential cannot be created.
      */
-    fun saveCredential(credential: OathCredential): OathCredential
+    suspend fun saveCredential(credential: OathCredential): OathCredential
     
     /**
      * Get all OATH credentials.
@@ -40,7 +40,7 @@ interface MfaOathClient : MfaClient {
      * @return A list of all OathCredentials.
      * @throws MfaException if the credentials cannot be retrieved.
      */
-    fun getCredentials(): List<OathCredential>
+    suspend fun getCredentials(): List<OathCredential>
     
     /**
      * Get an OATH credential by ID.
@@ -49,7 +49,7 @@ interface MfaOathClient : MfaClient {
      * @return The OathCredential, or null if not found.
      * @throws MfaException if the credential cannot be retrieved.
      */
-    fun getCredential(credentialId: String): OathCredential?
+    suspend fun getCredential(credentialId: String): OathCredential?
     
     /**
      * Delete an OATH credential by ID.
@@ -58,7 +58,7 @@ interface MfaOathClient : MfaClient {
      * @return True if the credential was removed, false if it didn't exist.
      * @throws MfaException if the credential cannot be removed.
      */
-    fun deleteCredential(credentialId: String): Boolean
+    suspend fun deleteCredential(credentialId: String): Boolean
     
     /**
      * Generate an OTP code for an OATH credential.
@@ -67,7 +67,7 @@ interface MfaOathClient : MfaClient {
      * @return The OTP code.
      * @throws MfaException if the code cannot be generated.
      */
-    fun generateCode(credentialId: String): String
+    suspend fun generateCode(credentialId: String): String
     
     /**
      * Generate an OTP code for an OATH credential and get its time validity information.
@@ -76,5 +76,5 @@ interface MfaOathClient : MfaClient {
      * @return The OTP code and validity information.
      * @throws MfaException if the code cannot be generated.
      */
-    fun generateCodeWithValidity(credentialId: String): OathCodeInfo
+    suspend fun generateCodeWithValidity(credentialId: String): OathCodeInfo
 }

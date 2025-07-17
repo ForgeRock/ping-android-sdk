@@ -9,6 +9,8 @@ package com.pingidentity.mfa.oath
 
 import com.pingidentity.mfa.commons.exception.MfaException
 import com.pingidentity.mfa.commons.MfaConfiguration
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -40,8 +42,8 @@ internal class OathService(
      * @return The created OathCredential.
      * @throws IllegalArgumentException if the URI is invalid.
      */
-    fun parseUri(uri: String): OathCredential {
-        return OathUriParser.parse(uri)
+    suspend fun parseUri(uri: String): OathCredential = withContext(Dispatchers.Default) {
+        OathUriParser.parse(uri)
     }
 
     /**
@@ -50,8 +52,8 @@ internal class OathService(
      * @param credential The OathCredential to format.
      * @return A URI string.
      */
-    fun formatUri(credential: OathCredential): String {
-        return OathUriParser.format(credential)
+    suspend fun formatUri(credential: OathCredential): String = withContext(Dispatchers.Default) {
+        OathUriParser.format(credential)
     }
 
     /**
@@ -61,22 +63,23 @@ internal class OathService(
      * @return The created OathCredential.
      * @throws MfaException if the credential cannot be created.
      */
-    @Throws(MfaException::class)
-    fun addCredential(credential: OathCredential): OathCredential {
-        try {
-            // Add to cache only if caching is enabled
-            if (configuration.enableCredentialCache) {
-                credentialsCache[credential.id] = credential
+    suspend fun addCredential(credential: OathCredential): OathCredential {
+        return withContext(Dispatchers.IO) {
+            try {
+                // Add to cache only if caching is enabled
+                if (configuration.enableCredentialCache) {
+                    credentialsCache[credential.id] = credential
+                }
+
+                // Store in persistent storage
+                storage?.storeOathCredential(credential)
+
+                logger.d("Added new OATH credential with ID: ${credential.id}")
+                credential
+            } catch (e: Exception) {
+                logger.e("Failed to add credential: ${e.message}", e)
+                throw MfaException("Failed to add credential", e)
             }
-
-            // Store in persistent storage
-            storage?.storeOathCredential(credential)
-
-            logger.d("Added new OATH credential with ID: ${credential.id}")
-            return credential
-        } catch (e: Exception) {
-            logger.e("Failed to add credential: ${e.message}", e)
-            throw MfaException("Failed to add credential", e)
         }
     }
 
@@ -86,28 +89,29 @@ internal class OathService(
      * @return A list of all OathCredentials.
      * @throws MfaException if the credentials cannot be retrieved.
      */
-    @Throws(MfaException::class)
-    fun getCredentials(): List<OathCredential> {
-        try {
-            // If caching is enabled and cache has data, use it
-            if (configuration.enableCredentialCache && credentialsCache.isNotEmpty()) {
-                return credentialsCache.values.toList()
-            }
-
-            // Get all credentials from storage
-            val credentials = storage?.getAllOathCredentials() ?: emptyList()
-            
-            // Update cache if enabled
-            if (configuration.enableCredentialCache) {
-                credentials.forEach { credential ->
-                    credentialsCache[credential.id] = credential
+    suspend fun getCredentials(): List<OathCredential> {
+        return withContext(Dispatchers.IO) {
+            try {
+                // If caching is enabled and cache has data, use it
+                if (configuration.enableCredentialCache && credentialsCache.isNotEmpty()) {
+                    return@withContext credentialsCache.values.toList()
                 }
-            }
 
-            return credentials
-        } catch (e: Exception) {
-            logger.e("Failed to get credentials: ${e.message}", e)
-            throw MfaException("Failed to get credentials", e)
+                // Get all credentials from storage
+                val credentials = storage?.getAllOathCredentials() ?: emptyList()
+                
+                // Update cache if enabled
+                if (configuration.enableCredentialCache) {
+                    credentials.forEach { credential ->
+                        credentialsCache[credential.id] = credential
+                    }
+                }
+
+                credentials
+            } catch (e: Exception) {
+                logger.e("Failed to get credentials: ${e.message}", e)
+                throw MfaException("Failed to get credentials", e)
+            }
         }
     }
 
@@ -118,29 +122,30 @@ internal class OathService(
      * @return The OathCredential, or null if not found.
      * @throws MfaException if the credential cannot be retrieved.
      */
-    @Throws(MfaException::class)
-    fun getCredential(credentialId: String): OathCredential? {
-        try {
-            // Check cache first if caching is enabled
-            var credential: OathCredential? = null
-            if (configuration.enableCredentialCache) {
-                credential = credentialsCache[credentialId]
-            }
-
-            // If not in cache or caching disabled, try to load from storage
-            if (credential == null) {
-                credential = storage?.retrieveOathCredential(credentialId)
-                
-                // Update cache if credential was found and caching is enabled
-                if (credential != null && configuration.enableCredentialCache) {
-                    credentialsCache[credentialId] = credential
+    suspend fun getCredential(credentialId: String): OathCredential? {
+        return withContext(Dispatchers.IO) {
+            try {
+                // Check cache first if caching is enabled
+                var credential: OathCredential? = null
+                if (configuration.enableCredentialCache) {
+                    credential = credentialsCache[credentialId]
                 }
-            }
 
-            return credential
-        } catch (e: Exception) {
-            logger.e("Failed to get credential with ID $credentialId: ${e.message}", e)
-            throw MfaException("Failed to get credential with ID $credentialId", e)
+                // If not in cache or caching disabled, try to load from storage
+                if (credential == null) {
+                    credential = storage?.retrieveOathCredential(credentialId)
+                    
+                    // Update cache if credential was found and caching is enabled
+                    if (credential != null && configuration.enableCredentialCache) {
+                        credentialsCache[credentialId] = credential
+                    }
+                }
+
+                credential
+            } catch (e: Exception) {
+                logger.e("Failed to get credential with ID $credentialId: ${e.message}", e)
+                throw MfaException("Failed to get credential with ID $credentialId", e)
+            }
         }
     }
     
@@ -153,25 +158,26 @@ internal class OathService(
      * @return True if the credential was removed, false if it didn't exist.
      * @throws MfaException if the credential cannot be removed.
      */
-    @Throws(MfaException::class)
-    fun removeCredential(credentialId: String): Boolean {
-        try {
-            // Remove from cache if enabled
-            if (configuration.enableCredentialCache) {
-                credentialsCache.remove(credentialId)
+    suspend fun removeCredential(credentialId: String): Boolean {
+        return withContext(Dispatchers.IO) {
+            try {
+                // Remove from cache if enabled
+                if (configuration.enableCredentialCache) {
+                    credentialsCache.remove(credentialId)
+                }
+
+                // Remove from storage
+                val removed = storage?.removeOathCredential(credentialId) ?: false
+
+                if (removed) {
+                    logger.d("Removed OATH credential with ID: $credentialId")
+                }
+
+                removed
+            } catch (e: Exception) {
+                logger.e("Failed to remove credential with ID $credentialId: ${e.message}", e)
+                throw MfaException("Failed to remove credential with ID $credentialId", e)
             }
-
-            // Remove from storage
-            val removed = storage?.removeOathCredential(credentialId) ?: false
-
-            if (removed) {
-                logger.d("Removed OATH credential with ID: $credentialId")
-            }
-
-            return removed
-        } catch (e: Exception) {
-            logger.e("Failed to remove credential with ID $credentialId: ${e.message}", e)
-            throw MfaException("Failed to remove credential with ID $credentialId", e)
         }
     }
 
@@ -182,10 +188,11 @@ internal class OathService(
      * @return The OTP code with validity information.
      * @throws MfaException if the code cannot be generated.
      */
-    @Throws(MfaException::class)
-    fun generateCode(credential: OathCredential): OathCodeInfo {
+    suspend fun generateCode(credential: OathCredential): OathCodeInfo {
         try {
-            return OathAlgorithmHelper.generateCode(credential, configuration.logger)
+            return withContext(Dispatchers.IO) {
+                OathAlgorithmHelper.generateCode(credential, configuration.logger)
+            }
         } catch (e: Exception) {
             logger.e("Failed to generate code for credential: ${e.message}", e)
             throw MfaException("Failed to generate code", e)
@@ -199,28 +206,29 @@ internal class OathService(
      * @return The OTP code and validity information.
      * @throws MfaException if the code cannot be generated.
      */
-    @Throws(MfaException::class)
-    fun generateCodeForCredential(credentialId: String): OathCodeInfo {
-        try {
-            val credential = getCredential(credentialId)
-                ?: throw MfaException("Credential with ID $credentialId not found")
+    suspend fun generateCodeForCredential(credentialId: String): OathCodeInfo {
+        return withContext(Dispatchers.IO) {
+            try {
+                val credential = getCredential(credentialId)
+                    ?: throw MfaException("Credential with ID $credentialId not found")
 
-            val codeInfo = generateCode(credential)
+                val codeInfo = generateCode(credential)
 
-            // Update counter in storage for HOTP
-            if (credential.oathType == OathType.HOTP && codeInfo.counter > credential.counter) {
-                val updatedCredential = credential.copy(counter = codeInfo.counter)
-                // Update cache if enabled
-                if (configuration.enableCredentialCache) {
-                    credentialsCache[credentialId] = updatedCredential
+                // Update counter in storage for HOTP
+                if (credential.oathType == OathType.HOTP && codeInfo.counter > credential.counter) {
+                    val updatedCredential = credential.copy(counter = codeInfo.counter)
+                    // Update cache if enabled
+                    if (configuration.enableCredentialCache) {
+                        credentialsCache[credentialId] = updatedCredential
+                    }
+                    storage?.storeOathCredential(updatedCredential)
                 }
-                storage?.storeOathCredential(updatedCredential)
-            }
 
-            return codeInfo
-        } catch (e: Exception) {
-            logger.e("Failed to generate code for credential with ID $credentialId: ${e.message}", e)
-            throw MfaException("Failed to generate code for credential with ID $credentialId", e)
+                codeInfo
+            } catch (e: Exception) {
+                logger.e("Failed to generate code for credential with ID $credentialId: ${e.message}", e)
+                throw MfaException("Failed to generate code for credential with ID $credentialId", e)
+            }
         }
     }
     
@@ -228,9 +236,11 @@ internal class OathService(
      * Clear the internal memory caches.
      * This should be called when the client is being closed.
      */
-    fun clearCache() {
-        credentialsCache.clear()
-        logger.d("OATH credentials cache cleared")
+    suspend fun clearCache() {
+        withContext(Dispatchers.IO) {
+            credentialsCache.clear()
+            logger.d("OATH credentials cache cleared")
+        }
     }
     
 }

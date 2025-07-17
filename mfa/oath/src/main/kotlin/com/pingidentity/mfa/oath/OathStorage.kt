@@ -26,8 +26,7 @@ interface OathStorage : MfaStorage {
      * @param credential The OATH credential to be stored.
      * @throws MfaStorageException if the credential cannot be stored.
      */
-    @Throws(MfaStorageException::class)
-    fun storeOathCredential(credential: OathCredential)
+    suspend fun storeOathCredential(credential: OathCredential)
     
     /**
      * Retrieve an OATH credential by its ID.
@@ -36,8 +35,7 @@ interface OathStorage : MfaStorage {
      * @return The OATH credential, or null if not found.
      * @throws MfaStorageException if the credential cannot be retrieved.
      */
-    @Throws(MfaStorageException::class)
-    fun retrieveOathCredential(credentialId: String): OathCredential?
+    suspend fun retrieveOathCredential(credentialId: String): OathCredential?
     
     /**
      * Get all OATH credentials.
@@ -45,8 +43,7 @@ interface OathStorage : MfaStorage {
      * @return A list of all OATH credentials.
      * @throws MfaStorageException if the credentials cannot be retrieved.
      */
-    @Throws(MfaStorageException::class)
-    fun getAllOathCredentials(): List<OathCredential>
+    suspend fun getAllOathCredentials(): List<OathCredential>
     
     /**
      * Remove an OATH credential by its ID.
@@ -55,14 +52,12 @@ interface OathStorage : MfaStorage {
      * @return true if the credential was successfully removed, false if it didn't exist.
      * @throws MfaStorageException if the credential cannot be removed.
      */
-    @Throws(MfaStorageException::class)
-    fun removeOathCredential(credentialId: String): Boolean
+    suspend fun removeOathCredential(credentialId: String): Boolean
     
     /**
      * Clear all OATH credentials from the storage.
      *
      * @throws MfaStorageException if the credentials cannot be cleared.
      */
-    @Throws(MfaStorageException::class)
-    fun clearOathCredentials()
+    suspend fun clearOathCredentials()
 }

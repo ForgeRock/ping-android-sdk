@@ -16,6 +16,8 @@ import io.ktor.client.engine.cio.CIO
 import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.logging.LogLevel
 import io.ktor.client.plugins.logging.Logging
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /**
  * Base abstract class for MFA client implementations.
@@ -51,24 +53,26 @@ abstract class BaseMfaClient(
      *
      * @return True if initialization was successful, false otherwise.
      */
-    override fun initialize(): Boolean {
-        try {
-            // Initialize storage if it exists
-            if (storage != null) {
-                storage.initialize()
-                logger.d("Storage initialized successfully")
+    override suspend fun initialize(): Boolean {
+        return withContext(Dispatchers.IO) {
+            try {
+                // Initialize storage if it exists
+                if (storage != null) {
+                    storage.initialize()
+                    logger.d("Storage initialized successfully")
+                }
+                
+                // Additional initialization for subclasses
+                initializeClient()
+                
+                isInitialized = true
+                logger.d("MFA client initialized successfully")
+                
+                true
+            } catch (e: Exception) {
+                logger.e("Failed to initialize MFA client: ${e.message}")
+                throw MfaInitializationException("Failed to initialize MFA client", e)
             }
-            
-            // Additional initialization for subclasses
-            initializeClient()
-            
-            isInitialized = true
-            logger.d("MFA client initialized successfully")
-            
-            return true
-        } catch (e: Exception) {
-            logger.e("Failed to initialize MFA client: ${e.message}")
-            throw MfaInitializationException("Failed to initialize MFA client", e)
         }
     }
 
@@ -109,14 +113,13 @@ abstract class BaseMfaClient(
      *
      * @throws MfaInitializationException if the client cannot be initialized.
      */
-    @Throws(MfaInitializationException::class)
-    protected abstract fun initializeClient()
+    protected abstract suspend fun initializeClient()
 
     /**
      * Clean up resources used by the MFA client.
      * This method closes the storage client, http client, and performs any additional cleanup.
      */
-    override fun close() {
+    override suspend fun close() = withContext(Dispatchers.IO) {
         // Close storage client
         storage?.close()
 
@@ -134,7 +137,6 @@ abstract class BaseMfaClient(
      *
      * @throws MfaClientNotInitializedException if the client is not initialized.
      */
-    @Throws(MfaClientNotInitializedException::class)
     protected fun checkInitialized() {
         if (!isInitialized) {
             throw MfaClientNotInitializedException("MFA client not initialized. Call initialize() first.")

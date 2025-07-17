@@ -26,7 +26,8 @@ This SDK is support Browser, iOS and Android platforms.
     │   └── utils                             # Provide common utilities function
     ├── davinci                               # Orchestrate authentication with PingOne Davinci
     ├── journey*                              # Orchestrate authentication with Journey
-    ├── external-idp*                          # Provide Native Google, Facebook, Apple SocialLogin
+    ├── mfa*                                  # Povide MFA capabilities such as OTP, PUsh, WebAuthn
+    ├── external-idp                          # Provide Native Google, Facebook, Apple SocialLogin
     ├── ...
     └── ...
 

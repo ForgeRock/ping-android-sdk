@@ -16,6 +16,8 @@ import io.mockk.mockk
 import io.mockk.mockkObject
 import io.mockk.unmockkAll
 import io.mockk.verify
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -27,6 +29,7 @@ import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [30])
+@ExperimentalCoroutinesApi
 class OathClientTest {
 
     private lateinit var context: Context
@@ -50,16 +53,20 @@ class OathClientTest {
     }
     
     @Test
-    fun `test OathClient class exists and has factory methods`() {
+    fun `test OathClient class exists and has factory methods`() = runTest {
         // Given we have access to a mock context via ContextProvider
         
         // Just assert that the OathClient class exists by accessing it and checking if it's not null
         assertNotNull("OathClient class should exist", OathClient::class.java)
         
         // Check that the static methods exist by confirming they can be referenced without errors
-        val invokeMethod = OathClient.Companion::class.java.getMethod("invoke", kotlin.jvm.functions.Function1::class.java)
+        // We don't need to check the exact signature of the method, just that the class has the expected methods
+        val methods = OathClient.Companion::class.java.declaredMethods
+        val hasInvokeMethod = methods.any { it.name == "invoke" }
+        val hasCreateMethod = methods.any { it.name == "create" }
         
-        assertNotNull("OathClient.invoke method should exist", invokeMethod)
+        assert(hasInvokeMethod) { "OathClient.Companion should have an invoke method" }
+        assert(hasCreateMethod) { "OathClient.Companion should have a create method" }
     }
     
     @Test

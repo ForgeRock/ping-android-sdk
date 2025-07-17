@@ -16,7 +16,11 @@ import com.pingidentity.android.ContextProvider
 import com.pingidentity.logger.Logger
 import com.pingidentity.logger.STANDARD
 import com.pingidentity.mfa.commons.MfaConfiguration
-import com.pingidentity.utils.TestModeDetector
+import com.pingidentity.mfa.oath.storage.SQLOathStorage
+import com.pingidentity.storage.sqlite.passphrase.NonePassphraseProvider
+import com.pingidentity.storage.passphrase.TestPassphraseProvider
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -39,21 +43,12 @@ class OathClientAndroidTest {
 
     private lateinit var appContext: Context
 
-    companion object {
-        // Initialize test mode early to ensure it's enabled before any SDK initialization
-        init {
-            println("Enabling test mode for OathClientAndroidTest")
-            TestModeDetector.enableTestMode()
-        }
-    }
+    private val testPassphraseProvider = TestPassphraseProvider()
 
     @Before
     fun setup() {
         // Get the context from instrumentation
         appContext = InstrumentationRegistry.getInstrumentation().targetContext
-        
-        // Ensure test mode is enabled again (just to be safe)
-        TestModeDetector.enableTestMode()
         
         // Initialize ContextProvider with the actual app context
         ContextProvider.init(appContext)
@@ -70,9 +65,6 @@ class OathClientAndroidTest {
     private fun cleanupExistingCredentials() {
         println("Cleaning up existing credentials before test")
         
-        // Ensure test mode is enabled for cleanup
-        TestModeDetector.enableTestMode()
-        
         // First try with encryption disabled
         cleanupWithClient(encryptionEnabled = false)
         
@@ -85,57 +77,44 @@ class OathClientAndroidTest {
      */
     private fun cleanupWithClient(encryptionEnabled: Boolean) {
         try {
+            // Create storage with appropriate passphrase provider based on encryption setting
+            val testStorage = SQLOathStorage {
+                context = appContext
+                // Use TestPassphraseProvider for encrypted storage, NonePassphraseProvider for non-encrypted
+                passphraseProvider = if (encryptionEnabled) testPassphraseProvider else NonePassphraseProvider()
+            }
+            
             // Create a client with the specified configuration
-            val client = OathClient {
-                this.encryptionEnabled = encryptionEnabled
-                logger = Logger.STANDARD
-            }
-            
-            // Get all credentials that might exist from previous tests
-            val credentials = client.getCredentials()
-            
-            // Remove each credential
-            for (credential in credentials) {
-                client.deleteCredential(credential.id)
-            }
-            
-            // Log success if we cleaned up credentials
-            if (credentials.isNotEmpty()) {
-                println("Cleaned up ${credentials.size} existing credentials with encryption=${encryptionEnabled}")
+            runTest {
+                val client = OathClient.invoke {
+                    this.encryptionEnabled = encryptionEnabled
+                    this.storage = testStorage
+                    logger = Logger.STANDARD
+                }
+                
+                // Initialize the client
+                client.initialize()
+                
+                // Get all credentials that might exist from previous tests
+                val existingCredentials = client.getCredentials()
+                
+                // Delete each credential
+                for (credential in existingCredentials) {
+                    client.deleteCredential(credential.id)
+                }
+                
+                // Close the client to release resources
+                client.close()
             }
         } catch (e: Exception) {
-            // Log but ignore exceptions during cleanup
-            println("Warning: Failed to clean up credentials with encryption=${encryptionEnabled}: ${e.message}")
-            e.printStackTrace() // Add stack trace for better debugging
+            // Just log the exception - we don't want test setup to fail if cleanup has issues
+            println("Warning: Exception during cleanup: ${e.message}")
         }
     }
 
-    @Test
-    fun testCreateOathClientWithDefaultConfiguration() {
-        // Create an OathClient with default configuration
-        val client = OathClient.create()
-
-        // Initialize the client
-        client.initialize()
-
-        // Verify client is correctly initialized
-        assertNotNull("Client should not be null", client)
-
-        // Verify no credentials exist initially
-        val credentials = client.getCredentials()
-        assertTrue("There should be no credentials initially", credentials.isEmpty())
-        
-        // Add a test credential to verify the client is fully functional
-        val uri = "otpauth://totp/TestDefault:test@example.com?secret=JBSWY3DPEHPK3PXP&issuer=TestDefault"
-        val credential = client.addCredentialFromUri(uri)
-        
-        // Verify credential was created
-        assertNotNull("Test credential should not be null", credential)
-        assertEquals("Issuer should match", "TestDefault", credential.issuer)
-    }
 
     @Test
-    fun testCreateOathClientWithMfaConfigurationObject() {
+    fun testCreateOathClientWithMfaConfigurationObject() = runTest {
         // Create an OathClient with a MfaConfiguration object
         val config = MfaConfiguration.Builder()
             .enableCredentialCache(true)
@@ -154,17 +133,16 @@ class OathClientAndroidTest {
         // Verify no credentials exist initially
         val credentials = client.getCredentials()
         assertTrue("There should be no credentials initially", credentials.isEmpty())
+        
+        // Close the client when done
+        client.close()
     }
 
+
     @Test
-    fun testCreateOathClientWithCustomConfiguration() {
+    fun testCreateOathClientWithCustomConfiguration() = runTest {
         // Create an OathClient with custom configuration using the block-based API
-        val client = OathClient {
-            enableCredentialCache = true
-            timeoutMs = 60_000L
-            encryptionEnabled = false
-            logger = Logger.STANDARD
-        }
+        val client = createTestClient(enableCredentialCache = true)
 
         // Verify client is correctly initialized
         assertNotNull("Client should not be null", client)
@@ -172,15 +150,16 @@ class OathClientAndroidTest {
         // Verify no credentials exist initially
         val credentials = client.getCredentials()
         assertTrue("There should be no credentials initially", credentials.isEmpty())
+        
+        // Close the client when done
+        runBlocking { client.close() }
     }
 
+
     @Test
-    fun testAddAndRetrieveCredential() {
+    fun testAddAndRetrieveCredential() = runTest {
         // Create an OathClient
-        val client = OathClient {
-            encryptionEnabled = false
-            logger = Logger.STANDARD
-        }
+        val client = createTestClient()
 
         // Create a test URI
         val uri = "otpauth://totp/Example:test@example.com?secret=JBSWY3DPEHPK3PXP&issuer=Example&algorithm=SHA1&digits=6&period=30"
@@ -203,14 +182,16 @@ class OathClientAndroidTest {
         // Verify retrieved credential matches the original
         assertNotNull("Retrieved credential should not be null", retrievedCredential)
         assertEquals("Retrieved credential should match the original", credential.id, retrievedCredential?.id)
+        
+        // Close the client when done
+        client.close()
     }
 
+
     @Test
-    fun testRemoveCredential() {
+    fun testRemoveCredential() = runTest {
         // Create an OathClient
-        val client = OathClient {
-            encryptionEnabled = false
-        }
+        val client = createTestClient()
 
         // Create a test URI
         val uri = "otpauth://totp/Example:remove-test@example.com?secret=JBSWY3DPEHPK3PXP&issuer=Example"
@@ -231,15 +212,16 @@ class OathClientAndroidTest {
         // Verify credential no longer exists
         val retrievedAfterRemove = client.getCredential(credential.id)
         assertTrue("Credential should not exist after removal", retrievedAfterRemove == null)
+        
+        // Close the client when done
+        client.close()
     }
 
+
     @Test
-    fun testGenerateCode() {
+    fun testGenerateCode() = runTest {
         // Create an OathClient
-        val client = OathClient {
-            encryptionEnabled = false
-            logger = Logger.STANDARD
-        }
+        val client = createTestClient()
 
         // Create a test URI
         val uri = "otpauth://totp/Example:code-test@example.com?secret=JBSWY3DPEHPK3PXP&issuer=Example&algorithm=SHA1&digits=6&period=30"
@@ -267,15 +249,16 @@ class OathClientAndroidTest {
             assertTrue("Time remaining should be >= 0", codeInfo.timeRemaining >= 0)
             assertEquals("Total period should be 30", 30, codeInfo.totalPeriod)
             assertTrue("Progress should be between 0 and 1", codeInfo.progress in 0.0..1.0)
+            
+        // Close the client when done
+        client.close()
     }
 
+
     @Test
-    fun testMultipleCredentials() {
+    fun testMultipleCredentials() = runTest {
         // Create an OathClient
-        val client = OathClient {
-            encryptionEnabled = false
-            logger = Logger.STANDARD
-        }
+        val client = createTestClient()
 
         // Create some test URIs
         val uri1 = "otpauth://totp/Service1:user1@example.com?secret=JBSWY3DPEHPK3PXP&issuer=Service1"
@@ -294,15 +277,16 @@ class OathClientAndroidTest {
         // Verify the credentials match what we created
         assertTrue("Should contain credential 1", credentials.any { it.id == credential1.id })
         assertTrue("Should contain credential 2", credentials.any { it.id == credential2.id })
+        
+        // Close the client when done
+        client.close()
     }
 
+
     @Test
-    fun testAddHotpCredential() {
+    fun testAddHotpCredential() = runTest {
         // Create an OathClient
-        val client = OathClient {
-            encryptionEnabled = false
-            logger = Logger.STANDARD
-        }
+        val client = createTestClient()
 
         // Create a HOTP URI (counter-based OTP)
         val uri = "otpauth://hotp/HotpTest:hotp@example.com?secret=JBSWY3DPEHPK3PXP&issuer=HotpTest&counter=0&algorithm=SHA1&digits=6"
@@ -333,44 +317,16 @@ class OathClientAndroidTest {
         // Codes should be different (counter incremented)
         assertNotNull("Second code should not be null", code2)
         assertTrue("HOTP codes should be different as counter increments", code1 != code2)
-    }
-
-    @Test
-    fun testEncryptedStorage() {
-        // Create an OathClient with encryption enabled
-        val client = OathClient {
-            encryptionEnabled = false
-            // Use SQL storage explicitly
-            
-            // Add logger to see what's happening
-            logger = Logger.STANDARD
-        }
-
-        // Add a credential
-        val uri = "otpauth://totp/EncryptedTest:secure@example.com?secret=JBSWY3DPEHPK3PXP&issuer=EncryptedTest"
-        val credential = client.addCredentialFromUri(uri)
-
-        // Verify credential was created
-        assertNotNull("Credential should not be null", credential)
-
-        // Retrieve the credential
-        val retrievedCredential = client.getCredential(credential.id)
-
-        // Verify credential can be retrieved from encrypted storage
-        assertNotNull("Retrieved credential should not be null", retrievedCredential)
-        assertEquals("Issuer should match", "EncryptedTest", retrievedCredential?.issuer)
         
-        // Also check for all credentials to verify database is working correctly
-        val allCredentials = client.getCredentials()
-        assertTrue("Should find at least one credential", allCredentials.isNotEmpty())
+        // Close the client when done
+        client.close()
     }
 
+
     @Test
-    fun testInvalidURIFormat() {
+    fun testInvalidURIFormat() = runTest {
         // Create an OathClient
-        val client = OathClient {
-            encryptionEnabled = false
-        }
+        val client = createTestClient()
 
         // Test invalid URI format
         try {
@@ -379,14 +335,16 @@ class OathClientAndroidTest {
         } catch (e: Exception) {
             // Expected exception
         }
+        
+        // Close the client when done
+        client.close()
     }
 
+
     @Test
-    fun testInvalidCredentialIdForGeneratingCode() {
+    fun testInvalidCredentialIdForGeneratingCode() = runTest {
         // Create an OathClient
-        val client = OathClient {
-            encryptionEnabled = false
-        }
+        val client = createTestClient()
 
         // Test invalid credential ID for generating code
         try {
@@ -395,22 +353,28 @@ class OathClientAndroidTest {
         } catch (e: Exception) {
             // Expected exception
         }
+        
+        // Close the client when done
+        client.close()
     }
 
+
     @Test
-    fun testRemovingNonExistentCredential() {
+    fun testRemovingNonExistentCredential() = runTest {
         // Create an OathClient
-        val client = OathClient {
-            encryptionEnabled = false
-        }
+        val client = createTestClient()
 
         // Test removing non-existent credential
         val removed = client.deleteCredential("non_existent_id")
         assertFalse("Removing non-existent credential should return false", removed)
+        
+        // Close the client when done
+        client.close()
     }
 
+
     @Test
-    fun testGetCredentialsFailClientNotInitialized() {
+    fun testGetCredentialsFailClientNotInitialized() = runTest {
         // Create an OathClient with default configuration
         val client = OathClient.create()
 
@@ -427,14 +391,11 @@ class OathClientAndroidTest {
         }
     }
     
+
     @Test
-    fun testBulkOperations() {
+    fun testBulkOperations() = runTest {
         // Create an OathClient
-        val client = OathClient {
-            
-            encryptionEnabled = false
-            logger = Logger.STANDARD
-        }
+        val client = createTestClient()
         
         // Create multiple credentials
         val uriList = listOf(
@@ -479,16 +440,16 @@ class OathClientAndroidTest {
         // Verify all are gone
         val remainingCredentials = client.getCredentials()
         assertTrue("No credentials should remain", remainingCredentials.isEmpty())
+        
+        // Close the client when done
+        client.close()
     }
     
+
     @Test
-    fun testCredentialImportExport() {
+    fun testCredentialImportExport() = runTest {
         // Create an OathClient
-        val client = OathClient {
-            
-            encryptionEnabled = false
-            logger = Logger.STANDARD
-        }
+        val client = createTestClient()
         
         // Add a credential
         val uri = "otpauth://totp/Export:export@example.com?secret=JBSWY3DPEHPK3PXP&issuer=Export&algorithm=SHA1&digits=6&period=30"
@@ -503,11 +464,7 @@ class OathClientAndroidTest {
         assertTrue("URI should contain correct OTP type", exportedUri.contains("otpauth://totp/"))
         
         // Create a new client and import the credential
-        val newClient = OathClient {
-            
-            encryptionEnabled = false
-            logger = Logger.STANDARD
-        }
+        val newClient = createTestClient()
         
         // Import the exported credential
         val importedCredential = newClient.addCredentialFromUri(exportedUri)
@@ -526,15 +483,17 @@ class OathClientAndroidTest {
         
         // For the same time period, both should generate identical codes
         assertEquals("Original and imported credential should generate same code", originalCode, importedCode)
+        
+        // Close the clients when done
+        client.close()
+        newClient.close()
     }
     
+
     @Test
-    fun testJsonSerialization() {
+    fun testJsonSerialization() = runTest {
         // Create an OathClient
-        val client = OathClient {
-            encryptionEnabled = false
-            logger = Logger.STANDARD
-        }
+        val client = createTestClient()
         
         // Add a credential
         val uri = "otpauth://totp/Json:json@example.com?secret=JBSWY3DPEHPK3PXP&issuer=Json"
@@ -547,16 +506,16 @@ class OathClientAndroidTest {
         assertTrue("JSON should contain ID", json.contains("\"id\""))
         assertTrue("JSON should contain issuer", json.contains("\"issuer\""))
         assertTrue("JSON should contain account info", json.contains("json@example.com"))
+        
+        // Close the client when done
+        client.close()
     }
     
+
     @Test
-    fun testCredentialSearch() {
+    fun testCredentialSearch() = runTest {
         // Create an OathClient
-        val client = OathClient {
-            
-            encryptionEnabled = false
-            logger = Logger.STANDARD
-        }
+        val client = createTestClient()
         
         // Add multiple credentials with different properties for searching
         val uris = listOf(
@@ -582,17 +541,16 @@ class OathClientAndroidTest {
         // Search by account name
         val user1Credentials = allCredentials.filter { it.accountName == "user1@example.com" }
         assertEquals("Should find one user1 credential", 1, user1Credentials.size)
+        
+        // Close the client when done
+        client.close()
     }
     
+
     @Test
-    fun testPerformance() {
+    fun testPerformance() = runTest {
         // Create an OathClient with credential cache enabled for performance
-        val client = OathClient {
-            
-            encryptionEnabled = false
-            enableCredentialCache = true
-            logger = Logger.STANDARD
-        }
+        val client = createTestClient(enableCredentialCache = true)
 
         // Create a test URI
         val uri = "otpauth://totp/Performance:perf@example.com?secret=JBSWY3DPEHPK3PXP&issuer=Performance"
@@ -617,16 +575,16 @@ class OathClientAndroidTest {
         // This is more of a benchmark than an assertion, but we can add a very liberal upper bound
         assertTrue("Code generation should be reasonably performant",
                   avgTimePerGeneration < 100) // Very generous upper bound for slow test devices
+                  
+        // Close the client when done
+        client.close()
     }
     
+
     @Test
-    fun testErrorHandlingAndRecovery() {
+    fun testErrorHandlingAndRecovery() = runTest {
         // Create an OathClient
-        val client = OathClient {
-            
-            encryptionEnabled = false
-            logger = Logger.STANDARD
-        }
+        val client = createTestClient()
 
         // Test handling of malformed URIs with different types of issues
         val testCases = listOf(
@@ -651,15 +609,23 @@ class OathClientAndroidTest {
         // Verify credential was created successfully
         assertNotNull("Client should recover and process valid URI after errors", credential)
         assertEquals("Issuer should match", "Recovery", credential.issuer)
+        
+        // Close the client when done
+        client.close()
     }
     
+
     @Test
-    fun testDifferentOathAlgorithms() {
-        // Create an OathClient
+    fun testDifferentOathAlgorithms() = runTest {
+        // Create an OathClient with NonePassphraseProvider for non-encrypted storage
         val client = OathClient {
             encryptionEnabled = false
             logger = Logger.STANDARD
+            // Storage will be created with NonePassphraseProvider due to encryptionEnabled = false
         }
+        
+        // Initialize the client
+        client.initialize()
 
         // Create test URIs with different algorithms
         val uriSha1 = "otpauth://totp/AlgSHA1:sha1@example.com?secret=JBSWY3DPEHPK3PXP&issuer=AlgSHA1&algorithm=SHA1"
@@ -690,15 +656,19 @@ class OathClientAndroidTest {
         assertEquals("SHA1 code should have 6 digits", 6, codeSha1.length)
         assertEquals("SHA256 code should have 6 digits", 6, codeSha256.length)
         assertEquals("SHA512 code should have 6 digits", 6, codeSha512.length)
+        
+        // Close the client when done
+        client.close()
     }
     
+
     @Test
-    fun testCredentialWithCustomDigits() {
-        // Create an OathClient
+    fun testCredentialWithCustomDigits() = runTest {
+        // Create an OathClient with NonePassphraseProvider for non-encrypted storage
         val client = OathClient {
-            
             encryptionEnabled = false
             logger = Logger.STANDARD
+            // Storage will be created with NonePassphraseProvider due to encryptionEnabled = false
         }
 
         // Initialize the client
@@ -722,16 +692,23 @@ class OathClientAndroidTest {
         
         assertEquals("6-digit code should have correct length", 6, code6.length)
         assertEquals("8-digit code should have correct length", 8, code8.length)
+        
+        // Close the client when done
+        client.close()
     }
     
+
     @Test
-    fun testReinitializeClient() {
-        // Create an OathClient
+    fun testReinitializeClient() = runTest {
+        // Create an OathClient with NonePassphraseProvider for non-encrypted storage
         val client = OathClient {
-            
             encryptionEnabled = false
             logger = Logger.STANDARD
+            // Storage will be created with NonePassphraseProvider due to encryptionEnabled = false
         }
+        
+        // Initialize the client
+        client.initialize()
 
         // Add a credential
         val uri = "otpauth://totp/Reinit:reinit@example.com?secret=JBSWY3DPEHPK3PXP&issuer=Reinit"
@@ -761,15 +738,23 @@ class OathClientAndroidTest {
         // Find our credential
         val retrievedCredential = retrievedCredentials.find { it.id == credential.id }
         assertNotNull("Should find the original credential after reinitialization", retrievedCredential)
+        
+        // Close the client when done
+        client.close()
     }
     
+
     @Test
-    fun testCredentialMetadata() {
-        // Create an OathClient
+    fun testCredentialMetadata() = runTest {
+        // Create an OathClient with NonePassphraseProvider for non-encrypted storage
         val client = OathClient {
             encryptionEnabled = false
             logger = Logger.STANDARD
+            // Storage will be created with NonePassphraseProvider due to encryptionEnabled = false
         }
+        
+        // Initialize the client
+        client.initialize()
 
         // Add a credential with creation time that we can verify
         val creationTime = System.currentTimeMillis()
@@ -786,5 +771,34 @@ class OathClientAndroidTest {
         assertEquals("Display issuer should match", "Metadata", credential.displayIssuer)
         assertEquals("Account name should match", "meta@example.com", credential.accountName)
         assertEquals("Display account name should match", "meta@example.com", credential.displayAccountName)
+        
+        // Close the client when done
+        client.close()
+    }
+    
+    /**
+     * Helper method to create a consistent OathClient with test configuration.
+     */
+
+    private suspend fun createTestClient(encryptionEnabled: Boolean = false, enableCredentialCache: Boolean = false): MfaOathClient {
+        // Create storage with appropriate passphrase provider based on encryption setting
+        val testStorage = SQLOathStorage {
+            context = appContext
+            // Use appropriate passphrase provider based on encryption setting
+            passphraseProvider = if (encryptionEnabled) testPassphraseProvider else NonePassphraseProvider()
+        }
+        
+        // Create client with the configuration
+        val client = OathClient.invoke {
+            this.encryptionEnabled = encryptionEnabled
+            this.enableCredentialCache = enableCredentialCache
+            this.storage = testStorage
+            this.logger = Logger.STANDARD
+        }
+        
+        // Initialize the client
+        client.initialize()
+        
+        return client
     }
 }

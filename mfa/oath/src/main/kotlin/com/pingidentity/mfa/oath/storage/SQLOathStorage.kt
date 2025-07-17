@@ -8,40 +8,43 @@
 package com.pingidentity.mfa.oath.storage
 
 import android.content.Context
+import com.pingidentity.logger.Logger
 import com.pingidentity.mfa.commons.exception.MfaStorageException
-import com.pingidentity.mfa.commons.storage.SQLMfaStorage
 import com.pingidentity.mfa.oath.OathAlgorithm
 import com.pingidentity.mfa.oath.OathCredential
 import com.pingidentity.mfa.oath.OathStorage
 import com.pingidentity.mfa.oath.OathType
+import com.pingidentity.storage.sqlite.passphrase.KeyStorePassphraseProvider
+import com.pingidentity.storage.sqlite.passphrase.PassphraseProvider
+import com.pingidentity.storage.sqlite.SQLiteStorage
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import net.sqlcipher.Cursor
 import java.util.Date
 
 /**
  * SQLite-based implementation of [OathStorage].
- * This class extends the base [SQLMfaStorage] class with OATH-specific functionality.
+ * This class directly extends [SQLiteStorage] with OATH-specific functionality.
  */
 class SQLOathStorage private constructor(
     context: Context,
     databaseName: String,
-    encryptionEnabled: Boolean,
-    secretKey: String?,
-    blockStorePreferred: Boolean
-) : SQLMfaStorage(context, databaseName, encryptionEnabled, secretKey, blockStorePreferred), OathStorage {
-
-    /**
-     * Secondary constructor for backward compatibility.
-     */
-    constructor(
-        context: Context,
-        databaseName: String = DEFAULT_DATABASE_NAME,
-        encryptionEnabled: Boolean = true
-    ) : this(context, databaseName, encryptionEnabled, null, false)
+    databaseVersion: Int = 1,
+    passphraseProvider: PassphraseProvider,
+    override val logger: Logger = Logger.logger
+) : SQLiteStorage(
+    context = context,
+    databaseName = databaseName,
+    databaseVersion = databaseVersion,
+    passphraseProvider = passphraseProvider,
+    logger = logger
+), OathStorage {
 
     /**
      * Builder-style DSL constructor for SQLOathStorage.
      */
     constructor(block: Builder.() -> Unit) : this(
-        Builder().apply(block).build()
+        Builder().apply(block)
     )
 
     /**
@@ -50,9 +53,13 @@ class SQLOathStorage private constructor(
     private constructor(builder: Builder) : this(
         builder.context ?: throw IllegalArgumentException("Context is required"),
         builder.databaseName ?: DEFAULT_DATABASE_NAME,
-        builder.encryptionEnabled,
-        builder.secretKey,
-        builder.blockStorePreferred
+        builder.databaseVersion,
+        builder.passphraseProvider ?: KeyStorePassphraseProvider(
+            builder.context ?: throw IllegalArgumentException("Context is required"),
+            builder.initialPassphrase,
+            builder.logger
+        ),
+        builder.logger
     )
 
     companion object {
@@ -90,19 +97,16 @@ class SQLOathStorage private constructor(
     class Builder {
         var context: Context? = null
         var databaseName: String? = null
+        var databaseVersion: Int = 1
         var encryptionEnabled: Boolean = true
-        var secretKey: String? = null
-        var blockStorePreferred: Boolean = true
-        
-        /**
-         * Build the SQLOathStorage instance.
-         */
-        internal fun build(): Builder = this
+        var initialPassphrase: String? = null
+        var passphraseProvider: PassphraseProvider? = null
+        var logger: Logger = Logger.logger
     }
     
     init {
-        // Register the OATH table
-        registerCredentialTable(OathStorage.CREDENTIAL_TYPE_OATH, OATH_TABLE) { db ->
+        // Register the OATH table creator
+        registerTableCreator { db ->
             // Create OATH table
             db.execSQL(
                 "CREATE TABLE IF NOT EXISTS $OATH_TABLE (" +
@@ -132,42 +136,149 @@ class SQLOathStorage private constructor(
             db.execSQL("CREATE INDEX IF NOT EXISTS idx_oath_user_id ON $OATH_TABLE ($OATH_COLUMN_USER_ID)")
             db.execSQL("CREATE INDEX IF NOT EXISTS idx_oath_resource_id ON $OATH_TABLE ($OATH_COLUMN_RESOURCE_ID)")
         }
+        
+        logger.d("OATH SQL storage created")
     }
     
+    /**
+     * Initialize the OATH storage.
+     * This method initializes the database and tables.
+     *
+     * @throws MfaStorageException if initialization fails.
+     */
+    override suspend fun initialize() {
+        withContext(Dispatchers.IO) {
+            try {
+                // Initialize the database
+                initializeDatabase()
+                logger.d("OATH storage initialized")
+            } catch (e: Exception) {
+                throw MfaStorageException("Failed to initialize OATH storage", e)
+            }
+        }
+    }
+    
+    /**
+     * Clear all data from the storage.
+     * This method clears all OATH credential tables.
+     *
+     * @throws MfaStorageException if the storage cannot be cleared.
+     */
+    override suspend fun clear() {
+        withContext(Dispatchers.IO) {
+            try {
+                clearOathCredentials()
+                logger.d("Cleared all data from OATH storage")
+            } catch (e: Exception) {
+                logger.e("Failed to clear OATH storage: ${e.message}", e)
+                throw MfaStorageException("Failed to clear OATH storage", e)
+            }
+        }
+    }
+    
+    /**
+     * Close the OATH storage.
+     * This method closes the database connection.
+     */
+    override suspend fun close() {
+        withContext(Dispatchers.IO) {
+            try {
+                closeDatabase() 
+                logger.d("OATH SQL storage closed")
+            } catch (e: Exception) {
+                logger.e("Error closing OATH storage: ${e.message}", e)
+            }
+        }
+    }
+
     /**
      * Store an OATH credential.
      *
      * @param credential The OATH credential to be stored.
      * @throws MfaStorageException if the credential cannot be stored.
      */
-    @Throws(MfaStorageException::class)
-    override fun storeOathCredential(credential: OathCredential) {
-        // Convert the boolean to an integer (0 or 1)
-        val isLockedAsInt = if (credential.isLocked) 1L else 0L
-        
-        val data = mapOf(
-            OATH_COLUMN_ID to credential.id,
-            OATH_COLUMN_USER_ID to credential.userId,
-            OATH_COLUMN_RESOURCE_ID to credential.resourceId,
-            OATH_COLUMN_ISSUER to credential.issuer,
-            OATH_COLUMN_DISPLAY_ISSUER to credential.displayIssuer,
-            OATH_COLUMN_ACCOUNT_NAME to credential.accountName,
-            OATH_COLUMN_DISPLAY_ACCOUNT_NAME to credential.displayAccountName,
-            OATH_COLUMN_TYPE to credential.oathType.name,
-            OATH_COLUMN_SECRET to credential.secret,
-            OATH_COLUMN_ALGORITHM to credential.oathAlgorithm.name,
-            OATH_COLUMN_DIGITS to credential.digits.toLong(),
-            OATH_COLUMN_PERIOD to credential.period.toLong(),
-            OATH_COLUMN_COUNTER to credential.counter,
-            OATH_COLUMN_CREATED_AT to credential.createdAt.time,
-            OATH_COLUMN_IMAGE_URL to credential.imageURL,
-            OATH_COLUMN_BACKGROUND_COLOR to credential.backgroundColor,
-            OATH_COLUMN_POLICIES to credential.policies,
-            OATH_COLUMN_LOCKING_POLICY to credential.lockingPolicy,
-            OATH_COLUMN_IS_LOCKED to isLockedAsInt
-        )
+    override suspend fun storeOathCredential(credential: OathCredential) {
+        try {
+            // Convert the boolean to an integer (0 or 1)
+            val isLockedAsInt = if (credential.isLocked) 1L else 0L
+            
+            val data = mapOf(
+                OATH_COLUMN_ID to credential.id,
+                OATH_COLUMN_USER_ID to credential.userId,
+                OATH_COLUMN_RESOURCE_ID to credential.resourceId,
+                OATH_COLUMN_ISSUER to credential.issuer,
+                OATH_COLUMN_DISPLAY_ISSUER to credential.displayIssuer,
+                OATH_COLUMN_ACCOUNT_NAME to credential.accountName,
+                OATH_COLUMN_DISPLAY_ACCOUNT_NAME to credential.displayAccountName,
+                OATH_COLUMN_TYPE to credential.oathType.name,
+                OATH_COLUMN_SECRET to credential.secret,
+                OATH_COLUMN_ALGORITHM to credential.oathAlgorithm.name,
+                OATH_COLUMN_DIGITS to credential.digits.toLong(),
+                OATH_COLUMN_PERIOD to credential.period.toLong(),
+                OATH_COLUMN_COUNTER to credential.counter,
+                OATH_COLUMN_CREATED_AT to credential.createdAt.time,
+                OATH_COLUMN_IMAGE_URL to credential.imageURL,
+                OATH_COLUMN_BACKGROUND_COLOR to credential.backgroundColor,
+                OATH_COLUMN_POLICIES to credential.policies,
+                OATH_COLUMN_LOCKING_POLICY to credential.lockingPolicy,
+                OATH_COLUMN_IS_LOCKED to isLockedAsInt
+            )
 
-        storeCredential(OathStorage.CREDENTIAL_TYPE_OATH, credential.id, data)
+            storeOathCredentialData(credential.id, data)
+        } catch (e: Exception) {
+            throw MfaStorageException("Failed to store OATH credential with ID ${credential.id}", e)
+        }
+    }
+    
+    /**
+     * Store OATH credential data in the database.
+     *
+     * @param credentialId The ID of the credential.
+     * @param data The credential data.
+     * @throws MfaStorageException if the credential cannot be stored.
+     */
+    private suspend fun storeOathCredentialData(credentialId: String, data: Map<String, Any?>) = withContext(Dispatchers.IO) {
+        checkDatabase()
+        
+        try {
+            // Begin a transaction to ensure data consistency
+            beginTransaction()
+            
+            try {
+                // Delete any existing credential with this ID
+                database.delete(
+                    OATH_TABLE,
+                    "$OATH_COLUMN_ID = ?",
+                    arrayOf(credentialId)
+                )
+                
+                // Build the column names and placeholders for the SQL statement
+                val columns = data.keys.joinToString(", ")
+                val placeholders = data.keys.joinToString(", ") { "?" }
+                
+                // Extract values in the same order as columns
+                val values = data.values.toTypedArray()
+                
+                // Log the SQL statement for debugging
+                val sqlStatement = "INSERT INTO $OATH_TABLE ($columns) VALUES ($placeholders)"
+                logger.d("Executing SQL: $sqlStatement")
+                logger.d("With values: ${values.joinToString(", ") { it?.toString() ?: "null" }}")
+                
+                // Insert the new credential
+                executeSQL(sqlStatement, values)
+                
+                // Mark the transaction as successful
+                setTransactionSuccessful()
+                
+                logger.d("Stored OATH credential with ID: $credentialId")
+            } finally {
+                // End the transaction (will be rolled back if not marked successful)
+                endTransaction()
+            }
+        } catch (e: Exception) {
+            logger.e("Failed to store OATH credential with ID $credentialId: ${e.message}", e)
+            throw MfaStorageException("Failed to store OATH credential with ID $credentialId", e)
+        }
     }
     
     /**
@@ -177,10 +288,39 @@ class SQLOathStorage private constructor(
      * @return The OATH credential, or null if not found.
      * @throws MfaStorageException if the credential cannot be retrieved.
      */
-    @Throws(MfaStorageException::class)
-    override fun retrieveOathCredential(credentialId: String): OathCredential? {
-        val data = retrieveCredential(OathStorage.CREDENTIAL_TYPE_OATH, credentialId) ?: return null
-        return createOathCredentialFromData(data)
+    override suspend fun retrieveOathCredential(credentialId: String): OathCredential? {
+        try {
+            val data = retrieveOathCredentialData(credentialId) ?: return null
+            return createOathCredentialFromData(data)
+        } catch (e: Exception) {
+            throw MfaStorageException("Failed to retrieve OATH credential with ID $credentialId", e)
+        }
+    }
+    
+    /**
+     * Retrieve OATH credential data from the database.
+     *
+     * @param credentialId The ID of the credential to retrieve.
+     * @return The credential data, or null if not found.
+     * @throws MfaStorageException if the credential cannot be retrieved.
+     */
+    private suspend fun retrieveOathCredentialData(credentialId: String): Map<String, Any?>? = withContext(Dispatchers.IO) {
+        checkDatabase()
+        
+        try {
+            // Use the query method from the parent class
+            val results = query(
+                "SELECT * FROM $OATH_TABLE WHERE $OATH_COLUMN_ID = ?",
+                arrayOf(credentialId)
+            ) { cursor ->
+                extractDataFromCursor(cursor)
+            }
+            
+            return@withContext results.firstOrNull()
+        } catch (e: Exception) {
+            logger.e("Failed to retrieve OATH credential with ID $credentialId: ${e.message}", e)
+            throw MfaStorageException("Failed to retrieve OATH credential with ID $credentialId", e)
+        }
     }
     
     /**
@@ -189,10 +329,36 @@ class SQLOathStorage private constructor(
      * @return A list of all OATH credentials.
      * @throws MfaStorageException if the credentials cannot be retrieved.
      */
-    @Throws(MfaStorageException::class)
-    override fun getAllOathCredentials(): List<OathCredential> {
-        val dataList = retrieveAllCredentials(OathStorage.CREDENTIAL_TYPE_OATH)
-        return dataList.mapNotNull { createOathCredentialFromData(it) }
+    override suspend fun getAllOathCredentials(): List<OathCredential> {
+        try {
+            val dataList = retrieveAllOathCredentialsData()
+            return dataList.mapNotNull { createOathCredentialFromData(it) }
+        } catch (e: Exception) {
+            throw MfaStorageException("Failed to retrieve all OATH credentials", e)
+        }
+    }
+    
+    /**
+     * Retrieve all OATH credential data from the database.
+     *
+     * @return A list of credential data.
+     * @throws MfaStorageException if the credentials cannot be retrieved.
+     */
+    private suspend fun retrieveAllOathCredentialsData(): List<Map<String, Any?>> = withContext(Dispatchers.IO) {
+        checkDatabase()
+        
+        try {
+            // Use the query method from the parent class
+            return@withContext query(
+                "SELECT * FROM $OATH_TABLE",
+                null
+            ) { cursor ->
+                extractDataFromCursor(cursor)
+            }
+        } catch (e: Exception) {
+            logger.e("Failed to retrieve all OATH credentials: ${e.message}", e)
+            throw MfaStorageException("Failed to retrieve all OATH credentials", e)
+        }
     }
     
     /**
@@ -202,9 +368,43 @@ class SQLOathStorage private constructor(
      * @return true if the credential was successfully removed, false if it didn't exist.
      * @throws MfaStorageException if the credential cannot be removed.
      */
-    @Throws(MfaStorageException::class)
-    override fun removeOathCredential(credentialId: String): Boolean {
-        return deleteCredential(OathStorage.CREDENTIAL_TYPE_OATH, credentialId)
+    override suspend fun removeOathCredential(credentialId: String): Boolean {
+        try {
+            return deleteOathCredential(credentialId)
+        } catch (e: Exception) {
+            throw MfaStorageException("Failed to remove OATH credential with ID $credentialId", e)
+        }
+    }
+    
+    /**
+     * Delete an OATH credential from the database.
+     *
+     * @param credentialId The ID of the credential to delete.
+     * @return true if the credential was successfully deleted, false if it didn't exist.
+     * @throws MfaStorageException if the credential cannot be deleted.
+     */
+    private suspend fun deleteOathCredential(credentialId: String): Boolean = withContext(Dispatchers.IO) {
+        checkDatabase()
+        
+        try {
+            val deletedRows = database.delete(
+                OATH_TABLE,
+                "$OATH_COLUMN_ID = ?",
+                arrayOf(credentialId)
+            )
+            
+            val wasDeleted = deletedRows > 0
+            if (wasDeleted) {
+                logger.d("Deleted OATH credential with ID: $credentialId")
+            } else {
+                logger.d("No OATH credential with ID: $credentialId found to delete")
+            }
+            
+            return@withContext wasDeleted
+        } catch (e: Exception) {
+            logger.e("Failed to delete OATH credential with ID $credentialId: ${e.message}", e)
+            throw MfaStorageException("Failed to delete OATH credential with ID $credentialId", e)
+        }
     }
     
     /**
@@ -212,9 +412,62 @@ class SQLOathStorage private constructor(
      *
      * @throws MfaStorageException if the credentials cannot be cleared.
      */
-    @Throws(MfaStorageException::class)
-    override fun clearOathCredentials() {
-        clearCredentials(OathStorage.CREDENTIAL_TYPE_OATH)
+    override suspend fun clearOathCredentials() {
+        try {
+            clearAllOathCredentials()
+        } catch (e: Exception) {
+            throw MfaStorageException("Failed to clear OATH credentials", e)
+        }
+    }
+    
+    /**
+     * Clear all OATH credentials from the database.
+     *
+     * @throws MfaStorageException if the credentials cannot be cleared.
+     */
+    private suspend fun clearAllOathCredentials() = withContext(Dispatchers.IO) {
+        checkDatabase()
+        
+        try {
+            database.delete(OATH_TABLE, null, null)
+            logger.d("Cleared all OATH credentials")
+        } catch (e: Exception) {
+            logger.e("Failed to clear OATH credentials: ${e.message}", e)
+            throw MfaStorageException("Failed to clear OATH credentials", e)
+        }
+    }
+    
+    /**
+     * Extract data from a cursor into a map.
+     *
+     * @param cursor The cursor to extract data from.
+     * @return A map of column names to values.
+     */
+    private fun extractDataFromCursor(cursor: Cursor): Map<String, Any?> {
+        val data = mutableMapOf<String, Any?>()
+        
+        // Extract column names
+        val columnNames = cursor.columnNames
+        
+        // Extract data for each column
+        for (i in 0 until cursor.columnCount) {
+            val columnName = columnNames[i]
+            val columnType = cursor.getType(i)
+            
+            // Extract the value based on column type
+            val value: Any? = when (columnType) {
+                Cursor.FIELD_TYPE_NULL -> null
+                Cursor.FIELD_TYPE_INTEGER -> cursor.getLong(i)
+                Cursor.FIELD_TYPE_FLOAT -> cursor.getDouble(i)
+                Cursor.FIELD_TYPE_STRING -> cursor.getString(i)
+                Cursor.FIELD_TYPE_BLOB -> cursor.getBlob(i)
+                else -> null
+            }
+            
+            data[columnName] = value
+        }
+        
+        return data
     }
     
     /**

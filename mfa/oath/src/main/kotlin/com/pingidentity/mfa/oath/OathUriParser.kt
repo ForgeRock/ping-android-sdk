@@ -9,6 +9,8 @@ package com.pingidentity.mfa.oath
 
 import android.net.Uri
 import com.pingidentity.mfa.commons.UriParser
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /**
  * Utility class for parsing OATH URIs.
@@ -27,6 +29,12 @@ object OathUriParser : UriParser() {
     // Additional parameters based on AM implementation of OATH
     private const val OATH_RESOURCE_ID_PARAM = "oid"        // OATH Resource ID parameter
     
+    // Default values for optional parameters
+    private const val DEFAULT_ALGORITHM = "SHA1"
+    private const val DEFAULT_DIGITS = 6
+    private const val DEFAULT_PERIOD = 30
+    private const val DEFAULT_COUNTER = 0L
+    
     /**
      * Parse an OATH URI string into an OathCredential.
      * Format: otpauth://totp/Issuer:AccountName?secret=SECRET&issuer=Issuer&algorithm=SHA1&digits=6&period=30
@@ -37,7 +45,7 @@ object OathUriParser : UriParser() {
      * @throws IllegalArgumentException if the URI is invalid.
      */
     @JvmStatic
-    fun parse(uri: String): OathCredential {
+    suspend fun parse(uri: String): OathCredential = withContext(Dispatchers.IO) {
         try {
             val parsedUri = Uri.parse(uri)
             
@@ -71,13 +79,13 @@ object OathUriParser : UriParser() {
             // Get required parameters
             val secret = parsedUri.getQueryParameter(SECRET_PARAM)
                 ?: throw IllegalArgumentException("Missing required parameter: $SECRET_PARAM")
-            
+
             // Get optional parameters or use defaults
-            val algorithmStr = parsedUri.getQueryParameter(ALGORITHM_PARAM)?.uppercase() ?: "SHA1"
+            val algorithmStr = parsedUri.getQueryParameter(ALGORITHM_PARAM)?.uppercase() ?: DEFAULT_ALGORITHM
             val algorithm = OathAlgorithm.fromString(algorithmStr)
-            val digits = parsedUri.getQueryParameter(DIGITS_PARAM)?.toIntOrNull() ?: 6
-            val period = parsedUri.getQueryParameter(PERIOD_PARAM)?.toIntOrNull() ?: 30
-            val counter = parsedUri.getQueryParameter(COUNTER_PARAM)?.toLongOrNull() ?: 0L
+            val digits = parsedUri.getQueryParameter(DIGITS_PARAM)?.toIntOrNull() ?: DEFAULT_DIGITS
+            val period = parsedUri.getQueryParameter(PERIOD_PARAM)?.toIntOrNull() ?: DEFAULT_PERIOD
+            val counter = parsedUri.getQueryParameter(COUNTER_PARAM)?.toLongOrNull() ?: DEFAULT_COUNTER
             
             // Parse the additional parameters and decode base64-encoded values
             
@@ -112,7 +120,7 @@ object OathUriParser : UriParser() {
                 if (it.isNotEmpty() && !it.startsWith("#")) "#$it" else it
             }
             
-            return OathCredential(
+            OathCredential(
                 userId = userId,
                 resourceId = resourceId,
                 issuer = issuer,
@@ -145,7 +153,7 @@ object OathUriParser : UriParser() {
      * @return A URI string.
      */
     @JvmStatic
-    fun format(credential: OathCredential): String {
+    suspend fun format(credential: OathCredential): String = withContext(Dispatchers.IO) {
         val typeStr = if (credential.oathType == OathType.TOTP) TOTP else HOTP
         
         // Format the label part in a way that preserves the colon character
@@ -161,7 +169,7 @@ object OathUriParser : UriParser() {
             .append("$OTPAUTH_SCHEME://$typeStr/")
             .append(encodedLabel)
             .append("?$SECRET_PARAM=").append(Uri.encode(credential.secret))
-            
+        
         if (credential.issuer.isNotEmpty()) {
             uriBuilder.append("&$ISSUER_PARAM=").append(Uri.encode(credential.issuer))
         }
@@ -203,6 +211,6 @@ object OathUriParser : UriParser() {
             uriBuilder.append("&$BACKGROUND_COLOR_PARAM=").append(Uri.encode(bgColor))
         }
         
-        return uriBuilder.toString()
+        uriBuilder.toString()
     }
 }

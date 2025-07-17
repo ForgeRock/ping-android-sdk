@@ -7,6 +7,8 @@
 
 package com.pingidentity.mfa.oath
 
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -19,8 +21,12 @@ import org.robolectric.annotation.Config
 import java.util.Date
 import java.util.UUID
 
+/**
+ * Unit tests for the OathCredential class.
+ */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [30])
+@ExperimentalCoroutinesApi
 class OathCredentialTest {
 
     private val testSecret = "JBSWY3DPEHPK3PXP"
@@ -122,7 +128,7 @@ class OathCredentialTest {
     }
 
     @Test
-    fun testFromUri_TOTP() {
+    fun testFromUri_TOTP() = runTest {
         val uri = "otpauth://totp/Test%20Issuer:testuser@example.com?secret=JBSWY3DPEHPK3PXP&issuer=Test%20Issuer&algorithm=SHA1&digits=6&period=30"
         val credential = OathCredential.fromUri(uri)
 
@@ -140,7 +146,7 @@ class OathCredentialTest {
     }
 
     @Test
-    fun testFromUri_HOTP() {
+    fun testFromUri_HOTP() = runTest {
         val uri = "otpauth://hotp/Test%20Issuer:testuser@example.com?secret=JBSWY3DPEHPK3PXP&issuer=Test%20Issuer&algorithm=SHA1&digits=6&counter=10"
         val credential = OathCredential.fromUri(uri)
 
@@ -158,12 +164,12 @@ class OathCredentialTest {
     }
 
     @Test(expected = IllegalArgumentException::class)
-    fun testFromUri_InvalidScheme() {
+    fun testFromUri_InvalidScheme() = runTest {
         OathCredential.fromUri("invalid://totp/Test%20Issuer:testuser@example.com?secret=JBSWY3DPEHPK3PXP")
     }
 
     @Test
-    fun testToUri_TOTP() {
+    fun testToUri_TOTP() = runTest {
         val credential = OathCredential(
             issuer = testIssuer,
             displayIssuer = testIssuer,
@@ -183,7 +189,7 @@ class OathCredentialTest {
     }
 
     @Test
-    fun testToUri_HOTP() {
+    fun testToUri_HOTP() = runTest {
         val credential = OathCredential(
             issuer = testIssuer,
             displayIssuer = testIssuer,

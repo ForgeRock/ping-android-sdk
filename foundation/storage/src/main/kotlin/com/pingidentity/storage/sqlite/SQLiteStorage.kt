@@ -8,9 +8,12 @@
 package com.pingidentity.storage.sqlite
 
 import android.content.Context
-import android.util.Log
+import com.pingidentity.logger.Logger
 import com.pingidentity.storage.exception.StorageException
-import com.pingidentity.utils.TestModeDetector
+import com.pingidentity.storage.sqlite.passphrase.KeyStorePassphraseProvider
+import com.pingidentity.storage.sqlite.passphrase.PassphraseProvider
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import net.sqlcipher.Cursor
 import net.sqlcipher.database.SQLiteDatabase
@@ -20,16 +23,18 @@ import net.sqlcipher.database.SQLiteOpenHelper
  * Base implementation for SQLite storage that uses SQLCipher for encrypted storage.
  * This class provides a secure storage solution with a generic approach for different data types.
  * It supports multiple tables through a table registration mechanism.
+ *
+ * This is an abstract base class that provides common SQLite database functionality.
+ * Subclasses should implement their specific storage operations based on their table structure.
  */
 open class SQLiteStorage(
     protected val context: Context,
     protected val databaseName: String = DEFAULT_DATABASE_NAME,
-    protected val encryptionEnabled: Boolean = true,
-    private val customPassphrase: String? = null,
-    private val blockStorePreferred: Boolean = false
+    protected val databaseVersion: Int = DATABASE_VERSION,
+    protected val passphraseProvider: PassphraseProvider = KeyStorePassphraseProvider(context),
+    protected open val logger: Logger = Logger.logger
 ) {
     companion object {
-        private const val TAG = "SQLiteStorage"
         private const val DEFAULT_DATABASE_NAME = "pingidentity_storage.db"
         private const val DATABASE_VERSION = 1
     }
@@ -38,7 +43,7 @@ open class SQLiteStorage(
     protected val tableCreators = mutableListOf<(SQLiteDatabase) -> Unit>()
 
     // Database helper for managing the SQLite database
-    protected var dbHelper: SQLiteOpenHelper? = null
+    protected lateinit var dbHelper: SQLiteOpenHelper
 
     // JSON serialization for storage
     protected val json = Json {
@@ -47,13 +52,10 @@ open class SQLiteStorage(
     }
 
     // Internal database property to be accessed through the getter
-    private var internalDatabase: SQLiteDatabase? = null
-
-    // Passphrase manager for handling encryption keys
-    private val passphraseManager by lazy { PassphraseManager(context, customPassphrase, blockStorePreferred) }
+    private lateinit var internalDatabase: SQLiteDatabase
 
     // Safe accessor for the database
-    val database: SQLiteDatabase?
+    val database: SQLiteDatabase
         get() = internalDatabase
 
 
@@ -63,125 +65,85 @@ open class SQLiteStorage(
      *
      * @throws StorageException if the database cannot be opened or the tables cannot be created.
      */
-    @Throws(StorageException::class)
-    fun initializeDatabase() {
+    suspend fun initializeDatabase() {
         try {
-            // Check if running in a test environment
-            val isTestEnvironment = TestModeDetector.isRunningInTestEnvironment()
-
             // Load SQLCipher libraries
             SQLiteDatabase.loadLibs(context)
 
-            // Special handling for test environment
-            if (isTestEnvironment) {
-                Log.d(TAG, "Test environment detected, using special database initialization")
-                initializeForTestEnvironment()
-            } else {
-                // Normal initialization for production code
-                initializeForProductionEnvironment()
+            // Create database helper
+            dbHelper = createDatabaseHelper(context, databaseName, databaseVersion)
+
+            // Get the passphrase from the provider
+            val passphrase = passphraseProvider.getPassphrase()
+            logger.d("Using passphrase from provider for database initialization")
+
+            try {
+                // Open or create the database
+                internalDatabase = dbHelper.getWritableDatabase(passphrase)
+            } catch (e: Exception) {
+                // If opening fails, try to recover
+                logger.e("Database initialization failed: ${e.message}")
+                closeAndCleanupDatabase()
+                
+                // Create a new helper and try again
+                dbHelper = createDatabaseHelper(context, databaseName, databaseVersion)
+                internalDatabase = dbHelper.getWritableDatabase(passphrase)
             }
 
-            Log.d(TAG, "SQL storage initialized successfully")
+            logger.d("SQL storage initialized successfully")
 
             // Validate database is properly initialized by testing a simple query
             validateDatabaseInitialization()
             
             // Call all registered table creators
-            internalDatabase?.let { db ->
-                tableCreators.forEach { creator ->
-                    try {
-                        creator(db)
-                    } catch (e: Exception) {
-                        Log.e(TAG, "Error calling table creator: ${e.message}")
-                    }
+            tableCreators.forEach { creator ->
+                try {
+                    creator(internalDatabase)
+                } catch (e: Exception) {
+                    logger.e("Failed to create table: ${e.message}", e)
                 }
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to initialize SQL storage: ${e.message}")
-            throw StorageException("Failed to initialize SQL storage", e)
+            logger.e("Failed to initialize database: ${e.message}", e)
+            throw StorageException("Failed to initialize database", e)
         }
     }
 
     /**
      * Factory method to create the appropriate database helper.
-     * This allows subclasses to provide their own DatabaseHelper implementation.
+     * This method follows the factory method pattern to allow subclasses to provide their own 
+     * DatabaseHelper implementation without modifying the base class.
+     * 
+     * For example, a subclass might override this to provide a helper with custom migration logic
+     * or specialized table creation behavior.
+     *
+     * @param context The Android context used to create the database
+     * @param databaseName The name of the database file
+     * @param version The database version
+     * @return A SQLiteOpenHelper instance that will manage the database
      */
     protected open fun createDatabaseHelper(context: Context, databaseName: String, version: Int): SQLiteOpenHelper {
-        return DatabaseHelper(context, databaseName, DATABASE_VERSION)
-    }
-
-    /**
-     * Initialize the database for test environments.
-     * This method uses a more resilient approach for tests where database
-     * state can be inconsistent between runs.
-     */
-    private fun initializeForTestEnvironment() {
-        // Always get a fresh passphrase for tests to ensure consistency
-        val testPassphrase = passphraseManager.getOrCreatePassphrase()
-        Log.d(TAG, "Using test passphrase for database initialization")
-
-        // Create database helper
-        dbHelper = createDatabaseHelper(context, databaseName, DATABASE_VERSION)
-
-        try {
-            // First attempt to open with the test passphrase
-            if (encryptionEnabled) {
-                internalDatabase = dbHelper?.getWritableDatabase(testPassphrase)
-            } else {
-                internalDatabase = dbHelper?.getWritableDatabase("")
-            }
-        } catch (e: Exception) {
-            // If opening fails, delete the database and recreate
-            Log.d(TAG, "Test database initialization failed, recreating: ${e.message}")
-            closeAndCleanupDatabase()
-
-            // Create a new helper and try again
-            dbHelper = createDatabaseHelper(context, databaseName, DATABASE_VERSION)
-
-            if (encryptionEnabled) {
-                internalDatabase = dbHelper?.getWritableDatabase(testPassphrase)
-            } else {
-                internalDatabase = dbHelper?.getWritableDatabase("")
-            }
-        }
-    }
-
-    /**
-     * Initialize the database for production environments.
-     */
-    private fun initializeForProductionEnvironment() {
-        // Create database helper
-        dbHelper = createDatabaseHelper(context, databaseName, DATABASE_VERSION)
-
-        // Get or create passphrase for encrypted database
-        val passphrase = if (encryptionEnabled) passphraseManager.getOrCreatePassphrase() else ""
-
-        // Open or create the database
-        internalDatabase = if (encryptionEnabled) {
-            dbHelper?.getWritableDatabase(passphrase)
-        } else {
-            dbHelper?.getWritableDatabase("")
-        }
+        return DatabaseHelper(context, databaseName, version)
     }
 
     /**
      * Validate that the database is properly initialized by running a simple query.
      */
     private fun validateDatabaseInitialization() {
-        if (internalDatabase == null || !internalDatabase!!.isOpen) {
+        if (!internalDatabase.isOpen) {
             throw StorageException("Database was not opened successfully")
         }
 
         try {
             // Try a simple SQLite query to validate db is operational
-            internalDatabase?.rawQuery("SELECT count(*) FROM sqlite_master", null)?.use { cursor ->
+            internalDatabase.rawQuery("SELECT count(*) FROM sqlite_master", null).use { cursor ->
                 if (cursor.moveToFirst()) {
                     val count = cursor.getInt(0)
-                    Log.d(TAG, "Database validation query successful, found $count tables")
+                    logger.d("Database validation query successful, found $count tables")
                 }
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Database validation query failed: ${e.message}")
+            logger.e("Database validation query failed: ${e.message}", e)
             closeAndCleanupDatabase()
             throw e
         }
@@ -190,24 +152,51 @@ open class SQLiteStorage(
     /**
      * Close and cleanup database resources.
      */
-    protected fun closeAndCleanupDatabase() {
+    private fun closeAndCleanupDatabase() {
+        // Attempt to close internalDatabase
         try {
-            internalDatabase?.close()
-            dbHelper?.close()
+            if (::internalDatabase.isInitialized && internalDatabase.isOpen) {
+                internalDatabase.use { /* it.close() is called automatically */ }
+            }
         } catch (e: Exception) {
-            Log.e(TAG, "Error closing database: ${e.message}")
+            logger.e("Error during internalDatabase.close(): ${e.message}", e)
+        }
+
+        // Attempt to close dbHelper
+        try {
+            if (::dbHelper.isInitialized) {
+                dbHelper.close()
+            }
+        } catch (e: Exception) {
+            logger.e("Error during dbHelper.close(): ${e.message}", e)
         }
 
         // Delete the database file
         try {
             context.deleteDatabase(databaseName)
-            Log.d(TAG, "Database file deleted successfully")
+            logger.d("Database file deleted successfully")
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to delete database file: ${e.message}")
+            logger.e("Failed to delete database file: ${e.message}", e)
         }
 
-        internalDatabase = null
-        dbHelper = null
+        // Re-initialize the properties - we need to be careful to set up new instances
+        // since these are now lateinit
+        initializeEmptyInstances()
+    }
+
+    /**
+     * Initialize empty instances for lateinit properties after cleanup.
+     * This is needed because we can't directly set lateinit properties to null.
+     */
+    private fun initializeEmptyInstances() {
+        // Create temporary instances to satisfy lateinit requirements
+        dbHelper = createDatabaseHelper(context, databaseName, databaseVersion)
+        try {
+            internalDatabase = dbHelper.getReadableDatabase("")
+            internalDatabase.close()
+        } catch (e: Exception) {
+            logger.e("Failed to create temporary database instance: ${e.message}", e)
+        }
     }
 
     /**
@@ -215,16 +204,14 @@ open class SQLiteStorage(
      *
      * @throws StorageException if the database cannot be cleared.
      */
-    @Throws(StorageException::class)
     fun clearDatabase() {
-        checkDatabase()
         try {
             // Execute a more general clear approach
             // This will rely on subclasses implementing their own clear logic
             // for their specific tables
-            Log.d(TAG, "Base clear method called - subclasses should override this")
+            logger.d("Base clear method called - subclasses should override this")
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to clear database: ${e.message}")
+            logger.e("Failed to clear database: ${e.message}", e)
             throw StorageException("Failed to clear database", e)
         }
     }
@@ -233,56 +220,37 @@ open class SQLiteStorage(
      * Close the database connection.
      */
     fun closeDatabase() {
-        internalDatabase?.close()
-        dbHelper?.close()
-        internalDatabase = null
-        dbHelper = null
-        Log.d(TAG, "SQL storage closed")
+        internalDatabase.close()
+        dbHelper.close()
+        
+        // Reinitialize with empty instances to satisfy lateinit requirements
+        initializeEmptyInstances()
+        
+        logger.d("SQL storage closed")
     }
 
     /**
      * Check if the database is open and throw an exception if it's not.
-     * This also validates the database is properly initialized, especially important
-     * for test environments where SQLCipher can sometimes create an empty database
-     * that isn't properly initialized.
+     * This provides a more informative error message than the default UninitializedPropertyAccessException.
      *
      * @throws StorageException if the database is not open or not properly initialized.
      */
-    @Throws(StorageException::class)
     protected fun checkDatabase() {
-        if (internalDatabase == null || !internalDatabase!!.isOpen) {
-            throw StorageException("Database is not open. Call initializeDatabase() first.")
+        if (!::internalDatabase.isInitialized) {
+            throw StorageException("Database has not been initialized. Call initializeDatabase() first.")
         }
-
-        // For test environments, do an additional validation to ensure database is usable
-        if (TestModeDetector.isRunningInTestEnvironment()) {
-            try {
-                // Try a simple query to validate database is operational
-                internalDatabase?.rawQuery("SELECT count(*) FROM sqlite_master", null)?.use { cursor ->
-                    // Just moving to first row is enough to validate database is working
-                    cursor.moveToFirst()
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Database validation failed during checkDatabase: ${e.message}")
-                // Database is corrupted or not properly initialized, try to reinitialize
-                reinitializeDatabase()
-                throw StorageException("Database check failed, attempting to reinitialize", e)
-            }
+        
+        if (!internalDatabase.isOpen) {
+            throw StorageException("Database is not open. Call initializeDatabase() first or check for errors during initialization.")
         }
-    }
-
-    /**
-     * Attempts to reinitialize the database when a validation check fails.
-     * This is useful for test environments where database state can be inconsistent.
-     */
-    private fun reinitializeDatabase() {
-        Log.d(TAG, "Attempting to reinitialize database after validation failure")
-        closeAndCleanupDatabase()
-        initializeDatabase()
     }
 
     /**
      * Store an item in the specified table.
+     * This is a convenience method for subclasses that follow the (type, id, data) table structure.
+     * 
+     * Note: Subclasses should consider implementing their own storage methods that align
+     * with their specific table structure rather than relying on this generic implementation.
      *
      * @param tableName The name of the table to store the item in.
      * @param type The type of the item.
@@ -290,28 +258,31 @@ open class SQLiteStorage(
      * @param data The serialized item data.
      * @throws StorageException if the item cannot be stored.
      */
-    @Throws(StorageException::class)
-    suspend fun storeItem(tableName: String, type: String, id: String, data: String) {
-        checkDatabase()
+    protected suspend fun storeItem(tableName: String, type: String, id: String, data: String) {
+        executeOnIO {
+            try {
+                database.execSQL(
+                    """
+                    INSERT OR REPLACE INTO $tableName (type, id, data)
+                    VALUES (?, ?, ?)
+                    """,
+                    arrayOf(type, id, data)
+                )
 
-        try {
-            database?.execSQL(
-                """
-                INSERT OR REPLACE INTO $tableName (type, id, data)
-                VALUES (?, ?, ?)
-                """,
-                arrayOf(type, id, data)
-            )
-
-            Log.d(TAG, "Stored item of type '$type' with ID: $id in table: $tableName")
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to store item of type '$type' with ID $id in table $tableName: ${e.message}")
-            throw StorageException("Failed to store item of type '$type' with ID $id in table $tableName", e)
+                logger.d("Stored item of type '$type' with ID: $id in table: $tableName")
+            } catch (e: Exception) {
+                logger.e("Failed to store item of type '$type' with ID $id in table $tableName: ${e.message}", e)
+                throw StorageException("Failed to store item of type '$type' with ID $id in table $tableName", e)
+            }
         }
     }
 
     /**
      * Retrieve an item from the specified table.
+     * This is a convenience method for subclasses that follow the (type, id, data) table structure.
+     * 
+     * Note: Subclasses should consider implementing their own retrieval methods that align
+     * with their specific table structure rather than relying on this generic implementation.
      *
      * @param tableName The name of the table to retrieve the item from.
      * @param type The type of the item.
@@ -319,61 +290,67 @@ open class SQLiteStorage(
      * @return The serialized item data, or null if not found.
      * @throws StorageException if the item cannot be retrieved.
      */
-    @Throws(StorageException::class)
-    suspend fun retrieveItem(tableName: String, type: String, id: String): String? {
-        checkDatabase()
-
-        try {
-            database?.rawQuery(
-                "SELECT data FROM $tableName WHERE type = ? AND id = ?",
-                arrayOf(type, id)
-            )?.use { cursor ->
-                if (cursor.moveToFirst()) {
-                    return cursor.getString(0)
+    protected suspend fun retrieveItem(tableName: String, type: String, id: String): String? {
+        return executeOnIO {
+            try {
+                database.rawQuery(
+                    "SELECT data FROM $tableName WHERE type = ? AND id = ?",
+                    arrayOf(type, id)
+                ).use { cursor ->
+                    if (cursor.moveToFirst()) {
+                        return@executeOnIO cursor.getString(0)
+                    }
                 }
-            }
 
-            // Item not found
-            return null
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to retrieve item of type '$type' with ID $id from table $tableName: ${e.message}")
-            throw StorageException("Failed to retrieve item of type '$type' with ID $id from table $tableName", e)
+                // Item not found
+                return@executeOnIO null
+            } catch (e: Exception) {
+                logger.e("Failed to retrieve item of type '$type' with ID $id from table $tableName: ${e.message}", e)
+                throw StorageException("Failed to retrieve item of type '$type' with ID $id from table $tableName", e)
+            }
         }
     }
 
     /**
      * Retrieve all items of a given type from the specified table.
+     * This is a convenience method for subclasses that follow the (type, id, data) table structure.
+     * 
+     * Note: Subclasses should consider implementing their own retrieval methods that align
+     * with their specific table structure rather than relying on this generic implementation.
      *
      * @param tableName The name of the table to retrieve items from.
      * @param type The type of items to retrieve.
      * @return A list of serialized item data.
      * @throws StorageException if the items cannot be retrieved.
      */
-    @Throws(StorageException::class)
-    suspend fun retrieveAllItems(tableName: String, type: String): List<String> {
-        checkDatabase()
+    protected suspend fun retrieveAllItems(tableName: String, type: String): List<String> {
+        return executeOnIO {
+            try {
+                val items = mutableListOf<String>()
 
-        try {
-            val items = mutableListOf<String>()
-
-            database?.rawQuery(
-                "SELECT data FROM $tableName WHERE type = ?",
-                arrayOf(type)
-            )?.use { cursor ->
-                while (cursor.moveToNext()) {
-                    items.add(cursor.getString(0))
+                database.rawQuery(
+                    "SELECT data FROM $tableName WHERE type = ?",
+                    arrayOf(type)
+                ).use { cursor ->
+                    while (cursor.moveToNext()) {
+                        items.add(cursor.getString(0))
+                    }
                 }
-            }
 
-            return items
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to retrieve all items of type '$type' from table $tableName: ${e.message}")
-            throw StorageException("Failed to retrieve all items of type '$type' from table $tableName", e)
+                return@executeOnIO items
+            } catch (e: Exception) {
+                logger.e("Failed to retrieve all items of type '$type' from table $tableName: ${e.message}", e)
+                throw StorageException("Failed to retrieve all items of type '$type' from table $tableName", e)
+            }
         }
     }
 
     /**
      * Delete an item from the specified table.
+     * This is a convenience method for subclasses that follow the (type, id, data) table structure.
+     * 
+     * Note: Subclasses should consider implementing their own deletion methods that align
+     * with their specific table structure rather than relying on this generic implementation.
      *
      * @param tableName The name of the table to delete the item from.
      * @param type The type of the item.
@@ -381,53 +358,55 @@ open class SQLiteStorage(
      * @return True if the item was deleted, false if it wasn't found.
      * @throws StorageException if the item cannot be deleted.
      */
-    @Throws(StorageException::class)
-    suspend fun deleteItem(tableName: String, type: String, id: String): Boolean {
-        checkDatabase()
+    protected suspend fun deleteItem(tableName: String, type: String, id: String): Boolean {
+        return executeOnIO {
+            try {
+                val deletedRows = database.delete(
+                    tableName,
+                    "type = ? AND id = ?",
+                    arrayOf(type, id)
+                )
 
-        try {
-            val deletedRows = database?.delete(
-                tableName,
-                "type = ? AND id = ?",
-                arrayOf(type, id)
-            ) ?: 0
+                val wasDeleted = deletedRows > 0
+                if (wasDeleted) {
+                    logger.d("Deleted item of type '$type' with ID: $id from table $tableName")
+                } else {
+                    logger.d("No item of type '$type' with ID: $id found to delete in table $tableName")
+                }
 
-            val wasDeleted = deletedRows > 0
-            if (wasDeleted) {
-                Log.d(TAG, "Deleted item of type '$type' with ID: $id from table $tableName")
-            } else {
-                Log.d(TAG, "No item of type '$type' with ID: $id found to delete in table $tableName")
+                return@executeOnIO wasDeleted
+            } catch (e: Exception) {
+                logger.e("Failed to delete item of type '$type' with ID $id from table $tableName: ${e.message}", e)
+                throw StorageException("Failed to delete item of type '$type' with ID $id from table $tableName", e)
             }
-
-            return wasDeleted
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to delete item of type '$type' with ID $id from table $tableName: ${e.message}")
-            throw StorageException("Failed to delete item of type '$type' with ID $id from table $tableName", e)
         }
     }
 
     /**
      * Delete all items of a given type from the specified table.
+     * This is a convenience method for subclasses that follow the (type, id, data) table structure.
+     * 
+     * Note: Subclasses should consider implementing their own deletion methods that align
+     * with their specific table structure rather than relying on this generic implementation.
      *
      * @param tableName The name of the table to delete items from.
      * @param type The type of items to delete.
      * @throws StorageException if the items cannot be deleted.
      */
-    @Throws(StorageException::class)
-    suspend fun clearItems(tableName: String, type: String) {
-        checkDatabase()
+    protected suspend fun clearItems(tableName: String, type: String) {
+        executeOnIO {
+            try {
+                database.delete(
+                    tableName,
+                    "type = ?",
+                    arrayOf(type)
+                )
 
-        try {
-            database?.delete(
-                tableName,
-                "type = ?",
-                arrayOf(type)
-            )
-
-            Log.d(TAG, "Cleared all items of type: $type from table $tableName")
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to clear items of type '$type' from table $tableName: ${e.message}")
-            throw StorageException("Failed to clear items of type '$type' from table $tableName", e)
+                logger.d("Cleared all items of type: $type from table $tableName")
+            } catch (e: Exception) {
+                logger.e("Failed to clear items of type '$type' from table $tableName: ${e.message}", e)
+                throw StorageException("Failed to clear items of type '$type' from table $tableName", e)
+            }
         }
     }
 
@@ -441,12 +420,12 @@ open class SQLiteStorage(
         tableCreators.add(creator)
         
         // If the database is already initialized, call the creator immediately
-        internalDatabase?.let { db ->
+        if (::internalDatabase.isInitialized && internalDatabase.isOpen) {
             try {
-                creator(db)
-                Log.d(TAG, "Called table creator on already initialized database")
+                creator(internalDatabase)
+                logger.d("Called table creator on already initialized database")
             } catch (e: Exception) {
-                Log.e(TAG, "Error calling table creator: ${e.message}")
+                logger.e("Error calling table creator: ${e.message}", e)
             }
         }
     }
@@ -459,13 +438,11 @@ open class SQLiteStorage(
      * @param args The arguments for the SQL statement.
      * @throws StorageException if the SQL execution fails.
      */
-    @Throws(StorageException::class)
     fun executeSQL(sql: String, args: Array<Any?>) {
-        checkDatabase()
         try {
-            internalDatabase?.execSQL(sql, args)
+            internalDatabase.execSQL(sql, args)
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to execute SQL: ${e.message}")
+            logger.e("Failed to execute SQL: ${e.message}", e)
             throw StorageException("Failed to execute SQL", e)
         }
     }
@@ -475,13 +452,11 @@ open class SQLiteStorage(
      *
      * @throws StorageException if the transaction cannot be started.
      */
-    @Throws(StorageException::class)
     fun beginTransaction() {
-        checkDatabase()
         try {
-            internalDatabase?.beginTransaction()
+            internalDatabase.beginTransaction()
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to begin transaction: ${e.message}")
+            logger.e("Failed to begin transaction: ${e.message}", e)
             throw StorageException("Failed to begin transaction", e)
         }
     }
@@ -491,13 +466,11 @@ open class SQLiteStorage(
      *
      * @throws StorageException if the transaction cannot be marked as successful.
      */
-    @Throws(StorageException::class)
     fun setTransactionSuccessful() {
-        checkDatabase()
         try {
-            internalDatabase?.setTransactionSuccessful()
+            internalDatabase.setTransactionSuccessful()
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to set transaction successful: ${e.message}")
+            logger.e("Failed to set transaction successful: ${e.message}", e)
             throw StorageException("Failed to set transaction successful", e)
         }
     }
@@ -507,13 +480,11 @@ open class SQLiteStorage(
      *
      * @throws StorageException if the transaction cannot be ended.
      */
-    @Throws(StorageException::class)
     fun endTransaction() {
-        checkDatabase()
         try {
-            internalDatabase?.endTransaction()
+            internalDatabase.endTransaction()
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to end transaction: ${e.message}")
+            logger.e("Failed to end transaction: ${e.message}", e)
             throw StorageException("Failed to end transaction", e)
         }
     }
@@ -527,27 +498,40 @@ open class SQLiteStorage(
      * @return A list of mapped results.
      * @throws StorageException if the query execution fails.
      */
-    @Throws(StorageException::class)
     fun <T> query(sql: String, args: Array<String>?, mapper: (Cursor) -> T): List<T> {
-        checkDatabase()
         val results = mutableListOf<T>()
         
         try {
-            internalDatabase?.rawQuery(sql, args)?.use { cursor ->
+            internalDatabase.rawQuery(sql, args).use { cursor ->
                 while (cursor.moveToNext()) {
                     results.add(mapper(cursor))
                 }
             }
             return results
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to execute query: ${e.message}")
+            logger.e("Failed to execute query: ${e.message}", e)
             throw StorageException("Failed to execute query", e)
         }
     }
 
     /**
+     * Execute a database operation on the IO dispatcher.
+     * This is a helper method for subclasses to use when implementing their own database operations.
+     *
+     * @param operation The database operation to execute.
+     * @return The result of the operation.
+     */
+    protected suspend fun <T> executeOnIO(operation: suspend () -> T): T {
+        return withContext(Dispatchers.IO) {
+            operation()
+        }
+    }
+
+    /**
      * Helper class for creating and managing the SQLite database.
-     * Enhanced with special handling for test environments.
+     * This class extends SQLiteOpenHelper which is required for proper SQLite database management in Android.
+     * It provides hooks for database creation and version upgrades, but delegates the actual table creation
+     * to the registered table creator functions.
      */
     protected open inner class DatabaseHelper(
         context: Context,
@@ -557,29 +541,17 @@ open class SQLiteStorage(
 
         override fun onCreate(db: SQLiteDatabase) {
             try {
-                // Don't create a default table anymore - the tableCreators will handle this
-                Log.d(TAG, "Database created successfully, waiting for table creators")
+                // Don't create a default table - the tableCreators will handle this
+                logger.d("Database created successfully, waiting for table creators")
             } catch (e: Exception) {
-                val isTestEnvironment = TestModeDetector.isRunningInTestEnvironment()
-                Log.e(TAG, "Error during database creation: ${e.message}")
-
-                if (isTestEnvironment) {
-                    // In test environments, we want to be more lenient and try to recover
-                    Log.w(
-                        TAG,
-                        "Test environment detected, attempting recovery from creation failure"
-                    )
-                } else {
-                    // In production, we don't want to silently recover
-                    throw e
-                }
+                logger.e("Error during database creation: ${e.message}", e)
+                throw e
             }
         }
 
         override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-            // Since the SDK hasn't been released yet, we can simply let each creator recreate tables
             // Each table creator will be called again on upgrade
-            Log.d(TAG, "Database upgrading from version $oldVersion to $newVersion")
+            logger.d("Database upgrading from version $oldVersion to $newVersion")
         }
     }
 }
