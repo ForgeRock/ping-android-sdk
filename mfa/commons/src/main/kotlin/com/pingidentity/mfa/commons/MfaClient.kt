@@ -21,10 +21,10 @@ interface MfaClient {
     /**
      * Initialize the MFA client with the given configuration.
      * This method must be called before any other method on the client.
-     *
-     * @return True if initialization was successful, false otherwise.
+     * 
+     * @throws MfaInitializationException if initialization fails.
      */
-    suspend fun initialize(): Boolean
+    suspend fun initialize()
     
     /**
      * Clean up any resources used by the MFA client.

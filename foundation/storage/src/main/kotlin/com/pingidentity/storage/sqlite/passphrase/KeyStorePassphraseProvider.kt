@@ -17,12 +17,14 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.pingidentity.logger.Logger
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.first
 import java.security.KeyStore
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
+import kotlin.coroutines.coroutineContext
 
 /**
  * PassphraseProvider implementation that securely stores the passphrase
@@ -55,25 +57,31 @@ class KeyStorePassphraseProvider(
     private val dataStore = context.dataStore
 
     override suspend fun getPassphrase(): String {
-        // Try to retrieve an existing passphrase first
-        val existingPassphrase = retrievePassphrase()
-        if (existingPassphrase != null) {
-            logger.d("Retrieved existing passphrase from DataStore using KeyStore encryption")
-            return existingPassphrase
-        }
-        
-        // If an initial passphrase was provided, use and store it
-        if (initialPassphrase != null) {
-            logger.d("Using provided initial passphrase")
-            storePassphrase(initialPassphrase)
-            return initialPassphrase
-        }
+        try {
+            // Try to retrieve an existing passphrase first
+            val existingPassphrase = retrievePassphrase()
+            if (existingPassphrase != null) {
+                logger.d("Retrieved existing passphrase from DataStore using KeyStore encryption")
+                return existingPassphrase
+            }
+            
+            // If an initial passphrase was provided, use and store it
+            if (initialPassphrase != null) {
+                logger.d("Using provided initial passphrase")
+                storePassphrase(initialPassphrase)
+                return initialPassphrase
+            }
 
-        // Generate and store a new passphrase
-        val newPassphrase = PassphraseProvider.generateRandomPassphrase()
-        storePassphrase(newPassphrase)
-        logger.d("Generated and stored new passphrase in DataStore with KeyStore encryption")
-        return newPassphrase
+            // Generate and store a new passphrase
+            val newPassphrase = PassphraseProvider.generateRandomPassphrase()
+            storePassphrase(newPassphrase)
+            logger.d("Generated and stored new passphrase in DataStore with KeyStore encryption")
+            return newPassphrase
+        } catch (e: Exception) {
+            coroutineContext.ensureActive()
+            logger.e("Error in getPassphrase: ${e.message}", e)
+            throw e
+        }
     }
 
     /**
@@ -112,6 +120,7 @@ class KeyStorePassphraseProvider(
 
             return String(decryptedBytes, Charsets.UTF_8)
         } catch (e: Exception) {
+            coroutineContext.ensureActive()
             logger.e("Failed to retrieve passphrase from KeyStore: ${e.message}", e)
             return null
         }
@@ -147,6 +156,7 @@ class KeyStorePassphraseProvider(
 
             logger.d("Successfully stored passphrase in DataStore with KeyStore encryption")
         } catch (e: Exception) {
+            coroutineContext.ensureActive()
             logger.e("Failed to store passphrase in KeyStore: ${e.message}", e)
             throw e
         }

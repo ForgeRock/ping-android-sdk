@@ -32,20 +32,20 @@ dependencies {
     implementation(project(":foundation:android"))
     implementation(project(":foundation:utils"))
 
+    // DataStore for local storage
     implementation(libs.androidx.datastore)
     implementation(libs.androidx.datastore.core)
+    compileOnly(libs.androidx.datastore.preferences) //Make it optional for developer
 
     // Google BlockStore for cloud-backed secure storage
-    implementation(libs.play.services.auth.blockstore)
-
-    compileOnly(libs.androidx.datastore.preferences) //Make it optional for developer
+    compileOnly(libs.play.services.auth.blockstore) //Make it optional for developer
+    compileOnly(libs.kotlinx.coroutines.play.services)
 
     // SQL Cipher for encrypted database
     compileOnly(libs.sqlcipher)
     compileOnly(libs.androidx.sqlite)
 
     implementation(libs.kotlinx.coroutines.core)
-    implementation(libs.kotlinx.coroutines.play.services)
     implementation(libs.kotlinx.serialization.json)
 
     testImplementation(libs.core.ktx)

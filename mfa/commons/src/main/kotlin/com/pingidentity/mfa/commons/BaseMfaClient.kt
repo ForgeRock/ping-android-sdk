@@ -17,6 +17,7 @@ import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.logging.LogLevel
 import io.ktor.client.plugins.logging.Logging
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 
 /**
@@ -27,7 +28,7 @@ import kotlinx.coroutines.withContext
  * @param storage The storage implementation to use. If null, no storage will be used.
  */
 abstract class BaseMfaClient(
-    override val config: MfaConfiguration,
+    final override val config: MfaConfiguration,
     protected val storage: MfaStorage? = null
 ) : MfaClient {
 
@@ -51,10 +52,10 @@ abstract class BaseMfaClient(
      * Initialize the MFA client with the given configuration.
      * This method initializes the storage client if one is provided.
      *
-     * @return True if initialization was successful, false otherwise.
+     * @throws MfaInitializationException if initialization fails.
      */
-    override suspend fun initialize(): Boolean {
-        return withContext(Dispatchers.IO) {
+    override suspend fun initialize() {
+        withContext(Dispatchers.IO) {
             try {
                 // Initialize storage if it exists
                 if (storage != null) {
@@ -67,10 +68,9 @@ abstract class BaseMfaClient(
                 
                 isInitialized = true
                 logger.d("MFA client initialized successfully")
-                
-                true
             } catch (e: Exception) {
-                logger.e("Failed to initialize MFA client: ${e.message}")
+                coroutineContext.ensureActive()
+                logger.e("Failed to initialize MFA client: ${e.message}", e)
                 throw MfaInitializationException("Failed to initialize MFA client", e)
             }
         }

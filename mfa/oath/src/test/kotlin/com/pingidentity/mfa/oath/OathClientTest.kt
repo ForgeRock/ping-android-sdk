@@ -90,7 +90,7 @@ class OathClientTest {
         // Given we have mocked the ContextProvider
         
         // When we build a configuration and access the context
-        val config = MfaConfiguration.Builder().build()
+        val config = MfaConfiguration {}
         val retrievedContext = config.context
         
         // Then it should use the context from ContextProvider

@@ -10,8 +10,10 @@ package com.pingidentity.mfa.oath
 import com.pingidentity.mfa.commons.exception.MfaException
 import com.pingidentity.mfa.commons.MfaConfiguration
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.coroutines.coroutineContext
 
 /**
  * Service class that provides OATH functionality including credential management
@@ -77,6 +79,7 @@ internal class OathService(
                 logger.d("Added new OATH credential with ID: ${credential.id}")
                 credential
             } catch (e: Exception) {
+                coroutineContext.ensureActive()
                 logger.e("Failed to add credential: ${e.message}", e)
                 throw MfaException("Failed to add credential", e)
             }
@@ -109,6 +112,7 @@ internal class OathService(
 
                 credentials
             } catch (e: Exception) {
+                coroutineContext.ensureActive()
                 logger.e("Failed to get credentials: ${e.message}", e)
                 throw MfaException("Failed to get credentials", e)
             }
@@ -175,6 +179,7 @@ internal class OathService(
 
                 removed
             } catch (e: Exception) {
+                coroutineContext.ensureActive()
                 logger.e("Failed to remove credential with ID $credentialId: ${e.message}", e)
                 throw MfaException("Failed to remove credential with ID $credentialId", e)
             }
@@ -194,6 +199,7 @@ internal class OathService(
                 OathAlgorithmHelper.generateCode(credential, configuration.logger)
             }
         } catch (e: Exception) {
+            coroutineContext.ensureActive()
             logger.e("Failed to generate code for credential: ${e.message}", e)
             throw MfaException("Failed to generate code", e)
         }
@@ -226,6 +232,7 @@ internal class OathService(
 
                 codeInfo
             } catch (e: Exception) {
+                coroutineContext.ensureActive()
                 logger.e("Failed to generate code for credential with ID $credentialId: ${e.message}", e)
                 throw MfaException("Failed to generate code for credential with ID $credentialId", e)
             }
@@ -236,11 +243,9 @@ internal class OathService(
      * Clear the internal memory caches.
      * This should be called when the client is being closed.
      */
-    suspend fun clearCache() {
-        withContext(Dispatchers.IO) {
-            credentialsCache.clear()
-            logger.d("OATH credentials cache cleared")
-        }
+    fun clearCache() {
+        credentialsCache.clear()
+        logger.d("OATH credentials cache cleared")
     }
     
 }

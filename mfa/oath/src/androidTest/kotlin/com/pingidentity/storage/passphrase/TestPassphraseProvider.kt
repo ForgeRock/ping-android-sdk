@@ -19,5 +19,5 @@ class TestPassphraseProvider : PassphraseProvider {
         const val TEST_PASSPHRASE = "test_passphrase"
     }
     
-    override fun getPassphrase(): String = TEST_PASSPHRASE
+    override suspend fun getPassphrase(): String = TEST_PASSPHRASE
 }

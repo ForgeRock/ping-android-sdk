@@ -15,11 +15,7 @@ import com.pingidentity.mfa.commons.exception.MfaStorageException
  * Extends the base MfaStorage interface with OATH-specific functionality.
  */
 interface OathStorage : MfaStorage {
-    
-    companion object {
-        const val CREDENTIAL_TYPE_OATH = "oath"
-    }
-    
+
     /**
      * Store an OATH credential.
      *

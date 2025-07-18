@@ -70,18 +70,18 @@ Each submodule can be used independently or in combination with others, allowing
 
 ### Configuration
 
-Each MFA client can be configured using either the builder pattern or a DSL-style approach (for Kotlin):
+Each MFA client can be configured using a DSL-style approach:
 
 ```kotlin
-// Using the builder pattern
-val config = MfaConfiguration.Builder()
-    .encryptionEnabled(true)
-    .timeoutMs(30000L)
-    .enableCredentialCache(false)
-    .logger(customLogger)
-    .build()
+// Using the DSL-style pattern
+val config = MfaConfiguration {
+    encryptionEnabled = true
+    timeoutMs = 30000L
+    enableCredentialCache = false
+    logger = customLogger
+}
 
-// Using the DSL-style pattern (Kotlin)
+// Using the DSL-style pattern with client directly
 val pushClient = PushClient {
     encryptionEnabled = true
     timeoutMs = 30000L

@@ -14,7 +14,6 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.pingidentity.storage.sqlite.passphrase.KeyStorePassphraseProvider.Companion.dataStore
 import com.pingidentity.storage.sqlite.passphrase.BlockStorePassphraseProvider
-import com.pingidentity.storage.sqlite.passphrase.DataStorePassphraseProvider
 import com.pingidentity.storage.sqlite.passphrase.FixedPassphraseProvider
 import com.pingidentity.storage.sqlite.passphrase.KeyStorePassphraseProvider
 import com.pingidentity.storage.sqlite.passphrase.NonePassphraseProvider
@@ -134,51 +133,6 @@ class PassphraseProviderTest {
         val ksProvider2 = KeyStorePassphraseProvider(context, "override-attempt")
         assertEquals(ksPassphrase1, ksProvider2.getPassphrase())
         assertNotEquals("override-attempt", ksProvider2.getPassphrase())
-    }
-    
-    @Test
-    fun testDataStorePassphraseProvider() = runTest {
-        // Make sure we start with a clean state
-        cleanupKeyStore()
-        
-        // Test with an initial passphrase
-        val provider1 = DataStorePassphraseProvider(context, testPassphrase)
-        val passphrase1 = provider1.getPassphrase()
-        assertEquals(testPassphrase, passphrase1)
-        
-        // Create a new instance and verify it returns the same passphrase
-        val provider2 = DataStorePassphraseProvider(context)
-        assertEquals(testPassphrase, provider2.getPassphrase())
-        
-        // Clean up
-        cleanupKeyStore()
-        
-        // Test without an initial passphrase (generates random)
-        val provider3 = DataStorePassphraseProvider(context)
-        val generatedPassphrase = provider3.getPassphrase()
-        assertNotNull(generatedPassphrase)
-        assertTrue(generatedPassphrase.isNotEmpty())
-        
-        // Create a new instance without an initial passphrase
-        // It should retrieve the previously stored passphrase
-        val provider4 = DataStorePassphraseProvider(context)
-        assertEquals(generatedPassphrase, provider4.getPassphrase())
-    }
-    
-    @Test
-    fun testInitialPassphraseOverrideForDataStore() = runTest {
-        // Make sure we start with a clean state
-        cleanupKeyStore()
-        
-        // First initialize with a specific passphrase
-        val dsProvider1 = DataStorePassphraseProvider(context, testPassphrase)
-        val dsPassphrase1 = dsProvider1.getPassphrase()
-        assertEquals(testPassphrase, dsPassphrase1)
-        
-        // Then try to override with a different initial passphrase - it should NOT override
-        val dsProvider2 = DataStorePassphraseProvider(context, "override-attempt")
-        assertEquals(testPassphrase, dsProvider2.getPassphrase())
-        assertNotEquals("override-attempt", dsProvider2.getPassphrase())
     }
     
     @Test

@@ -32,6 +32,23 @@ class MfaConfiguration private constructor(
      */
     val context: Context
         get() = ContextProvider.context
+        
+    /**
+     * Builder-style DSL constructor for MfaConfiguration.
+     */
+    constructor(block: Builder.() -> Unit) : this(
+        Builder().apply(block)
+    )
+
+    /**
+     * Internal constructor to support creation from Builder.
+     */
+    private constructor(builder: Builder) : this(
+        encryptionEnabled = builder.encryptionEnabled,
+        timeoutMs = builder.timeoutMs,
+        enableCredentialCache = builder.enableCredentialCache,
+        logger = builder.logger
+    )
 
     companion object {
         // Timeout for the HTTP client, default is 15 seconds
@@ -41,69 +58,10 @@ class MfaConfiguration private constructor(
     /**
      * Builder class for [MfaConfiguration].
      */
-    class Builder() {
-        private var encryptionEnabled: Boolean = true
-        private var timeoutMs: Long = DEFAULT_TIMEOUT_MS
-        private var enableCredentialCache: Boolean = false
-        private var logger: Logger = Logger.logger
-        
-        /**
-         * Sets whether credential caching is enabled in memory.
-         * By default this is disabled for security reasons.
-         *
-         * @param enabled True to enable credential caching, false otherwise.
-         * @return The builder instance.
-         */
-        fun enableCredentialCache(enabled: Boolean): Builder {
-            this.enableCredentialCache = enabled
-            return this
-        }
-
-        /**
-         * Sets whether data encryption is enabled.
-         *
-         * @param enabled True if encryption is enabled, false otherwise.
-         * @return The builder instance.
-         */
-        fun encryptionEnabled(enabled: Boolean): Builder {
-            this.encryptionEnabled = enabled
-            return this
-        }
-
-        /**
-         * Sets the timeout for network operations.
-         *
-         * @param timeoutMs The timeout in milliseconds.
-         * @return The builder instance.
-         */
-        fun timeoutMs(timeoutMs: Long): Builder {
-            this.timeoutMs = timeoutMs
-            return this
-        }
-
-        /**
-         * Sets the logger instance for logging messages.
-         *
-         * @param logger The logger instance to use.
-         * @return The builder instance.
-         */
-        fun logger(logger: Logger): Builder {
-            this.logger = logger
-            return this
-        }
-
-        /**
-         * Builds a new [MfaConfiguration] instance with the configured values.
-         *
-         * @return A new [MfaConfiguration] instance.
-         */
-        fun build(): MfaConfiguration {
-            return MfaConfiguration(
-                encryptionEnabled = encryptionEnabled,
-                timeoutMs = timeoutMs,
-                enableCredentialCache = enableCredentialCache,
-                logger = logger
-            )
-        }
+    class Builder {
+        var encryptionEnabled: Boolean = true
+        var timeoutMs: Long = DEFAULT_TIMEOUT_MS
+        var enableCredentialCache: Boolean = false
+        var logger: Logger = Logger.logger
     }
 }

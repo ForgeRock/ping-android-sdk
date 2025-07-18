@@ -8,6 +8,7 @@
 package com.pingidentity.mfa.oath.storage
 
 import android.content.Context
+import com.pingidentity.android.ContextProvider
 import com.pingidentity.logger.Logger
 import com.pingidentity.mfa.commons.exception.MfaStorageException
 import com.pingidentity.mfa.oath.OathAlgorithm
@@ -18,9 +19,11 @@ import com.pingidentity.storage.sqlite.passphrase.KeyStorePassphraseProvider
 import com.pingidentity.storage.sqlite.passphrase.PassphraseProvider
 import com.pingidentity.storage.sqlite.SQLiteStorage
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import net.sqlcipher.Cursor
 import java.util.Date
+import kotlin.coroutines.coroutineContext
 
 /**
  * SQLite-based implementation of [OathStorage].
@@ -95,12 +98,12 @@ class SQLOathStorage private constructor(
      * Builder class for configuring SQLOathStorage.
      */
     class Builder {
-        var context: Context? = null
-        var databaseName: String? = null
+        var context: Context = ContextProvider.context
+        var databaseName: String = DEFAULT_DATABASE_NAME
         var databaseVersion: Int = 1
         var encryptionEnabled: Boolean = true
-        var initialPassphrase: String? = null
-        var passphraseProvider: PassphraseProvider? = null
+        var initialPassphrase: String? = null // Default is null, in case developer does not want to supply their own passphrase
+        var passphraseProvider: PassphraseProvider = KeyStorePassphraseProvider(context, initialPassphrase)
         var logger: Logger = Logger.logger
     }
     
@@ -147,14 +150,13 @@ class SQLOathStorage private constructor(
      * @throws MfaStorageException if initialization fails.
      */
     override suspend fun initialize() {
-        withContext(Dispatchers.IO) {
-            try {
-                // Initialize the database
-                initializeDatabase()
-                logger.d("OATH storage initialized")
-            } catch (e: Exception) {
-                throw MfaStorageException("Failed to initialize OATH storage", e)
-            }
+        try {
+            // Initialize the database
+            initializeDatabase()
+            logger.d("OATH storage initialized")
+        } catch (e: Exception) {
+            coroutineContext.ensureActive()
+            throw MfaStorageException("Failed to initialize OATH storage", e)
         }
     }
     
@@ -165,14 +167,13 @@ class SQLOathStorage private constructor(
      * @throws MfaStorageException if the storage cannot be cleared.
      */
     override suspend fun clear() {
-        withContext(Dispatchers.IO) {
-            try {
-                clearOathCredentials()
-                logger.d("Cleared all data from OATH storage")
-            } catch (e: Exception) {
-                logger.e("Failed to clear OATH storage: ${e.message}", e)
-                throw MfaStorageException("Failed to clear OATH storage", e)
-            }
+        try {
+            clearOathCredentials()
+            logger.d("Cleared all data from OATH storage")
+        } catch (e: Exception) {
+            coroutineContext.ensureActive()
+            logger.e("Failed to clear OATH storage: ${e.message}", e)
+            throw MfaStorageException("Failed to clear OATH storage", e)
         }
     }
     
@@ -181,13 +182,12 @@ class SQLOathStorage private constructor(
      * This method closes the database connection.
      */
     override suspend fun close() {
-        withContext(Dispatchers.IO) {
-            try {
-                closeDatabase() 
-                logger.d("OATH SQL storage closed")
-            } catch (e: Exception) {
-                logger.e("Error closing OATH storage: ${e.message}", e)
-            }
+        try {
+            closeDatabase() 
+            logger.d("OATH SQL storage closed")
+        } catch (e: Exception) {
+            coroutineContext.ensureActive()
+            logger.e("Error closing OATH storage: ${e.message}", e)
         }
     }
 
@@ -226,6 +226,7 @@ class SQLOathStorage private constructor(
 
             storeOathCredentialData(credential.id, data)
         } catch (e: Exception) {
+            coroutineContext.ensureActive()
             throw MfaStorageException("Failed to store OATH credential with ID ${credential.id}", e)
         }
     }
@@ -276,6 +277,7 @@ class SQLOathStorage private constructor(
                 endTransaction()
             }
         } catch (e: Exception) {
+            coroutineContext.ensureActive()
             logger.e("Failed to store OATH credential with ID $credentialId: ${e.message}", e)
             throw MfaStorageException("Failed to store OATH credential with ID $credentialId", e)
         }
@@ -293,6 +295,7 @@ class SQLOathStorage private constructor(
             val data = retrieveOathCredentialData(credentialId) ?: return null
             return createOathCredentialFromData(data)
         } catch (e: Exception) {
+            coroutineContext.ensureActive()
             throw MfaStorageException("Failed to retrieve OATH credential with ID $credentialId", e)
         }
     }
@@ -318,6 +321,7 @@ class SQLOathStorage private constructor(
             
             return@withContext results.firstOrNull()
         } catch (e: Exception) {
+            coroutineContext.ensureActive()
             logger.e("Failed to retrieve OATH credential with ID $credentialId: ${e.message}", e)
             throw MfaStorageException("Failed to retrieve OATH credential with ID $credentialId", e)
         }
@@ -334,6 +338,7 @@ class SQLOathStorage private constructor(
             val dataList = retrieveAllOathCredentialsData()
             return dataList.mapNotNull { createOathCredentialFromData(it) }
         } catch (e: Exception) {
+            coroutineContext.ensureActive()
             throw MfaStorageException("Failed to retrieve all OATH credentials", e)
         }
     }
@@ -356,6 +361,7 @@ class SQLOathStorage private constructor(
                 extractDataFromCursor(cursor)
             }
         } catch (e: Exception) {
+            coroutineContext.ensureActive()
             logger.e("Failed to retrieve all OATH credentials: ${e.message}", e)
             throw MfaStorageException("Failed to retrieve all OATH credentials", e)
         }
@@ -372,6 +378,7 @@ class SQLOathStorage private constructor(
         try {
             return deleteOathCredential(credentialId)
         } catch (e: Exception) {
+            coroutineContext.ensureActive()
             throw MfaStorageException("Failed to remove OATH credential with ID $credentialId", e)
         }
     }
@@ -402,6 +409,7 @@ class SQLOathStorage private constructor(
             
             return@withContext wasDeleted
         } catch (e: Exception) {
+            coroutineContext.ensureActive()
             logger.e("Failed to delete OATH credential with ID $credentialId: ${e.message}", e)
             throw MfaStorageException("Failed to delete OATH credential with ID $credentialId", e)
         }
@@ -416,6 +424,7 @@ class SQLOathStorage private constructor(
         try {
             clearAllOathCredentials()
         } catch (e: Exception) {
+            coroutineContext.ensureActive()
             throw MfaStorageException("Failed to clear OATH credentials", e)
         }
     }
@@ -432,6 +441,7 @@ class SQLOathStorage private constructor(
             database.delete(OATH_TABLE, null, null)
             logger.d("Cleared all OATH credentials")
         } catch (e: Exception) {
+            coroutineContext.ensureActive()
             logger.e("Failed to clear OATH credentials: ${e.message}", e)
             throw MfaStorageException("Failed to clear OATH credentials", e)
         }

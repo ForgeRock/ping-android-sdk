@@ -16,7 +16,9 @@ import com.pingidentity.mfa.oath.storage.SQLOathStorage
 import com.pingidentity.storage.sqlite.passphrase.KeyStorePassphraseProvider
 import com.pingidentity.storage.sqlite.passphrase.NonePassphraseProvider
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
+import kotlin.coroutines.coroutineContext
 
 /**
  * Implementation of OathClient that provides OATH functionality.
@@ -57,23 +59,15 @@ class OathClient(
             val builder = Builder()
             builder.apply(block)
             
-            val configuration = MfaConfiguration.Builder().apply {
-                enableCredentialCache(builder.enableCredentialCache)
-                encryptionEnabled(builder.encryptionEnabled)
-                timeoutMs(builder.timeoutMs)
-                logger(builder.logger)
-            }.build()
+            val configuration = MfaConfiguration {
+                enableCredentialCache = builder.enableCredentialCache
+                encryptionEnabled = builder.encryptionEnabled
+                timeoutMs = builder.timeoutMs
+                logger = builder.logger
+            }
             
             // Create storage if not provided
-            val storage = builder.storage ?: SQLOathStorage { 
-                context = configuration.context
-                passphraseProvider = if (configuration.encryptionEnabled) {
-                    KeyStorePassphraseProvider(configuration.context, logger = configuration.logger)
-                } else {
-                    NonePassphraseProvider()
-                }
-                logger = configuration.logger
-            }
+            val storage = builder.storage ?: createDefaultStorage(configuration)
             
             val client = OathClient(configuration, storage)
             client.initialize()
@@ -89,11 +83,25 @@ class OathClient(
          * @return An uninitialized OathClient instance.
          */
         @JvmStatic
-        suspend fun create(configuration: MfaConfiguration? = null): MfaOathClient {
-            val config = configuration ?: MfaConfiguration.Builder().build()
+        fun create(configuration: MfaConfiguration? = null): MfaOathClient {
+            val config = configuration ?: MfaConfiguration {}
             
             // Create default storage with appropriate passphrase provider
-            val storage = SQLOathStorage { 
+            val storage = createDefaultStorage(config)
+            
+            // Return uninitialized client
+            return OathClient(config, storage)
+        }
+        
+        /**
+         * Creates a default OathStorage implementation with the appropriate configuration.
+         *
+         * @param config The MFA configuration to use for the storage.
+         * @return A configured OathStorage implementation.
+         */
+        @JvmStatic
+        private fun createDefaultStorage(config: MfaConfiguration): OathStorage {
+            return SQLOathStorage { 
                 context = config.context
                 passphraseProvider = if (config.encryptionEnabled) {
                     KeyStorePassphraseProvider(config.context, logger = config.logger)
@@ -102,10 +110,7 @@ class OathClient(
                 }
                 logger = config.logger
             }
-            
-            // Return uninitialized client
-            return OathClient(config, storage)
-        }       
+        }
         
         /**
          * Builder class for OathClient configuration.
@@ -113,7 +118,7 @@ class OathClient(
         class Builder {
             /**
              * The OathStorage implementation to use.
-             * If not set, a default SQLOathStorage implementation will be created.
+             * If not specified, a default SQLOathStorage implementation will be created when the client is built.
              */
             var storage: OathStorage? = null
             
@@ -166,6 +171,7 @@ class OathClient(
             
             logger.d("OATH client initialized successfully")
         } catch (e: Exception) {
+            coroutineContext.ensureActive()
             logger.e("Failed to initialize OATH client: ${e.message}", e)
             throw MfaInitializationException("Failed to initialize OATH client", e)
         }
@@ -184,6 +190,7 @@ class OathClient(
             val credential = oathService.parseUri(uri)
             return saveCredential(credential)
         } catch (e: Exception) {
+            coroutineContext.ensureActive()
             logger.e("Failed to add credential from URI: ${e.message}", e)
             throw MfaException("Failed to add credential from URI", e)
         }
@@ -271,6 +278,7 @@ class OathClient(
                 oathService.clearCache()
                 logger.d("OATH client cache cleared")
             } catch (e: Exception) {
+                coroutineContext.ensureActive()
                 // Just log any errors during cache clearing, but continue with closing
                 logger.w("Error clearing OATH client cache: ${e.message}", e)
             }

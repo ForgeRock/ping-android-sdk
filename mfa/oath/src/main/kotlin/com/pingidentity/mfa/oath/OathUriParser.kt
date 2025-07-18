@@ -10,7 +10,9 @@ package com.pingidentity.mfa.oath
 import android.net.Uri
 import com.pingidentity.mfa.commons.UriParser
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
+import kotlin.coroutines.coroutineContext
 
 /**
  * Utility class for parsing OATH URIs.
@@ -138,6 +140,7 @@ object OathUriParser : UriParser() {
                 backgroundColor = backgroundColor
             )
         } catch (e: Exception) {
+            coroutineContext.ensureActive()
             if (e is IllegalArgumentException) {
                 throw e
             } else {
