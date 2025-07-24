@@ -76,7 +76,12 @@ class RequestTest {
         request.form {
             append("key", "value")
         }
+        request.form {
+            append("key2", "value2")
+        }
         val body = request.builder.body as FormDataContent
         assertEquals("value", body.formData["key"])
+        assertEquals("value2", body.formData["key2"])
     }
+
 }

@@ -19,8 +19,8 @@ import com.pingidentity.davinci.module.Oidc
 import com.pingidentity.davinci.plugin.DaVinci
 import com.pingidentity.logger.Logger
 import com.pingidentity.logger.STANDARD
-import com.pingidentity.oidc.OidcClient
 import com.pingidentity.oidc.OidcClientConfig
+import com.pingidentity.oidc.OidcWeb
 import com.pingidentity.samples.app.User
 import com.pingidentity.samples.app.settingDataStore
 import kotlinx.coroutines.CoroutineScope
@@ -69,7 +69,7 @@ val social by lazy {
 }
 
 lateinit var daVinci: DaVinci
-lateinit var oidcClient: OidcClient
+lateinit var web: OidcWeb
 
 class EnvViewModel : ViewModel() {
 
@@ -91,11 +91,14 @@ class EnvViewModel : ViewModel() {
         val server = servers.firstOrNull { it.oidcConfig().clientId == config.clientId } ?: prod
         daVinci = server
 
-        oidcClient = OidcClient {
-            clientId = config.clientId
-            discoveryEndpoint = config.discoveryEndpoint
-            scopes = config.scopes
-            redirectUri = config.redirectUri
+        web = OidcWeb {
+            logger = Logger.STANDARD
+            module(com.pingidentity.oidc.module.Oidc) {
+                clientId = config.clientId
+                discoveryEndpoint = config.discoveryEndpoint
+                scopes = config.scopes
+                redirectUri = config.redirectUri
+            }
         }
 
         if (current.clientId != config.clientId) {

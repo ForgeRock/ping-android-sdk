@@ -15,6 +15,8 @@ import com.pingidentity.davinci.plugin.DaVinci
 import com.pingidentity.orchestrate.WorkflowConfig
 import com.pingidentity.orchestrate.module.Cookie
 import com.pingidentity.orchestrate.module.CustomHeader
+import com.pingidentity.orchestrate.module.CustomParameter
+import com.pingidentity.orchestrate.module.CustomParameterConfig.Companion.START
 
 // typealias DaVinciConfig = WorkflowConfig
 private const val X_REQUESTED_WITH = "x-requested-with"
@@ -53,6 +55,10 @@ fun DaVinci(block: DaVinciConfig.() -> Unit = {}): DaVinci {
             header(X_REQUESTED_WITH, PING_SDK)
             header(X_REQUESTED_PLATFORM, ANDROID)
             header(ACCEPT_LANGUAGE, LocaleList.getDefault().toAcceptLanguage())
+        }
+        module(CustomParameter) {
+            phase = START
+            parameter("response_mode", "pi.flow")
         }
         module(NodeTransform)
         //Module cookie has lower priority than Oidc, the Cookie module requires the request Url to be set

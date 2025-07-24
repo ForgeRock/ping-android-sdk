@@ -10,10 +10,8 @@ package com.pingidentity.oidc
 import com.pingidentity.exception.ApiException
 import com.pingidentity.logger.Logger
 import com.pingidentity.logger.None
-import com.pingidentity.oidc.agent.browser
 import com.pingidentity.storage.EncryptedDataStoreStorage
 import com.pingidentity.storage.EncryptedDataStoreStorageConfig
-import com.pingidentity.storage.EncryptedDataStoreStorageFactory
 import com.pingidentity.storage.Storage
 import com.pingidentity.utils.PingDsl
 import io.ktor.client.HttpClient
@@ -214,7 +212,7 @@ class OidcClientConfig {
             openId = discover()
         }
         if (!::agent.isInitialized) {
-            updateAgent(browser)
+            updateAgent(DefaultAgent)
         }
 
     }
