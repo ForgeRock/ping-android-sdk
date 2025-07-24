@@ -21,17 +21,17 @@ import kotlinx.serialization.json.put
 /**
  * Abstract class for callbacks.
  *
- * @property json The JSON object representing the callback.
+ * @property source The JSON object representing the callback.
  */
 abstract class AbstractCallback : Callback {
 
-    lateinit var json: JsonObject
+    lateinit var source: JsonObject
         protected set
 
     protected abstract fun init(name: String, value: JsonElement)
 
     override fun init(jsonObject: JsonObject) : Callback {
-        this.json = jsonObject
+        this.source = jsonObject
         jsonObject["output"]?.jsonArray?.forEach { outputItem ->
             val outputObject = outputItem.jsonObject
             outputObject["name"]?.jsonPrimitive?.content?.let { name ->
@@ -52,7 +52,7 @@ abstract class AbstractCallback : Callback {
      * @return The updated JsonObject.
      */
     fun input(vararg value: Any): JsonObject {
-        val orig = json["input"]?.jsonArray
+        val orig = source["input"]?.jsonArray
 
         val updated = buildJsonArray {
             value.forEachIndexed { index, element ->
@@ -74,19 +74,19 @@ abstract class AbstractCallback : Callback {
 
     private fun update(input: JsonArray): JsonObject {
         // Convert the JsonObject to a mutable map
-        val mutableMap = json.toMutableMap()
+        val mutableMap = source.toMutableMap()
 
         // Modify the map
         mutableMap["input"] = input
 
         // Convert the map back to a JsonObject
-        json = buildJsonObject {
+        source = buildJsonObject {
             mutableMap.forEach { (key, value) ->
                 put(key, value)
             }
         }
-        return json
+        return source
     }
 
-    override fun payload(): JsonObject = json
+    override fun payload(): JsonObject = source
 }
