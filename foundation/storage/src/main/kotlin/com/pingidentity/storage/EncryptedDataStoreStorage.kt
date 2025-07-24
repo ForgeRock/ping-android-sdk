@@ -20,5 +20,5 @@ inline fun <reified T : Any> EncryptedDataStoreStorage(block: EncryptedDataStore
 @PingDsl
 class EncryptedDataStoreStorageConfig : SecretKeyEncryptorConfig() {
     lateinit var fileName: String
-    var cache = false
+    var cacheStrategy = CacheStrategy.NO_CACHE
 }

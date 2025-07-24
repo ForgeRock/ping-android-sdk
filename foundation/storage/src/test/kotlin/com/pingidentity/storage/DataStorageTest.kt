@@ -94,7 +94,7 @@ class DataStorageTest {
     @Test
     fun testDataStoreCacheDelete() =
         runTest {
-            val storage = DataStoreStorage(context.dataStore, cacheable = true)
+            val storage = DataStoreStorage(context.dataStore, cacheStrategy = CacheStrategy.CACHE)
             storage.save(Data(1, "test1"))
 
             var storedData = storage.get()
@@ -110,7 +110,7 @@ class DataStorageTest {
     @Test
     fun testDataStoreCacheUpdate() =
         runTest {
-            val storage = DataStoreStorage(context.dataStore, cacheable = true)
+            val storage = DataStoreStorage(context.dataStore, CacheStrategy.CACHE)
             storage.save(Data(1, "test1"))
 
             var storedData = storage.get()

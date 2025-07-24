@@ -17,7 +17,7 @@ class EncryptedDataStoreStorageTest {
     fun createsStorageWithValidConfig() {
         val storage = EncryptedDataStoreStorage<String> {
             fileName = "secure_prefs"
-            cache = true
+            cacheStrategy = CacheStrategy.CACHE
             keyAlias = EncryptedDataStoreStorageTest::class.java.simpleName
         }
         assertNotNull(storage)

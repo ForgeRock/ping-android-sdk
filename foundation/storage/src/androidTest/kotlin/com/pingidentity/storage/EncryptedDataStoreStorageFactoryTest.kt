@@ -50,7 +50,6 @@ class EncryptedDataStoreStorageFactoryTest {
         // Delete key from keystore
         val keyStore = KeyStore.getInstance("AndroidKeyStore")
         keyStore.load(null)
-        println(keyStore.aliases())
         keyStore.deleteEntry(keyAlias1)
         keyStore.deleteEntry(keyAlias2)
 

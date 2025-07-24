@@ -107,11 +107,44 @@ val journey = Journey {
     module(Oidc) {
         clientId = "your_client_id"
         discoveryEndpoint =
-                "https://your_openam_domain/am/oauth2/alpha/.well-known/openid-configuration"
+            "https://your_openam_domain/am/oauth2/alpha/.well-known/openid-configuration"
         // ... other OIDC configurations
+
+        // Storage configuration options
+        storage {
+            fileName = "test"
+            keyAlias = "myKeyAlias"
+            strongBoxPreferred = true
+            cacheStrategy = CacheStrategy.CACHE_ON_FAILURE
+        }
+    }
+    module(Session) {
+        storage {
+            //keep default filename and keyalias.
+            strongBoxPreferred = false
+            cacheStrategy = CacheStrategy.CACHE_ON_FAILURE
+        }
     }
 }
 ```
+
+#### Storage Configuration Explained
+
+The `storage` block allows you to configure how data is persisted for each module. The options
+include:
+
+- **fileName**: The name of the file used for persistent storage.
+- **keyAlias**: If provided, enables encryption using AndroidKeyStore. This results in the use of
+  `EncryptedDataStoreStorage`.
+- **strongBoxPreferred**: If set to `true`, attempts to use hardware-backed StrongBox for key
+  storage (if available).
+- **cacheStrategy**: Controls in-memory caching behavior. Options:
+    - `NO_CACHE`: No caching, always fetch fresh data.
+    - `CACHE_ON_FAILURE`: Cache in memory only if storage operation fails.
+    - `CACHE`: Cache in memory, even if the storage operation fails.
+
+> **Note:** Data that store in the cache is kept in plain text and is not encrypted. A device that
+> can output a memory dump may expose sensitive information
 
 ### Navigating the Authentication Flow
 
@@ -411,7 +444,8 @@ C4Context
 
 ### Journey's Callback Customization & Extension
 
-Please refer to [journey-plugin](https://github.com/ForgeRock/ping-android-sdk/tree/develop/foundation/journey-plugin)
+Please refer
+to [journey-plugin](https://github.com/ForgeRock/ping-android-sdk/tree/develop/foundation/journey-plugin)
 for customizing the Journey's callback.
 
 Callback below will be supported by other modules:
@@ -430,6 +464,4 @@ Callback below will be supported by other modules:
 | WebAuthnAuthenticationCallback   | WebAuthn Authentication.                                                       |
 | SelectIdpCallback                | External Identity provider selection.                                          |
 | IdpCallback                      | External Identity provider authentication.                                     |
-
-
 

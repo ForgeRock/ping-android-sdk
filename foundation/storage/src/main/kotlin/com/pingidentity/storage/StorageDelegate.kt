@@ -16,11 +16,11 @@ import kotlinx.coroutines.sync.withLock
  *
  * @param T The type of the object to be stored.
  * @param delegate The repository to delegate the operations to.
- * @param cacheable Whether the storage should cache the object in memory.
+ * @param cacheStrategy The strategy for caching the item in memory.
  */
 class StorageDelegate<T : Any>(
     private val delegate: Storage<T>,
-    private val cacheable: Boolean = false,
+    private val cacheStrategy: CacheStrategy = CacheStrategy.NO_CACHE,
 ) : Storage<T> by delegate {
     private val lock = Mutex()
     private var cached: T? = null
@@ -31,10 +31,22 @@ class StorageDelegate<T : Any>(
      * @param item The item to save.
      */
     override suspend fun save(item: T) {
+
         lock.withLock {
-            delegate.save(item)
-            if (cacheable) {
-                cached = item
+            try {
+                cached = null
+                delegate.save(item)
+                // Only set cache if successful and strategy is CACHE
+                if (cacheStrategy == CacheStrategy.CACHE) {
+                    cached = item
+                }
+            } catch (e: Exception) {
+                // If the storage fails to persist, handle caching based on the strategy
+                if (cacheStrategy == CacheStrategy.CACHE_ON_FAILURE || cacheStrategy == CacheStrategy.CACHE) {
+                    cached = item
+                } else {
+                    throw e
+                }
             }
         }
     }
@@ -55,10 +67,25 @@ class StorageDelegate<T : Any>(
      */
     override suspend fun delete() {
         lock.withLock {
+            cached = null
             delegate.delete()
-            if (cacheable) {
-                cached = null
-            }
         }
     }
+}
+
+enum class CacheStrategy {
+    /**
+     * Cache the item in memory, even if the storage operation fails.
+     */
+    CACHE,
+
+    /**
+     * Do not cache the item in memory.
+     */
+    NO_CACHE,
+
+    /**
+     * Cache the item in memory only if the storage operation fails.
+     */
+    CACHE_ON_FAILURE
 }
