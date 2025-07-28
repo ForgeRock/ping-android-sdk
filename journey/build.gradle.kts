@@ -12,6 +12,8 @@ plugins {
     alias(libs.plugins.kotlinSerialization)
 }
 
+description = "Journey library"
+
 android {
     namespace = "com.pingidentity.journey"
 
@@ -21,6 +23,13 @@ android {
 
     testVariants.all {
         this.mergedFlavor.manifestPlaceholders["appRedirectUriScheme"] = "com.pingidentity.demo"
+    }
+
+    buildTypes {
+        debug {
+            enableAndroidTestCoverage = true
+            enableUnitTestCoverage = true
+        }
     }
 }
 
@@ -45,4 +54,9 @@ dependencies {
     testImplementation(libs.robolectric)
     testImplementation(libs.ktor.client.mock)
     testImplementation(project(":protect"))
+
+    androidTestImplementation(libs.kotlinx.coroutines.test)
+    androidTestImplementation(libs.androidx.junit)
+    androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(project(":foundation:testrail"))
 }
