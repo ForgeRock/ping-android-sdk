@@ -10,4 +10,5 @@ package com.pingidentity.device.profile.collector
 fun DefaultDeviceCollector(): MutableList<DeviceCollector<*>>.() -> Unit = {
     // Example usage: add collectors to the list
     add(CameraCollector)
+    add(PlatformCollector())
 }

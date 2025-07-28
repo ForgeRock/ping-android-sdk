@@ -10,6 +10,7 @@ package com.pingidentity.device.profile
 import com.pingidentity.device.id.DeviceIdentifier
 import com.pingidentity.device.profile.collector.CameraCollector
 import com.pingidentity.device.profile.collector.DeviceCollector
+import com.pingidentity.device.profile.collector.PlatformCollector
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.Serializable
 import kotlin.test.Test
@@ -35,6 +36,7 @@ class DeviceProfileCallbackTest {
             }
             metadata {
                 add(CameraCollector)
+                add(PlatformCollector())
             }
         }
     }
