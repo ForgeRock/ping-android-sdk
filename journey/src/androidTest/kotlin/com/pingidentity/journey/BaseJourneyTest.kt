@@ -26,7 +26,6 @@ open class BaseJourneyTest {
 //    @get:Rule
 //    val globalTimeout: Timeout = Timeout.seconds(360)
 
-
     // Common test properties
     protected val logger: Logger = Logger.STANDARD
 
@@ -34,12 +33,12 @@ open class BaseJourneyTest {
     protected val SERVER_URL: String = "https://openam-sdks.forgeblocks.com/am"
     protected val REALM: String = "alpha"
     protected val COOKIE: String = "5421aeddf91aa20"
-    protected var TREE: String = "Login"
     protected val USERNAME: String = "sdkuser"
     protected val PASSWORD: String = "password"
     protected val CLIENT_ID: String = "AndroidTest"
     protected val REDIRECT_URI: String = "org.forgerock.demo:/oauth2redirect"
     protected val DISCOVERY_ENDPOINT: String = "https://openam-sdks.forgeblocks.com/am/oauth2/alpha/.well-known/openid-configuration"
+    protected var tree: String = "Login"
 
     @Before
     fun setup() = runTest {

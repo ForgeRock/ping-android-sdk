@@ -8,14 +8,10 @@
 package com.pingidentity.journey.callback
 
 import com.pingidentity.journey.BaseJourneyTest
-import com.pingidentity.journey.module.session
 import com.pingidentity.journey.plugin.callbacks
 import com.pingidentity.journey.start
 import com.pingidentity.orchestrate.ContinueNode
-import com.pingidentity.orchestrate.SuccessNode
 import junit.framework.TestCase.assertEquals
-import junit.framework.TestCase.assertFalse
-import junit.framework.TestCase.assertNotNull
 import junit.framework.TestCase.assertTrue
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
@@ -25,12 +21,12 @@ class SuspendedTextCallbackE2ETest : BaseJourneyTest() {
 
     @Before
     fun setupTree() = runTest {
-        TREE = "SuspendedTextCallbackTest"
+        tree = "SuspendedTextCallbackTest"
     }
 
     @Test
     fun suspendedTextCallbackTest() = runTest {
-        var node = defaultJourney.start(TREE) as ContinueNode
+        var node = defaultJourney.start(tree) as ContinueNode
         node.handleLoginCallbacks()
         node = node.next() as ContinueNode
 

@@ -24,12 +24,12 @@ class NumberAttributeInputCallbackE2ETest : BaseJourneyTest() {
 
     @Before
     fun setupTree() = runTest {
-        TREE = "NumberAttributeInputCallbackTest"
+        tree = "NumberAttributeInputCallbackTest"
     }
 
     @Test
     fun numberAttributeInputCallbackTest() = runTest {
-        var node = defaultJourney.start(TREE)  as ContinueNode
+        var node = defaultJourney.start(tree)  as ContinueNode
 
         node.handleLoginCallbacks()
         node = node.next() as ContinueNode

@@ -24,12 +24,12 @@ class MetadataCallbackE2ETest : BaseJourneyTest() {
 
     @Before
     fun setupTree() = runTest {
-        TREE = "MetadataCallbackTest"
+        tree = "MetadataCallbackTest"
     }
 
     @Test
     fun namePasswordCallbackTest() = runTest {
-        var node = defaultJourney.start(TREE) as ContinueNode
+        var node = defaultJourney.start(tree) as ContinueNode
 
         node.handleLoginCallbacks()
         node = node.next() as ContinueNode

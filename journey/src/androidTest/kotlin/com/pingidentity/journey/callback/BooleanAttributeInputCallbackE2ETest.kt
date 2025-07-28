@@ -14,22 +14,22 @@ import com.pingidentity.journey.start
 import com.pingidentity.orchestrate.ContinueNode
 import com.pingidentity.orchestrate.SuccessNode
 import junit.framework.TestCase.assertEquals
+import junit.framework.TestCase.assertNotNull
 import junit.framework.TestCase.assertTrue
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Test
-import kotlin.test.assertNotNull
 
 class BooleanAttributeInputCallbackE2ETest : BaseJourneyTest() {
 
     @Before
     fun setupTree() = runTest {
-        TREE = "BooleanAttributeInputCallbackTest"
+        tree = "BooleanAttributeInputCallbackTest"
     }
 
     @Test
     fun booleanAttributeInputCallbackTest() = runTest {
-        var node = defaultJourney.start(TREE)  as ContinueNode
+        var node = defaultJourney.start(tree)  as ContinueNode
 
         node.handleLoginCallbacks()
         node = node.next() as ContinueNode

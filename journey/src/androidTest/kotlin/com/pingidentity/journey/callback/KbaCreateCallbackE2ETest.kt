@@ -24,12 +24,12 @@ class KbaCreateCallbackE2ETest : BaseJourneyTest() {
 
     @Before
     fun setupTree() = runTest {
-        TREE = "KbaCreateCallbackTest"
+        tree = "KbaCreateCallbackTest"
     }
 
     @Test
     fun kbaCreateCallbackTest() = runTest {
-        var node = defaultJourney.start(TREE) as ContinueNode
+        var node = defaultJourney.start(tree) as ContinueNode
 
         node.handleLoginCallbacks()
         node = node.next() as ContinueNode

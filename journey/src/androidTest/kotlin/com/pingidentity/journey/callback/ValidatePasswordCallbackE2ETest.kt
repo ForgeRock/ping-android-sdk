@@ -25,12 +25,12 @@ class ValidatePasswordCallbackE2ETest : BaseJourneyTest() {
 
     @Before
     fun setupTree() = runTest {
-        TREE = "ValidatedPasswordCallbackTest"
+        tree = "ValidatedPasswordCallbackTest"
     }
 
     @Test
     fun validatedPasswordCallbackTest() = runTest {
-        var node = defaultJourney.start(TREE) as ContinueNode
+        var node = defaultJourney.start(tree) as ContinueNode
 
         assertEquals(1, node.callbacks.size)
         var validatedPasswordCallback = node.callbacks.first() as ValidatedPasswordCallback

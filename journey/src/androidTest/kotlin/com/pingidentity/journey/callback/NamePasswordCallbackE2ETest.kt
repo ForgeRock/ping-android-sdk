@@ -24,12 +24,12 @@ class NamePasswordCallbackE2ETest : BaseJourneyTest() {
 
     @Before
     fun setupTree() = runTest {
-        TREE = "NamePasswordCallbackTest"
+        tree = "NamePasswordCallbackTest"
     }
 
     @Test
     fun namePasswordCallbackTest() = runTest {
-        var node = defaultJourney.start(TREE) as ContinueNode
+        var node = defaultJourney.start(tree) as ContinueNode
 
         assertEquals(1, node.callbacks.size)
         val nameCallback = node.callbacks[0] as NameCallback

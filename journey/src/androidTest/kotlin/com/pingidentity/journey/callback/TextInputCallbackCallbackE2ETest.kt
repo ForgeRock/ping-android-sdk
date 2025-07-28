@@ -24,12 +24,12 @@ class TextInputCallbackCallbackE2ETest : BaseJourneyTest() {
 
     @Before
     fun setupTree() = runTest {
-        TREE = "TextInputCallbackTest"
+        tree = "TextInputCallbackTest"
     }
 
     @Test
     fun textInputCallbackTest() = runTest {
-        var node = defaultJourney.start(TREE)  as ContinueNode
+        var node = defaultJourney.start(tree)  as ContinueNode
 
         node.handleLoginCallbacks()
         node = node.next() as ContinueNode
@@ -46,7 +46,7 @@ class TextInputCallbackCallbackE2ETest : BaseJourneyTest() {
         // The values entered in the NameCallback and  TextInputCallback above should match for "success"
         node = node.next() as ContinueNode
         val textOutputCallback = node.callbacks.first() as TextOutputCallback
-        kotlin.test.assertEquals("Success", textOutputCallback.message)
+        assertEquals("Success", textOutputCallback.message)
 
         val result = node.next()
 

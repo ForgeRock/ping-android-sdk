@@ -25,12 +25,12 @@ class ValidatedUsernameCallbackE2ETest : BaseJourneyTest() {
 
     @Before
     fun setupTree() = runTest {
-        TREE = "ValidatedUsernameCallbackTest"
+        tree = "ValidatedUsernameCallbackTest"
     }
 
     @Test
     fun validatedUsernameCallbackTest() = runTest {
-        var node = defaultJourney.start(TREE) as ContinueNode
+        var node = defaultJourney.start(tree) as ContinueNode
 
         assertEquals(1, node.callbacks.size)
         var validatedUsernameCallback = node.callbacks.first() as ValidatedUsernameCallback

@@ -41,7 +41,6 @@ dependencies {
     api(project(":foundation:logger"))
     api(project(":foundation:storage"))
     implementation(project(":foundation:android"))
-    implementation(libs.androidx.test.runner)
 
     testImplementation(project(":foundation:testrail"))
     implementation(libs.androidx.datastore)
@@ -55,10 +54,7 @@ dependencies {
     testImplementation(libs.robolectric)
     testImplementation(libs.ktor.client.mock)
     testImplementation(project(":protect"))
-    testImplementation(kotlin("test"))
 
-
-    androidTestImplementation(libs.kotlin.test)
     androidTestImplementation(libs.kotlinx.coroutines.test)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.test.runner)

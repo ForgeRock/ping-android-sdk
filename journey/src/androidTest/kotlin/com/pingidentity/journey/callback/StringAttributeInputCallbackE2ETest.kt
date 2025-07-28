@@ -24,17 +24,17 @@ class StringAttributeInputCallbackE2ETest : BaseJourneyTest() {
 
     @Before
     fun setupTree() = runTest {
-        TREE = "StringAttributeInputCallbackTest"
+        tree = "StringAttributeInputCallbackTest"
     }
 
     @Test
     fun stringAttributeInputCallbackTest() = runTest {
-        var node = defaultJourney.start(TREE)  as ContinueNode
+        var node = defaultJourney.start(tree)  as ContinueNode
 
         node.handleLoginCallbacks()
         node = node.next() as ContinueNode
 
-        kotlin.test.assertEquals(3, node.callbacks.size)
+        assertEquals(3, node.callbacks.size)
         val mail = node.callbacks[0] as StringAttributeInputCallback
         val givenName = node.callbacks[1] as StringAttributeInputCallback
         val sn = node.callbacks[2] as StringAttributeInputCallback
