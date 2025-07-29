@@ -33,7 +33,8 @@ fun KbaCreateCallback(callback: KbaCreateCallback,  onNodeUpdated: () -> Unit) {
     var selectedItem by remember {
         mutableStateOf(callback.predefinedQuestions[0])
     }
-
+    var isCustomQuestion by remember { mutableStateOf(false) }
+    var customQuestion by remember { mutableStateOf("") }
     var answer by remember {
         mutableStateOf("")
     }
@@ -51,7 +52,7 @@ fun KbaCreateCallback(callback: KbaCreateCallback,  onNodeUpdated: () -> Unit) {
             // text field
             TextField(
                 modifier = Modifier.menuAnchor(),
-                value = selectedItem,
+                value = if (isCustomQuestion) customQuestion else selectedItem,
                 onValueChange = {},
                 readOnly = true,
                 label = { Text(text = callback.prompt) },
@@ -74,15 +75,48 @@ fun KbaCreateCallback(callback: KbaCreateCallback,  onNodeUpdated: () -> Unit) {
                         Text(text = selectedOption)
                     }, onClick = {
                         selectedItem = selectedOption
+                        isCustomQuestion = false
                         expanded = false
                         callback.selectedQuestion = callback.predefinedQuestions[index]
                         onNodeUpdated()
                     })
                 }
+
+                // Add "Provide your own" option if allowed
+                if (callback.allowUserDefinedQuestions) {
+                    DropdownMenuItem(text = {
+                        Text(text = "Provide your own")
+                    }, onClick = {
+                        isCustomQuestion = true
+                        expanded = false
+                        // Clear the question until user provides one
+                        callback.selectedQuestion = ""
+                        onNodeUpdated()
+                    })
+                }
             }
         }
+
+        // Show custom question field when "Provide your own" is selected
+        if (isCustomQuestion) {
+            OutlinedTextField(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp),
+                value = customQuestion,
+                onValueChange = { value ->
+                    customQuestion = value
+                    callback.selectedQuestion = value
+                    onNodeUpdated()
+                },
+                label = { Text(text = "Your Question") },
+            )
+        }
+
         OutlinedTextField(
-            modifier = Modifier,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 8.dp),
             value = answer,
             onValueChange = { value ->
                 answer = value
@@ -91,8 +125,5 @@ fun KbaCreateCallback(callback: KbaCreateCallback,  onNodeUpdated: () -> Unit) {
             },
             label = { Text(text = "Answer") },
         )
-
     }
-
 }
-
