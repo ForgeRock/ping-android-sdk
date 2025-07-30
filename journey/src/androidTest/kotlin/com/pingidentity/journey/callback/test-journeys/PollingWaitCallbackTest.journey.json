@@ -1,6 +1,6 @@
 {
   "meta": {
-    "exportDate": "2025-07-30T01:12:11.438Z",
+    "exportDate": "2025-07-30T16:28:20.643Z",
     "exportTool": "frodo",
     "exportToolVersion": "v3.3.0 [v20.18.0]",
     "exportedBy": "stoyan.petrov@forgerock.com",
@@ -113,7 +113,7 @@
             "en": "Exit"
           },
           "exitable": true,
-          "secondsToWait": 10,
+          "secondsToWait": 5,
           "spamDetectionEnabled": true,
           "spamDetectionTolerance": 3,
           "waitingMessage": {
