@@ -41,17 +41,13 @@ class ConfirmationCallback : AbstractCallback() {
     var messageType = 0
         private set
 
-    var selectedIndex = 0
+    lateinit var selectedIndex: Number
 
     override fun init(name: String, value: JsonElement) {
         when (name) {
-            "prompt" -> this.prompt = value.jsonPrimitive.content ?: ""
+            "prompt" -> this.prompt = value.jsonPrimitive.content
             "optionType" -> this.optionType = value.jsonPrimitive.int
-            "defaultOption" -> {
-                this.defaultOption = value.jsonPrimitive.int
-                this.selectedIndex = this.defaultOption
-            }
-
+            "defaultOption" -> this.defaultOption = value.jsonPrimitive.int
             "messageType" -> this.messageType = value.jsonPrimitive.int
             "options" -> this.options = value.jsonArray.map {
                 it.jsonPrimitive.content
@@ -60,7 +56,11 @@ class ConfirmationCallback : AbstractCallback() {
     }
 
     override fun payload(): JsonObject {
-        return input(selectedIndex)
+        return if (::selectedIndex.isInitialized) {
+            input(selectedIndex.toInt())
+        } else {
+            json
+        }
     }
 
 
