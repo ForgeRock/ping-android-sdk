@@ -1,19 +1,23 @@
-package com.pingidentity.device.profile.detector
+/*
+ * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ *
+ * This software may be modified and distributed under the terms
+ * of the MIT license. See the LICENSE file for details.
+ */
+
+package com.pingidentity.device.root.detector
 
 import android.content.Context
 import android.os.Build
 import android.util.Log
-import com.pingidentity.device.root.BaseRootDetector
 import java.util.Scanner
 
 /**
  * After the device is rooted, the super user may change permission of some files.
  */
-class PermissionDetector : RootDetector<BaseRootDetector> {
-    override val key: String
-        get() = PermissionDetector::class.java.simpleName
+class PermissionDetector : RootDetector {
 
-    override fun isRooted(context: Context): Double {
+    override suspend fun isRooted(context: Context): Double {
         val sdkVersion = Build.VERSION.SDK_INT
         for (line in mountReader()) {
             val args = line.split(" ")

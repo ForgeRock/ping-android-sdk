@@ -2,14 +2,11 @@ package com.pingidentity.device.profile.collector
 
 import android.os.Build
 import com.pingidentity.android.ContextProvider
-import com.pingidentity.device.profile.detector.DefaultRootDetector
-import com.pingidentity.device.profile.detector.RootDetector
+import com.pingidentity.device.root.scan
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
 import java.util.Locale
 import java.util.TimeZone
-import kotlin.String
-import kotlin.math.max
 
 class PlatformCollector: DeviceCollector<Platform> {
     override val key: String
@@ -48,16 +45,6 @@ private fun getCurrentLocale(): Locale {
     return ContextProvider.context.resources.configuration.getLocales().get(0)
 }
 
-private fun isRooted(): Double {
-    val detectors = mutableListOf<RootDetector<*>>().apply(DefaultRootDetector())
-    var max = 0.0
-    for (detector in detectors) {
-        max = max(max, detector.isRooted(ContextProvider.context))
-        if (max >= 1) {
-            return max
-        }
-    }
-    return max
-}
+private suspend fun isRooted() = scan()
 
 private const val PLATFORM_COLLECTOR_KEY = "platform"

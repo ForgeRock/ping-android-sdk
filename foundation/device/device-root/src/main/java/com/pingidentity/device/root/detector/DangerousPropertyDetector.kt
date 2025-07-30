@@ -1,4 +1,4 @@
-package com.pingidentity.device.profile.detector
+package com.pingidentity.device.root.detector
 
 /**
  * Check System properties

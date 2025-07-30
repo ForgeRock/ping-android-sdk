@@ -8,12 +8,16 @@
 package com.pingidentity.device.profile
 
 import android.app.Application
+import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import com.pingidentity.android.ContextProvider
 import com.pingidentity.device.id.DeviceIdentifier
 import com.pingidentity.device.profile.collector.CameraCollector
 import com.pingidentity.device.profile.collector.DeviceCollector
+import com.pingidentity.device.profile.collector.HardwareCollector
 import com.pingidentity.device.profile.collector.PlatformCollector
+import io.mockk.every
+import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.Serializable
 import kotlin.test.BeforeTest
@@ -23,9 +27,9 @@ class DeviceProfileCallbackTest {
 
     @BeforeTest
     fun setup() {
-        ContextProvider.init(
-            ApplicationProvider.getApplicationContext<Application>()
-        )
+        val context: Context = mockk()
+        every { context.applicationContext } returns mockk()
+        ContextProvider.init(context)
     }
 
     @Test
@@ -56,6 +60,16 @@ class DeviceProfileCallbackTest {
     fun `collect returns config with default`() = runTest {
         val callback = DeviceProfileCallback()
         callback.collect()
+    }
+
+    @Test
+    fun `hardware collector returns config with default`() = runTest {
+        val callback = DeviceProfileCallback()
+        callback.collect {
+            metadata {
+                add(HardwareCollector)
+            }
+        }
     }
 
 }

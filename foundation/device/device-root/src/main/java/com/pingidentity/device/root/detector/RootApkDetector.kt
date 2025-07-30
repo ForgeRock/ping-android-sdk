@@ -1,18 +1,22 @@
-package com.pingidentity.device.profile.detector
+/*
+ * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ *
+ * This software may be modified and distributed under the terms
+ * of the MIT license. See the LICENSE file for details.
+ */
+
+package com.pingidentity.device.root.detector
 
 import android.content.Context
 import android.util.Log
-import com.pingidentity.device.root.BaseRootDetector
 import java.io.File
 
 /**
  * Check if there are well-known root apk files exist
  */
-class RootApkDetector : RootDetector<BaseRootDetector> {
-    override val key: String
-        get() = RootApkDetector::class.java.simpleName
+class RootApkDetector : RootDetector {
 
-    override fun isRooted(context: Context): Double {
+    override suspend fun isRooted(context: Context): Double {
         return if (exists(ROOT_APK)) {
             1.0
         } else {

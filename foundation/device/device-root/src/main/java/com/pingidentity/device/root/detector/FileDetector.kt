@@ -1,14 +1,20 @@
-package com.pingidentity.device.profile.detector
+/*
+ * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ *
+ * This software may be modified and distributed under the terms
+ * of the MIT license. See the LICENSE file for details.
+ */
+
+package com.pingidentity.device.root.detector
 
 import android.content.Context
-import com.pingidentity.device.root.BaseRootDetector
 import java.io.File
 
 /**
  * Check file exists in predefined path
  */
-abstract class FileDetector : RootDetector<BaseRootDetector> {
-    override fun isRooted(context: Context): Double {
+abstract class FileDetector : RootDetector {
+    override suspend fun isRooted(context: Context): Double {
         return if (getFilenames().any { exists(it) }) {
             1.0
         } else {

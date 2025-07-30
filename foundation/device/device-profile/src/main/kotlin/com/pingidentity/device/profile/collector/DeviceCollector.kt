@@ -7,8 +7,13 @@
 
 package com.pingidentity.device.profile.collector
 
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.encodeToJsonElement
+import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.serializer
 
 /**
@@ -38,6 +43,25 @@ inline fun <reified T : @Serializable Any> DeviceCollector(
         override val serializer: KSerializer<T> = serializer()
         override suspend fun collect(): T? = collect()
     }
+}
+
+@OptIn(ExperimentalSerializationApi::class)
+suspend fun List<DeviceCollector<*>>.collect(): JsonObject {
+    val json = Json {
+        explicitNulls = false
+        encodeDefaults = true
+    }
+    val result = this.mapNotNull { collector ->
+        @Suppress("UNCHECKED_CAST")
+        collector as DeviceCollector<Any>
+        val data = collector.collect()
+        data?.let {
+            collector.key to json.encodeToJsonElement(collector.serializer, data)
+        }
+    }.toMap()
+
+    return json.encodeToJsonElement(result).jsonObject
+
 }
 
 

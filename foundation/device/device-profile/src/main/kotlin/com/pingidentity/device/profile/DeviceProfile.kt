@@ -9,10 +9,10 @@ package com.pingidentity.device.profile
 
 import com.pingidentity.device.id.DefaultDeviceIdentifier
 import com.pingidentity.device.profile.collector.DefaultDeviceCollector
-import com.pingidentity.device.profile.collector.DeviceCollector
+import com.pingidentity.device.profile.collector.collect
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.encodeToJsonElement
 import kotlinx.serialization.json.jsonObject
@@ -24,22 +24,18 @@ fun DefaultProfile() : DeviceProfileConfig.() -> Unit  {
     }
 }
 
+@OptIn(ExperimentalSerializationApi::class)
 suspend fun profile(block: DeviceProfileConfig.() -> Unit = DefaultProfile()): JsonObject {
-    val json = Json
+    val json = Json {
+        explicitNulls = false
+        encodeDefaults = true
+    }
 
     val config =  DeviceProfileConfig().apply(block)
 
-    val metadataMap = config.collectors.mapNotNull { collector ->
-        @Suppress("UNCHECKED_CAST")
-        collector as DeviceCollector<Any?>
-        val data = collector.collect()
-        data?.let {
-            collector.key to json.encodeToJsonElement(collector.serializer, data)
-        }
-    }.toMap()
     val result = DeviceProfileResult(
         identifier = config.deviceIdentifier.id,
-        metadata = metadataMap
+        metadata = config.collectors.collect()
     )
 
     return json.encodeToJsonElement(result).jsonObject
@@ -49,5 +45,5 @@ suspend fun profile(block: DeviceProfileConfig.() -> Unit = DefaultProfile()): J
 @Serializable
 private data class DeviceProfileResult(
     val identifier: String,
-    val metadata: Map<String, JsonElement>
+    val metadata: JsonObject
 )

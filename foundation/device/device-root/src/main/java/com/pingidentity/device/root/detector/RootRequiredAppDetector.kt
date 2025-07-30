@@ -1,4 +1,11 @@
-package com.pingidentity.device.profile.detector
+/*
+ * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ *
+ * This software may be modified and distributed under the terms
+ * of the MIT license. See the LICENSE file for details.
+ */
+
+package com.pingidentity.device.root.detector
 
 import android.content.Context
 
@@ -6,12 +13,10 @@ import android.content.Context
  * Check if root required App are installed
  */
 class RootRequiredAppDetector : PackageDetector() {
-    override val key: String
-        get() = RootRequiredAppDetector::class.java.simpleName
 
     override fun getPackages(): List<String> = CURRENT_KNOWN_APPS_REQUIRE_ROOT
 
-    override fun isRooted(context: Context): Double {
+    override suspend fun isRooted(context: Context): Double {
         return if (super.isRooted(context) > 0) {
             0.5
         } else {

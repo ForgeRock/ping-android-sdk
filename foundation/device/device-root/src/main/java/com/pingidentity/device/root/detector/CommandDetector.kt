@@ -1,14 +1,20 @@
-package com.pingidentity.device.profile.detector
+/*
+ * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ *
+ * This software may be modified and distributed under the terms
+ * of the MIT license. See the LICENSE file for details.
+ */
+
+package com.pingidentity.device.root.detector
 
 import android.content.Context
-import com.pingidentity.device.root.BaseRootDetector
 import java.io.BufferedReader
 import java.io.InputStreamReader
 
 /**
  * Check command exists
  */
-abstract class CommandDetector: RootDetector<BaseRootDetector> {
+abstract class CommandDetector: RootDetector {
     private fun exists(command: String): Boolean {
         var process: Process? = null
         try {
@@ -22,7 +28,7 @@ abstract class CommandDetector: RootDetector<BaseRootDetector> {
         }
     }
 
-    override fun isRooted(context: Context): Double {
+    override suspend fun isRooted(context: Context): Double {
         for (command in getCommands()) {
             if (exists(command)) {
                 return 1.0

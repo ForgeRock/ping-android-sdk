@@ -1,14 +1,20 @@
-package com.pingidentity.device.profile.detector
+/*
+ * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ *
+ * This software may be modified and distributed under the terms
+ * of the MIT license. See the LICENSE file for details.
+ */
+
+package com.pingidentity.device.root.detector
 
 import android.content.Context
 import android.content.pm.PackageManager
 import android.util.Log
-import com.pingidentity.device.root.BaseRootDetector
 
 /**
  * User Package Manager and see if application is installed.
  */
-abstract class PackageDetector : RootDetector<BaseRootDetector> {
+abstract class PackageDetector : RootDetector {
 
     fun exists(context: Context, packages: List<String>): Boolean {
         val packageManager = context.packageManager
@@ -23,7 +29,7 @@ abstract class PackageDetector : RootDetector<BaseRootDetector> {
         return false
     }
 
-    override fun isRooted(context: Context): Double {
+    override suspend fun isRooted(context: Context): Double {
         return if (exists(context, getPackages())) {
             1.0
         } else {

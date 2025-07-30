@@ -26,5 +26,7 @@ dependencies {
     implementation(project(":foundation:android"))
     implementation(libs.kotlinx.serialization.json)
 
+    testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.kotlin.test)
+    testImplementation(libs.mockk)
 }
