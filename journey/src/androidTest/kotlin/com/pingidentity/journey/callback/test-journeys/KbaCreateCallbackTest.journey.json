@@ -1,0 +1,176 @@
+{
+  "meta": {
+    "exportDate": "2025-07-30T01:11:17.149Z",
+    "exportTool": "frodo",
+    "exportToolVersion": "v3.3.0 [v20.18.0]",
+    "exportedBy": "stoyan.petrov@forgerock.com",
+    "origin": "https://openam-sdks.forgeblocks.com/am",
+    "originAmVersion": "8.1.0"
+  },
+  "trees": {
+    "KbaCreateCallbackTest": {
+      "circlesOfTrust": {},
+      "emailTemplates": {},
+      "innerNodes": {
+        "2dc37214-50fa-4408-920d-644e43366859": {
+          "_id": "2dc37214-50fa-4408-920d-644e43366859",
+          "_outcomes": [
+            {
+              "displayName": "Outcome",
+              "id": "outcome"
+            }
+          ],
+          "_type": {
+            "_id": "ValidatedPasswordNode",
+            "collection": true,
+            "name": "Platform Password"
+          },
+          "passwordAttribute": "password",
+          "validateInput": false
+        },
+        "fade7c79-e68b-4aa7-b862-35dae907ccc0": {
+          "_id": "fade7c79-e68b-4aa7-b862-35dae907ccc0",
+          "_outcomes": [
+            {
+              "displayName": "Outcome",
+              "id": "outcome"
+            }
+          ],
+          "_type": {
+            "_id": "ValidatedUsernameNode",
+            "collection": true,
+            "name": "Platform Username"
+          },
+          "usernameAttribute": "userName",
+          "validateInput": false
+        }
+      },
+      "nodes": {
+        "0c3824bb-a63c-4e84-861a-c7240f9187fc": {
+          "_id": "0c3824bb-a63c-4e84-861a-c7240f9187fc",
+          "_outcomes": [
+            {
+              "displayName": "Outcome",
+              "id": "outcome"
+            }
+          ],
+          "_type": {
+            "_id": "KbaCreateNode",
+            "collection": true,
+            "name": "KBA Definition"
+          },
+          "allowUserDefinedQuestions": true,
+          "message": {
+            "en": "Security questions"
+          }
+        },
+        "2d72119f-6b42-4f28-bb76-5cf93c6b7223": {
+          "_id": "2d72119f-6b42-4f28-bb76-5cf93c6b7223",
+          "_outcomes": [
+            {
+              "displayName": "Outcome",
+              "id": "outcome"
+            }
+          ],
+          "_type": {
+            "_id": "PageNode",
+            "collection": true,
+            "name": "Page Node"
+          },
+          "nodes": [
+            {
+              "_id": "fade7c79-e68b-4aa7-b862-35dae907ccc0",
+              "displayName": "Platform Username",
+              "nodeType": "ValidatedUsernameNode"
+            },
+            {
+              "_id": "2dc37214-50fa-4408-920d-644e43366859",
+              "displayName": "Platform Password",
+              "nodeType": "ValidatedPasswordNode"
+            }
+          ],
+          "pageDescription": {},
+          "pageHeader": {}
+        },
+        "72d1bf88-e496-4750-b0ff-ca64d06dd4e5": {
+          "_id": "72d1bf88-e496-4750-b0ff-ca64d06dd4e5",
+          "_outcomes": [
+            {
+              "displayName": "True",
+              "id": "true"
+            },
+            {
+              "displayName": "False",
+              "id": "false"
+            }
+          ],
+          "_type": {
+            "_id": "DataStoreDecisionNode",
+            "collection": true,
+            "name": "Data Store Decision"
+          }
+        }
+      },
+      "saml2Entities": {},
+      "scripts": {},
+      "socialIdentityProviders": {},
+      "themes": [],
+      "tree": {
+        "_id": "KbaCreateCallbackTest",
+        "enabled": true,
+        "entryNodeId": "2d72119f-6b42-4f28-bb76-5cf93c6b7223",
+        "identityResource": "managed/alpha_user",
+        "innerTreeOnly": false,
+        "mustRun": false,
+        "noSession": false,
+        "nodes": {
+          "0c3824bb-a63c-4e84-861a-c7240f9187fc": {
+            "connections": {
+              "outcome": "70e691a5-1e33-4ac3-a356-e7b6d60d92e0"
+            },
+            "displayName": "KBA Definition",
+            "nodeType": "KbaCreateNode",
+            "x": 748,
+            "y": 42.015625
+          },
+          "2d72119f-6b42-4f28-bb76-5cf93c6b7223": {
+            "connections": {
+              "outcome": "72d1bf88-e496-4750-b0ff-ca64d06dd4e5"
+            },
+            "displayName": "Page Node",
+            "nodeType": "PageNode",
+            "x": 146,
+            "y": 20
+          },
+          "72d1bf88-e496-4750-b0ff-ca64d06dd4e5": {
+            "connections": {
+              "false": "e301438c-0bd0-429c-ab0c-66126501069a",
+              "true": "0c3824bb-a63c-4e84-861a-c7240f9187fc"
+            },
+            "displayName": "Data Store Decision",
+            "nodeType": "DataStoreDecisionNode",
+            "x": 489,
+            "y": 27
+          }
+        },
+        "staticNodes": {
+          "70e691a5-1e33-4ac3-a356-e7b6d60d92e0": {
+            "x": 990,
+            "y": 45
+          },
+          "e301438c-0bd0-429c-ab0c-66126501069a": {
+            "x": 808,
+            "y": 184
+          },
+          "startNode": {
+            "x": 50,
+            "y": 25
+          }
+        },
+        "uiConfig": {
+          "categories": "[]"
+        }
+      }
+    }
+  }
+}

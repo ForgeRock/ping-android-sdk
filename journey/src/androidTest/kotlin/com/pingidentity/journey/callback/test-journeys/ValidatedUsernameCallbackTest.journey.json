@@ -1,0 +1,170 @@
+{
+  "meta": {
+    "exportDate": "2025-07-30T01:15:08.792Z",
+    "exportTool": "frodo",
+    "exportToolVersion": "v3.3.0 [v20.18.0]",
+    "exportedBy": "stoyan.petrov@forgerock.com",
+    "origin": "https://openam-sdks.forgeblocks.com/am",
+    "originAmVersion": "8.1.0"
+  },
+  "trees": {
+    "ValidatedUsernameCallbackTest": {
+      "circlesOfTrust": {},
+      "emailTemplates": {},
+      "innerNodes": {
+        "28503857-b9ce-47d0-9e49-74dfb135bc52": {
+          "_id": "28503857-b9ce-47d0-9e49-74dfb135bc52",
+          "_outcomes": [
+            {
+              "displayName": "Outcome",
+              "id": "outcome"
+            }
+          ],
+          "_type": {
+            "_id": "PasswordCollectorNode",
+            "collection": true,
+            "name": "Password Collector"
+          }
+        },
+        "c508c469-ba94-4c44-9baf-744eb9cf4a9b": {
+          "_id": "c508c469-ba94-4c44-9baf-744eb9cf4a9b",
+          "_outcomes": [
+            {
+              "displayName": "Outcome",
+              "id": "outcome"
+            }
+          ],
+          "_type": {
+            "_id": "UsernameCollectorNode",
+            "collection": true,
+            "name": "Username Collector"
+          }
+        }
+      },
+      "nodes": {
+        "0d52d015-f416-40d3-9325-3e067e13220b": {
+          "_id": "0d52d015-f416-40d3-9325-3e067e13220b",
+          "_outcomes": [
+            {
+              "displayName": "Outcome",
+              "id": "outcome"
+            }
+          ],
+          "_type": {
+            "_id": "PageNode",
+            "collection": true,
+            "name": "Page Node"
+          },
+          "nodes": [
+            {
+              "_id": "c508c469-ba94-4c44-9baf-744eb9cf4a9b",
+              "displayName": "Username Collector",
+              "nodeType": "UsernameCollectorNode"
+            },
+            {
+              "_id": "28503857-b9ce-47d0-9e49-74dfb135bc52",
+              "displayName": "Password Collector",
+              "nodeType": "PasswordCollectorNode"
+            }
+          ],
+          "pageDescription": {},
+          "pageHeader": {}
+        },
+        "1a35041a-daf8-49f6-867f-33218408ef54": {
+          "_id": "1a35041a-daf8-49f6-867f-33218408ef54",
+          "_outcomes": [
+            {
+              "displayName": "True",
+              "id": "true"
+            },
+            {
+              "displayName": "False",
+              "id": "false"
+            }
+          ],
+          "_type": {
+            "_id": "DataStoreDecisionNode",
+            "collection": true,
+            "name": "Data Store Decision"
+          }
+        },
+        "f88b4115-0ec7-43fd-892c-e73aac3254e7": {
+          "_id": "f88b4115-0ec7-43fd-892c-e73aac3254e7",
+          "_outcomes": [
+            {
+              "displayName": "Outcome",
+              "id": "outcome"
+            }
+          ],
+          "_type": {
+            "_id": "ValidatedUsernameNode",
+            "collection": true,
+            "name": "Platform Username"
+          },
+          "usernameAttribute": "userName",
+          "validateInput": true
+        }
+      },
+      "saml2Entities": {},
+      "scripts": {},
+      "socialIdentityProviders": {},
+      "themes": [],
+      "tree": {
+        "_id": "ValidatedUsernameCallbackTest",
+        "enabled": true,
+        "entryNodeId": "f88b4115-0ec7-43fd-892c-e73aac3254e7",
+        "identityResource": "managed/alpha_user",
+        "innerTreeOnly": false,
+        "mustRun": false,
+        "noSession": false,
+        "nodes": {
+          "0d52d015-f416-40d3-9325-3e067e13220b": {
+            "connections": {
+              "outcome": "1a35041a-daf8-49f6-867f-33218408ef54"
+            },
+            "displayName": "Page Node",
+            "nodeType": "PageNode",
+            "x": 506,
+            "y": 74.25
+          },
+          "1a35041a-daf8-49f6-867f-33218408ef54": {
+            "connections": {
+              "false": "e301438c-0bd0-429c-ab0c-66126501069a",
+              "true": "70e691a5-1e33-4ac3-a356-e7b6d60d92e0"
+            },
+            "displayName": "Data Store Decision",
+            "nodeType": "DataStoreDecisionNode",
+            "x": 775,
+            "y": 121.25
+          },
+          "f88b4115-0ec7-43fd-892c-e73aac3254e7": {
+            "connections": {
+              "outcome": "0d52d015-f416-40d3-9325-3e067e13220b"
+            },
+            "displayName": "Platform Username",
+            "nodeType": "ValidatedUsernameNode",
+            "x": 226,
+            "y": 117.25
+          }
+        },
+        "staticNodes": {
+          "70e691a5-1e33-4ac3-a356-e7b6d60d92e0": {
+            "x": 1092,
+            "y": 110
+          },
+          "e301438c-0bd0-429c-ab0c-66126501069a": {
+            "x": 1040,
+            "y": 327
+          },
+          "startNode": {
+            "x": 58,
+            "y": 78
+          }
+        },
+        "uiConfig": {
+          "categories": "[]"
+        }
+      }
+    }
+  }
+}

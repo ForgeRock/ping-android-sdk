@@ -1,0 +1,172 @@
+{
+  "meta": {
+    "exportDate": "2025-07-30T01:10:42.262Z",
+    "exportTool": "frodo",
+    "exportToolVersion": "v3.3.0 [v20.18.0]",
+    "exportedBy": "stoyan.petrov@forgerock.com",
+    "origin": "https://openam-sdks.forgeblocks.com/am",
+    "originAmVersion": "8.1.0"
+  },
+  "trees": {
+    "ConsentMappingCallbackTest": {
+      "circlesOfTrust": {},
+      "emailTemplates": {},
+      "innerNodes": {
+        "4c347c01-d235-42ef-ba13-206e70704541": {
+          "_id": "4c347c01-d235-42ef-ba13-206e70704541",
+          "_outcomes": [
+            {
+              "displayName": "Outcome",
+              "id": "outcome"
+            }
+          ],
+          "_type": {
+            "_id": "UsernameCollectorNode",
+            "collection": true,
+            "name": "Username Collector"
+          }
+        },
+        "932100d7-f351-4807-a810-cabd4ddc19a7": {
+          "_id": "932100d7-f351-4807-a810-cabd4ddc19a7",
+          "_outcomes": [
+            {
+              "displayName": "Outcome",
+              "id": "outcome"
+            }
+          ],
+          "_type": {
+            "_id": "PasswordCollectorNode",
+            "collection": true,
+            "name": "Password Collector"
+          }
+        }
+      },
+      "nodes": {
+        "020b7779-c34a-4e47-9dbe-8e0117318478": {
+          "_id": "020b7779-c34a-4e47-9dbe-8e0117318478",
+          "_outcomes": [
+            {
+              "displayName": "True",
+              "id": "true"
+            },
+            {
+              "displayName": "False",
+              "id": "false"
+            }
+          ],
+          "_type": {
+            "_id": "DataStoreDecisionNode",
+            "collection": true,
+            "name": "Data Store Decision"
+          }
+        },
+        "3cee60e7-36bc-49cb-8609-00b5a0b2458d": {
+          "_id": "3cee60e7-36bc-49cb-8609-00b5a0b2458d",
+          "_outcomes": [
+            {
+              "displayName": "Outcome",
+              "id": "outcome"
+            }
+          ],
+          "_type": {
+            "_id": "ConsentNode",
+            "collection": true,
+            "name": "Consent Collector"
+          },
+          "allRequired": true,
+          "message": {
+            "en": "Test"
+          }
+        },
+        "c4a0a055-ad95-4117-bbed-376d9ba33446": {
+          "_id": "c4a0a055-ad95-4117-bbed-376d9ba33446",
+          "_outcomes": [
+            {
+              "displayName": "Outcome",
+              "id": "outcome"
+            }
+          ],
+          "_type": {
+            "_id": "PageNode",
+            "collection": true,
+            "name": "Page Node"
+          },
+          "nodes": [
+            {
+              "_id": "4c347c01-d235-42ef-ba13-206e70704541",
+              "displayName": "Username Collector",
+              "nodeType": "UsernameCollectorNode"
+            },
+            {
+              "_id": "932100d7-f351-4807-a810-cabd4ddc19a7",
+              "displayName": "Password Collector",
+              "nodeType": "PasswordCollectorNode"
+            }
+          ],
+          "pageDescription": {},
+          "pageHeader": {}
+        }
+      },
+      "saml2Entities": {},
+      "scripts": {},
+      "socialIdentityProviders": {},
+      "themes": [],
+      "tree": {
+        "_id": "ConsentMappingCallbackTest",
+        "enabled": true,
+        "entryNodeId": "c4a0a055-ad95-4117-bbed-376d9ba33446",
+        "identityResource": "managed/alpha_user",
+        "innerTreeOnly": false,
+        "mustRun": false,
+        "noSession": false,
+        "nodes": {
+          "020b7779-c34a-4e47-9dbe-8e0117318478": {
+            "connections": {
+              "false": "e301438c-0bd0-429c-ab0c-66126501069a",
+              "true": "3cee60e7-36bc-49cb-8609-00b5a0b2458d"
+            },
+            "displayName": "Data Store Decision",
+            "nodeType": "DataStoreDecisionNode",
+            "x": 360,
+            "y": 20
+          },
+          "3cee60e7-36bc-49cb-8609-00b5a0b2458d": {
+            "connections": {
+              "outcome": "70e691a5-1e33-4ac3-a356-e7b6d60d92e0"
+            },
+            "displayName": "Consent Collector",
+            "nodeType": "ConsentNode",
+            "x": 557,
+            "y": 20
+          },
+          "c4a0a055-ad95-4117-bbed-376d9ba33446": {
+            "connections": {
+              "outcome": "020b7779-c34a-4e47-9dbe-8e0117318478"
+            },
+            "displayName": "Page Node",
+            "nodeType": "PageNode",
+            "x": 162,
+            "y": 21
+          }
+        },
+        "staticNodes": {
+          "70e691a5-1e33-4ac3-a356-e7b6d60d92e0": {
+            "x": 757,
+            "y": 22
+          },
+          "e301438c-0bd0-429c-ab0c-66126501069a": {
+            "x": 698,
+            "y": 99
+          },
+          "startNode": {
+            "x": 50,
+            "y": 25
+          }
+        },
+        "uiConfig": {
+          "categories": "[]"
+        }
+      }
+    }
+  }
+}

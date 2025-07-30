@@ -1,0 +1,194 @@
+{
+  "meta": {
+    "exportDate": "2025-07-30T01:14:39.870Z",
+    "exportTool": "frodo",
+    "exportToolVersion": "v3.3.0 [v20.18.0]",
+    "exportedBy": "stoyan.petrov@forgerock.com",
+    "origin": "https://openam-sdks.forgeblocks.com/am",
+    "originAmVersion": "8.1.0"
+  },
+  "trees": {
+    "TextInputCallbackTest": {
+      "circlesOfTrust": {},
+      "emailTemplates": {},
+      "innerNodes": {},
+      "nodes": {
+        "42f71dc5-df5b-4561-b97b-d7b90f754858": {
+          "_id": "42f71dc5-df5b-4561-b97b-d7b90f754858",
+          "_outcomes": [
+            {
+              "displayName": "true",
+              "id": "true"
+            },
+            {
+              "displayName": "false",
+              "id": "false"
+            }
+          ],
+          "_type": {
+            "_id": "ScriptedDecisionNode",
+            "collection": true,
+            "name": "Scripted Decision"
+          },
+          "inputs": [
+            "*"
+          ],
+          "outcomes": [
+            "true",
+            "false"
+          ],
+          "outputs": [
+            "*"
+          ],
+          "script": "85692b70-68b4-49d8-a2e9-e93955a97526"
+        },
+        "a59d644e-0045-44b2-bb0a-51f5a0416b14": {
+          "_id": "a59d644e-0045-44b2-bb0a-51f5a0416b14",
+          "_outcomes": [
+            {
+              "displayName": "True",
+              "id": "true"
+            },
+            {
+              "displayName": "False",
+              "id": "false"
+            }
+          ],
+          "_type": {
+            "_id": "MessageNode",
+            "collection": true,
+            "name": "Message Node"
+          },
+          "message": {
+            "en": "Success"
+          },
+          "messageNo": {},
+          "messageYes": {}
+        },
+        "d6265ce0-6869-4bb2-ac9a-85b2ea7c493e": {
+          "_id": "d6265ce0-6869-4bb2-ac9a-85b2ea7c493e",
+          "_outcomes": [
+            {
+              "displayName": "Outcome",
+              "id": "outcome"
+            }
+          ],
+          "_type": {
+            "_id": "UsernameCollectorNode",
+            "collection": true,
+            "name": "Username Collector"
+          }
+        },
+        "fad1cc60-0515-43a0-a8ec-d6d9e1a5009c": {
+          "_id": "fad1cc60-0515-43a0-a8ec-d6d9e1a5009c",
+          "_outcomes": [
+            {
+              "displayName": "True",
+              "id": "true"
+            },
+            {
+              "displayName": "False",
+              "id": "false"
+            }
+          ],
+          "_type": {
+            "_id": "MessageNode",
+            "collection": true,
+            "name": "Message Node"
+          },
+          "message": {
+            "en": "Failure"
+          },
+          "messageNo": {},
+          "messageYes": {}
+        }
+      },
+      "saml2Entities": {},
+      "scripts": {
+        "85692b70-68b4-49d8-a2e9-e93955a97526": {
+          "_id": "85692b70-68b4-49d8-a2e9-e93955a97526",
+          "context": "AUTHENTICATION_TREE_DECISION_NODE",
+          "createdBy": "null",
+          "creationDate": 0,
+          "default": false,
+          "description": null,
+          "evaluatorVersion": "1.0",
+          "language": "JAVASCRIPT",
+          "lastModifiedBy": "null",
+          "lastModifiedDate": 0,
+          "name": "TextInputCallback Producer",
+          "script": "\"\\nvar fr = JavaImporter (\\n  org.forgerock.json.JsonValue,\\n  org.forgerock.openam.auth.node.api.Action,\\n  javax.security.auth.callback.TextInputCallback,\\n  java.lang.String\\n);\\n\\n// This is set by the username collector node...\\nvar username = sharedState.get(\\\"username\\\")\\n\\nwith (fr) {\\n  if (callbacks.isEmpty()) {\\n  \\taction = Action.send(new TextInputCallback(\\\"What is your username?\\\", \\\"ForgerRocker\\\")).build();\\n  } else {\\n    // TextInputCallback returned with value\\n    var textInputValue = fr.String(callbacks.get(0).getText());\\n    \\n    // Compare the textInputValue with the username and if they are the same return true\\n    if (username === textInputValue) {\\n       action = fr.Action.goTo(\\\"true\\\").build();\\n    } else {\\n       action = fr.Action.goTo(\\\"false\\\").build();\\n    }\\n  }\\n}\""
+        }
+      },
+      "socialIdentityProviders": {},
+      "themes": [],
+      "tree": {
+        "_id": "TextInputCallbackTest",
+        "enabled": true,
+        "entryNodeId": "d6265ce0-6869-4bb2-ac9a-85b2ea7c493e",
+        "identityResource": "managed/alpha_user",
+        "innerTreeOnly": false,
+        "mustRun": false,
+        "noSession": false,
+        "nodes": {
+          "42f71dc5-df5b-4561-b97b-d7b90f754858": {
+            "connections": {
+              "false": "fad1cc60-0515-43a0-a8ec-d6d9e1a5009c",
+              "true": "a59d644e-0045-44b2-bb0a-51f5a0416b14"
+            },
+            "displayName": "Scripted Decision",
+            "nodeType": "ScriptedDecisionNode",
+            "x": 269,
+            "y": 264.25
+          },
+          "a59d644e-0045-44b2-bb0a-51f5a0416b14": {
+            "connections": {
+              "false": "70e691a5-1e33-4ac3-a356-e7b6d60d92e0",
+              "true": "70e691a5-1e33-4ac3-a356-e7b6d60d92e0"
+            },
+            "displayName": "Success",
+            "nodeType": "MessageNode",
+            "x": 491,
+            "y": 167.25
+          },
+          "d6265ce0-6869-4bb2-ac9a-85b2ea7c493e": {
+            "connections": {
+              "outcome": "42f71dc5-df5b-4561-b97b-d7b90f754858"
+            },
+            "displayName": "Username Collector",
+            "nodeType": "UsernameCollectorNode",
+            "x": 156,
+            "y": 141.25
+          },
+          "fad1cc60-0515-43a0-a8ec-d6d9e1a5009c": {
+            "connections": {
+              "false": "e301438c-0bd0-429c-ab0c-66126501069a",
+              "true": "e301438c-0bd0-429c-ab0c-66126501069a"
+            },
+            "displayName": "Failure",
+            "nodeType": "MessageNode",
+            "x": 492,
+            "y": 357.25
+          }
+        },
+        "staticNodes": {
+          "70e691a5-1e33-4ac3-a356-e7b6d60d92e0": {
+            "x": 791,
+            "y": 171
+          },
+          "e301438c-0bd0-429c-ab0c-66126501069a": {
+            "x": 793,
+            "y": 331
+          },
+          "startNode": {
+            "x": 50,
+            "y": 250
+          }
+        },
+        "uiConfig": {
+          "categories": "[]"
+        }
+      }
+    }
+  }
+}
