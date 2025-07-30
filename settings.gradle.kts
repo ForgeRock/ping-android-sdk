@@ -53,3 +53,4 @@ include(":foundation:testrail")
 
 include(":samples:app")
 include(":samples:journeyapp")
+include(":foundation:device:device-root")

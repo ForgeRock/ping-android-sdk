@@ -7,15 +7,26 @@
 
 package com.pingidentity.device.profile
 
+import android.app.Application
+import androidx.test.core.app.ApplicationProvider
+import com.pingidentity.android.ContextProvider
 import com.pingidentity.device.id.DeviceIdentifier
 import com.pingidentity.device.profile.collector.CameraCollector
 import com.pingidentity.device.profile.collector.DeviceCollector
 import com.pingidentity.device.profile.collector.PlatformCollector
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.Serializable
+import kotlin.test.BeforeTest
 import kotlin.test.Test
 
 class DeviceProfileCallbackTest {
+
+    @BeforeTest
+    fun setup() {
+        ContextProvider.init(
+            ApplicationProvider.getApplicationContext<Application>()
+        )
+    }
 
     @Test
     fun `collect returns config with custom collector`() = runTest {

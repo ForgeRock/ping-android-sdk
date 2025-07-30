@@ -5,7 +5,7 @@
  * of the MIT license. See the LICENSE file for details.
  */
 
-description = "Device Profile library"
+description = "Device Root Detection library"
 
 plugins {
     id("com.pingidentity.convention.android.library")
@@ -16,19 +16,15 @@ plugins {
 }
 
 android {
-    namespace = "com.pingidentity.device.profile"
+    namespace = "com.pingidentity.device.root"
 }
 
 dependencies {
-
     implementation(project(":foundation:device:device-id"))
     implementation(project(":foundation:journey-plugin"))
     implementation(project(":foundation:utils"))
     implementation(project(":foundation:android"))
-    implementation(project(":foundation:device:device-root"))
     implementation(libs.kotlinx.serialization.json)
 
     testImplementation(libs.kotlin.test)
-    testImplementation(libs.kotlinx.coroutines.test)
-    testImplementation(libs.core.ktx)
 }
