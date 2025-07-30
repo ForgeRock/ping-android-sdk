@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Authenticator Sample</string>
+    <string name="scan_qr_code">Scan QR Code</string>
+    <string name="manually_enter_uri">Enter code manually</string>
+    <string name="add_account">Add Account</string>
+    <string name="my_accounts">My Accounts</string>
+    <string name="confirm">Confirm</string>
+    <string name="cancel">Cancel</string>
+    <string name="enter_otpauth_uri">Enter OTP Auth URI</string>
+    <string name="uri_hint">otpauth://totp/...</string>
+    <string name="issuer">Issuer</string>
+    <string name="account_name">Account Name</string>
+    <string name="uri_required">URI is required</string>
+    <string name="invalid_uri_format">Invalid URI format</string>
+    <string name="camera_permission_required">Camera permission is required to scan QR codes</string>
+    <string name="request_permission">Request Permission</string>
+    <string name="refresh">Refresh</string>
+    <string name="copy_code">Code copied to clipboard</string>
+    <string name="account_added">Account added successfully</string>
+    <string name="error_adding_account">Error adding account</string>
+    <string name="permissions_required">Camera Permission Required</string>
+    <string name="permissions_required_message">Camera permission is needed to scan QR codes</string>
+</resources>
