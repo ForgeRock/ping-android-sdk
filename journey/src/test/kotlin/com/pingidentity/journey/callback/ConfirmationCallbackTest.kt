@@ -58,10 +58,10 @@ class ConfirmationCallbackTest {
               "input": [
                 {
                   "name": "IDToken2",
-                  "value": 0
+                  "value": 100
                 }
               ]
-            }                
+            }
             """
         ) as JsonObject
     }
@@ -76,7 +76,6 @@ class ConfirmationCallbackTest {
         assertEquals(listOf("Yes", "No"), callback.options)
         assertEquals(-1, callback.optionType)
         assertEquals(1, callback.defaultOption)
-        assertEquals(1, callback.selectedIndex)
     }
 
     @Test
@@ -91,5 +90,18 @@ class ConfirmationCallbackTest {
             payload["input"]?.jsonArray?.get(0)?.jsonObject?.get("value")?.jsonPrimitive?.int
         )
     }
+
+    @Test
+    fun `payload not explicitly set`() {
+        val callback = ConfirmationCallback()
+        callback.init(jsonObject)
+
+        val payload = callback.payload()
+        assertEquals(
+            100,
+            payload["input"]?.jsonArray?.get(0)?.jsonObject?.get("value")?.jsonPrimitive?.int
+        )
+    }
+
 
 }

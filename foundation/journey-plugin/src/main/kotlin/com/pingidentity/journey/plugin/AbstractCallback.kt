@@ -51,6 +51,7 @@ abstract class AbstractCallback : Callback {
      * @param value The value to set.
      * @return The updated JsonObject.
      */
+    @Synchronized
     fun input(vararg value: Any): JsonObject {
         val orig = json["input"]?.jsonArray
 
