@@ -1,0 +1,182 @@
+{
+  "meta": {
+    "exportDate": "2025-07-30T01:10:26.389Z",
+    "exportTool": "frodo",
+    "exportToolVersion": "v3.3.0 [v20.18.0]",
+    "exportedBy": "stoyan.petrov@forgerock.com",
+    "origin": "https://openam-sdks.forgeblocks.com/am",
+    "originAmVersion": "8.1.0"
+  },
+  "trees": {
+    "ConfirmationCallbackTest": {
+      "circlesOfTrust": {},
+      "emailTemplates": {},
+      "innerNodes": {
+        "1baee4bc-aae5-4698-87b8-3246f87cf727": {
+          "_id": "1baee4bc-aae5-4698-87b8-3246f87cf727",
+          "_outcomes": [
+            {
+              "displayName": "Outcome",
+              "id": "outcome"
+            }
+          ],
+          "_type": {
+            "_id": "PasswordCollectorNode",
+            "collection": true,
+            "name": "Password Collector"
+          }
+        },
+        "999dd057-62fd-40ec-a381-c8c514d5422f": {
+          "_id": "999dd057-62fd-40ec-a381-c8c514d5422f",
+          "_outcomes": [
+            {
+              "displayName": "Outcome",
+              "id": "outcome"
+            }
+          ],
+          "_type": {
+            "_id": "UsernameCollectorNode",
+            "collection": true,
+            "name": "Username Collector"
+          }
+        }
+      },
+      "nodes": {
+        "75ec4a84-d756-4f6d-98b3-3fbdde77bd56": {
+          "_id": "75ec4a84-d756-4f6d-98b3-3fbdde77bd56",
+          "_outcomes": [
+            {
+              "displayName": "True",
+              "id": "true"
+            },
+            {
+              "displayName": "False",
+              "id": "false"
+            }
+          ],
+          "_type": {
+            "_id": "DataStoreDecisionNode",
+            "collection": true,
+            "name": "Data Store Decision"
+          }
+        },
+        "9284b2b3-6d31-4b59-8e24-8d2c50b64d5f": {
+          "_id": "9284b2b3-6d31-4b59-8e24-8d2c50b64d5f",
+          "_outcomes": [
+            {
+              "displayName": "Outcome",
+              "id": "outcome"
+            }
+          ],
+          "_type": {
+            "_id": "PageNode",
+            "collection": true,
+            "name": "Page Node"
+          },
+          "nodes": [
+            {
+              "_id": "999dd057-62fd-40ec-a381-c8c514d5422f",
+              "displayName": "Username Collector",
+              "nodeType": "UsernameCollectorNode"
+            },
+            {
+              "_id": "1baee4bc-aae5-4698-87b8-3246f87cf727",
+              "displayName": "Password Collector",
+              "nodeType": "PasswordCollectorNode"
+            }
+          ],
+          "pageDescription": {},
+          "pageHeader": {}
+        },
+        "afb4bd1b-5d95-4fe6-a745-e99d85d86908": {
+          "_id": "afb4bd1b-5d95-4fe6-a745-e99d85d86908",
+          "_outcomes": [
+            {
+              "displayName": "True",
+              "id": "true"
+            },
+            {
+              "displayName": "False",
+              "id": "false"
+            }
+          ],
+          "_type": {
+            "_id": "MessageNode",
+            "collection": true,
+            "name": "Message Node"
+          },
+          "message": {
+            "en": "Test"
+          },
+          "messageNo": {
+            "en": "No"
+          },
+          "messageYes": {
+            "en": "Yes"
+          }
+        }
+      },
+      "saml2Entities": {},
+      "scripts": {},
+      "socialIdentityProviders": {},
+      "themes": [],
+      "tree": {
+        "_id": "ConfirmationCallbackTest",
+        "enabled": true,
+        "entryNodeId": "9284b2b3-6d31-4b59-8e24-8d2c50b64d5f",
+        "identityResource": "managed/alpha_user",
+        "innerTreeOnly": false,
+        "mustRun": false,
+        "noSession": false,
+        "nodes": {
+          "75ec4a84-d756-4f6d-98b3-3fbdde77bd56": {
+            "connections": {
+              "false": "e301438c-0bd0-429c-ab0c-66126501069a",
+              "true": "afb4bd1b-5d95-4fe6-a745-e99d85d86908"
+            },
+            "displayName": "Data Store Decision",
+            "nodeType": "DataStoreDecisionNode",
+            "x": 341,
+            "y": 90
+          },
+          "9284b2b3-6d31-4b59-8e24-8d2c50b64d5f": {
+            "connections": {
+              "outcome": "75ec4a84-d756-4f6d-98b3-3fbdde77bd56"
+            },
+            "displayName": "Page Node",
+            "nodeType": "PageNode",
+            "x": 140,
+            "y": 34
+          },
+          "afb4bd1b-5d95-4fe6-a745-e99d85d86908": {
+            "connections": {
+              "false": "e301438c-0bd0-429c-ab0c-66126501069a",
+              "true": "70e691a5-1e33-4ac3-a356-e7b6d60d92e0"
+            },
+            "displayName": "Message Node",
+            "nodeType": "MessageNode",
+            "x": 533,
+            "y": 39
+          }
+        },
+        "staticNodes": {
+          "70e691a5-1e33-4ac3-a356-e7b6d60d92e0": {
+            "x": 1006,
+            "y": 52
+          },
+          "e301438c-0bd0-429c-ab0c-66126501069a": {
+            "x": 808,
+            "y": 397
+          },
+          "startNode": {
+            "x": 50,
+            "y": 25
+          }
+        },
+        "uiConfig": {
+          "categories": "[]"
+        }
+      }
+    }
+  }
+}

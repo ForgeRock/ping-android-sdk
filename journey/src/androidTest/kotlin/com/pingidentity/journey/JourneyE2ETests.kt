@@ -11,15 +11,21 @@ import androidx.test.filters.SmallTest
 import com.pingidentity.journey.callback.NameCallback
 import com.pingidentity.journey.callback.PasswordCallback
 import com.pingidentity.journey.module.Oidc
+import com.pingidentity.journey.module.Session
 import com.pingidentity.journey.module.oidcClient
 import com.pingidentity.journey.module.session
 import com.pingidentity.journey.plugin.callbacks
+import com.pingidentity.logger.Logger
+import com.pingidentity.logger.STANDARD
 import com.pingidentity.oidc.OidcError
 import com.pingidentity.oidc.User
 import com.pingidentity.orchestrate.ContinueNode
 import com.pingidentity.orchestrate.ErrorNode
+import com.pingidentity.orchestrate.FailureNode
 import com.pingidentity.orchestrate.SuccessNode
+import com.pingidentity.storage.MemoryStorage
 import com.pingidentity.utils.Result
+import io.ktor.client.plugins.HttpRequestTimeoutException
 import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.assertFalse
 import junit.framework.TestCase.assertNotNull
@@ -49,7 +55,6 @@ class JourneyE2ETests : BaseJourneyTest() {
         assertEquals("iPlanetDirectoryPro", minimalJourney.options.cookie)
         assertNull(minimalJourney.user())
 
-        // ToDo: Fix readme. It says 30 seconds. . .
         // Default timeout is 15 seconds
         assertEquals(15000, minimalJourney.options.timeout)
 
@@ -77,6 +82,30 @@ class JourneyE2ETests : BaseJourneyTest() {
         assertEquals(COOKIE, customJourney.options.cookie)
         assertEquals(60, customJourney.options.timeout)
         assertNull(customJourney.user())
+    }
+
+    @Test
+    fun journeyWithCustomStorage() = runTest {
+        val sessionStorage = MemoryStorage<SSOToken>()
+        val customStorageJourney = Journey {
+            serverUrl = SERVER_URL
+            realm = REALM
+            cookie = COOKIE
+            module(Session) {
+                storage = { sessionStorage }
+            }
+        }
+
+        var result = customStorageJourney.start(tree)
+        val continueNode = result as ContinueNode
+        continueNode.handleLoginCallbacks(USERNAME, PASSWORD)
+
+        result = continueNode.next()
+        assertTrue(result is SuccessNode)
+
+        // After successful login, the session should be stored in custom storage
+        assertNotNull(sessionStorage.get())
+        assertEquals(customStorageJourney.session()?.value, sessionStorage.get()?.value)
     }
 
     @Test
@@ -167,6 +196,22 @@ class JourneyE2ETests : BaseJourneyTest() {
     }
 
     @Test
+    fun handleFailure() = runTest {
+        val myJourney = Journey {
+            logger = Logger.STANDARD
+            timeout = 1 // Set a short timeout for testing failure
+            serverUrl = SERVER_URL
+            realm = REALM
+            cookie = COOKIE
+        }
+
+        val result = myJourney.start(tree)
+        val failureNode = result as FailureNode
+        assertTrue(failureNode.cause is HttpRequestTimeoutException)
+        assertTrue(failureNode.cause.message?.contains("Request timeout has expired") ?: false)
+    }
+
+    @Test
     fun testUserToken() = runTest {
         var result = defaultJourney.start(tree)
         val continueNode = result as ContinueNode
@@ -202,14 +247,14 @@ class JourneyE2ETests : BaseJourneyTest() {
             realm = REALM
             cookie = COOKIE
             module(Oidc) {
-                clientId = "InvalidClientId" // Intentionally invalid client ID
+                clientId = "InvalidClientId" // Intentionally set invalid client ID
                 redirectUri = REDIRECT_URI
                 scopes = mutableSetOf("openid", "email", "address", "profile", "phone")
                 discoveryEndpoint = DISCOVERY_ENDPOINT
             }
         }
 
-        var result = defaultJourney.start(tree)
+        var result = invalidOidcClientJourney.start(tree)
         val continueNode = result as ContinueNode
         continueNode.handleLoginCallbacks(USERNAME, PASSWORD)
 

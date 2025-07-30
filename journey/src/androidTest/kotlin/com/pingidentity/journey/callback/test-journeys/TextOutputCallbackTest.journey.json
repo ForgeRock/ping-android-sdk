@@ -1,0 +1,179 @@
+{
+  "meta": {
+    "exportDate": "2025-07-30T01:14:54.138Z",
+    "exportTool": "frodo",
+    "exportToolVersion": "v3.3.0 [v20.18.0]",
+    "exportedBy": "stoyan.petrov@forgerock.com",
+    "origin": "https://openam-sdks.forgeblocks.com/am",
+    "originAmVersion": "8.1.0"
+  },
+  "trees": {
+    "TextOutputCallbackTest": {
+      "circlesOfTrust": {},
+      "emailTemplates": {},
+      "innerNodes": {},
+      "nodes": {
+        "054b74d0-92a8-4507-969f-0b2165d51862": {
+          "_id": "054b74d0-92a8-4507-969f-0b2165d51862",
+          "_outcomes": [
+            {
+              "displayName": "true",
+              "id": "true"
+            },
+            {
+              "displayName": "false",
+              "id": "false"
+            }
+          ],
+          "_type": {
+            "_id": "ScriptedDecisionNode",
+            "collection": true,
+            "name": "Scripted Decision"
+          },
+          "inputs": [
+            "*"
+          ],
+          "outcomes": [
+            "true",
+            "false"
+          ],
+          "outputs": [
+            "*"
+          ],
+          "script": "49d509cd-5f95-437f-9f71-6a1a5538e350"
+        },
+        "109b7854-be74-4d6b-ad98-dcee8aee7d42": {
+          "_id": "109b7854-be74-4d6b-ad98-dcee8aee7d42",
+          "_outcomes": [
+            {
+              "displayName": "True",
+              "id": "true"
+            },
+            {
+              "displayName": "False",
+              "id": "false"
+            }
+          ],
+          "_type": {
+            "_id": "DataStoreDecisionNode",
+            "collection": true,
+            "name": "Data Store Decision"
+          }
+        },
+        "5e169d9d-70a1-4c4b-b81a-9051db89a6fd": {
+          "_id": "5e169d9d-70a1-4c4b-b81a-9051db89a6fd",
+          "_outcomes": [
+            {
+              "displayName": "Outcome",
+              "id": "outcome"
+            }
+          ],
+          "_type": {
+            "_id": "PasswordCollectorNode",
+            "collection": true,
+            "name": "Password Collector"
+          }
+        },
+        "b25e8a80-1f8a-45a6-b81f-c4516fcbb543": {
+          "_id": "b25e8a80-1f8a-45a6-b81f-c4516fcbb543",
+          "_outcomes": [
+            {
+              "displayName": "Outcome",
+              "id": "outcome"
+            }
+          ],
+          "_type": {
+            "_id": "UsernameCollectorNode",
+            "collection": true,
+            "name": "Username Collector"
+          }
+        }
+      },
+      "saml2Entities": {},
+      "scripts": {
+        "49d509cd-5f95-437f-9f71-6a1a5538e350": {
+          "_id": "49d509cd-5f95-437f-9f71-6a1a5538e350",
+          "context": "AUTHENTICATION_TREE_DECISION_NODE",
+          "createdBy": "null",
+          "creationDate": 0,
+          "default": false,
+          "description": "null",
+          "evaluatorVersion": "1.0",
+          "language": "JAVASCRIPT",
+          "lastModifiedBy": "id=0985abcd-9357-4a3f-94f6-9f346b3f19c7,ou=user,ou=am-config",
+          "lastModifiedDate": 1753114501252,
+          "name": "TextOutputCallbackProducer",
+          "script": "\"var fr = JavaImporter(\\n    org.forgerock.openam.auth.node.api.Action, \\n    com.sun.identity.authentication.callbacks.ScriptTextOutputCallback,\\n    javax.security.auth.callback.TextOutputCallback\\n)\\n\\nwith (fr) {\\n  if (callbacks.isEmpty()) {\\n    // Send 4 TextOutput callbacks of all possible types:\\n  \\taction = Action.send(new TextOutputCallback(TextOutputCallback.INFORMATION, \\\"TextOutput Type 0 (INFO)\\\"),\\n                         new TextOutputCallback(TextOutputCallback.WARNING, \\\"TextOutput Type 1 (WARNING)\\\"),\\n                         new TextOutputCallback(TextOutputCallback.ERROR, \\\"TextOutput Type 2 (ERROR)\\\"),\\n                         new ScriptTextOutputCallback(\\\"TextOutput Type 4 (SCRIPT)\\\")).build();\\n  } else {\\n      logger.error(\\\"callbacks.size(): \\\" + callbacks.size());\\n      if (callbacks.size() == 3) {\\n          // Loop through the callbacks to ensure that none of them is of type 4\\n          for (var i = 0; i < callbacks.size(); i++) {\\n            if (callbacks.get(i).getMessageType == 4) {\\n                // The SDK should NOT return TextCallback of type 4\\n                logger.error(\\\"Received unexpected TextCallback of type 4!\\\");\\n                action = fr.Action.goTo(\\\"false\\\").build();\\n                break;\\n            }\\n          }\\n          action = fr.Action.goTo(\\\"true\\\").build();\\n      }\\n      else {\\n          logger.error(\\\"Received unexpected number of callbcks expected 3, but got \\\" + callbacks.size());\\n          action = fr.Action.goTo(\\\"false\\\").build();\\n      }\\n  }\\n}\\n\""
+        }
+      },
+      "socialIdentityProviders": {},
+      "themes": [],
+      "tree": {
+        "_id": "TextOutputCallbackTest",
+        "enabled": true,
+        "entryNodeId": "b25e8a80-1f8a-45a6-b81f-c4516fcbb543",
+        "identityResource": "managed/alpha_user",
+        "innerTreeOnly": false,
+        "mustRun": false,
+        "noSession": false,
+        "nodes": {
+          "054b74d0-92a8-4507-969f-0b2165d51862": {
+            "connections": {
+              "false": "e301438c-0bd0-429c-ab0c-66126501069a",
+              "true": "70e691a5-1e33-4ac3-a356-e7b6d60d92e0"
+            },
+            "displayName": "Scripted Decision",
+            "nodeType": "ScriptedDecisionNode",
+            "x": 454,
+            "y": 59.421875
+          },
+          "109b7854-be74-4d6b-ad98-dcee8aee7d42": {
+            "connections": {
+              "false": "e301438c-0bd0-429c-ab0c-66126501069a",
+              "true": "054b74d0-92a8-4507-969f-0b2165d51862"
+            },
+            "displayName": "Data Store Decision",
+            "nodeType": "DataStoreDecisionNode",
+            "x": 367,
+            "y": 285.421875
+          },
+          "5e169d9d-70a1-4c4b-b81a-9051db89a6fd": {
+            "connections": {
+              "outcome": "109b7854-be74-4d6b-ad98-dcee8aee7d42"
+            },
+            "displayName": "Password Collector",
+            "nodeType": "PasswordCollectorNode",
+            "x": 170,
+            "y": 219.421875
+          },
+          "b25e8a80-1f8a-45a6-b81f-c4516fcbb543": {
+            "connections": {
+              "outcome": "5e169d9d-70a1-4c4b-b81a-9051db89a6fd"
+            },
+            "displayName": "Username Collector",
+            "nodeType": "UsernameCollectorNode",
+            "x": 138,
+            "y": 135.421875
+          }
+        },
+        "staticNodes": {
+          "70e691a5-1e33-4ac3-a356-e7b6d60d92e0": {
+            "x": 1011,
+            "y": 39
+          },
+          "e301438c-0bd0-429c-ab0c-66126501069a": {
+            "x": 997,
+            "y": 303
+          },
+          "startNode": {
+            "x": 33,
+            "y": 254
+          }
+        },
+        "uiConfig": {
+          "categories": "[]"
+        }
+      }
+    }
+  }
+}

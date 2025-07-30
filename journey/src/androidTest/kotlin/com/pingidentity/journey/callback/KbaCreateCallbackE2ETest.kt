@@ -38,13 +38,15 @@ class KbaCreateCallbackE2ETest : BaseJourneyTest() {
         val firstQuestion = node.callbacks[0] as KbaCreateCallback
         assertEquals(2, firstQuestion.predefinedQuestions.size)
         firstQuestion.selectedQuestion = firstQuestion.predefinedQuestions[0]
-        firstQuestion.selectedAnswer = "Test"
+        firstQuestion.selectedAnswer = "Yellow"
+        assertTrue(firstQuestion.allowUserDefinedQuestions)
         assertEquals("Security questions", firstQuestion.prompt);
 
         val secondQuestion = node.callbacks[1] as KbaCreateCallback
         assertEquals(2, secondQuestion.predefinedQuestions.size)
-        secondQuestion.selectedQuestion = secondQuestion.predefinedQuestions[1]
-        secondQuestion.selectedAnswer = "Test"
+        secondQuestion.selectedQuestion = "What city were you born in?"
+        secondQuestion.selectedAnswer = "Plovdiv"
+        assertTrue(secondQuestion.allowUserDefinedQuestions)
         assertEquals("Security questions", secondQuestion.prompt);
 
         val result = node.next()

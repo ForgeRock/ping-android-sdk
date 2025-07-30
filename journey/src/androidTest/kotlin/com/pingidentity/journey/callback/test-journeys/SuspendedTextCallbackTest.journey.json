@@ -1,0 +1,193 @@
+{
+  "meta": {
+    "exportDate": "2025-07-30T01:14:06.546Z",
+    "exportTool": "frodo",
+    "exportToolVersion": "v3.3.0 [v20.18.0]",
+    "exportedBy": "stoyan.petrov@forgerock.com",
+    "origin": "https://openam-sdks.forgeblocks.com/am",
+    "originAmVersion": "8.1.0"
+  },
+  "trees": {
+    "SuspendedTextCallbackTest": {
+      "circlesOfTrust": {},
+      "emailTemplates": {
+        "updatePassword": {
+          "_id": "emailTemplate/updatePassword",
+          "defaultLocale": "en",
+          "enabled": true,
+          "from": "",
+          "html": {
+            "en": "<h3>Verify email to update password</h3><p><a href=\"{{object.resumeURI}}\">Update password link</a></p>"
+          },
+          "message": {
+            "en": "<html><head></head><body style=\"background-color: #324054; color: #5e6d82; padding: 60px; text-align: center;\"><div class=\"content\" style=\"background-color: #fff; border-radius: 4px; margin: 0 auto; padding: 48px; width: 235px;\"><h3 id=\"verifyemailtoupdatepassword\">Verify email to update password</h3><p><a href=\"{{object.resumeURI}}\" style=\"text-decoration: none; color: #109cf1;\">Update password link</a></p></div></body></html>"
+          },
+          "mimeType": "text/html",
+          "styles": "body{background-color:#324054;color:#5e6d82;padding:60px;text-align:center}a{text-decoration:none;color:#109cf1}.content{background-color:#fff;border-radius:4px;margin:0 auto;padding:48px;width:235px}",
+          "subject": {
+            "en": "Update your password"
+          }
+        }
+      },
+      "innerNodes": {
+        "03e1d704-fdc4-4480-b300-581e5299d9f1": {
+          "_id": "03e1d704-fdc4-4480-b300-581e5299d9f1",
+          "_outcomes": [
+            {
+              "displayName": "Outcome",
+              "id": "outcome"
+            }
+          ],
+          "_type": {
+            "_id": "PasswordCollectorNode",
+            "collection": true,
+            "name": "Password Collector"
+          }
+        },
+        "82c6b74e-a37d-4a4e-8ff9-73c5f59eb1e5": {
+          "_id": "82c6b74e-a37d-4a4e-8ff9-73c5f59eb1e5",
+          "_outcomes": [
+            {
+              "displayName": "Outcome",
+              "id": "outcome"
+            }
+          ],
+          "_type": {
+            "_id": "UsernameCollectorNode",
+            "collection": true,
+            "name": "Username Collector"
+          }
+        }
+      },
+      "nodes": {
+        "431cced8-fecd-45df-bd84-541adad38c6a": {
+          "_id": "431cced8-fecd-45df-bd84-541adad38c6a",
+          "_outcomes": [
+            {
+              "displayName": "True",
+              "id": "true"
+            },
+            {
+              "displayName": "False",
+              "id": "false"
+            }
+          ],
+          "_type": {
+            "_id": "DataStoreDecisionNode",
+            "collection": true,
+            "name": "Data Store Decision"
+          }
+        },
+        "66752bdd-1d00-420b-b5b5-3c535e0ff9ad": {
+          "_id": "66752bdd-1d00-420b-b5b5-3c535e0ff9ad",
+          "_outcomes": [
+            {
+              "displayName": "Outcome",
+              "id": "outcome"
+            }
+          ],
+          "_type": {
+            "_id": "EmailSuspendNode",
+            "collection": true,
+            "name": "Email Suspend Node"
+          },
+          "emailAttribute": "mail",
+          "emailSuspendMessage": {
+            "en": "An email has been sent to the address you entered. Click the link in that email to proceed."
+          },
+          "emailTemplateName": "updatePassword",
+          "identityAttribute": "userName",
+          "objectLookup": false
+        },
+        "aea55eff-3f68-4b6d-a106-327ab7e2ff1f": {
+          "_id": "aea55eff-3f68-4b6d-a106-327ab7e2ff1f",
+          "_outcomes": [
+            {
+              "displayName": "Outcome",
+              "id": "outcome"
+            }
+          ],
+          "_type": {
+            "_id": "PageNode",
+            "collection": true,
+            "name": "Page Node"
+          },
+          "nodes": [
+            {
+              "_id": "82c6b74e-a37d-4a4e-8ff9-73c5f59eb1e5",
+              "displayName": "Username Collector",
+              "nodeType": "UsernameCollectorNode"
+            },
+            {
+              "_id": "03e1d704-fdc4-4480-b300-581e5299d9f1",
+              "displayName": "Password Collector",
+              "nodeType": "PasswordCollectorNode"
+            }
+          ],
+          "pageDescription": {},
+          "pageHeader": {}
+        }
+      },
+      "saml2Entities": {},
+      "scripts": {},
+      "socialIdentityProviders": {},
+      "themes": [],
+      "tree": {
+        "_id": "SuspendedTextCallbackTest",
+        "enabled": true,
+        "entryNodeId": "aea55eff-3f68-4b6d-a106-327ab7e2ff1f",
+        "identityResource": "managed/alpha_user",
+        "innerTreeOnly": false,
+        "mustRun": false,
+        "noSession": false,
+        "nodes": {
+          "431cced8-fecd-45df-bd84-541adad38c6a": {
+            "connections": {
+              "false": "e301438c-0bd0-429c-ab0c-66126501069a",
+              "true": "66752bdd-1d00-420b-b5b5-3c535e0ff9ad"
+            },
+            "displayName": "Data Store Decision",
+            "nodeType": "DataStoreDecisionNode",
+            "x": 448,
+            "y": 77.25
+          },
+          "66752bdd-1d00-420b-b5b5-3c535e0ff9ad": {
+            "connections": {
+              "outcome": "70e691a5-1e33-4ac3-a356-e7b6d60d92e0"
+            },
+            "displayName": "Email Suspend Node",
+            "nodeType": "EmailSuspendNode",
+            "x": 761,
+            "y": 63.25
+          },
+          "aea55eff-3f68-4b6d-a106-327ab7e2ff1f": {
+            "connections": {
+              "outcome": "431cced8-fecd-45df-bd84-541adad38c6a"
+            },
+            "displayName": "Page Node",
+            "nodeType": "PageNode",
+            "x": 180,
+            "y": 30.25
+          }
+        },
+        "staticNodes": {
+          "70e691a5-1e33-4ac3-a356-e7b6d60d92e0": {
+            "x": 1109,
+            "y": 66
+          },
+          "e301438c-0bd0-429c-ab0c-66126501069a": {
+            "x": 1105,
+            "y": 397
+          },
+          "startNode": {
+            "x": 50,
+            "y": 250
+          }
+        },
+        "uiConfig": {
+          "categories": "[]"
+        }
+      }
+    }
+  }
+}

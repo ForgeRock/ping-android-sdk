@@ -82,7 +82,8 @@ discovery of OpenID
 Connect (OIDC) endpoints using the `discoveryEndpoint` attribute.
 
 ```kotlin
-val journey = Journey {
+val journey = Journey { 
+    serverUrl = "your_server_url"
     module(Oidc) {
         clientId = "your_client_id"
         discoveryEndpoint =
@@ -100,8 +101,9 @@ The `Journey` configuration block offers further customization options:
 
 ```kotlin
 val journey = Journey {
-    timeout = 30 // Network request timeout in seconds (default: 30s)
+    timeout = 30000 // Network request timeout in milliseconds (default: 15000ms)
     logger = Logger.STANDARD // Use the standard logger for Logcat output
+    serverUrl = "<server_url>" // Specify the server URL
     realm = "<realm_name>" // Specify the realm for authentication
     cookie = "<cookie_name>" // Specify the cookie name for session management
     module(Oidc) {
@@ -212,7 +214,6 @@ The following Callback will be supported in the Core Journey Module:
 
 | Callback Name                   | Callback Description                                                                                |
 |---------------------------------|-----------------------------------------------------------------------------------------------------|
-| AppIntegrity                    | Collects a generated token from the client to verify the integrity of the app                       |
 | BooleanAttributeInputCallback   | Collects true or false.                                                                             |
 | ChoiceCallback                  | Collects single user input from available choices, retrieves selected choice from user interaction. |
 | ConfirmationCallback            | Retrieve a selected option from a list of options.                                                  |
