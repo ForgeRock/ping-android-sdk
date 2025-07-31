@@ -20,7 +20,7 @@ dependencyResolutionManagement {
         google()
         mavenCentral()
         //mavenLocal()
-        maven(url = "https://oss.sonatype.org/content/repositories/snapshots/")
+        maven(url = "https://central.sonatype.com/repository/maven-snapshots/")
     }
 }
 
