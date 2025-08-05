@@ -31,9 +31,9 @@ nexusPublishing {
         sonatype {
             username = System.getenv("OSS_USERNAME") //Token Id
             password = System.getenv("OSS_PASSWORD") //Token
-            stagingProfileId = System.getenv("OSS_STAGING_PROFILE_ID")
-            nexusUrl.set(uri("https://oss.sonatype.org/service/local/"))
-            snapshotRepositoryUrl.set(uri("https://oss.sonatype.org/content/repositories/snapshots/"))
+            //stagingProfileId = System.getenv("OSS_STAGING_PROFILE_ID")
+            nexusUrl.set(uri("https://ossrh-staging-api.central.sonatype.com/service/local/"))
+            snapshotRepositoryUrl.set(uri("https://central.sonatype.com/repository/maven-snapshots/"))
         }
     }
 }
