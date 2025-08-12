@@ -19,10 +19,17 @@ import kotlinx.serialization.json.jsonPrimitive
 class DeviceProfileCallback : AbstractCallback() {
     var metadata: Boolean = false
         private set
+    var location: Boolean = false
+        private set
+
+    var message: String = ""
+        private set
 
     override fun init(name: String, value: JsonElement) {
         when (name) {
             "metadata" -> metadata = value.jsonPrimitive.content.toBoolean()
+            "location" -> location = value.jsonPrimitive.content.toBoolean()
+            "message" -> message = value.jsonPrimitive.content
         }
     }
 
@@ -32,7 +39,9 @@ class DeviceProfileCallback : AbstractCallback() {
         }
         val prettyString = json.encodeToString(profile(block))
         println(prettyString)
-        input(prettyString)
+        if (metadata) {
+            input(prettyString)
+        }
     }
 }
 

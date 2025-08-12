@@ -9,4 +9,6 @@ package com.pingidentity.device.profile.collector
 fun DefaultDeviceCollector(): MutableList<DeviceCollector<*>>.() -> Unit = {
     add(PlatformCollector)
     add(HardwareCollector)
+    add(NetworkCollector())
+    add(TelephonyCollector)
 }

@@ -9,6 +9,7 @@ package com.pingidentity.device.profile
 import android.app.ActivityManager
 import android.content.Context
 import android.hardware.camera2.CameraManager
+import android.net.ConnectivityManager
 import android.os.Environment
 import android.os.StatFs
 import android.util.DisplayMetrics
@@ -114,6 +115,12 @@ class DeviceProfileCallbackTest {
             val memoryInfo = it.invocation.args[0] as ActivityManager.MemoryInfo
             memoryInfo.totalMem = 4096
         }
+    }
+
+    private fun setupConnectivityConnectivityMocks() {
+        val mockConnectivityManager = mockk<ConnectivityManager>()
+        every { mockContext.getSystemService(Context.CONNECTIVITY_SERVICE) }
+
     }
 }
 
