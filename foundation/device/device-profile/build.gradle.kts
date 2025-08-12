@@ -21,6 +21,7 @@ android {
 
 dependencies {
 
+    implementation(project(":foundation:device:device-id"))
     implementation(project(":foundation:journey-plugin"))
     implementation(project(":foundation:utils"))
     implementation(project(":foundation:android"))

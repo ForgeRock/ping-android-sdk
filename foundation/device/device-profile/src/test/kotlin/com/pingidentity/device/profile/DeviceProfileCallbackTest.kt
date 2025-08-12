@@ -1,0 +1,136 @@
+/*
+ * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ *
+ * This software may be modified and distributed under the terms
+ * of the MIT license. See the LICENSE file for details.
+ */
+package com.pingidentity.device.profile
+
+import android.app.ActivityManager
+import android.content.Context
+import android.hardware.camera2.CameraManager
+import android.os.Environment
+import android.os.StatFs
+import android.util.DisplayMetrics
+import android.view.Display
+import android.view.WindowManager
+import com.pingidentity.android.ContextProvider
+import com.pingidentity.device.id.DeviceIdentifier
+import com.pingidentity.device.profile.collector.DeviceCollector
+import com.pingidentity.device.profile.collector.HardwareCollector
+import com.pingidentity.device.profile.collector.PlatformCollector
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.mockkConstructor
+import io.mockk.mockkStatic
+import io.mockk.unmockkStatic
+import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.Serializable
+import java.io.File
+import kotlin.test.AfterTest
+import kotlin.test.BeforeTest
+import kotlin.test.Test
+
+class DeviceProfileCallbackTest {
+
+    private val mockContext = mockk<Context>()
+
+    @BeforeTest
+    fun setup() {
+        every { mockContext.applicationContext } returns mockContext
+        ContextProvider.init(mockContext)
+        setupCameraMocks()
+        setupWindowManagerMocks()
+        setupStorageMocks()
+        setupMemoryMocks()
+    }
+
+    @AfterTest
+    fun tearDown() {
+        unmockkStatic(Environment::class)
+    }
+
+    @Test
+    fun `collect returns config with custom collector`() = runTest {
+        val callback = DeviceProfileCallback()
+        callback.collect {
+            deviceIdentifier = object : DeviceIdentifier {
+                override val id = "test"
+            }
+            metadata {
+                add(DummyDeviceCollector())
+                add(DeviceCollector("test") {
+                    Dummy2("testName2", "testValue2")
+                })
+                add(Dummy2DeviceCollector)
+                add(DeviceCollector<Dummy2>("test3") {
+                    null
+                })
+            }
+            metadata {
+                add(PlatformCollector)
+                add(HardwareCollector)
+            }
+        }
+    }
+
+    @Test
+    fun `collect returns config with default`() = runTest {
+        val callback = DeviceProfileCallback()
+        callback.collect()
+    }
+
+    private fun setupCameraMocks() {
+        val mockCameraManager = mockk<CameraManager>()
+        val mockCameraIdList = arrayOf("camera1", "camera2")
+        every { mockContext.getSystemService(Context.CAMERA_SERVICE) } returns mockCameraManager
+        every { mockCameraManager.cameraIdList } returns mockCameraIdList
+    }
+
+    private fun setupWindowManagerMocks() {
+        val mockWindowManager = mockk<WindowManager>()
+        val mockDisplay = mockk<Display>()
+        every { mockContext.getSystemService(Context.WINDOW_SERVICE) } returns mockWindowManager
+        every { mockWindowManager.defaultDisplay } returns mockDisplay
+        every { mockDisplay.getMetrics(any()) } answers {
+            val displayMetrics = it.invocation.args[0] as DisplayMetrics
+            displayMetrics.widthPixels = 1080
+            displayMetrics.heightPixels = 1920
+        }
+    }
+
+    private fun setupStorageMocks() {
+        mockkStatic(Environment::class)
+        mockkConstructor(StatFs::class)
+        val mockFile = mockk<File>()
+        every { mockFile.path } returns "/fake/path"
+        every { Environment.getDataDirectory() } returns mockFile
+    }
+
+    private fun setupMemoryMocks() {
+        val mockActivityManager = mockk<ActivityManager>()
+        every { mockContext.getSystemService(Context.ACTIVITY_SERVICE) } returns mockActivityManager
+        every { mockActivityManager.getMemoryInfo(any()) } answers {
+            val memoryInfo = it.invocation.args[0] as ActivityManager.MemoryInfo
+            memoryInfo.totalMem = 4096
+        }
+    }
+}
+
+class DummyDeviceCollector : DeviceCollector<Dummy> {
+    override val key: String = "dummyCollector"
+    override val serializer = Dummy.serializer()
+    override suspend fun collect(): Dummy {
+        return Dummy("testName", "testValue")
+    }
+}
+
+val Dummy2DeviceCollector = DeviceCollector("dummy2") {
+    Dummy2("testName2", "testValue2")
+}
+
+@Serializable
+data class Dummy(var name: String, var value: String)
+
+@Serializable
+data class Dummy2(var name: String, var value: String)

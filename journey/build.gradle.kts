@@ -41,6 +41,7 @@ dependencies {
     api(project(":foundation:logger"))
     api(project(":foundation:storage"))
     implementation(project(":foundation:android"))
+    implementation(project(":foundation:device:device-profile"))
 
     testImplementation(project(":foundation:testrail"))
     implementation(libs.androidx.datastore)

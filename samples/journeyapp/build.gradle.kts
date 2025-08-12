@@ -65,6 +65,7 @@ dependencies {
     implementation(project(":journey"))
     implementation(project(":external-idp"))
     implementation(project(":protect"))
+    implementation(project(":foundation:device:device-profile"))
     //implementation("com.pingidentity.sdks:davinci:0.9.0-SNAPSHOT")
     implementation(libs.androidx.datastore.preferences)
 
