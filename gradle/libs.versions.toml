@@ -1,6 +1,7 @@
 [versions]
 coilSvg = "2.4.0"
 compileSdk = "35"
+forgerockAuth = "4.8.1"
 targetSdk = "35"
 minSdk = "28"
 jvmTarget = "17"
@@ -66,6 +67,7 @@ androidx-ui-tooling = { module = "androidx.compose.ui:ui-tooling" }
 androidx-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview" }
 coil-compose = { module = "io.coil-kt:coil-compose", version.ref = "coilCompose" }
 coil-svg = { module = "io.coil-kt:coil-svg", version.ref = "coilSvg" }
+forgerock-auth = { module = "org.forgerock:forgerock-auth", version.ref = "forgerockAuth" }
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
 compose-ui = { module = "androidx.compose.ui:ui", version.ref = "compose" }
 compose-foundation = { module = "androidx.compose.foundation:foundation", version.ref = "compose" }
