@@ -1,11 +1,11 @@
 [versions]
 coilSvg = "2.4.0"
-compileSdk = "35"
-forgerockAuth = "4.8.1"
-targetSdk = "35"
-minSdk = "28"
+compileSdk = "36"
+targetSdk = "36"
+minSdk = "29"
 jvmTarget = "17"
 
+forgerockAuth = "4.8.1"
 activityCompose = "1.9.3"
 agp = "8.7.3"
 coreSplashscreen = "1.0.1"

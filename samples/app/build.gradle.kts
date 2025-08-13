@@ -13,12 +13,12 @@ plugins {
 
 android {
     namespace = "com.pingidentity.samples.app"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.pingidentity.samples.app"
-        minSdk = 28
-        targetSdk = 35
+        minSdk = 29
+        targetSdk = 36
         versionCode = 1
         versionName = "1.0"
 
