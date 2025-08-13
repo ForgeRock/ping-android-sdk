@@ -12,11 +12,11 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.SmallTest
 import androidx.test.platform.app.InstrumentationRegistry
 import com.pingidentity.android.ContextProvider
+import com.pingidentity.mfa.commons.storage.TestPassphraseProvider
 import com.pingidentity.mfa.oath.OathAlgorithm
 import com.pingidentity.mfa.oath.OathCredential
 import com.pingidentity.mfa.oath.OathType
 import com.pingidentity.storage.sqlite.passphrase.FixedPassphraseProvider
-import com.pingidentity.storage.passphrase.TestPassphraseProvider
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
 import org.junit.After

@@ -11,6 +11,7 @@ import kotlinx.serialization.EncodeDefault
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerializationException
 import kotlinx.serialization.Transient
 import kotlinx.serialization.descriptors.PrimitiveKind
 import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
@@ -104,7 +105,7 @@ data class OathCredential(
          *
          * @param jsonString The JSON string.
          * @return An OathCredential.
-         * @throws kotlinx.serialization.SerializationException if the JSON is invalid.
+         * @throws SerializationException if the JSON is invalid.
          */
         @JvmStatic
         fun fromJson(jsonString: String): OathCredential {
@@ -139,7 +140,7 @@ data class OathCredential(
         }
         
         // Use the built-in serialization directly
-        return json.encodeToString(this)
+        return json.encodeToString(serializer(), this)
     }
 
     /**

@@ -5,7 +5,7 @@
  * of the MIT license. See the LICENSE file for details.
  */
 
-package com.pingidentity.storage.passphrase
+package com.pingidentity.mfa.commons.storage
 
 import com.pingidentity.storage.sqlite.passphrase.PassphraseProvider
 
@@ -14,10 +14,10 @@ import com.pingidentity.storage.sqlite.passphrase.PassphraseProvider
  * This ensures consistent behavior in tests and makes it easier to set up test databases.
  */
 class TestPassphraseProvider : PassphraseProvider {
-    
+
     companion object {
         const val TEST_PASSPHRASE = "test_passphrase"
     }
-    
+
     override suspend fun getPassphrase(): String = TEST_PASSPHRASE
 }

@@ -17,6 +17,7 @@ The OATH MFA module provides functionality for implementing Time-based One-Time 
 - Customizable digit lengths (6-8 digits)
 - Customizable periods for TOTP
 - URI parsing and formatting
+- Kotlin Result-based API for improved error handling
 
 ## Getting Started
 
@@ -67,7 +68,31 @@ Add a new OATH credential from a URI:
 
 ```kotlin
 val uri = "otpauth://totp/Example:user@example.com?secret=JBSWY3DPEHPK3PXP&issuer=Example&algorithm=SHA1&digits=6&period=30"
-val credential = oathClient.addCredentialFromUri(uri)
+
+// Using onSuccess/onFailure callbacks
+oathClient.addCredentialFromUri(uri).onSuccess { credential ->
+    // Handle the successfully created credential
+    println("Created credential: ${credential.issuer}")
+}.onFailure { exception ->
+    // Handle error
+    println("Failed to add credential: ${exception.message}")
+}
+
+// Alternative: Using getOrThrow()
+try {
+    val credential = oathClient.addCredentialFromUri(uri).getOrThrow()
+    // Use credential
+} catch (e: Exception) {
+    // Handle exception
+}
+
+// Alternative: Using getOrNull() for a nullable result
+val credential = oathClient.addCredentialFromUri(uri).getOrNull()
+if (credential != null) {
+    // Use credential
+} else {
+    // Handle null case
+}
 ```
 
 ### Generate OTP Code
@@ -76,17 +101,44 @@ Generate a one-time password for an OATH credential:
 
 ```kotlin
 // Generate code for a credential by its ID
-val code = oathClient.generateCode(credentialId)
+oathClient.generateCode(credentialId).onSuccess { code ->
+    // Use the generated code
+    displayCode(code)
+}.onFailure { exception ->
+    // Handle error
+    showError("Failed to generate code: ${exception.message}")
+}
+
+// With timing information
+oathClient.generateCodeWithValidity(credentialId).onSuccess { codeInfo ->
+    displayCode(codeInfo.code)
+    updateProgressBar(codeInfo.progress)
+    startCountdown(codeInfo.timeRemaining)
+}
 ```
 
 ### Retrieve Credentials
 
 ```kotlin
 // Get a specific credential by ID
-val credential = oathClient.getCredential(credentialId)
+oathClient.getCredential(credentialId).onSuccess { credential ->
+    if (credential != null) {
+        // Credential found, use it
+        displayCredential(credential)
+    } else {
+        // Credential not found
+        showMessage("Credential not found")
+    }
+}
 
 // Get all stored credentials
-val allCredentials = oathClient.getAllCredentials()
+oathClient.getCredentials().onSuccess { credentials ->
+    if (credentials.isEmpty()) {
+        showMessage("No credentials found")
+    } else {
+        displayCredentials(credentials)
+    }
+}
 ```
 
 ### Update a Credential
@@ -94,44 +146,64 @@ val allCredentials = oathClient.getAllCredentials()
 ```kotlin
 // Update a credential's properties
 credential.displayAccountName = "John Doe" // Change the display account name
-val updatedCredential = oathClient.saveCredential(credential)
+
+oathClient.saveCredential(credential).onSuccess { updatedCredential ->
+    // Handle successful update
+    showMessage("Credential updated")
+}.onFailure { exception ->
+    // Handle failure
+    showError("Failed to update credential: ${exception.message}")
+}
 ```
 
 ### Delete a Credential
 
 ```kotlin
 // Remove a credential by ID
-val isDeleted = oathClient.deleteCredential(credentialId)
+oathClient.deleteCredential(credentialId).onSuccess { isDeleted ->
+    if (isDeleted) {
+        showMessage("Credential deleted")
+    } else {
+        showMessage("Credential not found")
+    }
+}.onFailure { exception ->
+    showError("Failed to delete credential: ${exception.message}")
+}
 ```
 
 ### Extended Implementation Example
 
 ```kotlin
 class OathAuthActivity : AppCompatActivity() {
-    private lateinit var oathClient: OathClient
+    private lateinit var oathClient: OathMfaClient
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_oath_auth)
 
         // Initialize OATH client
-        oathClient = OathClient {
-            encryptionEnabled = false
-            enableCredentialCache = true
+        lifecycleScope.launch {
+            try {
+                oathClient = OathClient {
+                    encryptionEnabled = false
+                    enableCredentialCache = true
+                }
+                
+                // Load all credentials
+                loadCredentials()
+            } catch (e: Exception) {
+                showError("Failed to initialize: ${e.message}")
+            }
         }
-
-        // Load all credentials
-        loadCredentials()
 
         // Set up button to add new credential
         btnAddCredential.setOnClickListener {
             val uri = editTextUri.text.toString()
             lifecycleScope.launch {
-                try {
-                    val credential = oathClient.addCredentialFromUri(uri)
+                oathClient.addCredentialFromUri(uri).onSuccess { credential ->
                     showMessage("Credential added: ${credential.issuer}")
                     loadCredentials() // Refresh list
-                } catch (e: Exception) {
+                }.onFailure { e ->
                     showError("Failed to add credential: ${e.message}")
                 }
             }
@@ -140,11 +212,10 @@ class OathAuthActivity : AppCompatActivity() {
 
     private fun loadCredentials() {
         lifecycleScope.launch {
-            try {
-                val credentials = oathClient.getAllCredentials()
+            oathClient.getCredentials().onSuccess { credentials ->
                 // Update UI with credentials list
                 credentialsAdapter.submitList(credentials)
-            } catch (e: Exception) {
+            }.onFailure { e ->
                 showError("Failed to load credentials: ${e.message}")
             }
         }
@@ -152,11 +223,10 @@ class OathAuthActivity : AppCompatActivity() {
 
     private fun generateCodeForCredential(credentialId: String) {
         lifecycleScope.launch {
-            try {
-                val code = oathClient.generateCode(credentialId)
+            oathClient.generateCode(credentialId).onSuccess { code ->
                 // Display code to user
                 textViewCode.text = code
-            } catch (e: Exception) {
+            }.onFailure { e ->
                 showError("Failed to generate code: ${e.message}")
             }
         }
@@ -204,29 +274,44 @@ The custom storage options include:
 - **context**: Android application context (required)
 - **encryptionEnabled**: Whether to encrypt the database (default: true)
 - **databaseName**: Custom database name for the SQLite database (optional)
-- **secretKey**: Custom encryption key for the database (optional)
-- **blockStorePreferred**: Whether to prefer Google BlockStore over local KeyStore for key storage (default: false)
-
-If `secretKey` is not provided, the system will:
-1. Try to retrieve an existing key from Google BlockStore (if `blockStorePreferred` is true)
-2. Fall back to retrieving from local KeyStore if BlockStore retrieval fails
-3. Generate a new secure random key if no existing key is found
+- **databaseVersion**: Custom database version (default: 1)
+- **passphraseProvider**: Custom passphrase provider for database encryption (default: uses Android KeyStore)
 
 ## Error Handling
 
-The OATH module provides specific exceptions for different error cases:
+The OATH module uses Kotlin's Result API for error handling, providing a more functional approach:
 
 ```kotlin
-try {
-    oathClient.addCredentialFromUri(uri)
-} catch (e: OathUriParseException) {
-    // Handle invalid URI format
-} catch (e: OathCredentialException) {
-    // Handle credential validation errors
-} catch (e: MfaStorageException) {
-    // Handle storage-related errors
-} catch (e: MfaException) {
-    // Handle general MFA errors
+// Using onSuccess/onFailure
+oathClient.addCredentialFromUri(uri)
+    .onSuccess { credential ->
+        // Success path
+    }
+    .onFailure { exception ->
+        when (exception) {
+            is IllegalArgumentException -> // Handle invalid URI format
+            is MfaException -> // Handle general MFA errors
+            else -> // Handle other exceptions
+        }
+    }
+
+// Using fold for combined handling
+oathClient.addCredentialFromUri(uri).fold(
+    onSuccess = { credential -> 
+        // Handle success
+    },
+    onFailure = { exception ->
+        // Handle failure
+    }
+)
+
+// Using runCatching for additional operations
+runCatching { 
+    oathClient.addCredentialFromUri(uri).getOrThrow()
+}.onSuccess { credential ->
+    // Do something with credential
+}.onFailure { exception ->
+    // Handle error
 }
 ```
 

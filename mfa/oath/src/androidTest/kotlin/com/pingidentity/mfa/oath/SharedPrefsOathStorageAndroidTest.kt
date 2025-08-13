@@ -12,13 +12,9 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.pingidentity.android.ContextProvider
 import com.pingidentity.logger.Logger
-import com.pingidentity.mfa.commons.exception.MfaStorageException
 import com.pingidentity.mfa.oath.storage.SharedPrefsOathStorage
 import com.pingidentity.utils.TestModeDetector
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
@@ -33,7 +29,6 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.util.Collections
-import java.util.UUID
 
 /**
  * Android instrumented test for SharedPrefsOathStorage integration with OathClient.
@@ -53,7 +48,7 @@ import java.util.UUID
 class SharedPrefsOathStorageAndroidTest {
 
     private lateinit var storage: SharedPrefsOathStorage
-    private lateinit var client: MfaOathClient
+    private lateinit var client: OathMfaClient
     private lateinit var context: Context
     private val testPrefsName = "test_oath_integration_prefs"
     
@@ -102,7 +97,7 @@ class SharedPrefsOathStorageAndroidTest {
     fun tearDown() = runTest {
         // Clean up any test data
         try {
-            val credentials = client.getCredentials()
+            val credentials = client.getCredentials().getOrNull() ?: emptyList()
             credentials.forEach { credential ->
                 client.deleteCredential(credential.id)
             }
@@ -133,8 +128,8 @@ class SharedPrefsOathStorageAndroidTest {
                 digits = 6,
                 secret = testSecret
             )
-        )
-        
+        ).getOrThrow()
+
         // Verify the credential was added
         assertNotNull("Credential should not be null", credential)
         assertEquals("Issuer should match", testIssuer, credential.issuer)
@@ -148,8 +143,8 @@ class SharedPrefsOathStorageAndroidTest {
         assertTrue("Metadata should contain credential ID", metadataSet.contains(credential.id))
         
         // 3. Generate an OTP code
-        val codeInfo = client.generateCodeWithValidity(credential.id)
-        
+        val codeInfo = client.generateCodeWithValidity(credential.id).getOrThrow()
+
         // Verify the code was generated
         assertNotNull("Code info should not be null", codeInfo)
         assertEquals("Code should be 6 digits", 6, codeInfo.code.length)
@@ -158,7 +153,7 @@ class SharedPrefsOathStorageAndroidTest {
         assertTrue("Progress should be between 0 and 1", codeInfo.progress in 0.0..1.0)
         
         // 4. Verify the generated code
-        val code = client.generateCode(credential.id)
+        val code = client.generateCode(credential.id).getOrThrow()
         assertEquals("Generated code should match code info", codeInfo.code, code)
         
         // 5. Update the credential
@@ -167,20 +162,21 @@ class SharedPrefsOathStorageAndroidTest {
                 displayIssuer = "Updated Issuer",
                 displayAccountName = "Updated Account"
             )
-        )
-        
+        ).getOrThrow()
+
         // Verify the update
-        val retrievedCredential = client.getCredential(credential.id)
+        val retrievedCredential = client.getCredential(credential.id).getOrThrow()
         assertNotNull("Retrieved credential should not be null", retrievedCredential)
         assertEquals("Updated display issuer should match", "Updated Issuer", retrievedCredential!!.displayIssuer)
         assertEquals("Updated display account name should match", "Updated Account", retrievedCredential.displayAccountName)
         
         // 6. Remove the credential
-        val removed = client.deleteCredential(credential.id)
+        val removed = client.deleteCredential(credential.id).getOrThrow()
         assertTrue("Credential should be removed", removed)
         
         // Verify it's gone from both client and storage
-        assertNull("Credential should not be retrievable from client", client.getCredential(credential.id))
+        val credentialAfterDelete = client.getCredential(credential.id).getOrThrow()
+        assertNull("Credential should not be retrievable from client", credentialAfterDelete)
         assertNull("Credential should not be retrievable from storage", storage.retrieveOathCredential(credential.id))
         
         // Also verify it's gone from SharedPreferences
@@ -202,8 +198,8 @@ class SharedPrefsOathStorageAndroidTest {
                 oathAlgorithm = OathAlgorithm.SHA1,
                 secret = testSecret
             )
-        )
-        
+        ).getOrThrow()
+
         val hotpCredential = client.saveCredential(
             OathCredential(
                 issuer = "HOTP Issuer",
@@ -216,16 +212,16 @@ class SharedPrefsOathStorageAndroidTest {
                 counter = 5,
                 secret = testSecret
             )
-        )
-        
+        ).getOrThrow()
+
         // Verify both credentials were added
-        val credentials = client.getCredentials()
+        val credentials = client.getCredentials().getOrThrow()
         assertEquals("Should have 2 credentials", 2, credentials.size)
         
         // Generate codes for both credentials
-        val totpCodeInfo = client.generateCodeWithValidity(totpCredential.id)
-        val hotpCodeInfo = client.generateCodeWithValidity(hotpCredential.id)
-        
+        val totpCodeInfo = client.generateCodeWithValidity(totpCredential.id).getOrThrow()
+        val hotpCodeInfo = client.generateCodeWithValidity(hotpCredential.id).getOrThrow()
+
         // Verify TOTP properties
         assertEquals("TOTP code should be 6 digits", 6, totpCodeInfo.code.length)
         assertTrue("TOTP time remaining should be positive", totpCodeInfo.timeRemaining > 0)
@@ -235,7 +231,7 @@ class SharedPrefsOathStorageAndroidTest {
         assertEquals("HOTP counter should be incremented to 6", 6L, hotpCodeInfo.counter)
         
         // Generate a second HOTP code (counter should increment)
-        val hotpCodeInfo2 = client.generateCodeWithValidity(hotpCredential.id)
+        val hotpCodeInfo2 = client.generateCodeWithValidity(hotpCredential.id).getOrThrow()
         assertEquals("HOTP counter should be incremented to 7", 7L, hotpCodeInfo2.counter)
         
         // Clear all credentials
@@ -244,7 +240,7 @@ class SharedPrefsOathStorageAndroidTest {
         }
         
         // Verify all are gone
-        assertTrue("No credentials should remain", client.getCredentials().isEmpty())
+        assertTrue("No credentials should remain", client.getCredentials().getOrThrow().isEmpty())
     }
     
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -254,19 +250,19 @@ class SharedPrefsOathStorageAndroidTest {
         val uri = "otpauth://totp/Test%20Issuer:testuser@example.com?secret=JBSWY3DPEHPK3PXP&issuer=Test%20Issuer&algorithm=SHA1&digits=6&period=30"
         
         // Import the credential
-        val credential = client.addCredentialFromUri(uri)
-        
+        val credential = client.addCredentialFromUri(uri).getOrThrow()
+
         // Verify credential was added
         assertNotNull("Credential should not be null", credential)
         assertEquals("Issuer should match", testIssuer, credential.issuer)
         assertEquals("Account name should match", testAccountName, credential.accountName)
         
         // Generate and verify a code
-        val codeInfo = client.generateCodeWithValidity(credential.id)
+        val codeInfo = client.generateCodeWithValidity(credential.id).getOrThrow()
         assertNotNull("Code info should not be null", codeInfo)
         
         // Verify the code
-        val code = client.generateCode(credential.id)
+        val code = client.generateCode(credential.id).getOrThrow()
         assertEquals("Generated code should match code info", codeInfo.code, code)
     }
     
@@ -283,11 +279,11 @@ class SharedPrefsOathStorageAndroidTest {
                 oathType = OathType.TOTP,
                 secret = testSecret
             )
-        )
-        
+        ).getOrThrow()
+
         // Verify it was added
-        assertNotNull("Credential should be added", client.getCredential(credential.id))
-        
+        assertNotNull("Credential should be added", client.getCredential(credential.id).getOrThrow())
+
         // 2. Close the first client and storage
         storage.close()
         
@@ -304,12 +300,12 @@ class SharedPrefsOathStorageAndroidTest {
         
         try {
             // 5. Verify the credential is accessible in the new client instance
-            val retrievedCredential = newClient.getCredential(credential.id)
+            val retrievedCredential = newClient.getCredential(credential.id).getOrThrow()
             assertNotNull("Credential should be retrievable from new client", retrievedCredential)
             assertEquals("Credential issuer should match", testIssuer, retrievedCredential!!.issuer)
             
             // 6. Generate a code with the new client
-            val codeInfo = newClient.generateCodeWithValidity(credential.id)
+            val codeInfo = newClient.generateCodeWithValidity(credential.id).getOrThrow()
             assertNotNull("Should be able to generate code with new client", codeInfo)
             
             // 7. Clean up
@@ -333,8 +329,8 @@ class SharedPrefsOathStorageAndroidTest {
                 oathType = OathType.TOTP,
                 secret = testSecret
             )
-        )
-        
+        ).getOrThrow()
+
         // Store the ID for later use
         val credentialId = credential.id
         
@@ -354,19 +350,35 @@ class SharedPrefsOathStorageAndroidTest {
         // 4. Try to retrieve via client
         var retrievedClientResult: OathCredential? = null
         try {
-            retrievedClientResult = client.getCredential(credentialId)
-            println("Client handled corrupted data gracefully: ${if (retrievedClientResult == null) "returned null" else "returned valid credential"}")
+            val result = client.getCredential(credentialId)
+            result.fold(
+                onSuccess = { retrievedCredential ->
+                    retrievedClientResult = retrievedCredential
+                    println("Client handled corrupted data gracefully: ${if (retrievedClientResult == null) "returned null" else "returned valid credential"}")
+                },
+                onFailure = { e ->
+                    println("Client returned error for corrupted credential: ${e.javaClass.simpleName}: ${e.message}")
+                }
+            )
         } catch (e: Exception) {
-            println("Client threw exception for corrupted credential: ${e.javaClass.simpleName}: ${e.message}")
+            println("Client threw unexpected exception: ${e.javaClass.simpleName}: ${e.message}")
         }
         
         // 5. Try to generate a code
         var codeGenResult: OathCodeInfo? = null
         try {
-            codeGenResult = client.generateCodeWithValidity(credentialId)
-            println("Code generation handled corrupted credential gracefully: ${if (codeGenResult == null) "returned null" else "returned valid code"}")
+            val result = client.generateCodeWithValidity(credentialId)
+            result.fold(
+                onSuccess = { codeInfo ->
+                    codeGenResult = codeInfo
+                    println("Code generation handled corrupted credential gracefully: returned valid code")
+                },
+                onFailure = { e ->
+                    println("Code generation returned error: ${e.javaClass.simpleName}: ${e.message}")
+                }
+            )
         } catch (e: Exception) {
-            println("Code generation threw exception: ${e.javaClass.simpleName}: ${e.message}")
+            println("Code generation threw unexpected exception: ${e.javaClass.simpleName}: ${e.message}")
         }
 
         // Verify we can still get a code for the credential
@@ -395,9 +407,10 @@ class SharedPrefsOathStorageAndroidTest {
                         secret = testSecret
                     )
                     
-                    val addedCredential = client.saveCredential(credential)
-                    credentialIds.add(addedCredential.id)
-                    
+                    client.saveCredential(credential).onSuccess { addedCredential ->
+                        credentialIds.add(addedCredential.id)
+                    }
+
                     // Add a small delay to ensure the storage operation completes
                     delay(50)
                     
@@ -419,13 +432,17 @@ class SharedPrefsOathStorageAndroidTest {
         
         // Verify all can be retrieved
         credentialIds.forEach { id ->
-            val credential = client.getCredential(id)
-            assertNotNull("Should be able to retrieve credential $id", credential)
+            val credentialResult = client.getCredential(id)
+            credentialResult.onSuccess { credential ->
+                assertNotNull("Should be able to retrieve credential $id", credential)
+            }.onFailure { e ->
+                fail("Failed to retrieve credential $id: ${e.message}")
+            }
         }
         
         // Get all credentials from the client
-        val allCredentials = client.getCredentials()
-        
+        val allCredentials = client.getCredentials().getOrThrow()
+
         // Verify the total count
         assertEquals("Should have 5 credentials total", 5, allCredentials.size)
     }
@@ -445,17 +462,17 @@ class SharedPrefsOathStorageAndroidTest {
                 period = 30,
                 secret = testSecret
             )
-        )
-        
+        ).getOrThrow()
+
         // Generate first code
-        val codeInfo1 = client.generateCodeWithValidity(credential.id)
-        
+        val codeInfo1 = client.generateCodeWithValidity(credential.id).getOrThrow()
+
         // In runTest, we need to use a larger delay to ensure the time actually advances in the test
         delay(5000)
         
         // Generate second code - should be the same code but with less time remaining
-        val codeInfo2 = client.generateCodeWithValidity(credential.id)
-        
+        val codeInfo2 = client.generateCodeWithValidity(credential.id).getOrThrow()
+
         // Verify code stays the same (since we're within the same 30-second period)
         assertEquals("Codes should be the same", codeInfo1.code, codeInfo2.code)
         

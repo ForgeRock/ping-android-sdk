@@ -21,7 +21,7 @@ import com.pingidentity.logger.Logger
  *           for security reasons, as an attacker could potentially access cached credentials from memory dumps.
  * @property logger The logger instance used for logging messages. Defaults to a global logger instance.
  */
-class MfaConfiguration private constructor(
+open class MfaConfiguration(
     val encryptionEnabled: Boolean = true,
     val timeoutMs: Long = DEFAULT_TIMEOUT_MS,
     val enableCredentialCache: Boolean = false,
@@ -58,7 +58,7 @@ class MfaConfiguration private constructor(
     /**
      * Builder class for [MfaConfiguration].
      */
-    class Builder {
+    open class Builder {
         var encryptionEnabled: Boolean = true
         var timeoutMs: Long = DEFAULT_TIMEOUT_MS
         var enableCredentialCache: Boolean = false
