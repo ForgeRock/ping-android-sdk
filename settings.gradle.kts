@@ -20,7 +20,7 @@ dependencyResolutionManagement {
         google()
         mavenCentral()
         //mavenLocal()
-        maven(url = "https://oss.sonatype.org/content/repositories/snapshots/")
+        maven(url = "https://central.sonatype.com/repository/maven-snapshots/")
     }
 }
 
@@ -30,9 +30,9 @@ include(":davinci")
 include(":foundation")
 include(":foundation:android")
 include(":foundation:davinci-plugin")
-//include(":foundation:device")
+include(":foundation:device")
 //include(":foundation:device:device-binding")
-//include(":foundation:device:device-id")
+include(":foundation:device:device-id")
 //include(":foundation:device:device-integrity")
 //include(":foundation:fido")
 include(":foundation:journey-plugin")

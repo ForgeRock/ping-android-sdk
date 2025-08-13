@@ -7,7 +7,7 @@
 
 package com.pingidentity.idp.journey
 
-import android.net.Uri
+import androidx.core.net.toUri
 import com.pingidentity.browser.BrowserLauncher
 import com.pingidentity.idp.IdpClient
 import com.pingidentity.idp.IdpHandler
@@ -19,7 +19,7 @@ internal class AppleHandler : IdpHandler {
     override var tokenType: String = "authorization_code"
 
     override suspend fun authorize(idpClient: IdpClient): IdpResult {
-        val request = Uri.parse("https://appleid.apple.com/auth/authorize")
+        val request = "https://appleid.apple.com/auth/authorize".toUri()
             .buildUpon()
             .appendQueryParameter("client_id", idpClient.clientId)
             .appendQueryParameter("redirect_uri", idpClient.redirectUri)

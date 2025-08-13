@@ -82,14 +82,14 @@ class IdpCallback : AbstractCallback(), JourneyAware, RequestInterceptor {
     }
 
     private fun getIdpHandler(): IdpHandler? {
-        if (provider.lowercase().contains("google")) {
-            return GoogleHandler()
+        return if (provider.lowercase().contains("google")) {
+            GoogleHandler()
         } else if (provider.lowercase().contains("facebook")) {
-            return FacebookHandler()
+            FacebookHandler()
         } else if (provider.lowercase().contains("apple")) {
-            return AppleHandler()
+            AppleHandler()
         } else {
-            return null
+            null
         }
     }
 
