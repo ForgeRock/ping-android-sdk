@@ -84,7 +84,7 @@ class SharedPrefsOathStorageAndroidTest {
         storage = SharedPrefsOathStorage(context, testPrefsName)
         
         // Create client with our custom storage using DSL style
-        client = OathClient.invoke {
+        client = OathClient {
             this.storage = this@SharedPrefsOathStorageAndroidTest.storage
             enableCredentialCache = false
             encryptionEnabled = false // Disable encryption for tests

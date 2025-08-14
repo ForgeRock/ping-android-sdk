@@ -23,7 +23,7 @@ The Push module provides support for push notification-based multi-factor authen
 
 ### Prerequisites
 
-- Android API level 24 or higher
+- Android API level 29 or higher
 - Firebase Cloud Messaging (FCM) configured for your application
 - Push notification service from Ping Identity (PingAM or PingAIC)
 
@@ -49,7 +49,7 @@ Before using the Push MFA functionality, you need to initialize the `PushClient`
 #### Basic Initialization
 ```kotlin
 // Create a client with default configuration (not initialized)
-val pushClient = PushClient.create()
+val pushClient = PushClient()
 
 // Initialize the client
 pushClient.initialize()
@@ -567,6 +567,16 @@ class PushMainActivity : AppCompatActivity() {
                 showError("Failed to initialize: ${e.message}")
             }
         }
+
+        // Register Firebase token
+        firebaseMessaging.getToken().addOnSuccessListener { token ->
+            lifecycleScope.launch {
+                pushClient.setDeviceToken(token, credential.id)
+                    .onSuccess {
+                        loadCredentials() // Refresh list
+                    }
+            }
+        }
         
         // Set up QR code scanner button
         binding.btnScanQr.setOnClickListener {
@@ -614,16 +624,6 @@ class PushMainActivity : AppCompatActivity() {
         lifecycleScope.launch {
             pushClient.addCredentialFromUri(qrCode).onSuccess { credential ->
                 showMessage("Credential added: ${credential.issuer}")
-                
-                // Register Firebase token
-                firebaseMessaging.getToken().addOnSuccessListener { token ->
-                    lifecycleScope.launch {
-                        pushClient.setDeviceToken(token, credential.id)
-                            .onSuccess {
-                                loadCredentials() // Refresh list
-                            }
-                    }
-                }
             }.onFailure { error ->
                 showError("Failed to add credential: ${error.message}")
             }

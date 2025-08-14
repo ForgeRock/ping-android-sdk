@@ -1,14 +1,17 @@
 /*
- * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2024 - 2025 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
  */
 
-package com.pingidentity.mfa.push
+package com.pingidentity.mfa.push.storage
 
 import com.pingidentity.mfa.commons.MfaStorage
 import com.pingidentity.mfa.commons.exception.MfaStorageException
+import com.pingidentity.mfa.push.PushCredential
+import com.pingidentity.mfa.push.PushDeviceToken
+import com.pingidentity.mfa.push.PushNotification
 
 /**
  * Interface for Push-specific storage operations.

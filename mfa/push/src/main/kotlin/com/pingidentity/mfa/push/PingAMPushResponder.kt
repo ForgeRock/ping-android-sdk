@@ -8,16 +8,20 @@
 package com.pingidentity.mfa.push
 
 import android.util.Base64
+import com.pingidentity.exception.ApiException
 import com.pingidentity.logger.Logger
+import com.pingidentity.mfa.commons.util.JwtUtils
+import com.pingidentity.mfa.push.PushConstants.RESPONSE_ALGORITHM
 import io.ktor.client.HttpClient
+import io.ktor.client.call.body
 import io.ktor.client.request.headers
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.client.request.url
 import io.ktor.client.statement.HttpResponse
 import io.ktor.http.ContentType
-import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
+import io.ktor.http.isSuccess
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
@@ -30,8 +34,6 @@ import kotlinx.serialization.json.buildJsonObject
 import java.net.URL
 import java.security.InvalidKeyException
 import java.security.NoSuchAlgorithmException
-import java.util.Date
-import java.util.UUID
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
 
@@ -62,39 +64,43 @@ class PingAMPushResponder(
             // Extract registration parameters from credential and params
             val endpoint = credential.registrationEndpoint
             val base64Secret = credential.sharedSecret
-            val messageId =
-                params[PushConstants.KEY_MESSAGE_ID]?.toString() ?: return@withContext false
             val amlbCookie = params[PushConstants.KEY_ALMB_COOKIE]?.toString()
             val challenge = params[PushConstants.KEY_CHALLENGE]?.toString()
 
-            val challengeResponse =
-                challenge?.let { generateChallengeResponse(credential.sharedSecret, it) }
+            // Get deviceId if not provided fail
+            val deviceId = params[PushConstants.KEY_DEVICE_ID]?.toString()
+                ?: throw IllegalArgumentException("Device ID is required for registration")
+
+            // Get messageId if not provided fail
+            val messageId = params[PushConstants.KEY_MESSAGE_ID]?.toString()
+                ?: throw IllegalArgumentException("Message ID is required for registration")
+
+            // Generate challenge response if challenge is provided or fail if not
+            val challengeResponse = if (challenge != null) {
+                generateChallengeResponse(base64Secret, challenge)
+            } else {
+                throw IllegalArgumentException("Challenge is required for registration")
+            }
 
             logger.d("Registering credential with endpoint: $endpoint, messageId: $messageId")
 
-            // Set up claims for JWT
-            val claims = mapOf(
-                PushConstants.KEY_MESSAGE_ID to messageId,
-                PushConstants.KEY_ACTION to PushConstants.ACTION_REGISTER
-            )
-
             // Set up payload for the registration
-            val payload = mapOf(
-                PushConstants.KEY_DEVICE_ID to params[PushConstants.KEY_DEVICE_ID]?.toString(),
-                PushConstants.KEY_DEVICE_NAME to params[PushConstants.KEY_DEVICE_NAME]?.toString(),
+            val payload = mapOf<String, Any>(
+                PushConstants.KEY_DEVICE_ID to deviceId,
+                PushConstants.KEY_DEVICE_NAME to params[PushConstants.KEY_DEVICE_NAME].toString(),
                 PushConstants.KEY_DEVICE_TYPE to PushConstants.ANDROID,
                 PushConstants.KEY_COMMUNICATION_TYPE to PushConstants.GCM,
-                PushConstants.KEY_MECHANISM_UID to credential.resourceId,
+                PushConstants.KEY_MECHANISM_UID to credential.id,
                 PushConstants.KEY_RESPONSE to challengeResponse
             )
 
             // Generate JWT
-            val jwt = generateJwt(base64Secret, claims)
+            val jwt = generateJwt(base64Secret, payload)
 
             // Create request body
             val requestBody = mapOf(
+                PushConstants.KEY_MESSAGE_ID to messageId,
                 PushConstants.KEY_JWT to jwt,
-                PushConstants.KEY_PAYLOAD to payload
             )
 
             // Make the HTTP request
@@ -115,7 +121,11 @@ class PingAMPushResponder(
             }
 
             // Check if the response was successful
-            return@withContext response.status == HttpStatusCode.Companion.OK
+            if (response.status.isSuccess()) {
+                return@withContext true
+            } else {
+                throw ApiException(response.status.value, response.body())
+            }
         } catch (e: Exception) {
             coroutineContext.ensureActive()
             logger.e("Registration failed", e)
@@ -140,12 +150,6 @@ class PingAMPushResponder(
             // Get the endpoint URL
             val url = URL(credential.updateEndpoint)
 
-            // Set up keys for JWT
-            val keys = mapOf(
-                PushConstants.KEY_MECHANISM_UID to credential.id,
-                PushConstants.KEY_USERNAME to credential.userId
-            )
-
             // Set up payload for the update
             val payload = mapOf(
                 PushConstants.KEY_DEVICE_ID to deviceToken,
@@ -154,11 +158,8 @@ class PingAMPushResponder(
                 PushConstants.KEY_COMMUNICATION_TYPE to PushConstants.GCM
             )
 
-            // Generate JWT with the action and keys
-            val claims = keys.toMutableMap().apply {
-                put(PushConstants.KEY_ACTION, PushConstants.ACTION_UPDATE)
-            }
-            val jwt = generateJwt(credential.sharedSecret, claims as Map<String, Any>)
+            // Generate JWT with the payload
+            val jwt = generateJwt(credential.sharedSecret, payload)
 
             // Make the HTTP request
             val response: HttpResponse = httpClient.post {
@@ -171,15 +172,25 @@ class PingAMPushResponder(
                         PushConstants.ACCEPT_API_VERSION
                     )
                 }
-                val requestBody = mapOf(
-                    PushConstants.KEY_JWT to jwt,
-                    PushConstants.KEY_PAYLOAD to payload
+                val requestBody = mutableMapOf<String,Any>(
+                    PushConstants.KEY_MECHANISM_UID to credential.id,
+                    PushConstants.KEY_JWT to jwt
                 )
+
+                // Add userId to the request body if available
+                credential.userId?.let {
+                    requestBody[PushConstants.KEY_USER_ID] = it
+                }
+
                 setBody(Json.Default.encodeToString(mapToJsonElement(requestBody)))
             }
 
             // Check if the response was successful
-            return@withContext response.status == HttpStatusCode.Companion.OK
+            if (response.status.isSuccess()) {
+                return@withContext true
+            } else {
+                throw ApiException(response.status.value, response.body())
+            }
         } catch (e: Exception) {
             coroutineContext.ensureActive()
             logger.e("Device token update failed", e)
@@ -206,12 +217,6 @@ class PingAMPushResponder(
             // Get the endpoint URL
             val url = URL(credential.authenticationEndpoint)
 
-            // Set up keys for JWT
-            val keys = mapOf(
-                PushConstants.KEY_MESSAGE_ID to notification.messageId,
-                PushConstants.KEY_MECHANISM_UID to credential.id
-            )
-
             // Set up payload based on approval status and challenge response
             val payload = mutableMapOf<String, Any>()
 
@@ -220,6 +225,8 @@ class PingAMPushResponder(
                 val response =
                     generateChallengeResponse(credential.sharedSecret, notification.challenge)
                 payload[PushConstants.KEY_RESPONSE] = response
+            } else {
+                throw IllegalArgumentException("Challenge is required for authentication")
             }
 
             // For number challenge types
@@ -232,11 +239,8 @@ class PingAMPushResponder(
                 payload[PushConstants.KEY_DENY] = true
             }
 
-            // Generate JWT with the action and keys
-            val claims = keys.toMutableMap().apply {
-                put(PushConstants.KEY_ACTION, PushConstants.ACTION_AUTH)
-            }
-            val jwt = generateJwt(credential.sharedSecret, claims)
+            // Generate JWT with the payload
+            val jwt = generateJwt(credential.sharedSecret, payload)
 
             // Make the HTTP request
             val response: HttpResponse = httpClient.post {
@@ -254,14 +258,18 @@ class PingAMPushResponder(
                     }
                 }
                 val requestBody = mapOf(
-                    PushConstants.KEY_JWT to jwt,
-                    PushConstants.KEY_PAYLOAD to payload
+                    PushConstants.KEY_MESSAGE_ID to notification.messageId,
+                    PushConstants.KEY_JWT to jwt
                 )
                 setBody(Json.Default.encodeToString(mapToJsonElement(requestBody)))
             }
 
             // Check if the response was successful
-            return@withContext response.status == HttpStatusCode.Companion.OK
+            if (response.status.isSuccess()) {
+                return@withContext true
+            } else {
+                throw ApiException(response.status.value, response.body())
+            }
         } catch (e: Exception) {
             coroutineContext.ensureActive()
             logger.e("Authentication response failed", e)
@@ -278,39 +286,7 @@ class PingAMPushResponder(
      */
     internal fun generateJwt(base64Secret: String, claims: Map<String, Any>): String {
         try {
-            // Create JWT header
-            val header = mapOf(
-                PushConstants.JWT_ALG to PushConstants.JWT_ALG_HS256,
-                PushConstants.JWT_TYP to PushConstants.JWT_TYP_VALUE
-            )
-
-            // Convert header to JSON and then to base64
-            val headerJson = Json.Default.encodeToString(mapToJsonElement(header))
-            val base64Header = Base64.encodeToString(headerJson.toByteArray(), Base64.URL_SAFE or Base64.NO_WRAP)
-
-            // Add timestamp and UUID to claims
-            val claimsWithIat = claims.toMutableMap().apply {
-                put(PushConstants.JWT_IAT, Date().time / 1000)
-                put(PushConstants.JWT_JTI, UUID.randomUUID().toString())
-            }
-
-            // Convert claims to JSON and then to base64
-            val claimsJson = Json.Default.encodeToString(mapToJsonElement(claimsWithIat))
-            val base64Claims = Base64.encodeToString(claimsJson.toByteArray(), Base64.URL_SAFE or Base64.NO_WRAP)
-
-            // Combine header and claims
-            val dataToSign = "$base64Header.$base64Claims"
-
-            // Create signature
-            val secret = Base64.decode(base64Secret, Base64.DEFAULT)
-            val mac = Mac.getInstance(PushConstants.JWT_ALGORITHM)
-            val secretKey = SecretKeySpec(secret, mac.algorithm)
-            mac.init(secretKey)
-            val signature = mac.doFinal(dataToSign.toByteArray())
-            val base64Signature = Base64.encodeToString(signature, Base64.URL_SAFE or Base64.NO_WRAP)
-
-            // Return complete JWT
-            return "$base64Header.$base64Claims.$base64Signature"
+            return JwtUtils.generateJwt(base64Secret, claims)
         } catch (e: Exception) {
             logger.e("Error generating JWT", e)
             throw e
@@ -326,20 +302,26 @@ class PingAMPushResponder(
      */
     internal fun generateChallengeResponse(base64Secret: String, base64Challenge: String): String {
         try {
-            val secret = Base64.decode(base64Secret, Base64.DEFAULT)
-            val challenge = Base64.decode(base64Challenge, Base64.DEFAULT)
+            if (base64Secret.isEmpty()) {
+                throw IllegalArgumentException("Secret cannot be empty")
+            }
 
-            val mac = Mac.getInstance(PushConstants.JWT_ALGORITHM)
-            val secretKey = SecretKeySpec(secret, PushConstants.JWT_ALGORITHM)
+            val secret = Base64.decode(base64Secret, Base64.NO_WRAP)
+            val challenge = Base64.decode(base64Challenge, Base64.NO_WRAP)
+
+            // Create HMAC-SHA256 signature
+            val mac = Mac.getInstance(RESPONSE_ALGORITHM)
+            val secretKey = SecretKeySpec(secret, mac.algorithm)
             mac.init(secretKey)
-
             val result = mac.doFinal(challenge)
+
+            // Encode the result in Base64
             return Base64.encodeToString(result, Base64.NO_WRAP)
         } catch (e: NoSuchAlgorithmException) {
-            logger.e("Algorithm not supported", e)
             throw e
         } catch (e: InvalidKeyException) {
-            logger.e("Invalid key", e)
+            throw IllegalArgumentException("Invalid secret key", e)
+        } catch (e: IllegalArgumentException) {
             throw e
         }
     }

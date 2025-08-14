@@ -12,11 +12,11 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.SmallTest
 import androidx.test.platform.app.InstrumentationRegistry
 import com.pingidentity.android.ContextProvider
-import com.pingidentity.mfa.commons.storage.TestPassphraseProvider
 import com.pingidentity.mfa.oath.OathAlgorithm
 import com.pingidentity.mfa.oath.OathCredential
 import com.pingidentity.mfa.oath.OathType
 import com.pingidentity.storage.sqlite.passphrase.FixedPassphraseProvider
+import com.pingidentity.storage.sqlite.passphrase.PassphraseProvider
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -46,7 +46,9 @@ class SQLOathStorageTest {
     private lateinit var appContext: Context
     private lateinit var storage: SQLOathStorage
     private val testDbName = "test_oath_storage_${System.currentTimeMillis()}.db"
-    private val testPassphraseProvider = TestPassphraseProvider()
+    private val testPassphraseProvider = object : PassphraseProvider {
+        override suspend fun getPassphrase() = "test_passphrase"
+    }
 
     @OptIn(ExperimentalCoroutinesApi::class)
     @Before
@@ -61,7 +63,6 @@ class SQLOathStorageTest {
         storage = SQLOathStorage {
             context = appContext
             databaseName = testDbName
-            encryptionEnabled = false
             passphraseProvider = testPassphraseProvider
         }
 
@@ -137,7 +138,6 @@ class SQLOathStorageTest {
         val initStorage = SQLOathStorage {
             context = appContext
             databaseName = initDbName
-            encryptionEnabled = false
             passphraseProvider = testPassphraseProvider
         }
         
@@ -407,7 +407,6 @@ class SQLOathStorageTest {
         val reopenedStorage = SQLOathStorage {
             context = appContext
             databaseName = testDbName
-            encryptionEnabled = false
             passphraseProvider = testPassphraseProvider
         }
         
@@ -454,7 +453,6 @@ class SQLOathStorageTest {
             storage = SQLOathStorage {
                 this.context = context
                 databaseName = testDbName
-                encryptionEnabled = false
                 passphraseProvider = testPassphraseProvider
             }
             
@@ -509,7 +507,6 @@ class SQLOathStorageTest {
             storage = SQLOathStorage {
                 this.context = context
                 databaseName = testDbName
-                encryptionEnabled = false
                 passphraseProvider = testPassphraseProvider
             }
             
@@ -594,7 +591,6 @@ class SQLOathStorageTest {
         val builderStorage = SQLOathStorage {
             context = appContext
             databaseName = "builder_test_db_${System.currentTimeMillis()}.db"
-            encryptionEnabled = false
             initialPassphrase = "test-secret-key"
             passphraseProvider = testPassphraseProvider
         }
@@ -633,7 +629,6 @@ class SQLOathStorageTest {
         val passphraseStorage = SQLOathStorage {
             context = appContext
             databaseName = "passphrase_test_db_${System.currentTimeMillis()}.db"
-            encryptionEnabled = true
             // Use a custom fixed passphrase provider instead of the default test provider
             passphraseProvider = FixedPassphraseProvider(customPassphrase)
         }

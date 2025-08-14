@@ -8,6 +8,7 @@
 package com.pingidentity.mfa.push
 
 import com.pingidentity.logger.Logger
+import com.pingidentity.mfa.push.storage.PushStorage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -16,7 +17,7 @@ import kotlinx.coroutines.withContext
  * It implements the cleanup strategies defined in [NotificationCleanupConfig].
  * Responsible for removing old or excessive notifications based on the configured cleanup mode.
  */
-class NotificationCleanupManager(
+internal class NotificationCleanupManager(
     private val storage: PushStorage,
     private val config: NotificationCleanupConfig,
     private val logger: Logger

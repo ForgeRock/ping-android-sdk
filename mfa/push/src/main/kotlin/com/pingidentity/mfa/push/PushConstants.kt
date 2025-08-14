@@ -59,17 +59,11 @@ object PushConstants {
     const val KEY_USER_ID = "userId"
     const val KEY_ADDITIONAL_DATA = "additionalData"
     const val KEY_TIME_INTERVAL = "timeInterval"
-    
-    // JWT related constants
-    const val JWT_ALGORITHM = "HmacSHA256"
-    const val JWT_ALG = "alg"
-    const val JWT_TYP = "typ"
-    const val JWT_IAT = "iat"
-    const val JWT_JTI = "jti"
-    const val JWT_ALG_HS256 = "HS256"
-    const val JWT_TYP_VALUE = "JWT"
 
     // Default time-to-live for push notifications in seconds
     const val DEFAULT_TTL_SECONDS = 120;
+
+    // Response generation algorithm
+    const val RESPONSE_ALGORITHM = "HmacSHA256"
 
 }

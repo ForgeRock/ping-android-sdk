@@ -20,62 +20,10 @@ package com.pingidentity.mfa.push
  * @property maxStoredNotifications Maximum number of notifications to retain when using COUNT_BASED or HYBRID mode.
  * @property maxNotificationAgeDays Maximum age in days for notifications when using AGE_BASED or HYBRID mode.
  */
-class NotificationCleanupConfig(
-    val cleanupMode: CleanupMode = CleanupMode.COUNT_BASED,
-    val maxStoredNotifications: Int = DEFAULT_MAX_NOTIFICATIONS,
-    val maxNotificationAgeDays: Int = DEFAULT_MAX_AGE_DAYS
-) {
-    /**
-     * Builder-style DSL constructor for NotificationCleanupConfig.
-     *
-     * Example usage:
-     * ```
-     * val config = NotificationCleanupConfig {
-     *     cleanupMode = CleanupMode.COUNT_BASED
-     *     maxStoredNotifications = 50
-     * }
-     * ```
-     */
-    constructor(block: Builder.() -> Unit) : this(
-        Builder().apply(block)
-    )
-
-    /**
-     * Internal constructor to support creation from Builder.
-     */
-    private constructor(builder: Builder) : this(
-        cleanupMode = builder.cleanupMode,
-        maxStoredNotifications = builder.maxStoredNotifications,
-        maxNotificationAgeDays = builder.maxNotificationAgeDays
-    )
-
-    /**
-     * Builder class for [NotificationCleanupConfig].
-     *
-     * Properties can be directly assigned:
-     * - cleanupMode: The cleanup strategy to use (NONE, COUNT_BASED, AGE_BASED, HYBRID)
-     * - maxStoredNotifications: Maximum number of notifications to retain
-     * - maxNotificationAgeDays: Maximum age in days for notifications to retain
-     */
-    class Builder {
-        /**
-         * The cleanup mode to use.
-         * Default: COUNT_BASED (keeps a maximum number of notifications)
-         */
-        var cleanupMode: CleanupMode = CleanupMode.COUNT_BASED
-
-        /**
-         * Maximum number of notifications to retain when using COUNT_BASED or HYBRID mode.
-         * Default: 100
-         */
-        var maxStoredNotifications: Int = DEFAULT_MAX_NOTIFICATIONS
-
-        /**
-         * Maximum age in days for notifications when using AGE_BASED or HYBRID mode.
-         * Default: 30 days
-         */
-        var maxNotificationAgeDays: Int = DEFAULT_MAX_AGE_DAYS
-    }
+class NotificationCleanupConfig {
+    var cleanupMode: CleanupMode = CleanupMode.COUNT_BASED
+    var maxStoredNotifications: Int = DEFAULT_MAX_NOTIFICATIONS
+    var maxNotificationAgeDays: Int = DEFAULT_MAX_AGE_DAYS
 
     /**
      * Cleanup mode for push notifications.
@@ -112,6 +60,22 @@ class NotificationCleanupConfig(
          * Default maximum age in days for notifications.
          */
         const val DEFAULT_MAX_AGE_DAYS = 30
+
+        /**
+         * Create a NotificationCleanupConfig instance with the specified configuration block.
+         *
+         * Example usage:
+         * ```
+         * val config = NotificationCleanupConfig {
+         *    cleanupMode = CleanupMode.AGE_BASED
+         *    maxNotificationAgeDays = 60
+         * }
+         * ```
+         * @param block Configuration block to apply to the NotificationCleanupConfig.
+         * @return A new NotificationCleanupConfig instance with the applied settings.
+         */
+        operator fun invoke(block: NotificationCleanupConfig.() -> Unit = {}) =
+            NotificationCleanupConfig().apply(block)
 
         /**
          * Create a NotificationCleanupConfig with default settings (no cleanup).

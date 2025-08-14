@@ -9,7 +9,7 @@ package com.pingidentity.mfa.oath
 
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
+import com.pingidentity.mfa.commons.json
 
 /**
  * Class that contains OTP code information, including the actual code and validity details.
@@ -85,10 +85,6 @@ data class OathCodeInfo(
          */
         @JvmStatic
         fun fromJson(jsonString: String): OathCodeInfo {
-            val json = Json { 
-                ignoreUnknownKeys = true 
-                isLenient = true
-            }
             return json.decodeFromString(jsonString)
         }
     }
@@ -99,11 +95,6 @@ data class OathCodeInfo(
      * @return A JSON string representing this code info.
      */
     fun toJson(): String {
-        val json = Json { 
-            prettyPrint = false
-            encodeDefaults = true
-            ignoreUnknownKeys = true
-        }
         return json.encodeToString(this)
     }
 }

@@ -7,7 +7,7 @@
 
 package com.pingidentity.mfa.push
 
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
@@ -120,7 +120,7 @@ class PushCredentialTest {
     }
 
     @Test
-    fun `test create PushCredential from URI`() = runBlocking {
+    fun `test create PushCredential from URI`() = runTest {
         // Prepare test URI
         val uri = "pushauth://push/forgerock:user?a=aHR0cDovL2Rldi5vcGVuYW0uZXhhbXBsZS5jb206ODA4MS9vcGVuYW0vanNvbi9kZXYvcHVzaC9zbnMvbWVzc2FnZT9fYWN0aW9uPWF1dGhlbnRpY2F0ZQ&r=aHR0cDovL2Rldi5vcGVuYW0uZXhhbXBsZS5jb206ODA4MS9vcGVuYW0vanNvbi9kZXYvcHVzaC9zbnMvbWVzc2FnZT9fYWN0aW9uPXJlZ2lzdGVy&s=b3uYLkQ7dRPjBaIzV0t_aijoXRgMq-NP5AwVAvRfa_E&d=dXNlcjM&pid=NTgxZGQzYzgtM2M2OS00OWFjLWIwMWEtMDc0NDUwYjIyNmM1&image=aHR0cDovL2Zvcmdlcm9jay5jb20vbG9nby5qcGc&b=%23519387"
 
@@ -134,7 +134,7 @@ class PushCredentialTest {
         assertEquals("user", credential.accountName)
         assertEquals("user", credential.displayAccountName)
         assertEquals("http://dev.openam.example.com:8081/openam/json/dev/push/sns/message", credential.serverEndpoint)
-        assertEquals("b3uYLkQ7dRPjBaIzV0t_aijoXRgMq-NP5AwVAvRfa_E", credential.sharedSecret)
+        assertEquals("b3uYLkQ7dRPjBaIzV0t/aijoXRgMq+NP5AwVAvRfa/E=", credential.sharedSecret)
         assertEquals("user3", credential.userId)
         assertEquals("581dd3c8-3c69-49ac-b01a-074450b226c5", credential.resourceId)
         assertEquals("http://forgerock.com/logo.jpg", credential.imageURL)

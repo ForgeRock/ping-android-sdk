@@ -21,6 +21,7 @@ import com.pingidentity.mfa.push.PushConstants.KEY_RAW_JWT
 import com.pingidentity.mfa.push.PushConstants.KEY_TTL
 import com.pingidentity.mfa.push.PushConstants.KEY_USER_ID
 import com.pingidentity.logger.Logger
+import com.pingidentity.mfa.commons.util.JwtUtils
 import com.pingidentity.mfa.push.PushConstants.DEFAULT_DEVICE_NAME
 import com.pingidentity.mfa.push.PushConstants.DEFAULT_TTL_SECONDS
 import com.pingidentity.mfa.push.PushConstants.KEY_DEVICE_NAME
@@ -28,7 +29,6 @@ import com.pingidentity.mfa.push.PushConstants.KEY_MESSAGE
 import com.pingidentity.mfa.push.PushConstants.KEY_MESSAGE_ID
 import com.pingidentity.mfa.push.PushConstants.KEY_TIME_INTERVAL
 import io.ktor.client.HttpClient
-import kotlinx.serialization.json.Json
 
 /**
  * This class processes push notifications from PingAM service, handling the parsing of JWT messages,
@@ -76,24 +76,27 @@ internal class PingAMPushHandler(
         }
 
         // Check if it's a PingAM JWT message by attempting to parse it
+        return isValidJwt(message)
+    }
+    
+    /**
+     * Check if this handler can process the given message in string format.
+     *
+     * @param message The message data as a string, typically a JWT.
+     * @return True if this handler can process the message, false otherwise.
+     */
+    override fun canHandle(message: String): Boolean {
+        // For direct strings, assume it's the JWT itself
+        return isValidJwt(message)
+    }
+    
+    /**
+     * Helper method to validate if a string is a valid PingAM JWT.
+     */
+    private fun isValidJwt(jwt: String): Boolean {
         try {
-            // Parse the JWT manually - split into parts
-            val parts = message.split(".")
-            if (parts.size != 3) {
-                logger.w("Not a valid JWT format (should have 3 parts)")
-                return false
-            }
-
-            // Decode the claims part (second part of the JWT)
-            val claimsJson = String(Base64.decode(parts[1], Base64.URL_SAFE), Charsets.UTF_8)
-            val jsonParser = Json { ignoreUnknownKeys = true }
-            val claimsMap = jsonParser.decodeFromString<Map<String, String>>(claimsJson)
-            
-            // Check for required fields that identify this as a PingAM push message
-            val mechanismUid = claimsMap[JWT_MECHANISM_UID]
-            val challenge = claimsMap[JWT_CHALLENGE]
-            
-            return mechanismUid != null && challenge != null
+            // Validate JWT format and check for required fields
+            return JwtUtils.isValidJwt(jwt, listOf(JWT_MECHANISM_UID, JWT_CHALLENGE))
         } catch (e: Exception) {
             logger.w("Not a valid PingAM JWT message. Error: ${e.message}")
             return false
@@ -114,34 +117,48 @@ internal class PingAMPushHandler(
             val messageId = messageData[KEY_MESSAGE_ID]?.toString() ?: return result
             val message = messageData[KEY_MESSAGE]?.toString() ?: return result
             
-            // Parse the JWT manually - split into parts
+            return parseJwtMessage(message, messageId)
+        } catch (e: Exception) {
+            logger.e("Error parsing PingAM push notification: ${e.message}", e)
+            return result
+        }
+    }
+    
+    /**
+     * Parse a PingAM push notification message from a string.
+     *
+     * @param message The message data as a string (JWT token).
+     * @return A map of parsed data.
+     */
+    override fun parseMessage(message: String): Map<String, Any> {
+        // For direct string input, assume it's the JWT token itself
+        // Generate a message ID based on the token's signature part (last part of JWT)
+        try {
             val parts = message.split(".")
-            if (parts.size != 3) {
-                logger.w("Not a valid JWT format (should have 3 parts)")
-                return result
-            }
+            val messageId = if (parts.size >= 3) parts[2].take(8) else System.currentTimeMillis().toString()
             
-            // Decode the claims part (second part of the JWT)
-            val claimsJson = String(Base64.decode(parts[1], Base64.URL_SAFE), Charsets.UTF_8)
+            return parseJwtMessage(message, messageId)
+        } catch (e: Exception) {
+            logger.e("Error parsing PingAM JWT string: ${e.message}", e)
+            return emptyMap()
+        }
+    }
+    
+    /**
+     * Helper method to parse JWT message and extract relevant data.
+     */
+    private fun parseJwtMessage(jwt: String, messageId: String): Map<String, Any> {
+        val result = mutableMapOf<String, Any>()
+        
+        try {
+            // Add the message ID to the result
+            result[KEY_MESSAGE_ID] = messageId
             
-            // Parse the JSON into a map
-            val jsonParser = Json { ignoreUnknownKeys = true }
-            val claimsMap = try {
-                jsonParser.decodeFromString<Map<String, String>>(claimsJson)
-            } catch (_: Exception) {
-                // If we can't decode directly to String values, try with JsonElement and convert
-                logger.d("Parsing JWT with JsonElement due to mixed value types")
-                @Suppress("UNCHECKED_CAST")
-                jsonParser.decodeFromString<Map<String, kotlinx.serialization.json.JsonElement>>(claimsJson)
-                    .mapValues { entry -> 
-                        val value = entry.value
-                        when {
-                            value is kotlinx.serialization.json.JsonPrimitive && value.isString -> 
-                                value.content
-                            else -> value.toString().removeSurrounding("\"")
-                        }
-                    }
-            }
+            // Store the raw JWT for reference
+            result[KEY_RAW_JWT] = jwt
+            
+            // Parse the JWT claims using the helper
+            val claimsMap = JwtUtils.parseJwtClaims(jwt)
             
             // Extract all the claims we need
             val mechanismUid = claimsMap[JWT_MECHANISM_UID]
@@ -157,61 +174,53 @@ internal class PingAMPushHandler(
             
             // Handle AMLB Cookie - it's base64 encoded in the JWT
             val base64loadBalancer = claimsMap[JWT_AM_LOAD_BALANCER_COOKIE]
-            val loadBalancer = if (base64loadBalancer != null) {
-                Base64.decode(base64loadBalancer, Base64.NO_WRAP).toString(Charsets.UTF_8)
-            } else null
+            val loadBalancer = base64loadBalancer?.let {
+                Base64.decode(it.toString(), Base64.NO_WRAP).toString(Charsets.UTF_8)
+            }
             
             // Parse the TTL
             var ttl = DEFAULT_TTL_SECONDS // Default TTL seconds
-            if (ttlString != null) {
+            ttlString?.let { currentTtlString ->
                 try {
-                    ttl = ttlString.toInt()
+                    ttl = when (currentTtlString) {
+                        is Int -> currentTtlString
+                        is String -> currentTtlString.toInt()
+                        else -> currentTtlString.toString().toInt()
+                    }
                 } catch (e: NumberFormatException) {
-                    logger.w("TTL was not a valid number: $ttlString. Error: ${e.message}")
+                    logger.w("TTL was not a valid number: $currentTtlString. Error: ${e.message}")
                 }
             }
             
             // Add all extracted data to the result map
             result[KEY_MESSAGE_ID] = messageId
-            if (mechanismUid != null) {
-                result[KEY_CREDENTIAL_ID] = mechanismUid
-            }
-            if (challenge != null) {
-                result[KEY_CHALLENGE] = challenge
-            }
             result[KEY_TTL] = ttl
-            if (loadBalancer != null) {
-                result[KEY_AMLB_COOKIE] = loadBalancer
-            }
-            if (customMessage != null) {
-                result[KEY_MESSAGE_TEXT] = customMessage
-            }
-            if (customPayload != null) {
-                result[KEY_CUSTOM_PAYLOAD] = customPayload
-            }
-            if (numbersChallenge != null) {
-                result[KEY_NUMBERS_CHALLENGE] = numbersChallenge
-            }
-            if (contextInfo != null) {
-                result[KEY_CONTEXT_INFO] = contextInfo
-            }
-            if (pushType != null) {
-                result[KEY_PUSH_TYPE] = pushType
-            }
-            if (userId != null) {
-                result[KEY_USER_ID] = userId
-            }
-            if (timeIntervalString != null) {
+            mechanismUid?.let { result[KEY_CREDENTIAL_ID] = it }
+            challenge?.let { result[KEY_CHALLENGE] = it }
+            loadBalancer?.let { result[KEY_AMLB_COOKIE] = it }
+            customMessage?.let { result[KEY_MESSAGE_TEXT] = it }
+            customPayload?.let { result[KEY_CUSTOM_PAYLOAD] = it }
+            numbersChallenge?.let { result[KEY_NUMBERS_CHALLENGE] = it }
+            contextInfo?.let { result[KEY_CONTEXT_INFO] = it }
+            pushType?.let { result[KEY_PUSH_TYPE] = it }
+            userId?.let { result[KEY_USER_ID] = it }
+            
+            timeIntervalString?.let { currentIntervalString ->
                 try {
-                    val timeInterval = timeIntervalString.toLong()
+                    val timeInterval = when (currentIntervalString) {
+                        is Long -> currentIntervalString
+                        is Int -> currentIntervalString.toLong()
+                        is String -> currentIntervalString.toLong()
+                        else -> currentIntervalString.toString().toLong()
+                    }
                     result[KEY_TIME_INTERVAL] = timeInterval
                 } catch (e: NumberFormatException) {
-                    logger.w("Time interval was not a valid number: $timeIntervalString. Error: ${e.message}")
+                    logger.w("Time interval was not a valid number: $currentIntervalString. Error: ${e.message}")
                 }
             }
             
             // Store the original data for reference
-            result[KEY_RAW_JWT] = message
+            result[KEY_RAW_JWT] = jwt
 
             // Additional data includes everything from claimsMap not already extracted
             val additionalData = claimsMap.filterKeys {
@@ -244,49 +253,44 @@ internal class PingAMPushHandler(
         notification: PushNotification,
         params: Map<String, Any>
     ): Boolean {
-        try {
-            logger.d("Sending PingAM approval for notification: ${notification.id}")
+        logger.d("Sending PingAM approval for notification: ${notification.id}")
 
-            var challengeResponse: String? = null
+        var challengeResponse: String? = null
 
-            when (notification.pushType) {
-                PushType.CHALLENGE -> {
-                    // For challenge-based authentication, we need to get the user-selected challenge response
-                    val userProvidedResponse = params["challengeResponse"]?.toString()
+        when (notification.pushType) {
+            PushType.CHALLENGE -> {
+                // For challenge-based authentication, we need to get the user-selected challenge response
+                val userProvidedResponse = params["challengeResponse"]?.toString()
 
-                    if (userProvidedResponse == null) {
-                        logger.w("Challenge response is required for challenge-based authentication")
-                        return false
-                    }
-
-                    // Use the user-provided challenge response directly
-                    challengeResponse = userProvidedResponse
-                    logger.d("Using user-provided challenge response: $challengeResponse")
+                if (userProvidedResponse == null) {
+                    logger.w("Challenge response is required for challenge-based authentication")
+                    return false
                 }
 
-                PushType.BIOMETRIC -> {
-                    // For biometric-based authentication, we pass the method used (e.g., "face", "fingerprint")
-                    val authenticationMethod = params["authenticationMethod"]?.toString() ?: "face" // Default to face biometrics
-                    logger.d("Using biometric authentication method: $authenticationMethod")
-                }
-
-                PushType.DEFAULT -> {
-                    // Default push notification just needs the standard challenge response
-                    logger.d("Processing default push notification")
-                }
+                // Use the user-provided challenge response directly
+                challengeResponse = userProvidedResponse
+                logger.d("Using user-provided challenge response: $challengeResponse")
             }
 
-            // Send the authentication response
-            return pushResponder.authenticate(
-                credential = credential,
-                notification = notification,
-                approve = true,
-                challengeResponse = challengeResponse
-            )
-        } catch (e: Exception) {
-            logger.e("Failed to send PingAM approval: ${e.message}", e)
-            return false
+            PushType.BIOMETRIC -> {
+                // For biometric-based authentication, we pass the method used (e.g., "face", "fingerprint")
+                val authenticationMethod = params["authenticationMethod"]?.toString() ?: "face" // Default to face biometrics
+                logger.d("Using biometric authentication method: $authenticationMethod")
+            }
+
+            PushType.DEFAULT -> {
+                // Default push notification just needs the standard challenge response
+                logger.d("Processing default push notification")
+            }
         }
+
+        // Send the authentication response
+        return pushResponder.authenticate(
+            credential = credential,
+            notification = notification,
+            approve = true,
+            challengeResponse = challengeResponse
+        )
     }
     
     /**
@@ -302,20 +306,15 @@ internal class PingAMPushHandler(
         notification: PushNotification,
         params: Map<String, Any>
     ): Boolean {
-        try {
-            logger.d("Sending PingAM denial for notification: ${notification.id}")
+        logger.d("Sending PingAM denial for notification: ${notification.id}")
 
-            // Send the authentication response with deny=true
-            return pushResponder.authenticate(
-                credential = credential,
-                notification = notification,
-                approve = false,
-                challengeResponse = null // No challenge response needed for denial
-            )
-        } catch (e: Exception) {
-            logger.e("Failed to send PingAM denial: ${e.message}", e)
-            return false
-        }
+        // Send the authentication response with deny=true
+        return pushResponder.authenticate(
+            credential = credential,
+            notification = notification,
+            approve = false,
+            challengeResponse = null // No challenge response needed for denial
+        )
     }
 
     /**

@@ -26,6 +26,16 @@ interface PushHandler {
     fun canHandle(messageData: Map<String, Any>): Boolean
     
     /**
+     * Check if this handler can process the given message in string format.
+     * This method should inspect the message string to determine if it can be handled by this
+     * handler. It should return true if the handler can process the message, and false otherwise.
+     *
+     * @param message The message data as a string, typically a JWT or JSON string.
+     * @return True if this handler can process the message, false otherwise.
+     */
+    fun canHandle(message: String): Boolean
+    
+    /**
      * Parse the message data received from the push service.
      * It should extract relevant information such as notification type, message content, and any
      * additional parameters. It should return a map of parsed data that maps to the expected structure
@@ -38,6 +48,17 @@ interface PushHandler {
      * @return A map of parsed data.
      */
     fun parseMessage(messageData: Map<String, Any>): Map<String, Any>
+    
+    /**
+     * Parse the message received as a string.
+     * It should extract relevant information from the string message (typically a JWT or JSON string)
+     * and return a map of parsed data that maps to the expected structure for the [PushNotification].
+     * Any required fields should be included in the map.
+     *
+     * @param message The message data as a string to parse.
+     * @return A map of parsed data.
+     */
+    fun parseMessage(message: String): Map<String, Any>
     
     /**
      * Send to the server an approval response for a notification that was received.

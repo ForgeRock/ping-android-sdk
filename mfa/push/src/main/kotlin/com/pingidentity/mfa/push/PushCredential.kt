@@ -7,6 +7,7 @@
 
 package com.pingidentity.mfa.push
 
+import com.pingidentity.mfa.commons.json
 import kotlinx.serialization.EncodeDefault
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.KSerializer
@@ -16,7 +17,6 @@ import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
 import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
-import kotlinx.serialization.json.Json
 import java.util.Date
 import java.util.UUID
 
@@ -98,10 +98,6 @@ data class PushCredential(
          */
         @JvmStatic
         fun fromJson(jsonString: String): PushCredential {
-            val json = Json { 
-                ignoreUnknownKeys = true 
-                isLenient = true
-            }
             return json.decodeFromString(jsonString)
         }
         
@@ -125,13 +121,6 @@ data class PushCredential(
      * @return A JSON string representing this credential.
      */
     fun toJson(): String {
-        // Create a custom instance of Json with pretty printing for better readability
-        val json = Json { 
-            prettyPrint = false
-            encodeDefaults = true
-            ignoreUnknownKeys = true
-        }
-        
         // Use the built-in serialization directly
         return json.encodeToString(serializer(), this)
     }

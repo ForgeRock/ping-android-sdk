@@ -16,14 +16,15 @@ import com.pingidentity.mfa.push.PushConstants.KEY_CHALLENGE
 import com.pingidentity.mfa.push.PushConstants.KEY_CONTEXT_INFO
 import com.pingidentity.mfa.push.PushConstants.KEY_CREDENTIAL_ID
 import com.pingidentity.mfa.push.PushConstants.KEY_CUSTOM_PAYLOAD
+import com.pingidentity.mfa.push.PushConstants.KEY_DEVICE_ID
 import com.pingidentity.mfa.push.PushConstants.KEY_DEVICE_NAME
-import com.pingidentity.mfa.push.PushConstants.KEY_DEVICE_TOKEN
 import com.pingidentity.mfa.push.PushConstants.KEY_MESSAGE_ID
 import com.pingidentity.mfa.push.PushConstants.KEY_MESSAGE_TEXT
 import com.pingidentity.mfa.push.PushConstants.KEY_NUMBERS_CHALLENGE
 import com.pingidentity.mfa.push.PushConstants.KEY_PUSH_TYPE
 import com.pingidentity.mfa.push.PushConstants.KEY_TIME_INTERVAL
 import com.pingidentity.mfa.push.PushConstants.KEY_TTL
+import com.pingidentity.mfa.push.storage.PushStorage
 import io.ktor.client.HttpClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
@@ -124,7 +125,7 @@ internal class PushService(
             // Get registration parameters from URI and add device info
             val registrationParams = PushUriParser.registrationParameters(uri).toMutableMap()
             registrationParams[KEY_DEVICE_NAME] = deviceName
-            registrationParams[KEY_DEVICE_TOKEN] = deviceToken
+            registrationParams[KEY_DEVICE_ID] = deviceToken
 
             // Get the appropriate handler for this platform
             val platform = credential.platform
@@ -267,6 +268,37 @@ internal class PushService(
     }
 
     /**
+     * Set the device token for push notifications.
+     * This method should be called on initial registration and when the device token changes.
+     *
+     * @param deviceToken The new device token for push notifications.
+     * @param credentialId Optional ID of a specific credential to update the token for.
+     *                    When null, updates the token globally for all credentials.
+     * @return True if the token was updated successfully, false otherwise.
+     * @throws MfaException if the device token cannot be set.
+     */
+    suspend fun setDeviceToken(deviceToken: String, credentialId: String? = null): Boolean = withContext(Dispatchers.IO) {
+        try {
+            val shouldUpdate = deviceTokenManager.shouldUpdateToken(deviceToken)
+
+            // If the token has changed, update it
+            if (shouldUpdate) {
+                logger.d("Device token has changed, updating")
+                logger.d("Previous device token: ${deviceTokenManager.getDeviceTokenId()}")
+                logger.d("Setting device token to: $deviceToken")
+                return@withContext updateDeviceToken(deviceToken, credentialId)
+            } else {
+                logger.d("Device token has not changed, no update needed")
+                return@withContext true
+            }
+        } catch (e: Exception) {
+            coroutineContext.ensureActive()
+            logger.e("Failed to set device token: ${e.message}", e)
+            throw MfaException("Failed to set device token", e)
+        }
+    }
+
+    /**
      * Update the device token for push notifications.
      * 
      * @param deviceToken The new device token
@@ -274,9 +306,8 @@ internal class PushService(
      * @return True if the token was updated successfully, false otherwise
      * @throws MfaException if the device token cannot be updated
      */
-    suspend fun updateDeviceToken(deviceToken: String, credentialId: String? = null): Boolean = withContext(Dispatchers.IO) {
+    private suspend fun updateDeviceToken(deviceToken: String, credentialId: String? = null): Boolean = withContext(Dispatchers.IO) {
         try {
-            // Update the token locally first
             val localUpdateSuccess = deviceTokenManager.updateDeviceToken(deviceToken)
             if (!localUpdateSuccess) {
                 logger.e("Failed to update device token locally")
@@ -390,30 +421,73 @@ internal class PushService(
             // Parse the message
             val parsedData = handler.parseMessage(messageData)
             
-            // Get the messageId from parsed data
-            val messageId = parsedData[KEY_MESSAGE_ID] as? String
-
-            // Check if we already have this notification by messageId (if available)
-            if (!messageId.isNullOrBlank()) {
-                val existingNotification = storage.getNotificationByMessageId(messageId)
-                if (existingNotification != null) {
-                    logger.d("Notification with messageId=$messageId already exists")
-                    return@withContext existingNotification
-                }
-            }
-
-            // Create a notification object
-            val notification = createNotification(parsedData)
-            
-            // Store the notification
-            storeNotification(notification)
-            
-            return@withContext notification
+            return@withContext processAndStoreParsedData(parsedData)
         } catch (e: Exception) {
             coroutineContext.ensureActive()
             logger.e("Failed to process push notification: ${e.message}", e)
             throw MfaException("Failed to process push notification", e)
         }
+    }
+    
+    /**
+     * Process a push notification message from a string.
+     * It uses the appropriate PushHandler based on the message format. It checks for duplicates
+     * using the messageId if available, and stores the notification if it's new.
+     *
+     * @param message The message as a string (typically a JWT).
+     * @return The push notification, or null if the message is invalid.
+     * @throws MfaException if the message cannot be processed.
+     */
+    suspend fun processNotification(message: String): PushNotification? = withContext(Dispatchers.IO) {
+        try {
+            // Identify the platform based on the message format
+            val platform = identifyPlatform(message)
+            
+            if (platform == null) {
+                logger.d("Unknown push notification format in string")
+                return@withContext null
+            }
+
+            // Get the appropriate handler for this platform
+            val handler = pushHandlers[platform] ?: throw MfaException("No handler for platform: $platform")
+            
+            // Parse the message
+            val parsedData = handler.parseMessage(message)
+            
+            return@withContext processAndStoreParsedData(parsedData)
+        } catch (e: Exception) {
+            coroutineContext.ensureActive()
+            logger.e("Failed to process push notification from string: ${e.message}", e)
+            throw MfaException("Failed to process push notification from string", e)
+        }
+    }
+    
+    /**
+     * Helper method to process and store the parsed notification data.
+     * @param parsedData The parsed notification data.
+     * @return The created PushNotification, or null if it was a duplicate.
+     * @throws MfaException if the notification cannot be stored.
+     */
+    private suspend fun processAndStoreParsedData(parsedData: Map<String, Any>): PushNotification? {
+        // Get the messageId from parsed data
+        val messageId = parsedData[KEY_MESSAGE_ID] as? String
+
+        // Check if we already have this notification by messageId (if available)
+        if (!messageId.isNullOrBlank()) {
+            val existingNotification = storage.getNotificationByMessageId(messageId)
+            if (existingNotification != null) {
+                logger.d("Notification with messageId=$messageId already exists")
+                return existingNotification
+            }
+        }
+
+        // Create a notification object
+        val notification = createNotification(parsedData)
+        
+        // Store the notification
+        storeNotification(notification)
+        
+        return notification
     }
 
     /**
@@ -427,6 +501,23 @@ internal class PushService(
         // Try each platform's message handler
         for ((platformId, handler) in pushHandlers) {
             if (handler.canHandle(messageData)) {
+                return platformId
+            }
+        }
+        return null
+    }
+    
+    /**
+     * Identify the platform based on the message format for string messages.
+     * It uses each registered PushHandler to check if it can handle the message.
+     *
+     * @param message The message as a string to identify.
+     * @return The platform ID as a String, or null if unknown.
+     */
+    private fun identifyPlatform(message: String): String? {
+        // Try each platform's message handler
+        for ((platformId, handler) in pushHandlers) {
+            if (handler.canHandle(message)) {
                 return platformId
             }
         }
@@ -454,9 +545,10 @@ internal class PushService(
         val pushTypeStr = parsedData[KEY_PUSH_TYPE] as? String
         val pushType = if (pushTypeStr != null) PushType.fromString(pushTypeStr) else PushType.DEFAULT
 
-        // Use the time interval (date as long) if provided to set the createdAt time
+        // Use the time interval (date as long) if provided to set sentAt
         val timeInterval = parsedData[KEY_TIME_INTERVAL] as? Long
-        val createdAt = if (timeInterval != null) Date(timeInterval) else Date()
+        val sentAt = if (timeInterval != null) Date(timeInterval) else null
+        val createdAt = Date()
 
         @Suppress("UNCHECKED_CAST")
         val additionalDataMap = parsedData["additionalData"] as? Map<String, Any>
@@ -474,6 +566,7 @@ internal class PushService(
             contextInfo = contextInfo,
             pushType = pushType,
             createdAt = createdAt,
+            sentAt = sentAt,
             additionalData = additionalDataMap
         )
     }
@@ -597,6 +690,22 @@ internal class PushService(
             coroutineContext.ensureActive()
             logger.e("Failed to get pending notifications: ${e.message}", e)
             throw MfaException("Failed to get pending notifications", e)
+        }
+    }
+
+    /**
+     * Get all push notifications.
+     *
+     * @return A list of all stored notifications.
+     * @throws MfaException if the notifications cannot be retrieved.
+     */
+    suspend fun getAllNotifications(): List<PushNotification> = withContext(Dispatchers.IO) {
+        try {
+            return@withContext storage.getAllPushNotifications()
+        } catch (e: Exception) {
+            coroutineContext.ensureActive()
+            logger.e("Failed to get all notifications: ${e.message}", e)
+            throw MfaException("Failed to get all notifications", e)
         }
     }
 

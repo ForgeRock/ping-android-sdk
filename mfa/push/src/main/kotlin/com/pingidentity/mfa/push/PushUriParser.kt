@@ -5,9 +5,10 @@
  * of the MIT license. See the LICENSE file for details.
  */
 
+package com.pingidentity.mfa.push
+
 import android.net.Uri
 import com.pingidentity.mfa.commons.UriParser
-import com.pingidentity.mfa.push.PushCredential
 
 /**
  * Utility class for parsing Push URIs.
@@ -50,11 +51,11 @@ object PushUriParser : UriParser() {
             // Parse label (path without leading '/')
             val label = parsedUri.path?.removePrefix("/") ?: ""
 
-            // Get issuer parameter and decode it if needed for MFAUTH scheme
+            // Get issuer parameter and decode, it overrides the label issuer if provided
             var issuerParam = parsedUri.getQueryParameter(ISSUER_PARAM)
-            if (!issuerParam.isNullOrEmpty() && scheme == MFAUTH_SCHEME) {
+            if (!issuerParam.isNullOrEmpty()) {
                 if (isBase64Encoded(issuerParam)) {
-                    issuerParam = decodeBase64(issuerParam)
+                    issuerParam = decodeBase64Url(issuerParam)
                 }
             }
 
@@ -68,11 +69,12 @@ object PushUriParser : UriParser() {
             val regEndpoint = parsedUri.getQueryParameter(REG_ENDPOINT_PARAM)
                 ?: throw IllegalArgumentException("Missing required parameter: $REG_ENDPOINT_PARAM")
 
-            parsedUri.getQueryParameter(AUTH_ENDPOINT_PARAM)
+            val authEndpoint = parsedUri.getQueryParameter(AUTH_ENDPOINT_PARAM)
                 ?: throw IllegalArgumentException("Missing required parameter: $AUTH_ENDPOINT_PARAM")
 
             // Decode Base64 URLs if needed
-            val decodedRegEndpoint = if (isBase64Encoded(regEndpoint)) decodeBase64(regEndpoint) else regEndpoint
+            val decodedRegEndpoint = if (isBase64Encoded(regEndpoint)) decodeBase64Url(regEndpoint) else regEndpoint
+            if (isBase64Encoded(authEndpoint)) decodeBase64Url(authEndpoint) else authEndpoint
 
             // Extract the server endpoint base URL (without query parameters)
             val serverEndpoint = extractServerEndpoint(decodedRegEndpoint)
@@ -81,9 +83,9 @@ object PushUriParser : UriParser() {
             val sharedSecret = parsedUri.getQueryParameter(SHARED_SECRET_PARAM)
                 ?: throw IllegalArgumentException("Missing required parameter: $SHARED_SECRET_PARAM")
 
-            // The shared secret is often already in the correct format (base64url)
+            // The shared secret is already in the correct format (base64url)
             // and doesn't need further decoding
-            val decodedSharedSecret = sharedSecret
+            val decodedSharedSecret = recodeBase64NoWrapUrlSafeValueToNoWrap(sharedSecret)
 
             // Get user ID (optional)
             val userIdParam = parsedUri.getQueryParameter(USER_ID_PARAM)
@@ -121,6 +123,12 @@ object PushUriParser : UriParser() {
             val backgroundColor = parsedUri.getQueryParameter(BACKGROUND_COLOR_PARAM)?.let {
                 if (it.isNotEmpty() && !it.startsWith("#")) "#$it" else it
             }
+
+            // Now try to parse the challenge, load balancer, and message id params
+            // We don't throw if they're missing as they are required only for registration
+            parsedUri.getQueryParameter(CHALLENGE_PARAM)
+            parsedUri.getQueryParameter(AM_LOAD_BALANCER_PARAM)
+            parsedUri.getQueryParameter(MESSAGE_ID)
 
             return PushCredential(
                 userId = userId,
@@ -169,14 +177,13 @@ object PushUriParser : UriParser() {
         // Encode the endpoints in Base64
         val encodedRegEndpoint = encodeBase64(regEndpoint)
         val encodedAuthEndpoint = encodeBase64(authEndpoint)
-        // Don't encode the shared secret - it should already be in the correct format
 
         val uriBuilder = StringBuilder()
             .append("$PUSHAUTH_SCHEME://push/")
             .append(encodedLabel)
             .append("?$REG_ENDPOINT_PARAM=").append(Uri.encode(encodedRegEndpoint))
             .append("&$AUTH_ENDPOINT_PARAM=").append(Uri.encode(encodedAuthEndpoint))
-            .append("&$SHARED_SECRET_PARAM=").append(Uri.encode(credential.sharedSecret))
+            .append("&$SHARED_SECRET_PARAM=").append(recodeBase64NoWrapValueToUrlSafeNoWrap(credential.sharedSecret))
 
         if (credential.issuer.isNotEmpty()) {
             uriBuilder.append("&$ISSUER_PARAM=").append(Uri.encode(credential.issuer))
@@ -223,17 +230,17 @@ object PushUriParser : UriParser() {
 
         val amlbParam = parsedUri.getQueryParameter(AM_LOAD_BALANCER_PARAM)
             ?: throw IllegalArgumentException("Missing required parameter: $AM_LOAD_BALANCER_PARAM")
-        val amlbParamDecoded = if (isBase64Encoded(amlbParam)) decodeBase64(amlbParam) else amlbParam
+        val amlbParamDecoded = if (isBase64Encoded(amlbParam)) decodeBase64Url(amlbParam) else amlbParam
 
         val challengeParam = parsedUri.getQueryParameter(CHALLENGE_PARAM)
             ?: throw IllegalArgumentException("Missing required parameter: $CHALLENGE_PARAM")
-        val challengeParamDecoded = if (isBase64Encoded(challengeParam)) decodeBase64(challengeParam) else challengeParam
+        val challengeParamDecoded = recodeBase64NoWrapUrlSafeValueToNoWrap(challengeParam)
 
         // Return the parameters as a map
         return mapOf(
-            "amlbCookie" to amlbParamDecoded,
-            "messageId" to messageIdParam,
-            "challenge" to challengeParamDecoded
+            PushConstants.KEY_ALMB_COOKIE to amlbParamDecoded,
+            PushConstants.KEY_MESSAGE_ID to messageIdParam,
+            PushConstants.KEY_CHALLENGE to challengeParamDecoded
         )
     }
 

@@ -35,7 +35,7 @@ import java.util.concurrent.TimeUnit
 @OptIn(ExperimentalCoroutinesApi::class)
 class NotificationCleanupTest {
 
-    private lateinit var storage: SharedPrefsPushStorage
+    private lateinit var pushStorage: SharedPrefsPushStorage
     private lateinit var cleanupManager: NotificationCleanupManager
     private lateinit var testCredential: PushCredential
     private val testPrefName = "cleanup_test_prefs_${System.currentTimeMillis()}"
@@ -47,24 +47,24 @@ class NotificationCleanupTest {
         val appContext = InstrumentationRegistry.getInstrumentation().targetContext
 
         // Create storage instance with a unique test preferences name (use SharedPrefs for simplicity in tests)
-        storage = SharedPrefsPushStorage(appContext, testPrefName)
+        pushStorage = SharedPrefsPushStorage(appContext, testPrefName)
 
         // Initialize the storage
-        storage.initialize()
+        pushStorage.initialize()
 
         // Clean up any existing test data
         cleanupTestData()
 
         // Create and store a test credential that will be used in all tests
         testCredential = createTestCredential()
-        storage.storePushCredential(testCredential)
+        pushStorage.storePushCredential(testCredential)
     }
 
     @After
     fun tearDown() = runTest {
         // Clean up after tests
         cleanupTestData()
-        storage.close()
+        pushStorage.close()
     }
 
     /**
@@ -73,8 +73,8 @@ class NotificationCleanupTest {
     private suspend fun cleanupTestData() {
         try {
             // Clear all data
-            storage.clearPushCredentials()
-            storage.clearPushNotifications()
+            pushStorage.clearPushCredentials()
+            pushStorage.clearPushNotifications()
         } catch (e: Exception) {
             println("Warning: Failed to clean up test data: ${e.message}")
         }
@@ -139,7 +139,7 @@ class NotificationCleanupTest {
         val config = NotificationCleanupConfig {
             cleanupMode = NotificationCleanupConfig.CleanupMode.NONE
         }
-        cleanupManager = NotificationCleanupManager(storage, config, logger)
+        cleanupManager = NotificationCleanupManager(pushStorage, config, logger)
 
         // Store test notifications with various ages
         val notification1 = createNotificationWithAge(5)
@@ -147,13 +147,13 @@ class NotificationCleanupTest {
         val notification3 = createNotificationWithAge(20)
         val notification4 = createNotificationWithAge(40)
 
-        storage.storePushNotification(notification1)
-        storage.storePushNotification(notification2)
-        storage.storePushNotification(notification3)
-        storage.storePushNotification(notification4)
+        pushStorage.storePushNotification(notification1)
+        pushStorage.storePushNotification(notification2)
+        pushStorage.storePushNotification(notification3)
+        pushStorage.storePushNotification(notification4)
 
         // Verify all notifications are stored
-        val beforeCleanup = storage.getAllPushNotifications()
+        val beforeCleanup = pushStorage.getAllPushNotifications()
         assertEquals("Should have 4 notifications before cleanup", 4, beforeCleanup.size)
 
         // Run cleanup
@@ -163,7 +163,7 @@ class NotificationCleanupTest {
         assertEquals("Should not remove any notifications with NONE mode", 0, removed)
 
         // Verify all notifications still exist
-        val afterCleanup = storage.getAllPushNotifications()
+        val afterCleanup = pushStorage.getAllPushNotifications()
         assertEquals("Should still have 4 notifications after cleanup", 4, afterCleanup.size)
     }
 
@@ -177,7 +177,7 @@ class NotificationCleanupTest {
             cleanupMode = NotificationCleanupConfig.CleanupMode.COUNT_BASED
             maxStoredNotifications = 2
         }
-        cleanupManager = NotificationCleanupManager(storage, config, logger)
+        cleanupManager = NotificationCleanupManager(pushStorage, config, logger)
 
         // Store test notifications with various ages
         val notification1 = createNotificationWithAge(5)  // Newer
@@ -186,13 +186,13 @@ class NotificationCleanupTest {
         val notification4 = createNotificationWithAge(40) // Oldest - should be removed
 
         // Store in reverse order to ensure we're testing by timestamp, not insertion order
-        storage.storePushNotification(notification4)
-        storage.storePushNotification(notification3)
-        storage.storePushNotification(notification2)
-        storage.storePushNotification(notification1)
+        pushStorage.storePushNotification(notification4)
+        pushStorage.storePushNotification(notification3)
+        pushStorage.storePushNotification(notification2)
+        pushStorage.storePushNotification(notification1)
 
         // Verify all notifications are stored
-        val beforeCleanup = storage.getAllPushNotifications()
+        val beforeCleanup = pushStorage.getAllPushNotifications()
         assertEquals("Should have 4 notifications before cleanup", 4, beforeCleanup.size)
 
         // Run cleanup
@@ -202,7 +202,7 @@ class NotificationCleanupTest {
         assertEquals("Should remove 2 notifications with COUNT_BASED mode", 2, removed)
 
         // Verify only the 2 newest notifications remain
-        val afterCleanup = storage.getAllPushNotifications()
+        val afterCleanup = pushStorage.getAllPushNotifications()
         assertEquals("Should have 2 notifications after cleanup", 2, afterCleanup.size)
 
         // Verify the correct notifications remain (the newer ones)
@@ -221,7 +221,7 @@ class NotificationCleanupTest {
             cleanupMode = NotificationCleanupConfig.CleanupMode.AGE_BASED
             maxNotificationAgeDays = 15
         }
-        cleanupManager = NotificationCleanupManager(storage, config, logger)
+        cleanupManager = NotificationCleanupManager(pushStorage, config, logger)
 
         // Store test notifications with various ages
         val notification1 = createNotificationWithAge(5)  // Newer - should be kept
@@ -229,13 +229,13 @@ class NotificationCleanupTest {
         val notification3 = createNotificationWithAge(20) // Older than max - should be removed
         val notification4 = createNotificationWithAge(40) // Older than max - should be removed
 
-        storage.storePushNotification(notification1)
-        storage.storePushNotification(notification2)
-        storage.storePushNotification(notification3)
-        storage.storePushNotification(notification4)
+        pushStorage.storePushNotification(notification1)
+        pushStorage.storePushNotification(notification2)
+        pushStorage.storePushNotification(notification3)
+        pushStorage.storePushNotification(notification4)
 
         // Verify all notifications are stored
-        val beforeCleanup = storage.getAllPushNotifications()
+        val beforeCleanup = pushStorage.getAllPushNotifications()
         assertEquals("Should have 4 notifications before cleanup", 4, beforeCleanup.size)
 
         // Run cleanup
@@ -245,7 +245,7 @@ class NotificationCleanupTest {
         assertEquals("Should remove 2 notifications with AGE_BASED mode", 2, removed)
 
         // Verify only the notifications newer than maxAge remain
-        val afterCleanup = storage.getAllPushNotifications()
+        val afterCleanup = pushStorage.getAllPushNotifications()
         assertEquals("Should have 2 notifications after cleanup", 2, afterCleanup.size)
 
         // Verify the correct notifications remain (the newer ones)
@@ -265,7 +265,7 @@ class NotificationCleanupTest {
             maxStoredNotifications = 3
             maxNotificationAgeDays = 15
         }
-        cleanupManager = NotificationCleanupManager(storage, config, logger)
+        cleanupManager = NotificationCleanupManager(pushStorage, config, logger)
 
         // Store test notifications with various ages
         val notification1 = createNotificationWithAge(5)   // Newer - should be kept
@@ -275,14 +275,14 @@ class NotificationCleanupTest {
         val notification5 = createNotificationWithAge(40)  // Older than max age - should be removed
 
         // Store in a way that tests both count and age
-        storage.storePushNotification(notification1)
-        storage.storePushNotification(notification2)
-        storage.storePushNotification(notification3)
-        storage.storePushNotification(notification4)
-        storage.storePushNotification(notification5)
+        pushStorage.storePushNotification(notification1)
+        pushStorage.storePushNotification(notification2)
+        pushStorage.storePushNotification(notification3)
+        pushStorage.storePushNotification(notification4)
+        pushStorage.storePushNotification(notification5)
 
         // Verify all notifications are stored
-        val beforeCleanup = storage.getAllPushNotifications()
+        val beforeCleanup = pushStorage.getAllPushNotifications()
         assertEquals("Should have 5 notifications before cleanup", 5, beforeCleanup.size)
 
         // Run cleanup
@@ -292,7 +292,7 @@ class NotificationCleanupTest {
         assertEquals("Should remove 2 notifications with HYBRID mode", 2, removed)
 
         // Verify only the notifications that meet both criteria remain
-        val afterCleanup = storage.getAllPushNotifications()
+        val afterCleanup = pushStorage.getAllPushNotifications()
         assertEquals("Should have 3 notifications after cleanup", 3, afterCleanup.size)
 
         // Verify the correct notifications remain
@@ -310,28 +310,28 @@ class NotificationCleanupTest {
         // Create two different credentials
         val credential1 = testCredential
         val credential2 = createTestCredential()
-        storage.storePushCredential(credential2)
+        pushStorage.storePushCredential(credential2)
 
         // Create a cleanup manager with COUNT_BASED mode and max 1 notification
         val config = NotificationCleanupConfig {
             cleanupMode = NotificationCleanupConfig.CleanupMode.COUNT_BASED
             maxStoredNotifications = 1
         }
-        cleanupManager = NotificationCleanupManager(storage, config, logger)
+        cleanupManager = NotificationCleanupManager(pushStorage, config, logger)
 
         // Store notifications for each credential
         val notification1ForCred1 = createNotificationWithAge(5)
         val notification2ForCred1 = createNotificationWithAge(10)
-        notification1ForCred1.copy(credentialId = credential1.id).let { storage.storePushNotification(it) }
-        notification2ForCred1.copy(credentialId = credential1.id).let { storage.storePushNotification(it) }
+        notification1ForCred1.copy(credentialId = credential1.id).let { pushStorage.storePushNotification(it) }
+        notification2ForCred1.copy(credentialId = credential1.id).let { pushStorage.storePushNotification(it) }
 
         val notification1ForCred2 = createNotificationWithAge(5)
         val notification2ForCred2 = createNotificationWithAge(10)
-        notification1ForCred2.copy(credentialId = credential2.id).let { storage.storePushNotification(it) }
-        notification2ForCred2.copy(credentialId = credential2.id).let { storage.storePushNotification(it) }
+        notification1ForCred2.copy(credentialId = credential2.id).let { pushStorage.storePushNotification(it) }
+        notification2ForCred2.copy(credentialId = credential2.id).let { pushStorage.storePushNotification(it) }
 
         // Verify we have 4 notifications total
-        val allNotifications = storage.getAllPushNotifications()
+        val allNotifications = pushStorage.getAllPushNotifications()
         assertEquals("Should have 4 notifications total", 4, allNotifications.size)
 
         // Run cleanup for credential1 only
@@ -341,7 +341,7 @@ class NotificationCleanupTest {
         assertEquals("Should remove 1 notification for credential1", 1, removed)
 
         // Verify we now have 3 notifications total
-        val afterCleanup = storage.getAllPushNotifications()
+        val afterCleanup = pushStorage.getAllPushNotifications()
         assertEquals("Should have 3 notifications after cleanup", 3, afterCleanup.size)
 
         // Count notifications for each credential
@@ -371,10 +371,12 @@ class NotificationCleanupTest {
             }
             // Add our test handler
             customPushHandlers = handlers
+            // Use SharedPrefsPushStorage for simplicity in tests
+            storage = pushStorage
         }
 
         // Create PushClient with SharedPrefsPushStorage
-        val pushClient = PushClient(config, storage)
+        val pushClient = PushClient(config)
         pushClient.initialize()
 
         // Create a test credential through the client
@@ -385,11 +387,11 @@ class NotificationCleanupTest {
         val notification2 = createNotificationWithAge(10) // Older notification - should be removed when new one is added
 
         // Store the notifications directly in storage
-        storage.storePushNotification(notification1)
-        storage.storePushNotification(notification2)
+        pushStorage.storePushNotification(notification1)
+        pushStorage.storePushNotification(notification2)
 
         // Verify we have 2 notifications
-        val beforeProcessing = storage.getAllPushNotifications()
+        val beforeProcessing = pushStorage.getAllPushNotifications()
         assertEquals("Should have 2 notifications before processing new one", 2, beforeProcessing.size)
 
         // Process a new notification through the client (this should trigger auto-cleanup)
@@ -410,7 +412,7 @@ class NotificationCleanupTest {
         assertNotNull("Should successfully process the notification", processedNotification)
 
         // Verify we still have only 2 notifications (oldest should have been removed)
-        val afterProcessing = storage.getAllPushNotifications()
+        val afterProcessing = pushStorage.getAllPushNotifications()
         assertEquals("Should still have only 2 notifications after processing", 2, afterProcessing.size)
 
         // Get the notification IDs
@@ -434,10 +436,12 @@ class NotificationCleanupTest {
                 cleanupMode = NotificationCleanupConfig.CleanupMode.AGE_BASED
                 maxNotificationAgeDays = 15
             }
+            // Use SharedPrefsPushStorage for simplicity in tests
+            storage = pushStorage
         }
 
         // Create PushClient with SharedPrefsPushStorage
-        val pushClient = PushClient(config, storage)
+        val pushClient = PushClient(config)
         pushClient.initialize()
 
         // Create and store a test credential through the client
@@ -449,13 +453,13 @@ class NotificationCleanupTest {
         val notification3 = createNotificationWithAge(20) // Older than max age
         val notification4 = createNotificationWithAge(30) // Older than max age
 
-        storage.storePushNotification(notification1)
-        storage.storePushNotification(notification2)
-        storage.storePushNotification(notification3)
-        storage.storePushNotification(notification4)
+        pushStorage.storePushNotification(notification1)
+        pushStorage.storePushNotification(notification2)
+        pushStorage.storePushNotification(notification3)
+        pushStorage.storePushNotification(notification4)
 
         // Verify we have 4 notifications
-        val beforeCleanup = storage.getAllPushNotifications()
+        val beforeCleanup = pushStorage.getAllPushNotifications()
         assertEquals("Should have 4 notifications before manual cleanup", 4, beforeCleanup.size)
 
         // Run manual cleanup through the client
@@ -466,7 +470,7 @@ class NotificationCleanupTest {
         assertEquals("Should have removed 2 notifications", 2, removed)
 
         // Verify only 2 notifications remain (the newer ones)
-        val afterCleanup = storage.getAllPushNotifications()
+        val afterCleanup = pushStorage.getAllPushNotifications()
         assertEquals("Should have 2 notifications after cleanup", 2, afterCleanup.size)
 
         // Verify the correct notifications remain

@@ -7,6 +7,7 @@
 
 package com.pingidentity.mfa.push
 
+import com.pingidentity.mfa.commons.json
 import kotlinx.serialization.EncodeDefault
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.KSerializer
@@ -43,6 +44,7 @@ import java.util.UUID
  *                       user agent, location, etc.
  * @property pushType The type of push notification (DEFAULT, CHALLENGE, BIOMETRIC).
  * @property createdAt Timestamp when this notification was created.
+ * @property sentAt Optional timestamp from the server when this notification was sent.
  * @property respondedAt Timestamp when the user responded to this notification.
  * @property additionalData Optional additional custom data associated with this notification. This is a map of key-value pairs.
   *                         The values can be of any type (String, Number, Boolean, Map, List, etc.).
@@ -67,6 +69,8 @@ data class PushNotification(
     val pushType: PushType,
     @Serializable(with = DateSerializer::class)
     val createdAt: Date = Date(),
+    @Serializable(with = NullableDateSerializer::class)
+    val sentAt: Date? = null,
     @Serializable(with = NullableDateSerializer::class)
     var respondedAt: Date? = null,
     @Serializable(with = AdditionalDataSerializer::class)
@@ -146,10 +150,6 @@ data class PushNotification(
          */
         @JvmStatic
         fun fromJson(jsonString: String): PushNotification {
-            val json = Json { 
-                ignoreUnknownKeys = true 
-                isLenient = true
-            }
             return json.decodeFromString(jsonString)
         }
     }
@@ -160,12 +160,6 @@ data class PushNotification(
      * @return A JSON string representing this notification.
      */
     fun toJson(): String {
-        val json = Json { 
-            prettyPrint = false
-            encodeDefaults = true
-            ignoreUnknownKeys = true
-        }
-        
         return json.encodeToString(serializer(), this)
     }
 

@@ -12,13 +12,13 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.SmallTest
 import androidx.test.platform.app.InstrumentationRegistry
 import com.pingidentity.android.ContextProvider
-import com.pingidentity.mfa.commons.storage.TestPassphraseProvider
 import com.pingidentity.mfa.push.PushCredential
 import com.pingidentity.mfa.push.PushDeviceToken
 import com.pingidentity.mfa.push.PushNotification
 import com.pingidentity.mfa.push.PushPlatform
 import com.pingidentity.mfa.push.PushType
 import com.pingidentity.storage.sqlite.passphrase.FixedPassphraseProvider
+import com.pingidentity.storage.sqlite.passphrase.PassphraseProvider
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -49,7 +49,9 @@ class SQLPushStorageTest {
     private lateinit var appContext: Context
     private lateinit var storage: SQLPushStorage
     private val testDbName = "test_push_storage_${System.currentTimeMillis()}.db"
-    private val testPassphraseProvider = TestPassphraseProvider()
+    private val testPassphraseProvider = object : PassphraseProvider {
+        override suspend fun getPassphrase() = "test_passphrase"
+    }
 
     @Before
     fun setup() = runTest {
@@ -63,7 +65,6 @@ class SQLPushStorageTest {
         storage = SQLPushStorage {
             context = appContext
             databaseName = testDbName
-            encryptionEnabled = false
             passphraseProvider = testPassphraseProvider
         }
 
@@ -149,6 +150,7 @@ class SQLPushStorageTest {
             pending = true,
             approved = false,
             createdAt = Date(),
+            sentAt = Date(),
             respondedAt = null,
             additionalData = null
         )
@@ -188,6 +190,7 @@ class SQLPushStorageTest {
             pending = true,
             approved = false,
             createdAt = pastDate,
+            sentAt = pastDate,
             respondedAt = null,
             additionalData = null
         )
@@ -203,7 +206,6 @@ class SQLPushStorageTest {
         val initStorage = SQLPushStorage {
             context = appContext
             databaseName = initDbName
-            encryptionEnabled = false
             passphraseProvider = testPassphraseProvider
         }
 
@@ -636,7 +638,6 @@ class SQLPushStorageTest {
         val reopenedStorage = SQLPushStorage {
             context = appContext
             databaseName = testDbName
-            encryptionEnabled = false
             passphraseProvider = testPassphraseProvider
         }
 
@@ -673,7 +674,6 @@ class SQLPushStorageTest {
         val builderStorage = SQLPushStorage {
             context = appContext
             databaseName = "builder_test_db_${System.currentTimeMillis()}.db"
-            encryptionEnabled = false
             initialPassphrase = "test-secret-key"
             passphraseProvider = testPassphraseProvider
         }
@@ -711,7 +711,6 @@ class SQLPushStorageTest {
         val passphraseStorage = SQLPushStorage {
             context = appContext
             databaseName = "passphrase_test_db_${System.currentTimeMillis()}.db"
-            encryptionEnabled = true
             // Use a custom fixed passphrase provider instead of the default test provider
             passphraseProvider = FixedPassphraseProvider(customPassphrase)
         }

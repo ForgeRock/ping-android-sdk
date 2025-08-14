@@ -130,6 +130,7 @@ class SharedPrefsPushStorageTest {
             pending = true,
             approved = false,
             createdAt = Date(),
+            sentAt = Date(),
             respondedAt = null,
             additionalData = null
         )
@@ -169,6 +170,7 @@ class SharedPrefsPushStorageTest {
             pending = true,
             approved = false,
             createdAt = pastDate,
+            sentAt = pastDate,
             respondedAt = null,
             additionalData = null
         )
@@ -299,6 +301,7 @@ class SharedPrefsPushStorageTest {
         assertEquals("ID should match", testNotification.id, retrievedNotification?.id)
         assertEquals("Credential ID should match", testCred.id, retrievedNotification?.credentialId)
         assertEquals("Message text should match", testNotification.messageText, retrievedNotification?.messageText)
+        assertNotNull("sentAt should not be null", retrievedNotification?.sentAt)
     }
 
     /**

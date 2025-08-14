@@ -7,10 +7,10 @@
 
 package com.pingidentity.mfa.push
 
-import PushUriParser
 import android.content.Context
 import com.pingidentity.logger.Logger
 import com.pingidentity.mfa.commons.exception.MfaException
+import com.pingidentity.mfa.push.storage.PushStorage
 import io.ktor.client.HttpClient
 import io.mockk.clearMocks
 import io.mockk.coEvery
@@ -233,8 +233,8 @@ class PushServiceTest {
         )
 
         // Mock handler retrieval and methods
-        every { mockHandler.canHandle(any()) } returns true
-        every { mockHandler.parseMessage(any()) } returns mapOf(
+        every { mockHandler.canHandle(any<Map<String, Any>>()) } returns true
+        every { mockHandler.parseMessage(any<Map<String, Any>>()) } returns mapOf(
             "credentialId" to testCredentialId,
             "messageId" to "test-message-id",
             "messageText" to "Test authentication request"
@@ -252,6 +252,39 @@ class PushServiceTest {
 
         // When
         val result = pushService.processNotification(messageData)
+
+        // Then
+        assertNotNull(result)
+        assertEquals(testCredentialId, result?.credentialId)
+        coVerify(exactly = 1) { mockStorage.storePushNotification(any()) }
+    }
+    
+    @Test
+    fun `test process notification from string creates and stores notification`() = runTest {
+        // Given
+        val mockHandler = mockk<PushHandler>()
+        val messageString = "test-jwt-string"
+
+        // Mock handler retrieval and methods
+        every { mockHandler.canHandle(any<String>()) } returns true
+        every { mockHandler.parseMessage(any<String>()) } returns mapOf(
+            "credentialId" to testCredentialId,
+            "messageId" to "test-message-id",
+            "messageText" to "Test authentication request"
+        )
+
+        val pushService = PushService(
+            storage = mockStorage,
+            config = configWithCache,
+            httpClient = mockHttpClient,
+            handlers = mapOf(PushPlatform.PING_AM.name to mockHandler)
+        )
+
+        coEvery { mockStorage.getNotificationByMessageId(any()) } returns null
+        coEvery { mockStorage.storePushNotification(any()) } just runs
+
+        // When
+        val result = pushService.processNotification(messageString)
 
         // Then
         assertNotNull(result)
@@ -414,6 +447,8 @@ class PushServiceTest {
         )
 
         coEvery { mockDeviceTokenManager.updateDeviceToken(testDeviceToken) } returns true
+        coEvery { mockDeviceTokenManager.shouldUpdateToken(testDeviceToken) } returns true
+        coEvery { mockDeviceTokenManager.getDeviceTokenId() } returns "old-device-token"
 
         // Mock getting credentials
         coEvery { mockStorage.getAllPushCredentials() } returns listOf(testCredential)
@@ -422,7 +457,7 @@ class PushServiceTest {
         coEvery { mockHandler.setDeviceToken(any(), any(), any()) } returns true
 
         // When
-        val result = pushService.updateDeviceToken(testDeviceToken)
+        val result = pushService.setDeviceToken(testDeviceToken)
 
         // Then
         assertTrue(result)
@@ -445,6 +480,8 @@ class PushServiceTest {
         )
 
         coEvery { mockDeviceTokenManager.updateDeviceToken(testDeviceToken) } returns true
+        coEvery { mockDeviceTokenManager.shouldUpdateToken(testDeviceToken) } returns true
+        coEvery { mockDeviceTokenManager.getDeviceTokenId() } returns "old-device-token"
 
         // Mock getting specific credential
         coEvery { mockStorage.retrievePushCredential(testCredentialId) } returns testCredential
@@ -453,7 +490,7 @@ class PushServiceTest {
         coEvery { mockHandler.setDeviceToken(any(), any(), any()) } returns true
 
         // When
-        val result = pushService.updateDeviceToken(testDeviceToken, testCredentialId)
+        val result = pushService.setDeviceToken(testDeviceToken, testCredentialId)
 
         // Then
         assertTrue(result)

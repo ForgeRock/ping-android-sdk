@@ -16,10 +16,9 @@ import kotlinx.serialization.Transient
 import kotlinx.serialization.descriptors.PrimitiveKind
 import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
 import kotlinx.serialization.descriptors.SerialDescriptor
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
-import kotlinx.serialization.json.Json
+import com.pingidentity.mfa.commons.json
 import java.util.Date
 import java.util.UUID
 
@@ -109,10 +108,6 @@ data class OathCredential(
          */
         @JvmStatic
         fun fromJson(jsonString: String): OathCredential {
-            val json = Json { 
-                ignoreUnknownKeys = true 
-                isLenient = true
-            }
             return json.decodeFromString(jsonString)
         }
     }
@@ -132,13 +127,6 @@ data class OathCredential(
      * @return A JSON string representing this credential.
      */
     fun toJson(): String {
-        // Create a custom instance of Json with pretty printing for better readability
-        val json = Json { 
-            prettyPrint = false
-            encodeDefaults = true
-            ignoreUnknownKeys = true
-        }
-        
         // Use the built-in serialization directly
         return json.encodeToString(serializer(), this)
     }

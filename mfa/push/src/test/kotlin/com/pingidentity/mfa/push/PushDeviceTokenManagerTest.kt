@@ -8,10 +8,11 @@
 package com.pingidentity.mfa.push
 
 import com.pingidentity.logger.Logger
+import com.pingidentity.mfa.push.storage.PushStorage
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runTest
 import org.junit.Assert
 import org.junit.Before
 import org.junit.Test
@@ -54,7 +55,7 @@ class PushDeviceTokenManagerTest {
     }
 
     @Test
-    fun `test getCurrentDeviceToken returns token when available`() = runBlocking {
+    fun `test getCurrentDeviceToken returns token when available`() = runTest {
         // Given
         coEvery { mockStorage.getCurrentPushDeviceToken() } returns testDeviceToken
 
@@ -68,7 +69,7 @@ class PushDeviceTokenManagerTest {
     }
 
     @Test
-    fun `test getCurrentDeviceToken returns null when not available`() = runBlocking {
+    fun `test getCurrentDeviceToken returns null when not available`() = runTest {
         // Given
         coEvery { mockStorage.getCurrentPushDeviceToken() } returns null
 
@@ -81,7 +82,7 @@ class PushDeviceTokenManagerTest {
     }
 
     @Test
-    fun `test getCurrentDeviceToken handles exception`() = runBlocking {
+    fun `test getCurrentDeviceToken handles exception`() = runTest {
         // Given
         coEvery { mockStorage.getCurrentPushDeviceToken() } throws RuntimeException("Test exception")
 
@@ -94,7 +95,7 @@ class PushDeviceTokenManagerTest {
     }
 
     @Test
-    fun `test getDeviceTokenId returns cached token id`() = runBlocking {
+    fun `test getDeviceTokenId returns cached token id`() = runTest {
         // Given
         // This test is simplified to just check that getDeviceTokenId returns the token ID
         // from the token returned by storage
@@ -109,7 +110,7 @@ class PushDeviceTokenManagerTest {
     }
 
     @Test
-    fun `test getDeviceTokenId retrieves from storage when cache is empty`() = runBlocking {
+    fun `test getDeviceTokenId retrieves from storage when cache is empty`() = runTest {
         // Given
         coEvery { mockStorage.getCurrentPushDeviceToken() } returns testDeviceToken
 
@@ -122,7 +123,7 @@ class PushDeviceTokenManagerTest {
     }
 
     @Test
-    fun `test getDeviceTokenId returns null when token not found`() = runBlocking {
+    fun `test getDeviceTokenId returns null when token not found`() = runTest {
         // Given
         coEvery { mockStorage.getCurrentPushDeviceToken() } returns null
 
@@ -135,7 +136,7 @@ class PushDeviceTokenManagerTest {
     }
 
     @Test
-    fun `test shouldUpdateToken returns true for new token`() = runBlocking {
+    fun `test shouldUpdateToken returns true for new token`() = runTest {
         // Given
         // Mock getCurrentPushDeviceToken to return our test token
         coEvery { mockStorage.getCurrentPushDeviceToken() } returns testDeviceToken
@@ -151,7 +152,7 @@ class PushDeviceTokenManagerTest {
     }
 
     @Test
-    fun `test shouldUpdateToken returns false for same token`() = runBlocking {
+    fun `test shouldUpdateToken returns false for same token`() = runTest {
         // Given
         // Mock getCurrentPushDeviceToken to return our test token
         coEvery { mockStorage.getCurrentPushDeviceToken() } returns testDeviceToken
@@ -167,7 +168,7 @@ class PushDeviceTokenManagerTest {
     }
 
     @Test
-    fun `test shouldUpdateToken retrieves from storage when cache is empty`() = runBlocking {
+    fun `test shouldUpdateToken retrieves from storage when cache is empty`() = runTest {
         // Given
         coEvery { mockStorage.getCurrentPushDeviceToken() } returns testDeviceToken
 
@@ -180,7 +181,7 @@ class PushDeviceTokenManagerTest {
     }
 
     @Test
-    fun `test shouldUpdateToken returns false for empty token`() = runBlocking {
+    fun `test shouldUpdateToken returns false for empty token`() = runTest {
         // When
         val result = pushDeviceTokenManager.shouldUpdateToken("")
 
@@ -190,7 +191,7 @@ class PushDeviceTokenManagerTest {
     }
 
     @Test
-    fun `test updateDeviceToken stores new token successfully`() = runBlocking {
+    fun `test updateDeviceToken stores new token successfully`() = runTest {
         // Given
         // Mock getCurrentPushDeviceToken to return our test token
         coEvery { mockStorage.getCurrentPushDeviceToken() } returns testDeviceToken
@@ -213,7 +214,7 @@ class PushDeviceTokenManagerTest {
     }
 
     @Test
-    fun `test updateDeviceToken skips update for same token`() = runBlocking {
+    fun `test updateDeviceToken skips update for same token`() = runTest {
         // Given
         // Mock getCurrentPushDeviceToken to return our test token
         coEvery { mockStorage.getCurrentPushDeviceToken() } returns testDeviceToken
@@ -231,7 +232,7 @@ class PushDeviceTokenManagerTest {
     }
 
     @Test
-    fun `test updateDeviceToken fails for empty token`() = runBlocking {
+    fun `test updateDeviceToken fails for empty token`() = runTest {
         // When
         val result = pushDeviceTokenManager.updateDeviceToken("")
 
@@ -245,7 +246,7 @@ class PushDeviceTokenManagerTest {
     }
 
     @Test
-    fun `test updateDeviceToken handles storage exceptions`() = runBlocking {
+    fun `test updateDeviceToken handles storage exceptions`() = runTest {
         // Given
         // Return a different token ID to force an update
         val differentToken = PushDeviceToken(tokenId = "different-token", createdAt = Date())
@@ -266,7 +267,7 @@ class PushDeviceTokenManagerTest {
     }
 
     @Test
-    fun `test updateDeviceToken updates in-memory token after successful storage update`() = runBlocking {
+    fun `test updateDeviceToken updates in-memory token after successful storage update`() = runTest {
         // Given
         // Return a different token ID initially
         val differentToken = PushDeviceToken(tokenId = "different-token", createdAt = Date())

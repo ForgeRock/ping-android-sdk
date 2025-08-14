@@ -13,9 +13,11 @@ import androidx.test.filters.SmallTest
 import androidx.test.platform.app.InstrumentationRegistry
 import com.pingidentity.android.ContextProvider
 import com.pingidentity.logger.Logger
-import kotlinx.coroutines.runBlocking
+import com.pingidentity.logger.STANDARD
+import com.pingidentity.mfa.push.storage.SQLPushStorage
+import com.pingidentity.mfa.push.storage.SharedPrefsPushStorage
+import com.pingidentity.storage.sqlite.passphrase.NonePassphraseProvider
 import kotlinx.coroutines.test.runTest
-import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -37,64 +39,125 @@ class PushClientAndroidTest {
     private lateinit var appContext: Context
     private lateinit var testPushHandler: TestPushHandler
     private val logger: Logger = Logger.logger
-    
+    private val defaultDbName = "pingidentity_storage.db"
     private val testServerEndpoint = "https://example.com/push"
     private val testSharedSecret = "testsecret12345"
     private val testDeviceToken = "test-device-token-12345"
+    private val testDbName = "test_push_storage_${System.currentTimeMillis()}.db"
 
     @Before
-    fun setup() {
+    fun setup() = runTest {
+        //Get the application context
         appContext = InstrumentationRegistry.getInstrumentation().targetContext
+
+        // Initialize the ContextProvider with the application context
         ContextProvider.init(appContext)
-        
+
         // Initialize test push handler
         testPushHandler = TestPushHandler()
+
+        // Clean up any existing test data
+        cleanup()
     }
-    
-    @After
-    fun tearDown() {
-        // Clean up any resources
-        runBlocking {
-            try {
-                val client = createTestClient()
-                val credentials = client.getCredentials().getOrThrow()
-                credentials.forEach { credential ->
-                    client.deleteCredential(credential.id)
-                }
-                client.close()
-            } catch (e: Exception) {
-                logger.e("Error during test cleanup: ${e.message}")
+
+    private suspend fun createTestClient(
+        withCustomHandlers: Boolean? = false
+    ): PushMfaClient {
+        val testStorage = SQLPushStorage {
+            context = appContext
+            passphraseProvider = NonePassphraseProvider()
+            databaseName = testDbName
+        }
+
+        val client = if (withCustomHandlers == true) {
+            PushClient {
+                customPushHandlers = mapOf(TestPushHandler.HANDLER_NAME to testPushHandler)
+                storage = testStorage
+            }
+        } else {
+            PushClient {
+                storage = testStorage
             }
         }
-    }
-    
-    private suspend fun createTestClient(
-        withCustomHandlers: Boolean = false
-    ): PushMfaClient {
-        val config = if (withCustomHandlers) {
-            PushConfiguration(
-                customPushHandlers = mapOf(TestPushHandler.HANDLER_NAME to testPushHandler)
-            )
-        } else {
-            PushConfiguration {}
-        }
-        
-        val client = PushClient.create(config)
-        client.initialize()
+
         return client
     }
-    
-    @Test
-    fun testCreatePushClient() = runTest {
-        val config = PushConfiguration { }
 
-        val client = PushClient.create(config)
+    private fun cleanup() = runTest {
+        //Remove database
+        appContext.deleteDatabase(testDbName)
+        appContext.deleteDatabase(defaultDbName)
+    }
+
+    @Test
+    fun testCreatePushClientWithDefaultConfig() = runTest {
+        val client = PushClient()
         client.initialize()
         assertNotNull("Client should not be null", client)
-        
+
         val credentials = client.getCredentials().getOrThrow()
         assertEquals("Should have no credentials initially", 0, credentials.size)
-        
+
+        client.close()
+    }
+
+    @Test
+    fun testCreatePushClientWithCustomConfigLaterInitialization() = runTest {
+        val config = PushConfiguration {
+            logger = Logger.STANDARD
+            enableCredentialCache = true
+        }
+
+        val client = PushClient(config)
+        client.initialize()
+        assertNotNull("Client should not be null", client)
+
+        val credentials = client.getCredentials().getOrThrow()
+        assertEquals("Should have no credentials initially", 0, credentials.size)
+
+        client.close()
+    }
+
+    @Test
+    fun testCreatePushClientWithCustomStorage() = runTest {
+        val client = PushClient {
+            storage = SharedPrefsPushStorage(appContext, "test_storage")
+            enableCredentialCache = false
+        }
+
+        assertNotNull("Client should not be null", client)
+
+        val credentials = client.getCredentials().getOrThrow()
+        assertEquals("Should have no credentials initially", 0, credentials.size)
+
+        client.close()
+    }
+
+    @Test
+    fun testCreatePushClientWithCustomStorageAndLaterInitialization() = runTest {
+        val config = PushConfiguration {
+            storage = SharedPrefsPushStorage(appContext, "test_storage")
+            enableCredentialCache = true
+        }
+
+        val client = PushClient(config)
+        client.initialize()
+        assertNotNull("Client should not be null", client)
+
+        val credentials = client.getCredentials().getOrThrow()
+        assertEquals("Should have no credentials initially", 0, credentials.size)
+
+        client.close()
+    }
+
+    @Test
+    fun testClientWithCustomHandlers() = runTest {
+        // Create client with custom handlers enabled
+        val client = createTestClient(withCustomHandlers = true)
+
+        // Just verify the client is created successfully with custom handlers
+        assertNotNull("Client should not be null", client)
+
         client.close()
     }
 
@@ -145,16 +208,48 @@ class PushClientAndroidTest {
         
         client.close()
     }
-    
+
     @Test
-    fun testClientWithCustomHandlers() = runTest {
-        // Create client with custom handlers enabled
-        val client = createTestClient(withCustomHandlers = true)
-        
-        // Just verify the client is created successfully with custom handlers
-        assertNotNull("Client should not be null", client)
-        
+    fun testInvalidURIFormat() = runTest {
+        // Create an PushClient
+        val client = createTestClient()
+
+        // Test invalid URI format - using Result API now
+        val result = client.addCredentialFromUri("invalid_uri")
+
+        // Verify the operation failed as expected
+        assertTrue("Should return failure for invalid URI format", result.isFailure)
+
+        // Optionally, verify the exception type/message
+        result.onFailure { exception ->
+            println("Expected error: ${exception.message}")
+            // Could add more specific checks on the exception type/message if needed
+            assertTrue(
+                "Exception should be related to URI parsing",
+                exception.message?.contains("URI") ?: false ||
+                        exception is IllegalArgumentException
+            )
+        }
+
+        // Close the client when done
         client.close()
+    }
+
+    @Test
+    fun testGetCredentialsFailClientNotInitialized() = runTest {
+        // Create client with custom handlers enabled
+        val client = createTestClient()
+
+        // Verify client is correctly initialized
+        assertNotNull("Client should not be null", client)
+
+        // Get credentials fail, client not initialized
+        client.getCredentials().onFailure {
+            assertTrue(
+                "Exception should mention client not initialized",
+                it.message?.contains("not initialized") ?: false
+            )
+        }
     }
 
     @Test
@@ -557,13 +652,12 @@ class PushClientAndroidTest {
             maxStoredNotifications = 2
         }
 
-        val config = PushConfiguration {
+        val client = PushClient {
+            enableCredentialCache = false
             customPushHandlers = mapOf(TestPushHandler.HANDLER_NAME to testPushHandler)
             notificationCleanupConfig = cleanupConfig
+            storage = SharedPrefsPushStorage(appContext, "test_cleanup_storage")
         }
-
-        val client = PushClient.create(config)
-        client.initialize()
 
         // Add a credential
         val credentialId = UUID.randomUUID().toString()

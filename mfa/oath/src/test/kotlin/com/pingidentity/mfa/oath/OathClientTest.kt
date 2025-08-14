@@ -62,10 +62,8 @@ class OathClientTest {
         // We don't need to check the exact signature of the method, just that the class has the expected methods
         val methods = OathClient.Companion::class.java.declaredMethods
         val hasInvokeMethod = methods.any { it.name == "invoke" }
-        val hasCreateMethod = methods.any { it.name == "create" }
         
         assert(hasInvokeMethod) { "OathClient.Companion should have an invoke method" }
-        assert(hasCreateMethod) { "OathClient.Companion should have a create method" }
     }
     
     @Test

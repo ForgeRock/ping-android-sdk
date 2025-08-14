@@ -21,47 +21,21 @@ import com.pingidentity.logger.Logger
  *           for security reasons, as an attacker could potentially access cached credentials from memory dumps.
  * @property logger The logger instance used for logging messages. Defaults to a global logger instance.
  */
-open class MfaConfiguration(
-    val encryptionEnabled: Boolean = true,
-    val timeoutMs: Long = DEFAULT_TIMEOUT_MS,
-    val enableCredentialCache: Boolean = false,
-    val logger: Logger = Logger.logger
-) {
-    /**
-     * The application context is retrieved from the ContextProvider.
-     */
+open class MfaConfiguration {
+    var encryptionEnabled: Boolean = true
+    var timeoutMs: Long = DEFAULT_TIMEOUT_MS
+    var enableCredentialCache: Boolean = false
+    var logger: Logger = Logger.logger
     val context: Context
         get() = ContextProvider.context
         
-    /**
-     * Builder-style DSL constructor for MfaConfiguration.
-     */
-    constructor(block: Builder.() -> Unit) : this(
-        Builder().apply(block)
-    )
-
-    /**
-     * Internal constructor to support creation from Builder.
-     */
-    private constructor(builder: Builder) : this(
-        encryptionEnabled = builder.encryptionEnabled,
-        timeoutMs = builder.timeoutMs,
-        enableCredentialCache = builder.enableCredentialCache,
-        logger = builder.logger
-    )
-
     companion object {
         // Timeout for the HTTP client, default is 15 seconds
         const val DEFAULT_TIMEOUT_MS = 15000L
-    }
-
-    /**
-     * Builder class for [MfaConfiguration].
-     */
-    open class Builder {
-        var encryptionEnabled: Boolean = true
-        var timeoutMs: Long = DEFAULT_TIMEOUT_MS
-        var enableCredentialCache: Boolean = false
-        var logger: Logger = Logger.logger
+        operator fun invoke(block: MfaConfiguration.() -> Unit = {}): MfaConfiguration {
+            val config = MfaConfiguration()
+            config.apply(block) // apply the configuration block
+            return config
+        }
     }
 }

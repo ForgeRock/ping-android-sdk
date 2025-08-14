@@ -7,6 +7,7 @@
 
 package com.pingidentity.mfa.push
 
+import com.google.firebase.messaging.RemoteMessage
 import com.pingidentity.mfa.commons.MfaClient
 
 /**
@@ -69,10 +70,28 @@ interface PushMfaClient : MfaClient {
      * Process a push notification message.
      * This method parses the message data and creates a PushNotification object.
      *
-     * @param messageData The message data as a Map of String to Any.
+     * @param messageData The message data as a Map of String to Any, as typically received from Firebase.
      * @return A Result containing the PushNotification object (or null if message is invalid) or an Exception in case of failure.
      */
     suspend fun processNotification(messageData: Map<String, Any>): Result<PushNotification?>
+    
+    /**
+     * Process a push notification message received as a string.
+     * This method parses the string message data (typically a JWT) and creates a PushNotification object.
+     *
+     * @param message The message data as a String.
+     * @return A Result containing the PushNotification object (or null if message is invalid) or an Exception in case of failure.
+     */
+    suspend fun processNotification(message: String): Result<PushNotification?>
+    
+    /**
+     * Process a push notification message from Firebase Cloud Messaging.
+     * This method extracts data from the RemoteMessage and creates a PushNotification object.
+     *
+     * @param remoteMessage The Firebase RemoteMessage object.
+     * @return A Result containing the PushNotification object (or null if message is invalid) or an Exception in case of failure.
+     */
+    suspend fun processNotification(remoteMessage: RemoteMessage): Result<PushNotification?>
 
     /**
      * Approve a push notification.
@@ -121,6 +140,14 @@ interface PushMfaClient : MfaClient {
      * @return A Result containing a list of all pending PushNotifications or an Exception in case of failure.
      */
     suspend fun getPendingNotifications(): Result<List<PushNotification>>
+
+    /**
+     * Get all push notifications.
+     * This method returns all stored push notifications, regardless of their status.
+     *
+     * @return A Result containing a list of all PushNotifications or an Exception in case of failure.
+     */
+    suspend fun getAllNotifications(): Result<List<PushNotification>>
 
     /**
      * Get a push notification by ID.

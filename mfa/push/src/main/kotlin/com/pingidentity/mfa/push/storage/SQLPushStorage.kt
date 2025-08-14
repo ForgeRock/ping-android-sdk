@@ -16,7 +16,7 @@ import com.pingidentity.mfa.push.PushCredential
 import com.pingidentity.mfa.push.PushDeviceToken
 import com.pingidentity.mfa.push.PushNotification
 import com.pingidentity.mfa.push.PushPlatform
-import com.pingidentity.mfa.push.PushStorage
+import com.pingidentity.mfa.push.storage.PushStorage
 import com.pingidentity.mfa.push.PushType
 import com.pingidentity.storage.sqlite.passphrase.KeyStorePassphraseProvider
 import com.pingidentity.storage.sqlite.passphrase.PassphraseProvider
@@ -30,7 +30,7 @@ import java.util.Date
 import kotlin.coroutines.coroutineContext
 
 /**
- * SQLite-based implementation of [com.pingidentity.mfa.push.PushStorage].
+ * SQLite-based implementation of [PushStorage].
  * This class directly extends [SQLiteStorage] with Push-specific functionality.
  */
 class SQLPushStorage private constructor(
@@ -101,6 +101,7 @@ class SQLPushStorage private constructor(
         private const val NOTIFICATION_COLUMN_PENDING = "pending"
         private const val NOTIFICATION_COLUMN_APPROVED = "approved"
         private const val NOTIFICATION_COLUMN_CREATED_AT = "created_at"
+        private const val NOTIFICATION_COLUMN_SENT_AT = "sent_at"
         private const val NOTIFICATION_COLUMN_RESPONDED_AT = "responded_at"
         private const val NOTIFICATION_COLUMN_ADDITIONAL_DATA = "additional_data"
 
@@ -124,7 +125,6 @@ class SQLPushStorage private constructor(
         var context: Context = ContextProvider.context
         var databaseName: String = DEFAULT_DATABASE_NAME
         var databaseVersion: Int = 1
-        var encryptionEnabled: Boolean = true
         var initialPassphrase: String? = null // Default is null, in case developer does not want to supply their own passphrase
         var passphraseProvider: PassphraseProvider = KeyStorePassphraseProvider(context, initialPassphrase)
         var logger: Logger = Logger.logger
@@ -182,6 +182,7 @@ class SQLPushStorage private constructor(
                     $NOTIFICATION_COLUMN_PENDING INTEGER DEFAULT 0,
                     $NOTIFICATION_COLUMN_APPROVED INTEGER DEFAULT 0,
                     $NOTIFICATION_COLUMN_CREATED_AT INTEGER NOT NULL,
+                    $NOTIFICATION_COLUMN_SENT_AT INTEGER,
                     $NOTIFICATION_COLUMN_RESPONDED_AT INTEGER,
                     $NOTIFICATION_COLUMN_ADDITIONAL_DATA TEXT,
                     FOREIGN KEY ($NOTIFICATION_COLUMN_CREDENTIAL_ID) REFERENCES $PUSH_TABLE($PUSH_COLUMN_ID) ON DELETE CASCADE
@@ -230,6 +231,7 @@ class SQLPushStorage private constructor(
         try {
             clearPushCredentials()
             clearPushNotifications()
+            clearPushDeviceTokens()
             logger.d("Cleared all data from Push storage")
         } catch (e: Exception) {
             coroutineContext.ensureActive()
@@ -528,6 +530,7 @@ class SQLPushStorage private constructor(
                 NOTIFICATION_COLUMN_PENDING to notification.pending,
                 NOTIFICATION_COLUMN_APPROVED to notification.approved,
                 NOTIFICATION_COLUMN_CREATED_AT to notification.createdAt.time,
+                NOTIFICATION_COLUMN_SENT_AT to notification.sentAt?.time,
                 NOTIFICATION_COLUMN_RESPONDED_AT to notification.respondedAt?.time,
                 NOTIFICATION_COLUMN_ADDITIONAL_DATA to notification.additionalData?.let { Json.encodeToString(PushNotification.AdditionalDataSerializer, it) }
             )
@@ -1206,11 +1209,13 @@ class SQLPushStorage private constructor(
             val pending = data[NOTIFICATION_COLUMN_PENDING] as Long? == 1L
             val approved = data[NOTIFICATION_COLUMN_APPROVED] as Long? == 1L
             val createdAtMillis = data[NOTIFICATION_COLUMN_CREATED_AT] as Long
+            val sentAtMillis = data[NOTIFICATION_COLUMN_SENT_AT] as Long?
             val respondedAtMillis = data[NOTIFICATION_COLUMN_RESPONDED_AT] as Long?
             val additionalDataJson = data[NOTIFICATION_COLUMN_ADDITIONAL_DATA] as String?
 
             // Convert long timestamps to Dates
             val createdAt = Date(createdAtMillis)
+            val sentAt = sentAtMillis?.let { Date(it) }
             val respondedAt = respondedAtMillis?.let { Date(it) }
             
             // Parse pushType from string
@@ -1240,6 +1245,7 @@ class SQLPushStorage private constructor(
                 contextInfo = contextInfo,
                 pushType = pushType,
                 createdAt = createdAt,
+                sentAt = sentAt,
                 respondedAt = respondedAt,
                 additionalData = additionalData,
                 approved = approved,

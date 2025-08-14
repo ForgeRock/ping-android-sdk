@@ -14,7 +14,7 @@ import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.spyk
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -144,8 +144,8 @@ class PingAMPushHandlerTest {
         )
         
         // Test the parsing using our manually created expected result
-        every { spyHandler.parseMessage(any()) } returns expectedResult
-        val result = spyHandler.parseMessage(messageData)
+        every { spyHandler.parseMessage(any<Map<String, Any>>()) } returns expectedResult
+        val result = spyHandler.parseMessage(messageData as Map<String, Any>)
         
         // Verify all expected key-value pairs are in the result
         assertEquals("mechanism-uid", result[PushConstants.KEY_CREDENTIAL_ID])
@@ -163,7 +163,7 @@ class PingAMPushHandlerTest {
     }
     
     @Test
-    fun `test sendApproval calls responder with correct parameters`() = runBlocking {
+    fun `test sendApproval calls responder with correct parameters`() = runTest {
         // Set up mock to return success
         coEvery { 
             mockPushResponder.authenticate(
@@ -196,7 +196,7 @@ class PingAMPushHandlerTest {
     }
     
     @Test
-    fun `test sendDenial calls responder with correct parameters`() = runBlocking {
+    fun `test sendDenial calls responder with correct parameters`() = runTest {
         // Set up mock to return success
         coEvery { 
             mockPushResponder.authenticate(
@@ -229,7 +229,7 @@ class PingAMPushHandlerTest {
     }
     
     @Test
-    fun `test setDeviceToken calls responder with correct parameters`() = runBlocking {
+    fun `test setDeviceToken calls responder with correct parameters`() = runTest {
         // Set up mock to return success
         coEvery { 
             mockPushResponder.updateDeviceToken(
@@ -260,7 +260,7 @@ class PingAMPushHandlerTest {
     }
     
     @Test
-    fun `test setDeviceToken uses default device name when not provided`() = runBlocking {
+    fun `test setDeviceToken uses default device name when not provided`() = runTest {
         // Set up mock to return success
         coEvery { 
             mockPushResponder.updateDeviceToken(
@@ -291,7 +291,7 @@ class PingAMPushHandlerTest {
     }
     
     @Test
-    fun `test register calls responder with correct parameters`() = runBlocking {
+    fun `test register calls responder with correct parameters`() = runTest {
         // Set up mock to return success
         coEvery { 
             mockPushResponder.register(
@@ -324,7 +324,7 @@ class PingAMPushHandlerTest {
     }
     
     @Test
-    fun `test register handles failure from responder`() = runBlocking {
+    fun `test register handles failure from responder`() = runTest {
         // Set up mock to return failure
         coEvery { 
             mockPushResponder.register(
@@ -344,7 +344,7 @@ class PingAMPushHandlerTest {
     }
     
     @Test
-    fun `test register handles exception from responder`() = runBlocking {
+    fun `test register handles exception from responder`() = runTest {
         // Set up mock to throw exception
         coEvery { 
             mockPushResponder.register(

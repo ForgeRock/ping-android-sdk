@@ -8,7 +8,9 @@
 package com.pingidentity.mfa.push
 
 import com.pingidentity.logger.Logger
+import com.pingidentity.mfa.push.storage.PushStorage
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import java.util.Date
 
@@ -105,6 +107,7 @@ class PushDeviceTokenManager(
             logger.d("Device token updated locally: $newToken")
             return@withContext true
         } catch (e: Exception) {
+            coroutineContext.ensureActive()
             logger.e("Failed to update device token locally: ${e.message}")
             return@withContext false
         }

@@ -15,7 +15,7 @@ import com.pingidentity.mfa.commons.exception.MfaStorageException
 import com.pingidentity.mfa.push.PushCredential
 import com.pingidentity.mfa.push.PushDeviceToken
 import com.pingidentity.mfa.push.PushNotification
-import com.pingidentity.mfa.push.PushStorage
+import com.pingidentity.mfa.push.storage.PushStorage
 import kotlinx.serialization.json.Json
 
 /**

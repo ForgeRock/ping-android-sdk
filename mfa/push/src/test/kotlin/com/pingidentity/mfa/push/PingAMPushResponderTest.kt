@@ -9,14 +9,30 @@ package com.pingidentity.mfa.push
 
 import android.util.Base64
 import com.pingidentity.logger.Logger
+import com.pingidentity.mfa.push.PushConstants.ANDROID
+import com.pingidentity.mfa.push.PushConstants.GCM
+import com.pingidentity.mfa.push.PushConstants.KEY_ALMB_COOKIE
+import com.pingidentity.mfa.push.PushConstants.KEY_CHALLENGE
+import com.pingidentity.mfa.push.PushConstants.KEY_CHALLENGE_RESPONSE
+import com.pingidentity.mfa.push.PushConstants.KEY_COMMUNICATION_TYPE
+import com.pingidentity.mfa.push.PushConstants.KEY_DENY
+import com.pingidentity.mfa.push.PushConstants.KEY_DEVICE_ID
+import com.pingidentity.mfa.push.PushConstants.KEY_DEVICE_NAME
+import com.pingidentity.mfa.push.PushConstants.KEY_DEVICE_TYPE
+import com.pingidentity.mfa.push.PushConstants.KEY_JWT
+import com.pingidentity.mfa.push.PushConstants.KEY_MECHANISM_UID
+import com.pingidentity.mfa.push.PushConstants.KEY_MESSAGE_ID
+import com.pingidentity.mfa.push.PushConstants.KEY_RESPONSE
+import com.pingidentity.mfa.push.PushConstants.KEY_USER_ID
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
 import io.ktor.client.engine.mock.respondError
+import io.ktor.client.engine.mock.toByteArray
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.headersOf
 import io.mockk.mockk
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 import org.junit.Assert
@@ -38,6 +54,7 @@ class PingAMPushResponderTest {
         private const val BASE64_SECRET = "b3uYLkQ7dRPjBaIzV0t/aijoXRgMq+NP5AwVAvRfa/E="
         private const val BASE64_CHALLENGE = "9giiBAdUHjqpo0XE4YdZ7pRlv0hrQYwDz8Z1wwLLbkg="
         private const val EXPECTED_CHALLENGE_RESPONSE = "Df02AwA3Ra+sTGkL5+QvkEtN3eLdZiFmL5nxAV1m0k8="
+        private const val EXPECTED_NUMBER_CHALLENGE_RESPONSE = "80"
         private const val TEST_ENDPOINT = "http://test.example.com/push"
         private const val TEST_MESSAGE_ID = "test-message-id"
         private const val TEST_DEVICE_TOKEN = "test-fcm-token"
@@ -59,7 +76,7 @@ class PingAMPushResponderTest {
         testCredential = PushCredential(
             id = "test-id",
             userId = "user3",
-            resourceId = "test-resource-id",
+            resourceId = "test-id",
             issuer = "ForgeRock",
             displayIssuer = "ForgeRock Display",
             accountName = "user",
@@ -120,8 +137,6 @@ class PingAMPushResponderTest {
         val payloadMap = Json.Default.parseToJsonElement(payloadJson).jsonObject
         Assert.assertEquals("\"${TEST_MESSAGE_ID}\"", payloadMap["messageId"].toString())
         Assert.assertEquals("\"$TEST_ACTION\"", payloadMap["action"].toString())
-        Assert.assertTrue("JWT payload should contain IAT claim", payloadMap.containsKey("iat"))
-        Assert.assertTrue("JWT payload should contain JTI claim", payloadMap.containsKey("jti"))
 
         // Verify signature exists (we don't validate the actual signature here)
         Assert.assertNotNull(jwtParts[2])
@@ -223,7 +238,7 @@ class PingAMPushResponderTest {
     }
 
     @Test
-    fun `test register with valid parameters returns success`() = runBlocking {
+    fun `test register with valid parameters returns success`() = runTest {
         // Set up the mock engine to return success
         val mockEngine = MockEngine.Companion { request ->
             // Verify request headers and URL
@@ -237,6 +252,29 @@ class PingAMPushResponderTest {
             val url = request.url.toString()
             Assert.assertEquals("${TEST_ENDPOINT}?_action=register", url)
 
+            // Capture and verify the request body content
+            val requestBodyText = String(request.body.toByteArray())
+            val requestBodyJson = Json.parseToJsonElement(requestBodyText).jsonObject
+
+            // Body contains expected keys
+            Assert.assertTrue(requestBodyJson.containsKey(PushConstants.KEY_MESSAGE_ID))
+
+            // Verify JWT is present and has expected structure
+            Assert.assertTrue(requestBodyJson.containsKey(KEY_JWT))
+            val jwt = requestBodyJson[KEY_JWT].toString().replace("\"", "")
+            val jwtParts = jwt.split(".")
+            Assert.assertEquals(3, jwtParts.size)
+
+            // Jwt payload should contain messageId, deviceId, and deviceName
+            val jwtPayload = String(Base64.decode(jwtParts[1], Base64.URL_SAFE))
+            val jwtPayloadJson = Json.parseToJsonElement(jwtPayload).jsonObject
+            Assert.assertEquals("\"${ANDROID}\"", jwtPayloadJson[KEY_DEVICE_TYPE].toString())
+            Assert.assertEquals("\"${GCM}\"", jwtPayloadJson[KEY_COMMUNICATION_TYPE].toString())
+            Assert.assertEquals("\"${TEST_DEVICE_TOKEN}\"", jwtPayloadJson[KEY_DEVICE_ID].toString())
+            Assert.assertEquals("\"${TEST_DEVICE_NAME}\"", jwtPayloadJson[KEY_DEVICE_NAME].toString())
+            Assert.assertEquals("\"${testCredential.id}\"", jwtPayloadJson[KEY_MECHANISM_UID].toString())
+            Assert.assertEquals("\"${EXPECTED_CHALLENGE_RESPONSE}\"", jwtPayloadJson[KEY_RESPONSE].toString())
+
             respond(
                 content = "{}",
                 status = HttpStatusCode.Companion.OK,
@@ -248,11 +286,11 @@ class PingAMPushResponderTest {
 
         // Set up test parameters
         val params = mapOf<String, Any>(
-            PushConstants.KEY_MESSAGE_ID to TEST_MESSAGE_ID,
-            PushConstants.KEY_ALMB_COOKIE to TEST_AMLB_COOKIE,
-            PushConstants.KEY_DEVICE_ID to TEST_DEVICE_TOKEN,
-            PushConstants.KEY_DEVICE_NAME to TEST_DEVICE_NAME,
-            PushConstants.KEY_CHALLENGE to BASE64_CHALLENGE
+            KEY_MESSAGE_ID to TEST_MESSAGE_ID,
+            KEY_ALMB_COOKIE to TEST_AMLB_COOKIE,
+            KEY_DEVICE_ID to TEST_DEVICE_TOKEN,
+            KEY_DEVICE_NAME to TEST_DEVICE_NAME,
+            KEY_CHALLENGE to BASE64_CHALLENGE
         )
 
         // Call the method under test
@@ -265,7 +303,7 @@ class PingAMPushResponderTest {
     }
 
     @Test
-    fun `test register with server error returns failure`() = runBlocking {
+    fun `test register with server error returns failure`() = runTest {
         // Set up the mock engine to return an error
         val mockEngine = MockEngine.Companion { request ->
             respondError(HttpStatusCode.Companion.NotFound)
@@ -275,10 +313,10 @@ class PingAMPushResponderTest {
 
         // Set up test parameters
         val params = mapOf<String, Any>(
-            PushConstants.KEY_MESSAGE_ID to TEST_MESSAGE_ID,
-            PushConstants.KEY_ALMB_COOKIE to TEST_AMLB_COOKIE,
-            PushConstants.KEY_DEVICE_ID to TEST_DEVICE_TOKEN,
-            PushConstants.KEY_DEVICE_NAME to TEST_DEVICE_NAME
+            KEY_MESSAGE_ID to TEST_MESSAGE_ID,
+            KEY_ALMB_COOKIE to TEST_AMLB_COOKIE,
+            KEY_DEVICE_ID to TEST_DEVICE_TOKEN,
+            KEY_DEVICE_NAME to TEST_DEVICE_NAME
         )
 
         // Call the method under test
@@ -291,7 +329,7 @@ class PingAMPushResponderTest {
     }
 
     @Test
-    fun `test register with exception returns failure`() = runBlocking {
+    fun `test register with exception returns failure`() = runTest {
         // Set up the mock engine to throw an exception
         val mockEngine = MockEngine.Companion { request ->
             throw RuntimeException("Network error")
@@ -301,10 +339,10 @@ class PingAMPushResponderTest {
 
         // Set up test parameters
         val params = mapOf<String, Any>(
-            PushConstants.KEY_MESSAGE_ID to TEST_MESSAGE_ID,
-            PushConstants.KEY_ALMB_COOKIE to TEST_AMLB_COOKIE,
-            PushConstants.KEY_DEVICE_ID to TEST_DEVICE_TOKEN,
-            PushConstants.KEY_DEVICE_NAME to TEST_DEVICE_NAME
+            KEY_MESSAGE_ID to TEST_MESSAGE_ID,
+            KEY_ALMB_COOKIE to TEST_AMLB_COOKIE,
+            KEY_DEVICE_ID to TEST_DEVICE_TOKEN,
+            KEY_DEVICE_NAME to TEST_DEVICE_NAME
         )
 
         // Call the method under test
@@ -317,7 +355,7 @@ class PingAMPushResponderTest {
     }
 
     @Test
-    fun `test updateDeviceToken with valid parameters returns success`() = runBlocking {
+    fun `test updateDeviceToken with valid parameters returns success`() = runTest {
         // Set up the mock engine to return success
         val mockEngine = MockEngine.Companion { request ->
             // Verify request headers and URL
@@ -330,6 +368,28 @@ class PingAMPushResponderTest {
             val url = request.url.toString()
             Assert.assertEquals("${TEST_ENDPOINT}?_action=refresh", url)
 
+            // Capture and verify the request body content
+            val requestBodyText = String(request.body.toByteArray())
+            val requestBodyJson = Json.parseToJsonElement(requestBodyText).jsonObject
+
+            // Body contains expected keys
+            Assert.assertTrue(requestBodyJson.containsKey(KEY_MECHANISM_UID))
+            Assert.assertTrue(requestBodyJson.containsKey(KEY_USER_ID))
+
+            // Verify JWT is present and has expected structure
+            Assert.assertTrue(requestBodyJson.containsKey(KEY_JWT))
+            val jwt = requestBodyJson[KEY_JWT].toString().replace("\"", "")
+            val jwtParts = jwt.split(".")
+            Assert.assertEquals(3, jwtParts.size)
+
+            // Jwt payload should contain messageId, deviceId, and deviceName
+            val jwtPayload = String(Base64.decode(jwtParts[1], Base64.URL_SAFE))
+            val jwtPayloadJson = Json.parseToJsonElement(jwtPayload).jsonObject
+            Assert.assertEquals("\"${ANDROID}\"", jwtPayloadJson[KEY_DEVICE_TYPE].toString())
+            Assert.assertEquals("\"${GCM}\"", jwtPayloadJson[KEY_COMMUNICATION_TYPE].toString())
+            Assert.assertEquals("\"${TEST_DEVICE_TOKEN}\"", jwtPayloadJson[KEY_DEVICE_ID].toString())
+            Assert.assertEquals("\"${TEST_DEVICE_NAME}\"", jwtPayloadJson[KEY_DEVICE_NAME].toString())
+
             respond(
                 content = "{}",
                 status = HttpStatusCode.Companion.OK,
@@ -350,7 +410,7 @@ class PingAMPushResponderTest {
     }
 
     @Test
-    fun `test updateDeviceToken with server error returns failure`() = runBlocking {
+    fun `test updateDeviceToken with server error returns failure`() = runTest {
         // Set up the mock engine to return an error
         val mockEngine = MockEngine.Companion { request ->
             respondError(HttpStatusCode.Companion.NotFound)
@@ -369,7 +429,7 @@ class PingAMPushResponderTest {
     }
 
     @Test
-    fun `test updateDeviceToken with exception returns failure`() = runBlocking {
+    fun `test updateDeviceToken with exception returns failure`() = runTest {
         // Set up the mock engine to throw an exception
         val mockEngine = MockEngine.Companion { request ->
             throw RuntimeException("Network error")
@@ -388,7 +448,7 @@ class PingAMPushResponderTest {
     }
 
     @Test
-    fun `test authenticate approve with valid parameters returns success`() = runBlocking {
+    fun `test authenticate approve with valid parameters returns success`() = runTest {
         // Set up the mock engine to return success
         val mockEngine = MockEngine.Companion { request ->
             // Verify request headers and URL
@@ -401,6 +461,24 @@ class PingAMPushResponderTest {
             // Check that the URL includes the action=authenticate parameter
             val url = request.url.toString()
             Assert.assertEquals("${TEST_ENDPOINT}?_action=authenticate", url)
+
+            // Capture and verify the request body content
+            val requestBodyText = String(request.body.toByteArray())
+            val requestBodyJson = Json.parseToJsonElement(requestBodyText).jsonObject
+
+            // Body contains expected keys
+            Assert.assertTrue(requestBodyJson.containsKey(KEY_MESSAGE_ID))
+
+            // Verify JWT is present and has expected structure
+            Assert.assertTrue(requestBodyJson.containsKey(KEY_JWT))
+            val jwt = requestBodyJson[KEY_JWT].toString().replace("\"", "")
+            val jwtParts = jwt.split(".")
+            Assert.assertEquals(3, jwtParts.size)
+
+            // Jwt payload should contain messageId, deviceId, and deviceName
+            val jwtPayload = String(Base64.decode(jwtParts[1], Base64.URL_SAFE))
+            val jwtPayloadJson = Json.parseToJsonElement(jwtPayload).jsonObject
+            Assert.assertEquals("\"${EXPECTED_CHALLENGE_RESPONSE}\"", jwtPayloadJson[KEY_RESPONSE].toString())
 
             respond(
                 content = "{}",
@@ -421,7 +499,7 @@ class PingAMPushResponderTest {
     }
 
     @Test
-    fun `test authenticate deny with valid parameters returns success`() = runBlocking {
+    fun `test authenticate deny with valid parameters returns success`() = runTest {
         // Set up the mock engine to return success
         val mockEngine = MockEngine.Companion { request ->
             // Verify request headers and URL
@@ -434,6 +512,25 @@ class PingAMPushResponderTest {
             // Check that the URL includes the action=authenticate parameter
             val url = request.url.toString()
             Assert.assertEquals("${TEST_ENDPOINT}?_action=authenticate", url)
+
+            // Capture and verify the request body content
+            val requestBodyText = String(request.body.toByteArray())
+            val requestBodyJson = Json.parseToJsonElement(requestBodyText).jsonObject
+
+            // Body contains expected keys
+            Assert.assertTrue(requestBodyJson.containsKey(KEY_MESSAGE_ID))
+
+            // Verify JWT is present and has expected structure
+            Assert.assertTrue(requestBodyJson.containsKey(KEY_JWT))
+            val jwt = requestBodyJson[KEY_JWT].toString().replace("\"", "")
+            val jwtParts = jwt.split(".")
+            Assert.assertEquals(3, jwtParts.size)
+
+            // Jwt payload should contain messageId, deviceId, and deviceName
+            val jwtPayload = String(Base64.decode(jwtParts[1], Base64.URL_SAFE))
+            val jwtPayloadJson = Json.parseToJsonElement(jwtPayload).jsonObject
+            Assert.assertTrue(jwtPayloadJson[KEY_DENY].toString().toBoolean())
+            Assert.assertEquals("\"${EXPECTED_CHALLENGE_RESPONSE}\"", jwtPayloadJson[KEY_RESPONSE].toString())
 
             respond(
                 content = "{}",
@@ -454,12 +551,31 @@ class PingAMPushResponderTest {
     }
 
     @Test
-    fun `test authenticate with challenge response returns success`() = runBlocking {
+    fun `test authenticate with number challenge response returns success`() = runTest {
         // Set up the mock engine to return success
         val mockEngine = MockEngine.Companion { request ->
             // Check that the URL includes the action=authenticate parameter
             val url = request.url.toString()
             Assert.assertEquals("${TEST_ENDPOINT}?_action=authenticate", url)
+
+            // Capture and verify the request body content
+            val requestBodyText = String(request.body.toByteArray())
+            val requestBodyJson = Json.parseToJsonElement(requestBodyText).jsonObject
+
+            // Body contains expected keys
+            Assert.assertTrue(requestBodyJson.containsKey(KEY_MESSAGE_ID))
+
+            // Verify JWT is present and has expected structure
+            Assert.assertTrue(requestBodyJson.containsKey(KEY_JWT))
+            val jwt = requestBodyJson[KEY_JWT].toString().replace("\"", "")
+            val jwtParts = jwt.split(".")
+            Assert.assertEquals(3, jwtParts.size)
+
+            // Jwt payload should contain messageId, deviceId, and deviceName
+            val jwtPayload = String(Base64.decode(jwtParts[1], Base64.URL_SAFE))
+            val jwtPayloadJson = Json.parseToJsonElement(jwtPayload).jsonObject
+            Assert.assertEquals("\"${EXPECTED_NUMBER_CHALLENGE_RESPONSE}\"", jwtPayloadJson[KEY_CHALLENGE_RESPONSE].toString())
+            Assert.assertEquals("\"${EXPECTED_CHALLENGE_RESPONSE}\"", jwtPayloadJson[KEY_RESPONSE].toString())
 
             respond(
                 content = "{}",
@@ -471,7 +587,7 @@ class PingAMPushResponderTest {
         val pushResponder = PingAMPushResponder(httpClient, mockLogger)
 
         // Call the method under test
-        val result = pushResponder.authenticate(testCredential, testNotification, true, "123456")
+        val result = pushResponder.authenticate(testCredential, testNotification, true, "80")
 
         // Verify result
         Assert.assertTrue(result)
@@ -480,7 +596,7 @@ class PingAMPushResponderTest {
     }
 
     @Test
-    fun `test authenticate with server error returns failure`() = runBlocking {
+    fun `test authenticate with server error returns failure`() = runTest {
         // Set up the mock engine to return an error
         val mockEngine = MockEngine.Companion { request ->
             respondError(HttpStatusCode.Companion.NotFound)
@@ -498,7 +614,7 @@ class PingAMPushResponderTest {
     }
 
     @Test
-    fun `test authenticate with exception returns failure`() = runBlocking {
+    fun `test authenticate with exception returns failure`() = runTest {
         // Set up the mock engine to throw an exception
         val mockEngine = MockEngine.Companion { request ->
             throw RuntimeException("Network error")

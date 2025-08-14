@@ -7,56 +7,35 @@
 
 package com.pingidentity.mfa.oath
 
-import com.pingidentity.logger.Logger
 import com.pingidentity.mfa.commons.MfaConfiguration
+import com.pingidentity.mfa.oath.storage.OathStorage
 
 /**
  * Configuration class specific for OATH MFA functionality.
  * Extends the base MfaConfiguration with OATH-specific settings.
+ *
+ * @property storage The storage implementation to use for OATH credentials. If null, no storage will be used.
  */
-class OathConfiguration(
-    encryptionEnabled: Boolean = true,
-    timeoutMs: Long = DEFAULT_TIMEOUT_MS,
-    enableCredentialCache: Boolean = false,
-    logger: Logger = Logger.logger
-) : MfaConfiguration(
-    encryptionEnabled = encryptionEnabled,
-    timeoutMs = timeoutMs,
-    enableCredentialCache = enableCredentialCache,
-    logger = logger
-) {
-    /**
-     * Builder-style DSL constructor for OathConfiguration.
-     */
-    constructor(block: Builder.() -> Unit) : this(
-        Builder().apply(block)
-    )
 
-    /**
-     * Internal constructor to support creation from Builder.
-     */
-    private constructor(builder: Builder) : this(
-        encryptionEnabled = builder.encryptionEnabled,
-        timeoutMs = builder.timeoutMs,
-        enableCredentialCache = builder.enableCredentialCache,
-        logger = builder.logger
-    )
-
-    /**
-     * Builder class for [OathConfiguration].
-     */
-    class Builder : MfaConfiguration.Builder() {
-        var storage: OathStorage? = null
-    }
+class OathConfiguration: MfaConfiguration() {
+     var storage: OathStorage? = null
 
     companion object {
         /**
-         * Create an OathConfiguration with default settings.
+         * Creates a new instance of [OathConfiguration] with the provided configuration block.
          *
-         * @return A default OathConfiguration instance.
+         * Example usage:
+         * ```
+         * val config = OathConfiguration {
+         *     storage = MyOathStorage()
+         *     enableCredentialCache = false
+         * }
+         * ```
          */
-        fun default(): OathConfiguration {
-            return OathConfiguration {}
+        operator fun invoke(block: OathConfiguration.() -> Unit = {}): OathConfiguration {
+            val config = OathConfiguration()
+            config.apply(block) // apply the configuration block
+            return config
         }
     }
 }

@@ -13,7 +13,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
-import java.util.Base64
+import android.util.Base64
 
 /**
  * Unit tests for PushUriParser class.
@@ -31,7 +31,29 @@ class PushUriParserTest {
         assertEquals("forgerock", credential.issuer)
         assertEquals("user", credential.accountName)
         assertEquals("http://dev.openam.example.com:8081/openam/json/dev/push/sns/message", credential.serverEndpoint)
-        assertEquals("b3uYLkQ7dRPjBaIzV0t_aijoXRgMq-NP5AwVAvRfa_E", credential.sharedSecret)
+        assertEquals("b3uYLkQ7dRPjBaIzV0t/aijoXRgMq+NP5AwVAvRfa/E=", credential.sharedSecret)
+    }
+
+    @Test
+    fun `test parse real Push URI`() {
+        val uri = "pushauth://push/ForgeRock:stoyan@forgerock.com?a=aHR0cHM6Ly9vcGVuYW0tc2Rrcy5mb3JnZWJsb2Nrcy5jb206NDQzL2FtL2pzb24vYWxwaGEvcHVzaC9zbnMvbWVzc2FnZT9fYWN0aW9uPWF1dGhlbnRpY2F0ZQ&r=aHR0cHM6Ly9vcGVuYW0tc2Rrcy5mb3JnZWJsb2Nrcy5jb206NDQzL2FtL2pzb24vYWxwaGEvcHVzaC9zbnMvbWVzc2FnZT9fYWN0aW9uPXJlZ2lzdGVy&b=032b75&s=oSWY2AY0tHrGUivojn-iahvGC77YDKcA2x6ChSDzwAo&c=jaKZUQlypvRCEugWMVvUWcpNfUFW4pSiB9sVBcKZLis&l=YW1sYmNvb2tpZT0wMQ&m=REGISTER:9a8e9525-f598-4a7d-a759-1ff86f130cb31755365762960&issuer=Rm9yZ2VSb2Nr"
+        val credential = PushUriParser.parse(uri)
+
+        // Verify essential properties
+        assertNotNull(credential)
+        assertEquals("ForgeRock", credential.issuer)
+        assertEquals("stoyan@forgerock.com", credential.accountName)
+        assertEquals("oSWY2AY0tHrGUivojn+iahvGC77YDKcA2x6ChSDzwAo=", credential.sharedSecret)
+
+        // Verify server endpoint contains expected base URL
+        val serverEndpoint = credential.serverEndpoint
+        assert(serverEndpoint.contains("openam-sdks.forgeblocks.com:443/am/json/alpha/push/sns/message"))
+
+        // Also try to get registration parameters
+        val regParams = PushUriParser.registrationParameters(uri)
+        assertEquals("REGISTER:9a8e9525-f598-4a7d-a759-1ff86f130cb31755365762960", regParams["messageId"])
+        assertEquals("jaKZUQlypvRCEugWMVvUWcpNfUFW4pSiB9sVBcKZLis=", regParams["challenge"])
+        assertEquals("amlbcookie=01", regParams["amlbCookie"])
     }
     
     @Test(expected = IllegalArgumentException::class)
@@ -121,7 +143,7 @@ class PushUriParserTest {
 
     @Test
     fun `test parse URI with image URL parameter`() {
-        val uri = "pushauth://push/forgerock:user?a=aHR0cDovL2Rldi5vcGVuYW0uZXhhbXBsZS5jb206ODA4MS9vcGVuYW0vanNvbi9kZXYvcHVzaC9zbnMvbWVzc2FnZT9fYWN0aW9uPWF1dGhlbnRpY2F0ZQ&image=aHR0cDovL2Zvcmdlcm9jay5jb20vbG9nby5qcGc&r=aHR0cDovL2Rldi5vcGVuYW0uZXhhbXBsZS5jb206ODA4MS9vcGVuYW0vanNvbi9kZXYvcHVzaC9zbnMvbWVzc2FnZT9fYWN0aW9uPXJlZ2lzdGVy&s=b3uYLkQ7dRPjBaIzV0t_aijoXRgMq-NP5AwVAvRfa_E"
+        val uri = "pushauth://push/forgerock:user?a=aHR0cDovL2Rldi5vcGVuYW0uZXhhbXBsZS5jb206ODA4MS9vcGVuYW0vanNvbi9kZXYvcHVzaC9zbnMvbWVzc2FnZT9fYWN0aW9uPWF1dGhlbnRpY2F0ZQ&b=519387&image=aHR0cDovL2Zvcmdlcm9jay5jb20vbG9nby5qcGc&r=aHR0cDovL2Rldi5vcGVuYW0uZXhhbXBsZS5jb206ODA4MS9vcGVuYW0vanNvbi9kZXYvcHVzaC9zbnMvbWVzc2FnZT9fYWN0aW9uPXJlZ2lzdGVy&s=b3uYLkQ7dRPjBaIzV0t_aijoXRgMq-NP5AwVAvRfa_E&c=9giiBAdUHjqpo0XE4YdZ7pRlv0hrQYwDz8Z1wwLLbkg&l=YW1sYmNvb2tpZT0wMQ&m=REGISTER:8be951c6-af83-438d-8f74-421bd18650421570561063169&issuer=Rm9yZ2VSb2Nr"
         val credential = PushUriParser.parse(uri)
         
         assertEquals("http://forgerock.com/logo.jpg", credential.imageURL)
@@ -135,10 +157,8 @@ class PushUriParserTest {
     @Test
     fun `verify parsing and formatting of URI with Base64 encoded parameters`() {
         // Using standard Java Base64 for test data preparation
-        val encodedUserId = Base64.getUrlEncoder().withoutPadding()
-            .encodeToString("test-user@example.com".toByteArray())
-        val encodedResourceId = Base64.getUrlEncoder().withoutPadding()
-            .encodeToString("resource-123456".toByteArray())
+        val encodedUserId = Base64.encodeToString("test-user@example.com".toByteArray(), Base64.URL_SAFE or Base64.NO_WRAP)
+        val encodedResourceId = Base64.encodeToString("resource-123456".toByteArray(), Base64.URL_SAFE or Base64.NO_WRAP)
         
         // Create a URI with encoded parameters
         val uriWithEncodedParams = "pushauth://push/ForgeRock:john.doe?a=aHR0cDovL2Rldi5vcGVuYW0uZXhhbXBsZS5jb206ODA4MS9vcGVuYW0vanNvbi9kZXYvcHVzaC9zbnMvbWVzc2FnZT9fYWN0aW9uPWF1dGhlbnRpY2F0ZQ&r=aHR0cDovL2Rldi5vcGVuYW0uZXhhbXBsZS5jb206ODA4MS9vcGVuYW0vanNvbi9kZXYvcHVzaC9zbnMvbWVzc2FnZT9fYWN0aW9uPXJlZ2lzdGVy&s=b3uYLkQ7dRPjBaIzV0t_aijoXRgMq-NP5AwVAvRfa_E&d=$encodedUserId&pid=$encodedResourceId&b=%23ff0000"

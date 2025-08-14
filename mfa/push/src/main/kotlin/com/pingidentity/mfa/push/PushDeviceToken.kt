@@ -9,7 +9,7 @@ package com.pingidentity.mfa.push
 
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
+import com.pingidentity.mfa.commons.json
 import java.util.Date
 import java.util.UUID
 
@@ -37,10 +37,6 @@ data class PushDeviceToken(
          * @return The deserialized PushDeviceToken, or null if deserialization fails
          */
         fun fromJson(jsonString: String): PushDeviceToken? {
-            val json = Json {
-                ignoreUnknownKeys = true
-                isLenient = true
-            }
             return json.decodeFromString(jsonString)
         }
     }
@@ -51,12 +47,6 @@ data class PushDeviceToken(
      * @return The JSON string representation of this PushDeviceToken
      */
     fun toJson(): String {
-        val json = Json {
-            prettyPrint = false
-            encodeDefaults = true
-            ignoreUnknownKeys = true
-        }
-
         return json.encodeToString(serializer(), this)
     }
 }

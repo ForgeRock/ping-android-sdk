@@ -44,7 +44,7 @@ Before using the OATH MFA functionality, you need to initialize the `OathClient`
 #### Basic Initialization
 ```kotlin
 // Create a client with default configuration (not initialized)
-val oathClient = OathClient.create()
+val oathClient = OathClient()
 
 // Initialize the client
 oathClient.initialize()

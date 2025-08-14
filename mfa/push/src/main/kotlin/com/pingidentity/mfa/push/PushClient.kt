@@ -7,9 +7,13 @@
 
 package com.pingidentity.mfa.push
 
+import com.google.firebase.messaging.RemoteMessage
 import com.pingidentity.mfa.commons.BaseMfaClient
 import com.pingidentity.mfa.commons.exception.MfaInitializationException
+import com.pingidentity.mfa.push.storage.PushStorage
 import com.pingidentity.mfa.push.storage.SQLPushStorage
+import com.pingidentity.storage.sqlite.passphrase.KeyStorePassphraseProvider
+import com.pingidentity.storage.sqlite.passphrase.NonePassphraseProvider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
@@ -22,10 +26,9 @@ import kotlin.coroutines.coroutineContext
  * @param configuration The Push configuration.
  * @param storage The PushStorage implementation to use. If null, a default SQLPushStorage will be created.
  */
-class PushClient(
-    configuration: PushConfiguration,
-    storage: PushStorage? = null
-) : BaseMfaClient(configuration, storage), PushMfaClient {
+class PushClient internal constructor(
+    private val configuration: PushConfiguration,
+) : BaseMfaClient(configuration, configuration.storage ?: defaultStorage(configuration)), PushMfaClient {
 
     // The storage used for persisting push credentials and notifications
     private lateinit var pushStorage: PushStorage
@@ -37,6 +40,7 @@ class PushClient(
     private lateinit var cleanupManager: NotificationCleanupManager
 
     companion object {
+
         /**
          * Create a PushClient instance with a customizable configuration block.
          * This allows for a more fluent, DSL-style configuration approach.
@@ -49,61 +53,21 @@ class PushClient(
          * val pushClient = PushClient {
          *     encryptionEnabled = true
          *     timeoutMs = 60000
-         *     logger = CustomLogger()
+         *     logger = Logger.STANDARD
          *     storage = SQLPushStorage()
          *     // Add custom push handlers
          *     addPushHandler("CUSTOM_PLATFORM", CustomPushHandler())
          * }
          * ```
          */
-        @JvmStatic
-        suspend operator fun invoke(block: PushConfiguration.Builder.() -> Unit = {}): PushMfaClient {
+        suspend operator fun invoke(block: PushConfiguration.() -> Unit = {}): PushMfaClient {
             // Create configuration
             val configuration = PushConfiguration(block)
+            configuration.storage = configuration.storage ?: defaultStorage(configuration)
 
-            // Create storage if not provided
-            val builder = PushConfiguration.Builder().apply(block)
-            val storage = builder.storage ?: createDefaultStorage(configuration)
-            
-            val client = PushClient(configuration, storage)
-            client.initialize()
-            
-            return client
-        }
-        
-        /**
-         * Create a PushClient instance with the default configuration.
-         * The client is not initialized automatically and requires a call to initialize() before use.
-         *
-         * @return An uninitialized PushClient instance.
-         */
-        @JvmStatic
-        fun create(): PushMfaClient {
-            // Use default configuration
-            val config = PushConfiguration.default()
-
-            // Create default storage with appropriate configuration
-            val storage = createDefaultStorage(config)
-            
-            // Return uninitialized client
-            return PushClient(config, storage)
-        }
-
-        /**
-         * Create a PushClient instance with a specific configuration.
-         * The client is not initialized automatically and requires a call to initialize() before use.
-         *
-         * @param configuration The PushConfiguration to use.
-         * @param storage Optional custom storage implementation.
-         * @return An uninitialized PushClient instance.
-         */
-        @JvmStatic
-        fun create(configuration: PushConfiguration, storage: PushStorage? = null): PushMfaClient {
-            // Create default storage if needed
-            val actualStorage = storage ?: createDefaultStorage(configuration)
-
-            // Return uninitialized client
-            return PushClient(configuration, actualStorage)
+            return PushClient(configuration).apply {
+                initialize()
+            }
         }
 
         /**
@@ -113,13 +77,19 @@ class PushClient(
          * @return A configured PushStorage implementation.
          */
         @JvmStatic
-        private fun createDefaultStorage(config: PushConfiguration): PushStorage {
+        internal fun defaultStorage(config: PushConfiguration): PushStorage {
             return SQLPushStorage {
-                encryptionEnabled = config.encryptionEnabled
+                context = config.context
+                passphraseProvider = if (config.encryptionEnabled) {
+                    KeyStorePassphraseProvider(config.context, logger = config.logger)
+                } else {
+                    NonePassphraseProvider()
+                }
+                logger = config.logger
             }
         }
     }
-    
+
     /**
      * Initialize the Push client.
      *
@@ -164,8 +134,8 @@ class PushClient(
      * @return A Result containing the created PushCredential or an Exception in case of failure.
      */
     override suspend fun addCredentialFromUri(uri: String): Result<PushCredential> {
-        checkInitialized()
         return try {
+            checkInitialized()
             Result.success(pushService.addCredentialFromUri(uri))
         } catch (e: Exception) {
             coroutineContext.ensureActive()
@@ -181,8 +151,8 @@ class PushClient(
      * @return A Result containing the saved PushCredential or an Exception in case of failure.
      */
     override suspend fun saveCredential(credential: PushCredential): Result<PushCredential> {
-        checkInitialized()
         return try {
+            checkInitialized()
             Result.success(pushService.addCredential(credential))
         } catch (e: Exception) {
             coroutineContext.ensureActive()
@@ -197,8 +167,8 @@ class PushClient(
      * @return A Result containing a list of all PushCredentials or an Exception in case of failure.
      */
     override suspend fun getCredentials(): Result<List<PushCredential>> {
-        checkInitialized()
         return try {
+            checkInitialized()
             Result.success(pushService.getCredentials())
         } catch (e: Exception) {
             coroutineContext.ensureActive()
@@ -214,8 +184,8 @@ class PushClient(
      * @return A Result containing the PushCredential (or null if not found) or an Exception in case of failure.
      */
     override suspend fun getCredential(credentialId: String): Result<PushCredential?> {
-        checkInitialized()
         return try {
+            checkInitialized()
             Result.success(pushService.getCredential(credentialId))
         } catch (e: Exception) {
             coroutineContext.ensureActive()
@@ -232,8 +202,8 @@ class PushClient(
      * @return A Result containing a Boolean indicating success or an Exception in case of failure.
      */
     override suspend fun deleteCredential(credentialId: String): Result<Boolean> {
-        checkInitialized()
         return try {
+            checkInitialized()
             Result.success(pushService.removeCredential(credentialId))
         } catch (e: Exception) {
             coroutineContext.ensureActive()
@@ -254,17 +224,13 @@ class PushClient(
      * @return A Result containing a Boolean indicating success or an Exception in case of failure.
      */
     override suspend fun setDeviceToken(deviceToken: String, credentialId: String?): Result<Boolean> {
-        checkInitialized()
         return try {
-            val success = pushService.updateDeviceToken(deviceToken, credentialId)
-
+            checkInitialized()
+            val success = pushService.setDeviceToken(deviceToken, credentialId)
             if (success) {
-                if (credentialId != null) {
-                    logger.d("Device token updated successfully for credential $credentialId")
-                } else {
-                    logger.d("Device token updated successfully for all credentials")
-                }
+                logger.d("Device token is either unchanged or updated successfully.")
             }
+
             Result.success(success)
         } catch (e: Exception) {
             coroutineContext.ensureActive()
@@ -283,8 +249,8 @@ class PushClient(
      * @return A Result containing the current device token (or null if not set) or an Exception in case of failure.
      */
     suspend fun getDeviceToken(): Result<String?> {
-        checkInitialized()
         return try {
+            checkInitialized()
             Result.success(pushService.getDeviceToken())
         } catch (e: Exception) {
             coroutineContext.ensureActive()
@@ -297,12 +263,12 @@ class PushClient(
      * Process a push notification message.
      * This method parses the message data and creates a PushNotification object.
      *
-     * @param messageData The message data as a Map of String to Any.
+     * @param messageData The message data as a Map of Any to String, as typically received from Firebase.
      * @return A Result containing the PushNotification object (or null if message is invalid) or an Exception in case of failure.
      */
     override suspend fun processNotification(messageData: Map<String, Any>): Result<PushNotification?> {
-        checkInitialized()
         return try {
+            checkInitialized()
             val notification = pushService.processNotification(messageData)
 
             // Run auto-cleanup after successfully processing a new notification
@@ -317,6 +283,42 @@ class PushClient(
             Result.failure(e)
         }
     }
+    
+    /**
+     * Process a push notification message received as a string.
+     * This method parses the string message data (typically a JWT) and creates a PushNotification object.
+     *
+     * @param message The message data as a String.
+     * @return A Result containing the PushNotification object (or null if message is invalid) or an Exception in case of failure.
+     */
+    override suspend fun processNotification(message: String): Result<PushNotification?> {
+        return try {
+            checkInitialized()
+            val notification = pushService.processNotification(message)
+
+            // Run auto-cleanup after successfully processing a new notification
+            if (notification != null) {
+                runAutoCleanup(notification.credentialId)
+            }
+
+            Result.success(notification)
+        } catch (e: Exception) {
+            coroutineContext.ensureActive()
+            logger.e("Failed to process notification from string: ${e.message}", e)
+            Result.failure(e)
+        }
+    }
+    
+    /**
+     * Process a push notification message from Firebase Cloud Messaging.
+     * This method extracts data from the RemoteMessage and creates a PushNotification object.
+     *
+     * @param remoteMessage The Firebase RemoteMessage object.
+     * @return A Result containing the PushNotification object (or null if message is invalid) or an Exception in case of failure.
+     */
+    override suspend fun processNotification(remoteMessage: RemoteMessage): Result<PushNotification?> {
+        return processNotification(remoteMessage.data)
+    }
 
     /**
      * Manually trigger notification cleanup based on the configured cleanup mode.
@@ -326,8 +328,8 @@ class PushClient(
      * @return A Result containing the number of notifications removed during cleanup or an Exception in case of failure.
      */
     override suspend fun cleanupNotifications(credentialId: String?): Result<Int> {
-        checkInitialized()
         return try {
+            checkInitialized()
             val count = cleanupManager.runCleanup(credentialId)
             Result.success(count)
         } catch (e: Exception) {
@@ -374,8 +376,8 @@ class PushClient(
      * @return A Result containing a Boolean indicating success or an Exception in case of failure.
      */
     override suspend fun approveNotification(notificationId: String): Result<Boolean> {
-        checkInitialized()
         return try {
+            checkInitialized()
             Result.success(pushService.approveNotification(notificationId, emptyMap()))
         } catch (e: Exception) {
             coroutineContext.ensureActive()
@@ -394,8 +396,8 @@ class PushClient(
      * @return A Result containing a Boolean indicating success or an Exception in case of failure.
      */
     override suspend fun approveChallengeNotification(notificationId: String, challengeResponse: String): Result<Boolean> {
-        checkInitialized()
         return try {
+            checkInitialized()
             val params = mapOf("challengeResponse" to challengeResponse)
             Result.success(pushService.approveNotification(notificationId, params))
         } catch (e: Exception) {
@@ -418,8 +420,8 @@ class PushClient(
      * @return A Result containing a Boolean indicating success or an Exception in case of failure.
      */
     override suspend fun approveBiometricNotification(notificationId: String, authenticationMethod: String): Result<Boolean> {
-        checkInitialized()
         return try {
+            checkInitialized()
             val params = mapOf("authenticationMethod" to authenticationMethod)
             Result.success(pushService.approveNotification(notificationId, params))
         } catch (e: Exception) {
@@ -437,8 +439,8 @@ class PushClient(
      * @return A Result containing a Boolean indicating success or an Exception in case of failure.
      */
     override suspend fun denyNotification(notificationId: String): Result<Boolean> {
-        checkInitialized()
         return try {
+            checkInitialized()
             Result.success(pushService.denyNotification(notificationId, emptyMap()))
         } catch (e: Exception) {
             coroutineContext.ensureActive()
@@ -454,12 +456,29 @@ class PushClient(
      * @return A Result containing a list of all pending PushNotifications or an Exception in case of failure.
      */
     override suspend fun getPendingNotifications(): Result<List<PushNotification>> {
-        checkInitialized()
         return try {
+            checkInitialized()
             Result.success(pushService.getPendingNotifications())
         } catch (e: Exception) {
             coroutineContext.ensureActive()
             logger.e("Failed to get pending notifications: ${e.message}", e)
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Get all push notifications.
+     * This method returns all stored push notifications, regardless of their status.
+     *
+     * @return A Result containing a list of all PushNotifications or an Exception in case of failure.
+     */
+    override suspend fun getAllNotifications(): Result<List<PushNotification>> {
+        return try {
+            checkInitialized()
+            Result.success(pushService.getAllNotifications())
+        } catch (e: Exception) {
+            coroutineContext.ensureActive()
+            logger.e("Failed to get all notifications: ${e.message}", e)
             Result.failure(e)
         }
     }
@@ -471,8 +490,8 @@ class PushClient(
      * @return A Result containing the PushNotification (or null if not found) or an Exception in case of failure.
      */
     override suspend fun getNotification(notificationId: String): Result<PushNotification?> {
-        checkInitialized()
         return try {
+            checkInitialized()
             Result.success(pushService.getNotification(notificationId))
         } catch (e: Exception) {
             coroutineContext.ensureActive()

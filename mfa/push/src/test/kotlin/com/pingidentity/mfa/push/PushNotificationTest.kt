@@ -42,6 +42,7 @@ class PushNotificationTest {
               "contextInfo": "{\"location\":{\"latitude\":49.2208569,\"longitude\":-123.1174431},\"userAgent\":\"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36\",\"platform\":\"MacIntel\"}",
               "pushType": "challenge",
               "createdAt": 1659312000000,
+              "sentAt": 1659312001000,
               "additionalData": "{\"city\":\"New York\",\"registeredDeviceId\":\"Chrome Browser\",\"ipAddress\":\"192.168.1.1\"}",
               "approved": false,
               "pending": true
@@ -65,6 +66,7 @@ class PushNotificationTest {
         assertEquals(PushType.CHALLENGE, notification.pushType)
         assertEquals("challenge", notification.type)
         assertEquals(1659312000000, notification.createdAt.time)
+        assertEquals(1659312001000, notification.sentAt?.time)
 
         // Check additional data was parsed correctly
         assertNotNull(notification.additionalData)
@@ -82,6 +84,7 @@ class PushNotificationTest {
     fun `test PushNotification to JSON conversion`() {
         // Create a fixed date for testing
         val createdAt = Date(1659312000000)
+        val sentAt = Date(1659312001000)
 
         // Create a notification
         val notification = PushNotification(
@@ -97,6 +100,7 @@ class PushNotificationTest {
             contextInfo = "context information",
             pushType = PushType.CHALLENGE,
             createdAt = createdAt,
+            sentAt = sentAt,
             additionalData = mapOf(
                 "location" to "New York",
                 "deviceName" to "Chrome Browser",
@@ -125,6 +129,7 @@ class PushNotificationTest {
         assertEquals(notification.contextInfo, parsedNotification.contextInfo)
         assertEquals(notification.pushType, parsedNotification.pushType)
         assertEquals(notification.createdAt.time, parsedNotification.createdAt.time)
+        assertEquals(notification.sentAt?.time, parsedNotification.sentAt?.time)
         assertEquals(notification.approved, parsedNotification.approved)
         assertEquals(notification.pending, parsedNotification.pending)
 

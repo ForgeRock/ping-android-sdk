@@ -38,6 +38,11 @@ class TestPushHandler(private val logger: Logger = Logger.logger) : PushHandler 
                messageData["platform"] == HANDLER_NAME
     }
     
+    override fun canHandle(message: String): Boolean {
+        // For string messages in tests, we expect a simple format like "TEST_HANDLER:messageId:credentialId"
+        return message.startsWith("$HANDLER_NAME:") && message.count { it == ':' } >= 2
+    }
+    
     override fun parseMessage(messageData: Map<String, Any>): Map<String, Any> {
         // Map the simple format to the format expected by PushService
         val result = mutableMapOf<String, Any>()
@@ -76,6 +81,48 @@ class TestPushHandler(private val logger: Logger = Logger.logger) : PushHandler 
         
         if (messageData.containsKey("challenge")) {
             result[KEY_CHALLENGE] = messageData["challenge"]!!
+        }
+        
+        return result
+    }
+    
+    override fun parseMessage(message: String): Map<String, Any> {
+        // Parse string in format "TEST_HANDLER:messageId:credentialId[:optional_params]"
+        val parts = message.split(":")
+        if (parts.size < 3 || parts[0] != HANDLER_NAME) {
+            logger.w("Invalid test message format: $message")
+            return emptyMap()
+        }
+        
+        val result = mutableMapOf<String, Any>()
+        result[KEY_MESSAGE_ID] = parts[1]
+        result[KEY_CREDENTIAL_ID] = parts[2]
+        result["platform"] = HANDLER_NAME
+        
+        // Add any additional parameters if present
+        if (parts.size > 3) {
+            // Handle optional parameters in pairs (key:value)
+            for (i in 3 until parts.size step 2) {
+                if (i + 1 < parts.size) {
+                    val key = parts[i]
+                    val value = parts[i + 1]
+                    
+                    // Try to convert to appropriate type
+                    val typedValue: Any = when {
+                        value.equals("true", ignoreCase = true) -> true
+                        value.equals("false", ignoreCase = true) -> false
+                        value.toIntOrNull() != null -> value.toInt()
+                        else -> value
+                    }
+                    
+                    result[key] = typedValue
+                }
+            }
+        }
+        
+        // Add default message text if not provided
+        if (!result.containsKey(KEY_MESSAGE_TEXT)) {
+            result[KEY_MESSAGE_TEXT] = "Test notification"
         }
         
         return result

@@ -20,10 +20,14 @@ object DeviceUtils {
 
     // Default logger instance
     private var _logger = Logger.logger
-    
+
+    // Platform-specific providers with default Android implementations
+    private var settingsProvider: PlatformSettingsProvider = AndroidPlatformSettingsProvider()
+    private var buildInfoProvider: PlatformBuildInfoProvider = AndroidPlatformBuildInfoProvider()
+
     /**
      * Sets a custom logger for this utility class. If not provided, the default logger is used.
-     * 
+     *
      * @param logger The custom logger to use.
      */
     @JvmStatic
@@ -39,36 +43,23 @@ object DeviceUtils {
      */
     @JvmStatic
     fun getDeviceName(context: Context): String {
-        // Use the provided logger if available, otherwise use the default
-        var deviceName: String? = null
-        
-        // Try to get device name from settings
-        deviceName = getDeviceNameFromSettings(context)
-
-        // If not found, try from Build properties
-        if (deviceName.isNullOrBlank()) {
-            deviceName = getDeviceNameFromBuild()
-        }
-
-        // If still not found, use a default value
-        if (deviceName.isNullOrBlank()) {
-            deviceName = "Unknown Android Device"
-        }
-
+        val deviceName = getDeviceNameFromSettings(context)
+            ?: getDeviceNameFromBuild()
+            ?: "Unknown Android Device"
         return deviceName
     }
 
     /**
-     * Gets the device name from the system settings.
+     * Gets the device name from the Android Settings.
      *
      * @param context The application context.
-     * @return The device name from settings, or null if not found.
+     * @return The device name from Settings, or null if not found.
      */
     private fun getDeviceNameFromSettings(context: Context): String? {
         return try {
-            Settings.Global.getString(context.contentResolver, Settings.Global.DEVICE_NAME)
+            settingsProvider.getDeviceNameFromSettings(context)
         } catch (e: Exception) {
-            _logger.w("Error getting device name from settings: ${e.message}")
+            _logger.w("Error getting device name from Settings: ${e.message}")
             null
         }
     }
@@ -80,9 +71,9 @@ object DeviceUtils {
      */
     private fun getDeviceNameFromBuild(): String? {
         return try {
-            val manufacturer = Build.MANUFACTURER
-            val model = Build.MODEL
-            
+            val manufacturer = buildInfoProvider.getManufacturer()
+            val model = buildInfoProvider.getModel()
+
             if (model.lowercase(Locale.ROOT).startsWith(manufacturer.lowercase(Locale.ROOT))) {
                 capitalize(model)
             } else {
@@ -100,11 +91,12 @@ object DeviceUtils {
      * @param str The string to capitalize.
      * @return The capitalized string.
      */
-    private fun capitalize(str: String): String {
+    @JvmStatic
+    internal fun capitalize(str: String): String {
         if (str.isEmpty()) {
             return str
         }
-        
+
         val firstChar = str[0]
         return if (Character.isUpperCase(firstChar)) {
             str
@@ -112,4 +104,61 @@ object DeviceUtils {
             str.replaceFirst(firstChar, firstChar.uppercaseChar())
         }
     }
+
+    /**
+     * For testing only - allows injecting mock providers
+     */
+    @JvmStatic
+    internal fun setProviders(
+        settingsProvider: PlatformSettingsProvider,
+        buildInfoProvider: PlatformBuildInfoProvider
+    ) {
+        this.settingsProvider = settingsProvider
+        this.buildInfoProvider = buildInfoProvider
+    }
+
+    /**
+     * For testing only - reset providers to default implementations
+     */
+    @JvmStatic
+    internal fun resetProviders() {
+        settingsProvider = AndroidPlatformSettingsProvider()
+        buildInfoProvider = AndroidPlatformBuildInfoProvider()
+    }
+}
+
+/**
+ * Interfaces for platform-specific functionality
+ */
+internal interface PlatformSettingsProvider {
+    fun getDeviceNameFromSettings(context: Context): String?
+}
+
+/**
+ * Interface for platform-specific build information
+ */
+internal interface PlatformBuildInfoProvider {
+    fun getManufacturer(): String
+    fun getModel(): String
+}
+
+/**
+ * Default implementation that uses Android's actual Settings
+ */
+internal class AndroidPlatformSettingsProvider : PlatformSettingsProvider {
+    override fun getDeviceNameFromSettings(context: Context): String? {
+        return try {
+            Settings.Global.getString(context.contentResolver, Settings.Global.DEVICE_NAME)
+        } catch (_: Exception) {
+            null
+        }
+    }
+}
+
+/**
+ * Default implementation that uses Android's Build properties
+ */
+internal class AndroidPlatformBuildInfoProvider : PlatformBuildInfoProvider {
+    override fun getManufacturer(): String = Build.MANUFACTURER
+    override fun getModel(): String = Build.MODEL
 }
