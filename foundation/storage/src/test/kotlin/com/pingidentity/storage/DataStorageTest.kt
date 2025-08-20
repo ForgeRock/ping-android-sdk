@@ -7,21 +7,27 @@
 
 package com.pingidentity.storage
 
-import android.app.Application
 import android.content.Context
 import androidx.datastore.core.DataStore
-import androidx.datastore.dataStore
+import androidx.datastore.core.DataStoreFactory
+import androidx.datastore.dataStoreFile
 import androidx.test.core.app.ApplicationProvider
 import com.pingidentity.testrail.TestRailCase
 import com.pingidentity.testrail.TestRailWatcher
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.TestCoroutineScheduler
+import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Rule
+import org.junit.rules.TestWatcher
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import java.io.File
 import kotlin.test.AfterTest
+import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import org.junit.rules.TestWatcher
 
 @RunWith(RobolectricTestRunner::class)
 class DataStorageTest {
@@ -29,22 +35,58 @@ class DataStorageTest {
     @Rule
     val watcher: TestWatcher = TestRailWatcher
 
-    private val context: Context by lazy { ApplicationProvider.getApplicationContext<Application>() }
+    private val testContext: Context = ApplicationProvider.getApplicationContext()
+    private val testCoroutineScheduler = TestCoroutineScheduler()
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private val testScope = TestScope(UnconfinedTestDispatcher(testCoroutineScheduler))
 
-    private val Context.dataStore: DataStore<Data?> by dataStore("test", DataToJsonSerializer())
-    private val Context.dataStoreList: DataStore<List<Data>?> by dataStore("test-list", DataToJsonSerializer())
+    private lateinit var dataStore: DataStore<Data?>
+    private lateinit var dataStoreList: DataStore<List<Data>?>
+    private lateinit var dataStoreFile: File
+    private lateinit var dataStoreListFile: File
+
+    @BeforeTest
+    fun setup() {
+        // Use a unique file name for each test to ensure isolation
+        val fileName = "test_data_${System.currentTimeMillis()}.pb"
+        dataStoreFile = testContext.dataStoreFile(fileName)
+
+        dataStore = DataStoreFactory.create(
+            serializer = DataToJsonSerializer(), // Your actual serializer
+            scope = testScope, // Use the test scope
+            produceFile = { dataStoreFile }
+        )
+
+        val fileNameList = "test_datalist_${System.currentTimeMillis()}.pb"
+        dataStoreListFile = testContext.dataStoreFile(fileNameList)
+
+        dataStoreList = DataStoreFactory.create(
+            serializer = DataToJsonSerializer(), // Your actual serializer
+            scope = testScope, // Use the test scope
+            produceFile = { dataStoreListFile }
+        )
+
+
+    }
 
     @AfterTest
-    fun tearDown() =
-        runTest {
-            context.dataStore.updateData { null }
+    fun tearDown() {
+        // Crucially, delete the DataStore file after each test
+        if (dataStoreFile.exists()) {
+            dataStoreFile.delete()
         }
+
+        if (dataStoreListFile.exists()) {
+            dataStoreListFile.delete()
+        }
+    }
 
     @TestRailCase(21605, 21611)
     @Test
     fun testDataStore() =
         runTest {
-            val storage = DataStoreStorage(context.dataStore)
+            val storage = DataStoreStorage(dataStore)
+            //val storage = DataStoreStorageFactory.getOrCreate<Data>("test")
             storage.save(Data(1, "test"))
             val storedData = storage.get()
             assertEquals(1, storedData!!.a)
@@ -55,7 +97,7 @@ class DataStorageTest {
     @Test
     fun testMultipleData() =
         runTest {
-            val storage = DataStoreStorage(context.dataStoreList)
+            val storage = DataStoreStorage(dataStoreList)
             val dataList = listOf(Data(1, "test1"), Data(2, "test2"))
             storage.save(dataList)
             val storedData = storage.get()
@@ -66,7 +108,7 @@ class DataStorageTest {
     @Test
     fun testDeleteData() =
         runTest {
-            val storage = DataStoreStorage(context.dataStore)
+            val storage = DataStoreStorage(dataStore)
             val data = Data(1, "test")
             storage.save(data)
             storage.delete()
@@ -78,7 +120,7 @@ class DataStorageTest {
     @Test
     fun testOverwriteData() =
         runTest {
-            val storage = DataStoreStorage(context.dataStore)
+            val storage = DataStoreStorage(dataStore)
             storage.save(Data(1, "test1"))
             val storedData = storage.get()
             assertEquals(1, storedData!!.a)
@@ -94,7 +136,7 @@ class DataStorageTest {
     @Test
     fun testDataStoreCacheDelete() =
         runTest {
-            val storage = DataStoreStorage(context.dataStore, cacheStrategy = CacheStrategy.CACHE)
+            val storage = DataStoreStorage(dataStore, cacheStrategy = CacheStrategy.CACHE)
             storage.save(Data(1, "test1"))
 
             var storedData = storage.get()
@@ -110,7 +152,7 @@ class DataStorageTest {
     @Test
     fun testDataStoreCacheUpdate() =
         runTest {
-            val storage = DataStoreStorage(context.dataStore, CacheStrategy.CACHE)
+            val storage = DataStoreStorage(dataStore, CacheStrategy.CACHE)
             storage.save(Data(1, "test1"))
 
             var storedData = storage.get()
@@ -122,4 +164,5 @@ class DataStorageTest {
             assertEquals(2, storedData!!.a)
             assertEquals("test2", storedData.b)
         }
+
 }
