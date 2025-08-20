@@ -96,7 +96,6 @@ data class PushCredential(
          * @return A PushCredential.
          * @throws kotlinx.serialization.SerializationException if the JSON is invalid.
          */
-        @JvmStatic
         fun fromJson(jsonString: String): PushCredential {
             return json.decodeFromString(jsonString)
         }
@@ -109,7 +108,6 @@ data class PushCredential(
          * @return A PushCredential.
          * @throws IllegalArgumentException if the URI is invalid.
          */
-        @JvmStatic
         fun fromUri(uri: String): PushCredential {
             return PushUriParser.parse(uri)
         }

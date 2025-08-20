@@ -46,7 +46,6 @@ object OathUriParser : UriParser() {
      * @return An OathCredential.
      * @throws IllegalArgumentException if the URI is invalid.
      */
-    @JvmStatic
     suspend fun parse(uri: String): OathCredential = withContext(Dispatchers.IO) {
         try {
             val parsedUri = Uri.parse(uri)
@@ -155,7 +154,6 @@ object OathUriParser : UriParser() {
      * @param credential The OathCredential to format.
      * @return A URI string.
      */
-    @JvmStatic
     suspend fun format(credential: OathCredential): String = withContext(Dispatchers.IO) {
         val typeStr = if (credential.oathType == OathType.TOTP) TOTP else HOTP
         

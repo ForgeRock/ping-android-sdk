@@ -147,7 +147,6 @@ data class PushNotification(
          * @return A PushNotification.
          * @throws SerializationException if the JSON is invalid.
          */
-        @JvmStatic
         fun fromJson(jsonString: String): PushNotification {
             return json.decodeFromString(jsonString)
         }

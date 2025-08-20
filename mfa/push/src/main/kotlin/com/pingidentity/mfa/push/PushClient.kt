@@ -76,7 +76,6 @@ class PushClient internal constructor(
          * @param config The Push configuration to use for the storage.
          * @return A configured PushStorage implementation.
          */
-        @JvmStatic
         internal fun defaultStorage(config: PushConfiguration): PushStorage {
             return SQLPushStorage {
                 context = config.context

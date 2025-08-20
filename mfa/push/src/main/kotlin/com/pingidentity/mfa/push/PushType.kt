@@ -56,7 +56,6 @@ enum class PushType {
     }
 
     companion object {
-        @JvmStatic
         fun fromString(type: String): PushType {
             return when (type.lowercase()) {
                 "default" -> DEFAULT

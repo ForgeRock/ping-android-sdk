@@ -25,7 +25,6 @@ enum class OathType {
      * Convert from a string representation.
      */
     companion object {
-        @JvmStatic
         fun fromString(type: String): OathType {
             return when (type.lowercase()) {
                 "totp" -> TOTP

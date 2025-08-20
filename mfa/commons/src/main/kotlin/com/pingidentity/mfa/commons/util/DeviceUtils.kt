@@ -30,7 +30,6 @@ object DeviceUtils {
      *
      * @param logger The custom logger to use.
      */
-    @JvmStatic
     fun setLogger(logger: Logger) {
         _logger = logger
     }
@@ -41,7 +40,6 @@ object DeviceUtils {
      * @param context The application context.
      * @return The device name, or a default value if the name cannot be determined.
      */
-    @JvmStatic
     fun getDeviceName(context: Context): String {
         val deviceName = getDeviceNameFromSettings(context)
             ?: getDeviceNameFromBuild()
@@ -91,7 +89,6 @@ object DeviceUtils {
      * @param str The string to capitalize.
      * @return The capitalized string.
      */
-    @JvmStatic
     internal fun capitalize(str: String): String {
         if (str.isEmpty()) {
             return str
@@ -108,7 +105,6 @@ object DeviceUtils {
     /**
      * For testing only - allows injecting mock providers
      */
-    @JvmStatic
     internal fun setProviders(
         settingsProvider: PlatformSettingsProvider,
         buildInfoProvider: PlatformBuildInfoProvider
@@ -120,7 +116,6 @@ object DeviceUtils {
     /**
      * For testing only - reset providers to default implementations
      */
-    @JvmStatic
     internal fun resetProviders() {
         settingsProvider = AndroidPlatformSettingsProvider()
         buildInfoProvider = AndroidPlatformBuildInfoProvider()

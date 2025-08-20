@@ -158,7 +158,6 @@ object PushUriParser : UriParser() {
      * @param credential The PushCredential to format.
      * @return A URI string.
      */
-    @JvmStatic
     fun format(credential: PushCredential): String {
         // Format the label part in a way that preserves the colon character
         val encodedLabel = if (credential.issuer.isNotEmpty()) {

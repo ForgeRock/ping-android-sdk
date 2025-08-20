@@ -24,6 +24,7 @@ import com.pingidentity.mfa.push.PushConstants.KEY_NUMBERS_CHALLENGE
 import com.pingidentity.mfa.push.PushConstants.KEY_PUSH_TYPE
 import com.pingidentity.mfa.push.PushConstants.KEY_TIME_INTERVAL
 import com.pingidentity.mfa.push.PushConstants.KEY_TTL
+import com.pingidentity.mfa.push.PushConstants.KEY_USER_ID
 import com.pingidentity.mfa.push.storage.PushStorage
 import io.ktor.client.HttpClient
 import kotlinx.coroutines.Dispatchers
@@ -476,6 +477,19 @@ internal class PushService(
             if (existingNotification != null) {
                 logger.d("Notification with messageId=$messageId already exists")
                 return existingNotification
+            }
+        }
+        
+        // Attempt to update credential with userId if it's missing
+        (parsedData[KEY_CREDENTIAL_ID] as? String)?.let { credId ->
+            storage.retrievePushCredential(credId)?.let { credential ->
+                if (credential.userId.isNullOrBlank()) { // Only update if existing userId is missing
+                    (parsedData[KEY_USER_ID] as? String)?.takeIf { it.isNotBlank() }?.let { newUserId ->
+                        logger.d("Credential ${credential.id} missing userId. Updating with: $newUserId from push notification.")
+                        val updatedCredential = credential.copy(userId = newUserId)
+                        storage.storePushCredential(updatedCredential)
+                    }
+                }
             }
         }
 
