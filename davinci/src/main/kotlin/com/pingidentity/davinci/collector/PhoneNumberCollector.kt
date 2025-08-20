@@ -14,6 +14,9 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 
+private const val COUNTRY_CODE = "countryCode"
+private const val PHONE_NUMBER = "phoneNumber"
+
 /**
  * A collector for phone number.
  */
@@ -38,7 +41,14 @@ class PhoneNumberCollector : FieldCollector<JsonObject>(), Validator {
     }
 
     override fun init(input: JsonElement) {
-        phoneNumber = input.jsonPrimitive.content
+        if (input is JsonObject) {
+            // New structure with phoneNumber and countryCode
+            phoneNumber = input[PHONE_NUMBER]?.jsonPrimitive?.content ?: ""
+            countryCode = input[COUNTRY_CODE]?.jsonPrimitive?.content ?: ""
+        } else {
+            // Legacy structure - simple string
+            phoneNumber = input.jsonPrimitive.content
+        }
     }
 
     override fun payload(): JsonObject? {
@@ -46,8 +56,8 @@ class PhoneNumberCollector : FieldCollector<JsonObject>(), Validator {
             null
         } else {
             buildJsonObject {
-                put("countryCode", countryCode)
-                put("phoneNumber", phoneNumber)
+                put(COUNTRY_CODE, countryCode)
+                put(PHONE_NUMBER, phoneNumber)
             }
         }
     }
