@@ -257,7 +257,7 @@ class PingAMPushResponderTest {
             val requestBodyJson = Json.parseToJsonElement(requestBodyText).jsonObject
 
             // Body contains expected keys
-            Assert.assertTrue(requestBodyJson.containsKey(PushConstants.KEY_MESSAGE_ID))
+            Assert.assertTrue(requestBodyJson.containsKey(KEY_MESSAGE_ID))
 
             // Verify JWT is present and has expected structure
             Assert.assertTrue(requestBodyJson.containsKey(KEY_JWT))

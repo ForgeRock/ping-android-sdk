@@ -9,8 +9,6 @@ package com.pingidentity.mfa.push
 
 import com.pingidentity.logger.Logger
 import com.pingidentity.mfa.push.storage.PushStorage
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 
 /**
  * Manager class for handling push notification cleanup operations.
@@ -29,7 +27,7 @@ internal class NotificationCleanupManager(
      * @param credentialId Optional ID of a specific credential to cleanup notifications for.
      * @return The number of notifications removed during cleanup.
      */
-    suspend fun runCleanup(credentialId: String? = null): Int = withContext(Dispatchers.IO) {
+    suspend fun runCleanup(credentialId: String? = null): Int {
         try {
             val count = when (config.cleanupMode) {
                 NotificationCleanupConfig.CleanupMode.NONE -> {
@@ -49,10 +47,10 @@ internal class NotificationCleanupManager(
                     ageRemoved + countRemoved
                 }
             }
-            return@withContext count
+            return count
         } catch (e: Exception) {
             logger.e("Failed to run notification cleanup: ${e.message}", e)
-            return@withContext 0
+            return 0
         }
     }
 

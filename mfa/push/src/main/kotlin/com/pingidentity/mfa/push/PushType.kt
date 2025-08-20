@@ -19,7 +19,7 @@ enum class PushType {
      * The user simply approves or denies the authentication request without additional verification.
      * This is the standard push notification flow.
      *
-     * Use [approveNotification] to approve this type of notification.
+     * Use `approveNotification` to approve this type of notification.
      */
     DEFAULT,
 
@@ -31,7 +31,7 @@ enum class PushType {
      * This provides an additional layer of security by ensuring the user is responding to
      * the correct authentication request.
      * 
-     * Use [approveChallengeNotification] with the user-provided challenge response to approve
+     * Use `approveChallengeNotification` with the user-provided challenge response to approve
      * this type of notification.
      */
     CHALLENGE,
@@ -42,7 +42,7 @@ enum class PushType {
      * This type requires the user to verify their identity using biometric authentication
      * (such as fingerprint or face recognition) before approving the authentication request.
      * 
-     * Use [approveBiometricNotification] with the authentication method to approve this type
+     * Use `approveBiometricNotification` with the authentication method to approve this type
      * of notification.
      */
     BIOMETRIC;

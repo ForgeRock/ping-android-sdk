@@ -18,7 +18,6 @@ import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
 import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
-import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
@@ -174,7 +173,7 @@ data class PushNotification(
                 val jsonObj = value.entries.associate { (key, value) ->
                     key to serializeValue(value)
                 }
-                Json { ignoreUnknownKeys = true }.encodeToString(JsonObject.serializer(), JsonObject(jsonObj))
+                json.encodeToString(JsonObject.serializer(), JsonObject(jsonObj))
             } else {
                 null
             }
@@ -186,10 +185,9 @@ data class PushNotification(
             if (jsonString.isEmpty()) return null
 
             return try {
-                val json = Json { ignoreUnknownKeys = true }
                 val map = json.decodeFromString<Map<String, JsonElement>>(jsonString)
                 map.mapValues { deserializeValue(it.value) }
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 null
             }
         }

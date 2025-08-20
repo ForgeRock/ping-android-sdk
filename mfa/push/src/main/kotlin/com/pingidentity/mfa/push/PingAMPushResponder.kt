@@ -10,6 +10,7 @@ package com.pingidentity.mfa.push
 import android.util.Base64
 import com.pingidentity.exception.ApiException
 import com.pingidentity.logger.Logger
+import com.pingidentity.mfa.commons.json
 import com.pingidentity.mfa.commons.util.JwtUtils
 import com.pingidentity.mfa.push.PushConstants.RESPONSE_ALGORITHM
 import io.ktor.client.HttpClient
@@ -28,7 +29,6 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import java.net.URL
@@ -261,7 +261,7 @@ class PingAMPushResponder(
                     PushConstants.KEY_MESSAGE_ID to notification.messageId,
                     PushConstants.KEY_JWT to jwt
                 )
-                setBody(Json.Default.encodeToString(mapToJsonElement(requestBody)))
+                setBody(json.encodeToString(mapToJsonElement(requestBody)))
             }
 
             // Check if the response was successful
@@ -341,8 +341,6 @@ class PingAMPushResponder(
                         key,
                         mapToJsonElement(value as Map<String, Any>)
                     )
-
-                    null -> put(key, JsonNull)
                     else -> put(key, JsonPrimitive(value.toString()))
                 }
             }

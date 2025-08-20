@@ -7,9 +7,8 @@
 
 package com.pingidentity.mfa.push
 
-import kotlinx.serialization.ExperimentalSerializationApi
-import kotlinx.serialization.Serializable
 import com.pingidentity.mfa.commons.json
+import kotlinx.serialization.Serializable
 import java.util.Date
 import java.util.UUID
 
@@ -21,7 +20,6 @@ import java.util.UUID
  * @property tokenId The actual device token string issued by the messaging service
  * @property createdAt The timestamp when this token was created/received
  */
-@OptIn(ExperimentalSerializationApi::class)
 @Serializable
 data class PushDeviceToken(
     val id: String = UUID.randomUUID().toString(),
@@ -36,7 +34,7 @@ data class PushDeviceToken(
          * @param jsonString The JSON string representation of a PushDeviceToken
          * @return The deserialized PushDeviceToken, or null if deserialization fails
          */
-        fun fromJson(jsonString: String): PushDeviceToken? {
+        fun fromJson(jsonString: String): PushDeviceToken {
             return json.decodeFromString(jsonString)
         }
     }

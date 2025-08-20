@@ -43,8 +43,6 @@ import kotlin.coroutines.coroutineContext
  * @property storage The storage implementation for persisting push credentials and notifications.
  * @property config The Push configuration.
  * @property httpClient The HTTP client for network operations.
- * @property tokenManager Optional device token manager for handling device tokens.
- * @property handlers Optional map of custom push handlers for different platforms.
  */
 internal class PushService(
     private val storage: PushStorage,

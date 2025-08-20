@@ -21,28 +21,19 @@ object PushConstants {
     const val HEADER_ACCEPT_API_VERSION = "Accept-API-Version"
     const val HEADER_COOKIE = "Cookie"
 
-    // Actions for push authentication
-    const val ACTION_REGISTER = "pushauth_register"
-    const val ACTION_AUTH = "pushauth_authenticate"
-    const val ACTION_UPDATE = "pushauth_update"
-
     // Keys and values used in the request and response payloads
     const val KEY_MESSAGE_ID = "messageId"
     const val KEY_MECHANISM_UID = "mechanismUid"
-    const val KEY_USERNAME = "username"
     const val KEY_RESPONSE = "response"
     const val KEY_DENY = "deny"
     const val KEY_CHALLENGE_RESPONSE = "challengeResponse"
     const val KEY_COMMUNICATION_TYPE = "communicationType"
     const val KEY_DEVICE_ID = "deviceId"
     const val KEY_DEVICE_NAME = "deviceName"
-    const val KEY_DEVICE_TOKEN = "deviceToken"
     const val KEY_DEVICE_TYPE = "deviceType"
-    const val KEY_ACTION = "action"
     const val KEY_ALMB_COOKIE = "amlbCookie"
     const val KEY_CHALLENGE = "challenge"
     const val KEY_JWT = "jwt"
-    const val KEY_PAYLOAD = "payload"
     const val ANDROID = "android"
     const val GCM = "gcm"
     const val DEFAULT_DEVICE_NAME = "Android Device"
@@ -61,7 +52,7 @@ object PushConstants {
     const val KEY_TIME_INTERVAL = "timeInterval"
 
     // Default time-to-live for push notifications in seconds
-    const val DEFAULT_TTL_SECONDS = 120;
+    const val DEFAULT_TTL_SECONDS = 120
 
     // Response generation algorithm
     const val RESPONSE_ALGORITHM = "HmacSHA256"

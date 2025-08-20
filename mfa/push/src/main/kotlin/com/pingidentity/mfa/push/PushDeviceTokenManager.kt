@@ -9,9 +9,6 @@ package com.pingidentity.mfa.push
 
 import com.pingidentity.logger.Logger
 import com.pingidentity.mfa.push.storage.PushStorage
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ensureActive
-import kotlinx.coroutines.withContext
 import java.util.Date
 
 /**
@@ -35,12 +32,12 @@ class PushDeviceTokenManager(
      * 
      * @return The current Push device token, or null if not found
      */
-    suspend fun getCurrentDeviceToken(): PushDeviceToken? = withContext(Dispatchers.IO) {
+    suspend fun getCurrentDeviceToken(): PushDeviceToken? {
         try {
-            return@withContext storage.getCurrentPushDeviceToken()
+            return storage.getCurrentPushDeviceToken()
         } catch (e: Exception) {
             logger.e("Failed to get current device token: ${e.message}")
-            return@withContext null
+            return null
         }
     }
     
@@ -49,13 +46,8 @@ class PushDeviceTokenManager(
      * 
      * @return The current device token ID as a String, or null if not set
      */
-    suspend fun getDeviceTokenId(): String? = withContext(Dispatchers.IO) {
-        if (currentToken != null) {
-            return@withContext currentToken
-        }
-        
-        val token = getCurrentDeviceToken()
-        return@withContext token?.tokenId
+    suspend fun getDeviceTokenId(): String? {
+        return currentToken ?: getCurrentDeviceToken()?.tokenId
     }
     
     /**
@@ -64,9 +56,9 @@ class PushDeviceTokenManager(
      * @param newToken The new device token to compare
      * @return True if the token has changed and should be updated, false otherwise
      */
-    suspend fun shouldUpdateToken(newToken: String): Boolean = withContext(Dispatchers.IO) {
+    suspend fun shouldUpdateToken(newToken: String): Boolean {
         if (newToken.isEmpty()) {
-            return@withContext false
+            return false
         }
         
         // If we don't have a current token in memory, check storage
@@ -76,7 +68,7 @@ class PushDeviceTokenManager(
         }
         
         // If the token is different from the current one, it needs to be updated
-        return@withContext currentToken != newToken
+        return currentToken != newToken
     }
     
     /**
@@ -85,16 +77,16 @@ class PushDeviceTokenManager(
      * @param newToken The new device token
      * @return True if the token was updated successfully, false otherwise
      */
-    suspend fun updateDeviceToken(newToken: String): Boolean = withContext(Dispatchers.IO) {
+    suspend fun updateDeviceToken(newToken: String): Boolean {
         if (newToken.isEmpty()) {
             logger.w("Cannot update token with empty value")
-            return@withContext false
+            return false
         }
         
         // Check if we need to update the token
         if (!shouldUpdateToken(newToken)) {
             logger.d("Device token has not changed, skipping update")
-            return@withContext true
+            return true
         }
 
         try {
@@ -105,11 +97,10 @@ class PushDeviceTokenManager(
             // Update the current token in memory
             currentToken = newToken
             logger.d("Device token updated locally: $newToken")
-            return@withContext true
+            return true
         } catch (e: Exception) {
-            coroutineContext.ensureActive()
             logger.e("Failed to update device token locally: ${e.message}")
-            return@withContext false
+            return false
         }
     }
 }

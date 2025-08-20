@@ -9,6 +9,7 @@ package com.pingidentity.mfa.push
 
 import android.net.Uri
 import com.pingidentity.mfa.commons.UriParser
+import androidx.core.net.toUri
 
 /**
  * Utility class for parsing Push URIs.
@@ -23,7 +24,7 @@ object PushUriParser : UriParser() {
     private const val AUTH_ENDPOINT_PARAM = "a"             // Authentication endpoint
     private const val CHALLENGE_PARAM = "c"                 // Challenge parameter to use for registration response
     private const val AM_LOAD_BALANCER_PARAM  = "l"         // AM Load Balancer cookie
-    private const val MESSAGE_ID = "m";                     // Message id to use for registration response
+    private const val MESSAGE_ID = "m"                      // Message id to use for registration response
 
     // Optional parameters
     private const val PUSH_RESOURCE_ID_PARAM = "pid"        // Push Resource ID parameter
@@ -37,10 +38,9 @@ object PushUriParser : UriParser() {
      * @return A PushCredential.
      * @throws IllegalArgumentException if the URI is invalid.
      */
-    @JvmStatic
     fun parse(uri: String): PushCredential {
         try {
-            val parsedUri = Uri.parse(uri)
+            val parsedUri = uri.toUri()
 
             // Check scheme
             val scheme = parsedUri.scheme?.lowercase() ?: ""
@@ -69,12 +69,11 @@ object PushUriParser : UriParser() {
             val regEndpoint = parsedUri.getQueryParameter(REG_ENDPOINT_PARAM)
                 ?: throw IllegalArgumentException("Missing required parameter: $REG_ENDPOINT_PARAM")
 
-            val authEndpoint = parsedUri.getQueryParameter(AUTH_ENDPOINT_PARAM)
+            parsedUri.getQueryParameter(AUTH_ENDPOINT_PARAM)
                 ?: throw IllegalArgumentException("Missing required parameter: $AUTH_ENDPOINT_PARAM")
 
             // Decode Base64 URLs if needed
             val decodedRegEndpoint = if (isBase64Encoded(regEndpoint)) decodeBase64Url(regEndpoint) else regEndpoint
-            if (isBase64Encoded(authEndpoint)) decodeBase64Url(authEndpoint) else authEndpoint
 
             // Extract the server endpoint base URL (without query parameters)
             val serverEndpoint = extractServerEndpoint(decodedRegEndpoint)
@@ -221,9 +220,8 @@ object PushUriParser : UriParser() {
         return uriBuilder.toString()
     }
 
-    @JvmStatic
     fun registrationParameters(uri: String): Map<String, String> {
-        val parsedUri = Uri.parse(uri)
+        val parsedUri = uri.toUri()
 
         val messageIdParam = parsedUri.getQueryParameter(MESSAGE_ID)
             ?: throw IllegalArgumentException("Missing required parameter: $MESSAGE_ID")

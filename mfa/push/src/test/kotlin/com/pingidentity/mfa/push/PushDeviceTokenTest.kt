@@ -39,9 +39,9 @@ class PushDeviceTokenTest {
 
         // Verify properties
         assertNotNull(deviceToken)
-        assertEquals("test-id", deviceToken?.id)
-        assertEquals("fcm-token-123456789", deviceToken?.tokenId)
-        assertEquals(1659312000000, deviceToken?.createdAt?.time)
+        assertEquals("test-id", deviceToken.id)
+        assertEquals("fcm-token-123456789", deviceToken.tokenId)
+        assertEquals(1659312000000, deviceToken.createdAt.time)
     }
 
     @Test
@@ -62,9 +62,9 @@ class PushDeviceTokenTest {
 
         // Verify all properties match
         assertNotNull(parsedToken)
-        assertEquals(deviceToken.id, parsedToken?.id)
-        assertEquals(deviceToken.tokenId, parsedToken?.tokenId)
-        assertEquals(deviceToken.createdAt.time, parsedToken?.createdAt?.time)
+        assertEquals(deviceToken.id, parsedToken.id)
+        assertEquals(deviceToken.tokenId, parsedToken.tokenId)
+        assertEquals(deviceToken.createdAt.time, parsedToken.createdAt.time)
     }
 
     @Test
@@ -96,8 +96,8 @@ class PushDeviceTokenTest {
         val deviceToken = PushDeviceToken.fromJson(json)
 
         assertNotNull(deviceToken)
-        assertEquals("test-id", deviceToken?.id)
-        assertEquals("fcm-token-123456789", deviceToken?.tokenId)
+        assertEquals("test-id", deviceToken.id)
+        assertEquals("fcm-token-123456789", deviceToken.tokenId)
     }
 
     @Test
@@ -112,8 +112,8 @@ class PushDeviceTokenTest {
         val deviceToken = PushDeviceToken.fromJson(json)
 
         assertNotNull(deviceToken)
-        assertNotNull(deviceToken?.id) // Should generate default UUID
-        assertEquals("fcm-token-minimal", deviceToken?.tokenId)
-        assertNotNull(deviceToken?.createdAt) // Should use current time
+        assertNotNull(deviceToken.id) // Should generate default UUID
+        assertEquals("fcm-token-minimal", deviceToken.tokenId)
+        assertNotNull(deviceToken.createdAt) // Should use current time
     }
 }

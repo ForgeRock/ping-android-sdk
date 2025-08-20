@@ -49,13 +49,6 @@ class SharedPrefsPushStorage(context: Context, prefName: String = DEFAULT_PREFS_
         prefName, Context.MODE_PRIVATE
     )
 
-    private val json = Json {
-        prettyPrint = false
-        encodeDefaults = true
-        ignoreUnknownKeys = true
-        isLenient = true
-    }
-
     private var isInitialized = false
 
     /**

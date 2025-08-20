@@ -36,10 +36,6 @@ class PingAMPushHandlerTest {
     private lateinit var mockLogger: Logger
     private lateinit var mockPushResponder: PingAMPushResponder
     
-    // Handler constants
-    private val KEY_MESSAGE = "message"
-    private val KEY_MESSAGE_ID = "messageId"
-    
     // Test subject
     private lateinit var pushHandler: PingAMPushHandler
     
@@ -90,8 +86,8 @@ class PingAMPushHandlerTest {
     fun `test canHandle returns true for valid PingAM message`() {
         // Create a message data that PingAM handler can handle
         val messageData = mapOf(
-            KEY_MESSAGE to TEST_JWT_MESSAGE,
-            KEY_MESSAGE_ID to TEST_MESSAGE_ID
+            PushConstants.KEY_MESSAGE to TEST_JWT_MESSAGE,
+            PushConstants.KEY_MESSAGE_ID to TEST_MESSAGE_ID
         )
         
         // Test the handler
@@ -105,7 +101,7 @@ class PingAMPushHandlerTest {
     fun `test canHandle returns false for invalid message`() {
         // Create an invalid message data (missing JWT)
         val messageData = mapOf(
-            KEY_MESSAGE_ID to TEST_MESSAGE_ID
+            PushConstants.KEY_MESSAGE_ID to TEST_MESSAGE_ID
         )
         
         // Test the handler
@@ -123,8 +119,8 @@ class PingAMPushHandlerTest {
         
         // Mock the JWT parsing logic
         val messageData = mapOf(
-            KEY_MESSAGE to "test-jwt",
-            KEY_MESSAGE_ID to TEST_MESSAGE_ID
+            PushConstants.KEY_MESSAGE to "test-jwt",
+            PushConstants.KEY_MESSAGE_ID to TEST_MESSAGE_ID
         )
         
         // Create a result map with the expected data
