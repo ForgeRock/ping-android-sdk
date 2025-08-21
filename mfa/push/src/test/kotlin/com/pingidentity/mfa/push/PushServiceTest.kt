@@ -226,6 +226,7 @@ class PushServiceTest {
     fun `test process notification creates and stores notification`() = runTest {
         // Given
         val mockHandler = mockk<PushHandler>()
+        val mockCredential = mockk<PushCredential>()
         val messageData = mapOf(
             "credentialId" to testCredentialId,
             "message" to "Test message",
@@ -247,7 +248,9 @@ class PushServiceTest {
             handlers = mapOf(PushPlatform.PING_AM.name to mockHandler)
         )
 
+        coEvery { mockCredential.userId } returns "some-id"
         coEvery { mockStorage.getNotificationByMessageId(any()) } returns null
+        coEvery { mockStorage.retrievePushCredential(any()) } returns mockCredential
         coEvery { mockStorage.storePushNotification(any()) } just runs
 
         // When
@@ -263,6 +266,7 @@ class PushServiceTest {
     fun `test process notification from string creates and stores notification`() = runTest {
         // Given
         val mockHandler = mockk<PushHandler>()
+        val mockCredential = mockk<PushCredential>()
         val messageString = "test-jwt-string"
 
         // Mock handler retrieval and methods
@@ -280,7 +284,9 @@ class PushServiceTest {
             handlers = mapOf(PushPlatform.PING_AM.name to mockHandler)
         )
 
+        coEvery { mockCredential.userId } returns "some-id"
         coEvery { mockStorage.getNotificationByMessageId(any()) } returns null
+        coEvery { mockStorage.retrievePushCredential(any()) } returns mockCredential
         coEvery { mockStorage.storePushNotification(any()) } just runs
 
         // When
