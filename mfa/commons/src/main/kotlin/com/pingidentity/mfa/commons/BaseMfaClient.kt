@@ -58,20 +58,16 @@ abstract class BaseMfaClient(
         withContext(Dispatchers.IO) {
             try {
                 // Initialize storage if it exists
-                if (storage != null) {
-                    storage.initialize()
-                    logger.d("Storage initialized successfully")
-                }
+                storage?.initialize()
                 
                 // Additional initialization for subclasses
                 initializeClient()
                 
                 isInitialized = true
-                logger.d("MFA client initialized successfully")
             } catch (e: Exception) {
                 coroutineContext.ensureActive()
-                logger.e("Failed to initialize MFA client: ${e.message}", e)
-                throw MfaInitializationException("Failed to initialize MFA client", e)
+                logger.e("Failed to initialize client: ${e.message}", e)
+                throw MfaInitializationException("Failed to initialize client", e)
             }
         }
     }
@@ -129,7 +125,6 @@ abstract class BaseMfaClient(
         }
 
         isInitialized = false
-        logger.d("MFA client closed")
     }
 
     /**

@@ -30,7 +30,6 @@ enum class OathAlgorithm {
      * Convert from a string representation.
      */
     companion object {
-        @JvmStatic
         fun fromString(algorithm: String): OathAlgorithm {
             return when (algorithm.uppercase()) {
                 "SHA1" -> SHA1

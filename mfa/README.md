@@ -42,13 +42,13 @@ Add the dependencies for the MFA modules you need in your app's `build.gradle` o
 
 ```kotlin
 // For OATH (TOTP/HOTP) support
-implementation("com.pingidentity.android:mfa-oath:1.0.0")
+implementation("com.pingidentity.android:mfa:oath:1.0.0")
 
 // For Push notification support
-implementation("com.pingidentity.android:mfa-push:1.0.0")
+implementation("com.pingidentity.android:mfa:push:1.0.0")
 
 // For FIDO2 (WebAuthn) support
-implementation("com.pingidentity.android:mfa-fido2:1.0.0")
+implementation("com.pingidentity.android:mfa:fido2:1.0.0")
 ```
 
 ## Architecture Overview
@@ -74,7 +74,7 @@ Each MFA client can be configured using a DSL-style approach:
 
 ```kotlin
 // Using the DSL-style pattern
-val config = MfaConfiguration {
+val config = PushConfiguration {
     encryptionEnabled = true
     timeoutMs = 30000L
     enableCredentialCache = false
@@ -122,10 +122,22 @@ val oathClient = OathClient {
 
 // Add a TOTP credential
 val uri = "otpauth://totp/Example:user@example.com?secret=JBSWY3DPEHPK3PXP&issuer=Example&algorithm=SHA1&digits=6&period=30"
-val credential = oathClient.addCredentialFromUri(uri)
+pushClient.addCredentialFromUri(uri).onSuccess { credential ->
+    // Handle the successfully created credential
+    println("Created credential: ${credential.issuer}")
+}.onFailure { exception ->
+    // Handle error
+    println("Failed to add credential: ${exception.message}")
+}
 
 // Generate a TOTP code
-val code = oathClient.generateCode(totpCredential.id)
+oathClient.generateCode(credentialId).onSuccess { code ->
+    // Use the generated code
+    displayCode(code)
+}.onFailure { exception ->
+    // Handle error
+    showError("Failed to generate code: ${exception.message}")
+}
 ```
 
 ### Push Authentication
@@ -140,62 +152,55 @@ val pushClient = PushClient {
 }
 
 // Add a credential from a URI
-val credential = pushClient.addCredentialFromUri("pushauth://push/Ping:john.doe@example.com?r=https://api.example.com/register&a=https://api.example.com/auth&s=your-shared-secret&d=user_id")
+val uri = "pushauth://push/Ping:john.doe@example.com?r=https://api.example.com/register&a=https://api.example.com/auth&s=your-shared-secret&d=user_id"
+pushClient.addCredentialFromUri(uri).onSuccess { credential ->
+    // Handle the successfully created credential
+    println("Created credential: ${credential.issuer}")
+}.onFailure { exception ->
+    // Handle error
+    println("Failed to add credential: ${exception.message}")
+}
 
 // Update the FCM device token
-pushClient.updateDeviceToken("fcm-token")
+pushClient.setDeviceToken("fcm-token").onSuccess {
+    // Device token updated successfully
+    println("Device token updated")
+}.onFailure { exception ->
+    // Handle error
+    println("Failed to update device token: ${exception.message}")
+}
 
 // Process an incoming push message
-val notification = pushClient.processPushMessage(messageData)
+pushClient.processPushMessage(messageData).onSuccess { notification ->
+    // Handle the processed notification
+    println("Received notification: ${notification.id}")
+}.onFailure { exception ->
+    // Handle error
+    println("Failed to process push message: ${exception.message}")
+}
 
 // Approve a push notification
-val approved = pushClient.approveNotification(notification)
+pushClient.approveNotification(notification).onSuccess {
+    // Notification approved successfully
+    println("Notification approved")
+}.onFailure { exception ->
+    // Handle error
+    println("Failed to approve notification: ${exception.message}")
+}
 
 // Deny a push notification
-val denied = pushClient.denyNotification(notification)
+pushClient.denyNotification(notification).onSuccess {
+    // Notification denied successfully
+    println("Notification denied")
+}.onFailure { exception ->
+    // Handle error
+    println("Failed to deny notification: ${exception.message}")
+}
 ```
 
 ### FIDO2 (WebAuthn)
 
-The FIDO2 module supports WebAuthn standard for passwordless authentication:
-
-```kotlin
-// Create a FIDO2 client
-val fido2Client = Fido2Client {
-    // Configuration options here
-}
-
-// Register a new credential
-val options = Fido2RegistrationOptions.Builder()
-    .setRp("example.com")
-    .setUser(userId, userName, userDisplayName)
-    .build()
-    
-val credential = fido2Client.registerCredential(options)
-
-// Authenticate with a credential
-val assertion = fido2Client.authenticate(authenticationOptions)
-```
-
-### Security Recommendations
-
-1. **Enable Encryption**: Always enable encryption for sensitive data storage (default)
-   ```kotlin
-   .encryptionEnabled(true)
-   ```
-
-2. **Disable Credential Caching**: Unless absolutely necessary, keep credential caching disabled (default)
-   ```kotlin
-   .enableCredentialCache(false)
-   ```
-
-3. **Implement Proper Lifecycle Management**: Always close the client when it's no longer needed
-   ```kotlin
-   override fun onDestroy() {
-       super.onDestroy()
-       mfaClient.close()
-   }
-   ```
+TBD
 
 ## Sample Applications
 

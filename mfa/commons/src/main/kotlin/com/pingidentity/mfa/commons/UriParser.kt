@@ -7,7 +7,6 @@
 
 package com.pingidentity.mfa.commons
 
-import android.net.Uri
 import android.util.Base64
 
 /**
@@ -48,7 +47,7 @@ abstract class UriParser {
                 }
                 
                 // Use the label issuer if it exists, otherwise use the parameter
-                val issuer = if (labelIssuer.isNotEmpty()) labelIssuer else (issuerParam ?: "")
+                val issuer = labelIssuer.ifEmpty { (issuerParam ?: "") }
                 val accountName = labelComponents[1]
                 
                 issuer to accountName
@@ -78,8 +77,13 @@ abstract class UriParser {
         return try {
             Base64.decode(value, Base64.DEFAULT)
             true
-        } catch (e: Exception) {
-            false
+        } catch (_: Exception) {
+            return try {
+                Base64.decode(value, Base64.NO_WRAP or Base64.URL_SAFE)
+                true
+            } catch (_: Exception) {
+                false
+            }
         }
     }
     
@@ -90,6 +94,17 @@ abstract class UriParser {
      * @return The decoded string.
      */
     protected fun decodeBase64(value: String): String {
+        val bytes = Base64.decode(value, Base64.NO_WRAP)
+        return String(bytes)
+    }
+
+    /**
+     * Decode a Base64 URL encoded string.
+     *
+     * @param value The Base64 URL encoded string.
+     * @return The decoded string.
+     */
+    protected fun decodeBase64Url(value: String): String {
         val bytes = Base64.decode(value, Base64.NO_WRAP or Base64.URL_SAFE)
         return String(bytes)
     }
@@ -104,7 +119,29 @@ abstract class UriParser {
         val bytes = value.toByteArray()
         return Base64.encodeToString(bytes, Base64.NO_WRAP or Base64.URL_SAFE)
     }
-    
+
+    /**
+     * Recode a Base64 URL encoded value to a Base64 encoded value without URL-safe.
+     *
+     * @param value The Base64 URL encoded string.
+     * @return The recoded Base64 string.
+     */
+    protected fun recodeBase64NoWrapUrlSafeValueToNoWrap(value: String): String {
+        val bytes = Base64.decode(value, Base64.NO_WRAP + Base64.URL_SAFE)
+        return Base64.encodeToString(bytes, Base64.NO_WRAP)
+    }
+
+    /**
+     * Recode a Base64 encoded value to URL-safe Base64 encoding with wrapping.
+     *
+     * @param value The Base64 encoded string.
+     * @return The recoded URL-safe Base64 string.
+     */
+    protected fun recodeBase64NoWrapValueToUrlSafeNoWrap(value: String): String {
+        val bytes = Base64.decode(value, Base64.NO_WRAP)
+        return Base64.encodeToString(bytes, Base64.NO_WRAP + Base64.URL_SAFE)
+    }
+
     /**
      * Format the background color for URI inclusion.
      * Removes # prefix if present.

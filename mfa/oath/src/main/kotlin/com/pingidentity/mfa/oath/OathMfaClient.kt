@@ -14,67 +14,60 @@ import com.pingidentity.mfa.commons.exception.MfaException
  * Interface for OATH client functionality.
  * Extends the base MfaClient interface with OATH-specific functionality.
  */
-interface MfaOathClient : MfaClient {
+interface OathMfaClient : MfaClient {
     
     /**
      * Creates an OATH Credential from a standard otpauth:// URI (typically from a QR code).
      *
      * @param uri The URI string in the format otpauth://totp/issuer:accountName?secret=SECRET&issuer=issuer&algorithm=SHA1&digits=6&period=30
-     * @return The created OathCredential.
-     * @throws MfaException if the credential cannot be created.
+     * @return A Result containing the created OathCredential or an Exception in case of failure.
      */
-    suspend fun addCredentialFromUri(uri: String): OathCredential
-    
+    suspend fun addCredentialFromUri(uri: String): Result<OathCredential>
+
     /**
      * Save an OATH credential.
      *
      * @param credential The OathCredential to add.
-     * @return The created OathCredential.
-     * @throws MfaException if the credential cannot be created.
+     * @return A Result containing the created OathCredential or an Exception in case of failure.
      */
-    suspend fun saveCredential(credential: OathCredential): OathCredential
-    
+    suspend fun saveCredential(credential: OathCredential): Result<OathCredential>
+
     /**
      * Get all OATH credentials.
      *
-     * @return A list of all OathCredentials.
-     * @throws MfaException if the credentials cannot be retrieved.
+     * @return A Result containing a list of all OathCredentials or an Exception in case of failure.
      */
-    suspend fun getCredentials(): List<OathCredential>
-    
+    suspend fun getCredentials(): Result<List<OathCredential>>
+
     /**
      * Get an OATH credential by ID.
      *
      * @param credentialId The ID of the credential to get.
-     * @return The OathCredential, or null if not found.
-     * @throws MfaException if the credential cannot be retrieved.
+     * @return A Result containing the OathCredential (or null if not found) or an Exception in case of failure.
      */
-    suspend fun getCredential(credentialId: String): OathCredential?
-    
+    suspend fun getCredential(credentialId: String): Result<OathCredential?>
+
     /**
      * Delete an OATH credential by ID.
      *
      * @param credentialId The ID of the credential to remove.
-     * @return True if the credential was removed, false if it didn't exist.
-     * @throws MfaException if the credential cannot be removed.
+     * @return A Result containing a Boolean indicating success or an Exception in case of failure.
      */
-    suspend fun deleteCredential(credentialId: String): Boolean
-    
+    suspend fun deleteCredential(credentialId: String): Result<Boolean>
+
     /**
      * Generate an OTP code for an OATH credential.
      *
      * @param credentialId The ID of the credential.
-     * @return The OTP code.
-     * @throws MfaException if the code cannot be generated.
+     * @return A Result containing the OTP code or an Exception in case of failure.
      */
-    suspend fun generateCode(credentialId: String): String
-    
+    suspend fun generateCode(credentialId: String): Result<String>
+
     /**
      * Generate an OTP code for an OATH credential and get its time validity information.
      *
      * @param credentialId The ID of the credential.
-     * @return The OTP code and validity information.
-     * @throws MfaException if the code cannot be generated.
+     * @return A Result containing the OTP code and validity information or an Exception in case of failure.
      */
-    suspend fun generateCodeWithValidity(credentialId: String): OathCodeInfo
+    suspend fun generateCodeWithValidity(credentialId: String): Result<OathCodeInfo>
 }

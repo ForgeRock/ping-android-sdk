@@ -13,7 +13,7 @@ import com.pingidentity.logger.Logger
 import com.pingidentity.mfa.commons.exception.MfaStorageException
 import com.pingidentity.mfa.oath.OathAlgorithm
 import com.pingidentity.mfa.oath.OathCredential
-import com.pingidentity.mfa.oath.OathStorage
+import com.pingidentity.mfa.oath.storage.OathStorage
 import com.pingidentity.mfa.oath.OathType
 import com.pingidentity.storage.sqlite.passphrase.KeyStorePassphraseProvider
 import com.pingidentity.storage.sqlite.passphrase.PassphraseProvider
@@ -54,14 +54,10 @@ class SQLOathStorage private constructor(
      * Internal constructor to support creation from Builder.
      */
     private constructor(builder: Builder) : this(
-        builder.context ?: throw IllegalArgumentException("Context is required"),
-        builder.databaseName ?: DEFAULT_DATABASE_NAME,
+        builder.context,
+        builder.databaseName,
         builder.databaseVersion,
-        builder.passphraseProvider ?: KeyStorePassphraseProvider(
-            builder.context ?: throw IllegalArgumentException("Context is required"),
-            builder.initialPassphrase,
-            builder.logger
-        ),
+        builder.passphraseProvider,
         builder.logger
     )
 
@@ -101,7 +97,6 @@ class SQLOathStorage private constructor(
         var context: Context = ContextProvider.context
         var databaseName: String = DEFAULT_DATABASE_NAME
         var databaseVersion: Int = 1
-        var encryptionEnabled: Boolean = true
         var initialPassphrase: String? = null // Default is null, in case developer does not want to supply their own passphrase
         var passphraseProvider: PassphraseProvider = KeyStorePassphraseProvider(context, initialPassphrase)
         var logger: Logger = Logger.logger
