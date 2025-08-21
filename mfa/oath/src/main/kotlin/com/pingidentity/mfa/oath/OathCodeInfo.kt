@@ -9,7 +9,7 @@ package com.pingidentity.mfa.oath
 
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
+import com.pingidentity.mfa.commons.json
 
 /**
  * Class that contains OTP code information, including the actual code and validity details.
@@ -42,7 +42,6 @@ data class OathCodeInfo(
          * @param totalPeriod The total validity period in seconds.
          * @return An OathCodeInfo instance for TOTP.
          */
-        @JvmStatic
         fun forTotp(code: String, timeRemaining: Int, totalPeriod: Int): OathCodeInfo {
             val progress = if (totalPeriod > 0) {
                 1.0 - (timeRemaining.toDouble() / totalPeriod)
@@ -65,7 +64,6 @@ data class OathCodeInfo(
          * @param counter The counter value after code generation.
          * @return An OathCodeInfo instance for HOTP.
          */
-        @JvmStatic
         fun forHotp(code: String, counter: Long): OathCodeInfo {
             return OathCodeInfo(
                 code = code,
@@ -83,12 +81,7 @@ data class OathCodeInfo(
          * @return An OathCodeInfo.
          * @throws kotlinx.serialization.SerializationException if the JSON is invalid.
          */
-        @JvmStatic
         fun fromJson(jsonString: String): OathCodeInfo {
-            val json = Json { 
-                ignoreUnknownKeys = true 
-                isLenient = true
-            }
             return json.decodeFromString(jsonString)
         }
     }
@@ -99,11 +92,6 @@ data class OathCodeInfo(
      * @return A JSON string representing this code info.
      */
     fun toJson(): String {
-        val json = Json { 
-            prettyPrint = false
-            encodeDefaults = true
-            ignoreUnknownKeys = true
-        }
         return json.encodeToString(this)
     }
 }

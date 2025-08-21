@@ -11,14 +11,14 @@ import kotlinx.serialization.EncodeDefault
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerializationException
 import kotlinx.serialization.Transient
 import kotlinx.serialization.descriptors.PrimitiveKind
 import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
 import kotlinx.serialization.descriptors.SerialDescriptor
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
-import kotlinx.serialization.json.Json
+import com.pingidentity.mfa.commons.json
 import java.util.Date
 import java.util.UUID
 
@@ -94,7 +94,6 @@ data class OathCredential(
          * @return An OathCredential.
          * @throws IllegalArgumentException if the URI is invalid.
          */
-        @JvmStatic
         suspend fun fromUri(uri: String): OathCredential {
             return OathUriParser.parse(uri)
         }
@@ -104,14 +103,9 @@ data class OathCredential(
          *
          * @param jsonString The JSON string.
          * @return An OathCredential.
-         * @throws kotlinx.serialization.SerializationException if the JSON is invalid.
+         * @throws SerializationException if the JSON is invalid.
          */
-        @JvmStatic
         fun fromJson(jsonString: String): OathCredential {
-            val json = Json { 
-                ignoreUnknownKeys = true 
-                isLenient = true
-            }
             return json.decodeFromString(jsonString)
         }
     }
@@ -131,15 +125,8 @@ data class OathCredential(
      * @return A JSON string representing this credential.
      */
     fun toJson(): String {
-        // Create a custom instance of Json with pretty printing for better readability
-        val json = Json { 
-            prettyPrint = false
-            encodeDefaults = true
-            ignoreUnknownKeys = true
-        }
-        
         // Use the built-in serialization directly
-        return json.encodeToString(this)
+        return json.encodeToString(serializer(), this)
     }
 
     /**

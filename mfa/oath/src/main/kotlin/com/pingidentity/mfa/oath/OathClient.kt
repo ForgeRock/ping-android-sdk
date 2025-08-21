@@ -7,11 +7,9 @@
 
 package com.pingidentity.mfa.oath
 
-import com.pingidentity.logger.Logger
 import com.pingidentity.mfa.commons.BaseMfaClient
-import com.pingidentity.mfa.commons.MfaConfiguration
-import com.pingidentity.mfa.commons.exception.MfaException
 import com.pingidentity.mfa.commons.exception.MfaInitializationException
+import com.pingidentity.mfa.oath.storage.OathStorage
 import com.pingidentity.mfa.oath.storage.SQLOathStorage
 import com.pingidentity.storage.sqlite.passphrase.KeyStorePassphraseProvider
 import com.pingidentity.storage.sqlite.passphrase.NonePassphraseProvider
@@ -24,25 +22,27 @@ import kotlin.coroutines.coroutineContext
  * Implementation of OathClient that provides OATH functionality.
  * This client handles TOTP and HOTP credential management and code generation.
  *
- * @param configuration The MFA configuration.
+ * @param configuration The OATH configuration.
  * @param storage The OathStorage implementation to use. If null, a default SQLOathStorage will be created.
  */
-class OathClient(
-    configuration: MfaConfiguration,
-    storage: OathStorage? = null
-) : BaseMfaClient(configuration, storage), MfaOathClient {
+class OathClient internal constructor(
+    private val configuration: OathConfiguration,
+) : BaseMfaClient(configuration, configuration.storage ?: defaultStorage(configuration)), OathMfaClient {
 
     // The storage used for persisting OATH credentials
     private lateinit var oathStorage: OathStorage
+
+    // The service that handles OATH operations
+    private lateinit var oathService: OathService
 
     companion object {
         /**
          * Create an OathClient instance with a customizable configuration block.
          * This allows for a more fluent, DSL-style configuration approach.
-         * 
+         *
          * @param block The configuration block to customize the client configuration.
          * @return An initialized OathClient instance.
-         * 
+         *
          * @sample
          * ```
          * val oathClient = OathClient {
@@ -54,54 +54,24 @@ class OathClient(
          * }
          * ```
          */
-        @JvmStatic
-        suspend operator fun invoke(block: Builder.() -> Unit = {}): MfaOathClient {
-            val builder = Builder()
-            builder.apply(block)
-            
-            val configuration = MfaConfiguration {
-                enableCredentialCache = builder.enableCredentialCache
-                encryptionEnabled = builder.encryptionEnabled
-                timeoutMs = builder.timeoutMs
-                logger = builder.logger
+        suspend operator fun invoke(block: OathConfiguration.() -> Unit = {}): OathMfaClient {
+            // Create configuration
+            val configuration = OathConfiguration(block)
+            configuration.storage = configuration.storage ?: defaultStorage(configuration)
+
+            return OathClient(configuration).apply {
+                initialize()
             }
-            
-            // Create storage if not provided
-            val storage = builder.storage ?: createDefaultStorage(configuration)
-            
-            val client = OathClient(configuration, storage)
-            client.initialize()
-            
-            return client
         }
-        
-        /**
-         * Create an OathClient instance with the default configuration or a specified configuration.
-         * The client is not initialized automatically and requires a call to initialize() before use.
-         *
-         * @param configuration Optional MfaConfiguration. If not provided, a default configuration will be used.
-         * @return An uninitialized OathClient instance.
-         */
-        @JvmStatic
-        fun create(configuration: MfaConfiguration? = null): MfaOathClient {
-            val config = configuration ?: MfaConfiguration {}
-            
-            // Create default storage with appropriate passphrase provider
-            val storage = createDefaultStorage(config)
-            
-            // Return uninitialized client
-            return OathClient(config, storage)
-        }
-        
+
         /**
          * Creates a default OathStorage implementation with the appropriate configuration.
          *
-         * @param config The MFA configuration to use for the storage.
+         * @param config The OATH configuration to use for the storage.
          * @return A configured OathStorage implementation.
          */
-        @JvmStatic
-        private fun createDefaultStorage(config: MfaConfiguration): OathStorage {
-            return SQLOathStorage { 
+        private fun defaultStorage(config: OathConfiguration): OathStorage {
+            return SQLOathStorage {
                 context = config.context
                 passphraseProvider = if (config.encryptionEnabled) {
                     KeyStorePassphraseProvider(config.context, logger = config.logger)
@@ -111,43 +81,8 @@ class OathClient(
                 logger = config.logger
             }
         }
-        
-        /**
-         * Builder class for OathClient configuration.
-         */
-        class Builder {
-            /**
-             * The OathStorage implementation to use.
-             * If not specified, a default SQLOathStorage implementation will be created when the client is built.
-             */
-            var storage: OathStorage? = null
-            
-            /**
-             * Whether credential caching is enabled in memory.
-             * By default this is disabled for security reasons.
-             */
-            var enableCredentialCache: Boolean = false
-            
-            /**
-             * Whether data encryption is enabled.
-             */
-            var encryptionEnabled: Boolean = true
-            
-            /**
-             * The timeout for network operations in milliseconds.
-             */
-            var timeoutMs: Long = MfaConfiguration.DEFAULT_TIMEOUT_MS
-            
-            /**
-             * The logger instance for logging messages.
-             */
-            var logger: Logger = Logger.logger
-        }
     }
-    
-    // The service that handles OATH operations
-    private lateinit var oathService: OathService
-    
+
     /**
      * Initialize the OATH client.
      *
@@ -159,16 +94,16 @@ class OathClient(
             if (storage !is OathStorage) {
                 throw MfaInitializationException("Storage implementation must implement OathStorage interface")
             }
-            
+
             // Initialize the OathStorage
             oathStorage = storage as OathStorage
-            
+
             // Create the OATH service with the MFA configuration
             oathService = OathService(
-                oathStorage, 
+                oathStorage,
                 config
             )
-            
+
             logger.d("OATH client initialized successfully")
         } catch (e: Exception) {
             coroutineContext.ensureActive()
@@ -176,97 +111,127 @@ class OathClient(
             throw MfaInitializationException("Failed to initialize OATH client", e)
         }
     }
-    
+
     /**
      * Add a new OATH credential from a URI.
      *
      * @param uri The URI string in the format otpauth://totp/issuer:accountName?secret=SECRET&issuer=issuer&algorithm=SHA1&digits=6&period=30
-     * @return The created OathCredential.
-     * @throws MfaException if the credential cannot be created.
+     * @return A Result containing the created OathCredential or an Exception in case of failure.
      */
-    override suspend fun addCredentialFromUri(uri: String): OathCredential {
-        checkInitialized()
-        try {
+    override suspend fun addCredentialFromUri(uri: String): Result<OathCredential> {
+        return try {
+            checkInitialized()
             val credential = oathService.parseUri(uri)
-            return saveCredential(credential)
+            saveCredential(credential)
         } catch (e: Exception) {
             coroutineContext.ensureActive()
             logger.e("Failed to add credential from URI: ${e.message}", e)
-            throw MfaException("Failed to add credential from URI", e)
+            Result.failure(e)
         }
     }
-    
+
     /**
      * Save an OATH credential.
      *
      * @param credential The OathCredential to save.
-     * @return The saved OathCredential.
-     * @throws MfaException if the credential cannot be saved.
+     * @return A Result containing the saved OathCredential or an Exception in case of failure.
      */
-    override suspend fun saveCredential(credential: OathCredential): OathCredential {
-        checkInitialized()
-        return oathService.addCredential(credential)
+    override suspend fun saveCredential(credential: OathCredential): Result<OathCredential> {
+        return try {
+            checkInitialized()
+            Result.success(oathService.addCredential(credential))
+        } catch (e: Exception) {
+            coroutineContext.ensureActive()
+            logger.e("Failed to save credential: ${e.message}", e)
+            Result.failure(e)
+        }
     }
-    
+
     /**
      * Get all OATH credentials.
      *
-     * @return A list of all OathCredentials.
-     * @throws MfaException if the credentials cannot be retrieved.
+     * @return A Result containing a list of all OathCredentials or an Exception in case of failure.
      */
-    override suspend fun getCredentials(): List<OathCredential> {
-        checkInitialized()
-        return oathService.getCredentials()
+    override suspend fun getCredentials(): Result<List<OathCredential>> {
+        return try {
+            checkInitialized()
+            Result.success(oathService.getCredentials())
+        } catch (e: Exception) {
+            coroutineContext.ensureActive()
+            logger.e("Failed to get credentials: ${e.message}", e)
+            Result.failure(e)
+        }
     }
-    
+
     /**
      * Get an OATH credential by ID.
      *
      * @param credentialId The ID of the credential to get.
-     * @return The OathCredential, or null if not found.
-     * @throws MfaException if the credential cannot be retrieved.
+     * @return A Result containing the OathCredential (or null if not found) or an Exception in case of failure.
      */
-    override suspend fun getCredential(credentialId: String): OathCredential? {
-        checkInitialized()
-        return oathService.getCredential(credentialId)
+    override suspend fun getCredential(credentialId: String): Result<OathCredential?> {
+        return try {
+            checkInitialized()
+            Result.success(oathService.getCredential(credentialId))
+        } catch (e: Exception) {
+            coroutineContext.ensureActive()
+            logger.e("Failed to get credential: ${e.message}", e)
+            Result.failure(e)
+        }
     }
-    
+
     /**
      * Delete an OATH credential by ID.
      *
      * @param credentialId The ID of the credential to remove.
-     * @return True if the credential was removed, false if it didn't exist.
-     * @throws MfaException if the credential cannot be removed.
+     * @return A Result containing a Boolean indicating success or an Exception in case of failure.
      */
-    override suspend fun deleteCredential(credentialId: String): Boolean {
-        checkInitialized()
-        return oathService.removeCredential(credentialId)
+    override suspend fun deleteCredential(credentialId: String): Result<Boolean> {
+        return try {
+            checkInitialized()
+            Result.success(oathService.removeCredential(credentialId))
+        } catch (e: Exception) {
+            coroutineContext.ensureActive()
+            logger.e("Failed to delete credential: ${e.message}", e)
+            Result.failure(e)
+        }
     }
-    
+
     /**
      * Generate an OTP code for an OATH credential.
      *
      * @param credentialId The ID of the credential.
-     * @return The OTP code.
-     * @throws MfaException if the code cannot be generated.
+     * @return A Result containing the OTP code or an Exception in case of failure.
      */
-    override suspend fun generateCode(credentialId: String): String {
-        val codeInfo = generateCodeWithValidity(credentialId)
-        return codeInfo.code
+    override suspend fun generateCode(credentialId: String): Result<String> {
+        return try {
+            checkInitialized()
+            val codeInfo = oathService.generateCodeForCredential(credentialId)
+            Result.success(codeInfo.code)
+        } catch (e: Exception) {
+            coroutineContext.ensureActive()
+            logger.e("Failed to generate code: ${e.message}", e)
+            Result.failure(e)
+        }
     }
-    
+
     /**
      * Generate an OTP code for an OATH credential and get its time validity information.
      *
      * @param credentialId The ID of the credential.
-     * @return The OTP code and validity information.
-     * @throws MfaException if the code cannot be generated.
+     * @return A Result containing the OTP code and validity information or an Exception in case of failure.
      */
-    override suspend fun generateCodeWithValidity(credentialId: String): OathCodeInfo {
-        checkInitialized()
-        return oathService.generateCodeForCredential(credentialId)
+    override suspend fun generateCodeWithValidity(credentialId: String): Result<OathCodeInfo> {
+        return try {
+            checkInitialized()
+            Result.success(oathService.generateCodeForCredential(credentialId))
+        } catch (e: Exception) {
+            coroutineContext.ensureActive()
+            logger.e("Failed to generate code with validity: ${e.message}", e)
+            Result.failure(e)
+        }
     }
-    
+
     /**
      * Clean up resources used by the OATH client.
      * This method clears caches and then calls the parent close method.

@@ -12,7 +12,7 @@ import android.content.SharedPreferences
 import android.util.Log
 import com.pingidentity.mfa.commons.exception.MfaStorageException
 import com.pingidentity.mfa.oath.OathCredential
-import com.pingidentity.mfa.oath.OathStorage
+import com.pingidentity.mfa.oath.storage.OathStorage
 import kotlinx.serialization.json.Json
 import androidx.core.content.edit
 

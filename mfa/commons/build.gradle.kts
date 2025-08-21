@@ -9,6 +9,7 @@ plugins {
     id("com.pingidentity.convention.android.library")
     alias(libs.plugins.androidLibrary)
     alias(libs.plugins.kotlinAndroid)
+    alias(libs.plugins.kotlinSerialization)
 }
 
 android {
@@ -29,6 +30,10 @@ dependencies {
     implementation(libs.androidx.sqlite)
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.androidx.datastore.preferences)
+    implementation(libs.kotlinx.serialization.json)
+
+    // JWT Generation and Validation
+    implementation(libs.nimbus.jose.jwt)
 
     // HTTP Client
     implementation(libs.ktor.client.core)
@@ -43,6 +48,8 @@ dependencies {
     // Testing dependencies
     testImplementation(libs.junit)
     testImplementation(libs.mockk)
-    androidTestImplementation(libs.androidx.junit)
-    androidTestImplementation(libs.androidx.espresso.core)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.ktor.client.mock)
+    testImplementation(libs.kotlin.test)
 }

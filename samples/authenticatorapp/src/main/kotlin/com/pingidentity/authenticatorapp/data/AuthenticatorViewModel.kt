@@ -10,7 +10,7 @@ package com.pingidentity.authenticatorapp.data
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.pingidentity.mfa.oath.MfaOathClient
+import com.pingidentity.mfa.oath.OathMfaClient
 import com.pingidentity.mfa.oath.OathClient
 import com.pingidentity.mfa.oath.OathCodeInfo
 import com.pingidentity.mfa.oath.OathCredential
@@ -27,7 +27,7 @@ import kotlinx.coroutines.withContext
  */
 class AuthenticatorViewModel : ViewModel() {
     
-    private lateinit var oathClient: MfaOathClient
+    private lateinit var oathClient: OathMfaClient
     
     private val _uiState = MutableStateFlow(AuthenticatorUiState())
     val uiState: StateFlow<AuthenticatorUiState> = _uiState.asStateFlow()
@@ -62,12 +62,11 @@ class AuthenticatorViewModel : ViewModel() {
      */
     private fun loadCredentials() {
         viewModelScope.launch {
-            try {
-                val credentials = withContext(Dispatchers.IO) {
-                    oathClient.getCredentials()
-                }
+            withContext(Dispatchers.IO) {
+                oathClient.getCredentials()
+            }.onSuccess { credentials ->
                 _uiState.update { it.copy(credentials = credentials, error = null) }
-            } catch (e: Exception) {
+            }.onFailure { e ->
                 _uiState.update { it.copy(error = e.message ?: "Failed to load credentials") }
             }
         }
@@ -78,15 +77,13 @@ class AuthenticatorViewModel : ViewModel() {
      */
     fun addCredentialFromUri(uri: String) {
         viewModelScope.launch {
-            try {
-                val credential = withContext(Dispatchers.IO) {
-                    oathClient.addCredentialFromUri(uri)
-                }
-                
+            withContext(Dispatchers.IO) {
+                oathClient.addCredentialFromUri(uri)
+            }.onSuccess { credential ->
                 // Reload all credentials after adding a new one
                 loadCredentials()
                 _uiState.update { it.copy(lastAddedCredential = credential, error = null) }
-            } catch (e: Exception) {
+            }.onFailure { e ->
                 _uiState.update { it.copy(error = e.message ?: "Failed to add credential") }
             }
         }
@@ -97,16 +94,14 @@ class AuthenticatorViewModel : ViewModel() {
      */
     fun removeCredential(credentialId: String) {
         viewModelScope.launch {
-            try {
-                val removed = withContext(Dispatchers.IO) {
-                    oathClient.deleteCredential(credentialId)
-                }
-                
+            withContext(Dispatchers.IO) {
+                oathClient.deleteCredential(credentialId)
+            }.onSuccess { removed ->
                 if (removed) {
                     // Reload all credentials after removing one
                     loadCredentials()
                 }
-            } catch (e: Exception) {
+            }.onFailure { e ->
                 _uiState.update { it.copy(error = e.message ?: "Failed to remove credential") }
             }
         }
@@ -117,17 +112,15 @@ class AuthenticatorViewModel : ViewModel() {
      */
     fun generateCode(credentialId: String) {
         viewModelScope.launch {
-            try {
-                val codeInfo = withContext(Dispatchers.IO) {
-                    oathClient.generateCodeWithValidity(credentialId)
-                }
-                
+            withContext(Dispatchers.IO) {
+                oathClient.generateCodeWithValidity(credentialId)
+            }.onSuccess { codeInfo ->
                 // Update the code info in the UI state
                 val updatedCodes = _uiState.value.generatedCodes.toMutableMap()
                 updatedCodes[credentialId] = codeInfo
                 
                 _uiState.update { it.copy(generatedCodes = updatedCodes, error = null) }
-            } catch (e: Exception) {
+            }.onFailure { e ->
                 _uiState.update { it.copy(error = e.message ?: "Failed to generate code") }
             }
         }

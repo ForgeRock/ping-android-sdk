@@ -10,7 +10,6 @@ package com.pingidentity.mfa.oath
 import android.content.Context
 import com.pingidentity.android.ContextProvider
 import com.pingidentity.logger.Logger
-import com.pingidentity.mfa.commons.MfaConfiguration
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkObject
@@ -63,18 +62,16 @@ class OathClientTest {
         // We don't need to check the exact signature of the method, just that the class has the expected methods
         val methods = OathClient.Companion::class.java.declaredMethods
         val hasInvokeMethod = methods.any { it.name == "invoke" }
-        val hasCreateMethod = methods.any { it.name == "create" }
         
         assert(hasInvokeMethod) { "OathClient.Companion should have an invoke method" }
-        assert(hasCreateMethod) { "OathClient.Companion should have a create method" }
     }
     
     @Test
-    fun `test OathClient constructor accepts MfaConfiguration`() {
+    fun `test OathClient constructor accepts OathConfiguration`() {
         // Given we have access to a mock context via ContextProvider
         
         // Create a mock configuration
-        val mockConfig = mockk<MfaConfiguration>(relaxed = true)
+        val mockConfig = mockk<OathConfiguration>(relaxed = true)
         every { mockConfig.context } returns context
         
         // When we create a client with the configuration
@@ -86,11 +83,11 @@ class OathClientTest {
     }
     
     @Test
-    fun `test MfaConfiguration uses ContextProvider`() {
+    fun `test OathConfiguration uses ContextProvider`() {
         // Given we have mocked the ContextProvider
         
         // When we build a configuration and access the context
-        val config = MfaConfiguration {}
+        val config = OathConfiguration {}
         val retrievedContext = config.context
         
         // Then it should use the context from ContextProvider

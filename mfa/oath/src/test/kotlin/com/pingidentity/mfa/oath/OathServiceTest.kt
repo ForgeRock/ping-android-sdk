@@ -8,6 +8,7 @@
 package com.pingidentity.mfa.oath
 
 import com.pingidentity.mfa.commons.exception.MfaException
+import com.pingidentity.mfa.oath.storage.OathStorage
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
