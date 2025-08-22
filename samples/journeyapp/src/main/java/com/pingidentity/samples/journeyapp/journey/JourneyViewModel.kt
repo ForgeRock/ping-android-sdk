@@ -63,7 +63,7 @@ class JourneyViewModel(private var journeyName: String) : ViewModel() {
 
     fun refresh() {
         state.update {
-            it.copy(node = it.node)
+            it.copy(node = it.node, counter = it.counter + 1)
         }
     }
 

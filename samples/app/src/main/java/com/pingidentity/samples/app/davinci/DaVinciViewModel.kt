@@ -63,7 +63,7 @@ class DaVinciViewModel : ViewModel() {
 
     fun refresh() {
         state.update {
-            it.copy(node = it.node)
+            it.copy(node = it.node, counter = it.counter + 1)
         }
     }
 }

@@ -86,7 +86,6 @@ class DataStorageTest {
     fun testDataStore() =
         runTest {
             val storage = DataStoreStorage(dataStore)
-            //val storage = DataStoreStorageFactory.getOrCreate<Data>("test")
             storage.save(Data(1, "test"))
             val storedData = storage.get()
             assertEquals(1, storedData!!.a)

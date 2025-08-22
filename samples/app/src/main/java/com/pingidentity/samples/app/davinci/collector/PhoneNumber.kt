@@ -41,6 +41,7 @@ fun PhoneNumber(field: PhoneNumberCollector, onNodeUpdated: () -> Unit) {
         mutableStateOf(countryCodes.firstOrNull { it.countryCode == field.defaultCountryCode }
             ?: countryCodes.first())
     }
+    var phone by remember { mutableStateOf(field.phoneNumber) }
 
     var isValid by remember {
         mutableStateOf(true)
@@ -106,11 +107,11 @@ fun PhoneNumber(field: PhoneNumberCollector, onNodeUpdated: () -> Unit) {
             }
             // Phone Number Input
             OutlinedTextField(
-                value = field.phoneNumber,
-                onValueChange = {
-                    val phoneNumber = it.take(10).filter { it.isDigit() }
+                value = phone,
+                onValueChange = { value ->
+                    val phoneNumber = value.take(10).filter { it.isDigit() }
+                    phone = phoneNumber
                     field.phoneNumber = phoneNumber
-                    onNodeUpdated()
                 },
                 label = { androidx.compose.material3.Text(field.label) },
                 singleLine = true,

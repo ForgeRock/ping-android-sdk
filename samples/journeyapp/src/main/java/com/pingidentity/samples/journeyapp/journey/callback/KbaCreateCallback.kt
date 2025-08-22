@@ -18,6 +18,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -39,6 +40,10 @@ fun KbaCreateCallback(callback: KbaCreateCallback,  onNodeUpdated: () -> Unit) {
         mutableStateOf("")
     }
 
+    LaunchedEffect(true) {
+        callback.selectedQuestion = selectedItem
+    }
+
     Column(modifier = Modifier
         .padding(8.dp)
         .fillMaxWidth()) {
@@ -52,7 +57,7 @@ fun KbaCreateCallback(callback: KbaCreateCallback,  onNodeUpdated: () -> Unit) {
             // text field
             TextField(
                 modifier = Modifier.menuAnchor(),
-                value = if (isCustomQuestion) customQuestion else selectedItem,
+                value = if (isCustomQuestion) "Provide your own" else selectedItem,
                 onValueChange = {},
                 readOnly = true,
                 label = { Text(text = callback.prompt) },

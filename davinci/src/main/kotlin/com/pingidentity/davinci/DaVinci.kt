@@ -31,7 +31,6 @@ class DaVinciConfig : WorkflowConfig()
 
 /**
  * Function to create a DaVinci instance.
- * @sample
  * fun main() {
  *     val daVinci = DaVinci {
  *         module(Oidc) {

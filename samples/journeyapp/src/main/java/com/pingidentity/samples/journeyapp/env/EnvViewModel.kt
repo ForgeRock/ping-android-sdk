@@ -82,11 +82,16 @@ class EnvViewModel : ViewModel() {
 
         servers.first { it.oidcConfig().clientId == config.clientId }.let { journey = it }
 
+        val server = servers.firstOrNull { it.oidcConfig().clientId == config.clientId } ?: forgeblock
+        journey = server
+
+        val oidcConfig = server.oidcConfig()
+
         oidcClient = OidcClient {
-            clientId = config.clientId
-            discoveryEndpoint = config.discoveryEndpoint
-            scopes = config.scopes
-            redirectUri = config.redirectUri
+            clientId = oidcConfig.clientId
+            discoveryEndpoint = oidcConfig.discoveryEndpoint
+            scopes = oidcConfig.scopes
+            redirectUri = oidcConfig.redirectUri
         }
 
         if (current.clientId != config.clientId) {
@@ -95,7 +100,7 @@ class EnvViewModel : ViewModel() {
             }
         }
 
-        current = config
+        current = oidcConfig
 
         CoroutineScope(Dispatchers.IO).launch {
             context.settingDataStore.edit { preferences ->

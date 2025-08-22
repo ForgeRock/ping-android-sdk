@@ -210,7 +210,7 @@ class CookieModuleTest {
                     headers {
                         append(
                             "Set-Cookie",
-                            "interactionId=178ce234-afd2-4207-984e-bda28bd7042c; Max-Age=3600; Path=/; Expires=Thu, 09 May 2024 21:38:44 GMT; HttpOnly;"
+                            "interactionId=178ce234-afd2-4207-984e-bda28bd7042c; Path=/; Expires=Thu, 09 May 2024 21:38:44 GMT; HttpOnly;"
                         )
                         append(
                             "Set-Cookie",

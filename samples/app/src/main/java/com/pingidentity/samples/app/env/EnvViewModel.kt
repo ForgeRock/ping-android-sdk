@@ -91,13 +91,15 @@ class EnvViewModel : ViewModel() {
         val server = servers.firstOrNull { it.oidcConfig().clientId == config.clientId } ?: prod
         daVinci = server
 
+        val oidcConfig = server.oidcConfig()
+
         web = OidcWeb {
             logger = Logger.STANDARD
             module(com.pingidentity.oidc.module.Oidc) {
-                clientId = config.clientId
-                discoveryEndpoint = config.discoveryEndpoint
-                scopes = config.scopes
-                redirectUri = config.redirectUri
+                clientId = oidcConfig.clientId
+                discoveryEndpoint = oidcConfig.discoveryEndpoint
+                scopes = oidcConfig.scopes
+                redirectUri = oidcConfig.redirectUri
             }
         }
 
@@ -107,7 +109,7 @@ class EnvViewModel : ViewModel() {
             }
         }
 
-        current = config
+        current = oidcConfig
 
         CoroutineScope(Dispatchers.IO).launch {
             context.settingDataStore.edit { preferences ->

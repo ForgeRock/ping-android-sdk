@@ -23,6 +23,12 @@ class AndroidLibraryConventionPlugin : Plugin<Project> {
             extensions.configure<LibraryExtension> {
                 configureKotlinAndroid(this)
                 namespace = "com.pingidentity.${project.name.replace("-", ".")}"
+                publishing {
+                    singleVariant("release") {
+                        withSourcesJar()
+                        withJavadocJar()
+                    }
+                }
             }
 
             configureJava()
