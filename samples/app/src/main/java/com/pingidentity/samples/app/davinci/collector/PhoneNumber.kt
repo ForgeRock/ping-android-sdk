@@ -38,8 +38,11 @@ import com.pingidentity.davinci.collector.PhoneNumberCollector
 fun PhoneNumber(field: PhoneNumberCollector, onNodeUpdated: () -> Unit) {
     var expanded by remember { mutableStateOf(false) }
     var selectedCountryCode by remember {
-        mutableStateOf(countryCodes.firstOrNull { it.countryCode == field.defaultCountryCode }
-            ?: countryCodes.first())
+        val codeToUse = field.countryCode.ifEmpty { field.defaultCountryCode }
+        mutableStateOf(
+            countryCodes.firstOrNull { it.countryCode == codeToUse }
+                ?: countryCodes.first()
+        )
     }
 
     var isValid by remember {
@@ -148,4 +151,3 @@ val countryCodes = listOf(
     Country("HK", "Hong Kong", "852"),
     // Add more countries as needed
 )
-
