@@ -11,6 +11,7 @@ import androidx.test.filters.SmallTest
 import com.pingidentity.davinci.collector.FlowCollector
 import com.pingidentity.davinci.collector.LabelCollector
 import com.pingidentity.davinci.collector.MultiSelectCollector
+import com.pingidentity.davinci.collector.PhoneNumberCollector
 import com.pingidentity.davinci.collector.SingleSelectCollector
 import com.pingidentity.davinci.collector.SubmitCollector
 import com.pingidentity.davinci.collector.TextCollector
@@ -285,6 +286,50 @@ class FormFieldsTest {
         assertTrue(validationResult2.isEmpty())
     }
 
+    @TestRailCase(26027, 31735)
+    @Test
+    fun phoneNumberCollectorTest() = runTest {
+        // Go to the "Form Fields" form
+        var node = daVinci.start() as ContinueNode
+        (node.collectors[0] as? SubmitCollector)?.value = "click"
+        node = node.next() as ContinueNode
+
+        assertTrue(node.collectors[7] is PhoneNumberCollector)
+        val phone = node.collectors[7] as PhoneNumberCollector
+
+        // Assert the properties of the comboBox
+        assertEquals("PHONE_NUMBER", phone.type)
+        assertEquals("phone-field", phone.key)
+        assertEquals("Phone Collector", phone.label)
+        assertEquals(true, phone.required)
+        assertEquals(true, phone.validatePhoneNumber)
+        assertEquals("BF", phone.defaultCountryCode) // Burkina Faso (set in the form)
+        assertEquals("GB", phone.countryCode) // Great Britain (set in DV form connector)
+        assertEquals("(555)555-1234", phone.phoneNumber) // Set in DV form connector
+
+        // Clear the value of the phone number
+        phone.phoneNumber = ""
+
+        // validate() should fail since the phone number is empty but required
+        var validationResult = phone.validate()
+        assertTrue(validationResult.isNotEmpty())
+        assertEquals("Required", validationResult[0].toString())
+
+        // Provide a phone number without country code and validate again
+        phone.countryCode = ""
+        phone.phoneNumber = "7783177184"
+
+        validationResult = phone.validate() // Should fail
+        assertTrue(validationResult.isNotEmpty())
+        assertEquals("Required", validationResult[0].toString())
+
+        // Providing a phone number and country code should pass the validation
+        phone.countryCode = "CA"
+        phone.phoneNumber = "7783177184"
+        validationResult = phone.validate() // Should pass
+        assertTrue(validationResult.isEmpty())
+    }
+
     @TestRailCase(26033)
     @Test
     fun flowButtonCollectorTest() = runTest {
@@ -294,8 +339,8 @@ class FormFieldsTest {
         node = node.next() as ContinueNode
 
         // Make sure that FlowButton is present
-        assertTrue(node.collectors[7] is FlowCollector)
-        val flowButton = (node.collectors[7] as FlowCollector)
+        assertTrue(node.collectors[8] is FlowCollector)
+        val flowButton = (node.collectors[8] as FlowCollector)
         flowButton.value = "action"
 
         // Assert the properties
@@ -319,8 +364,8 @@ class FormFieldsTest {
         node = node.next() as ContinueNode
 
         // Make sure that FlowLink is present
-        assertTrue(node.collectors[8] is FlowCollector)
-        val flowLink = (node.collectors[8] as FlowCollector)
+        assertTrue(node.collectors[9] is FlowCollector)
+        val flowLink = (node.collectors[9] as FlowCollector)
 
         // Assert the properties
         assertEquals("FLOW_LINK", flowLink.type)
