@@ -20,6 +20,7 @@ import com.pingidentity.device.id.DeviceIdentifier
 import com.pingidentity.device.profile.collector.DeviceCollector
 import com.pingidentity.device.profile.collector.HardwareCollector
 import com.pingidentity.device.profile.collector.PlatformCollector
+import com.pingidentity.device.profile.collector.collect
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkConstructor
@@ -79,6 +80,20 @@ class DeviceProfileCallbackTest {
     fun `collect returns config with default`() = runTest {
         val callback = DeviceProfileCallback()
         callback.collect()
+    }
+
+    @Test
+    fun `extension function test`() = runTest {
+
+        // Initialize collectors with default set
+        val collectors: MutableList<DeviceCollector<*>> =
+            mutableListOf(DummyDeviceCollector(), Dummy2DeviceCollector)
+
+        // Collect device information
+        val deviceProfile = collectors.collect()
+
+        // Use the collected profile (JsonObject)
+        println(deviceProfile.toString())
     }
 
     private fun setupCameraMocks() {

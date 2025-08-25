@@ -7,8 +7,12 @@
 
 package com.pingidentity.device.profile.collector
 
+import com.pingidentity.device.profile.json
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.encodeToJsonElement
+import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.serializer
 
 /**
@@ -37,5 +41,19 @@ inline fun <reified T : @Serializable Any> DeviceCollector(
         override val key = key
         override val serializer: KSerializer<T> = serializer()
         override suspend fun collect(): T? = collect()
+    }
+}
+
+suspend fun MutableList<DeviceCollector<*>>.collect(): JsonElement {
+    val result = mapNotNull { collector ->
+        collector.encodeAndCollect()
+    }.toMap()
+    return json.encodeToJsonElement(result).jsonObject
+}
+
+private suspend fun <T : Any> DeviceCollector<T>.encodeAndCollect(): Pair<String, JsonElement>? {
+    val data = this.collect()
+    return data?.let {
+        this.key to json.encodeToJsonElement(this.serializer, it)
     }
 }

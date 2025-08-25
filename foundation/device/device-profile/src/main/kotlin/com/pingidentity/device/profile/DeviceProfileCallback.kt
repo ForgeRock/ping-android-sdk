@@ -14,6 +14,7 @@ import com.pingidentity.utils.PingDsl
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
 class DeviceProfileCallback : AbstractCallback() {
@@ -33,15 +34,17 @@ class DeviceProfileCallback : AbstractCallback() {
         }
     }
 
-    suspend fun collect(block: DeviceProfileConfig.() -> Unit = DefaultProfile()) {
+    suspend fun collect(block: DeviceProfileConfig.() -> Unit = DefaultProfile()): Result<JsonObject> {
         val json = Json {
             prettyPrint = true
         }
+
         val prettyString = json.encodeToString(profile(block))
         println(prettyString)
         if (metadata) {
             input(prettyString)
         }
+        return Result.success(profile(block))
     }
 }
 
