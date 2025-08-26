@@ -60,3 +60,17 @@ subprojects {
         theme = ThemeType.MOCHA
     }
 }
+
+// Commend to generate all doc ./gradlew dokkaGenerate
+dependencies {
+    subprojects
+        .filter {
+            //it.plugins does not work
+            val buildFile = it.buildFile
+            buildFile.exists() && buildFile.readText()
+                .contains("com.pingidentity.convention.centralPublish")
+        }
+        .forEach { subproject ->
+            dokka(subproject)
+        }
+}

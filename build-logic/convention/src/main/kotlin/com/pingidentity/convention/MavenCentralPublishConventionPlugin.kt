@@ -20,6 +20,9 @@ import org.gradle.kotlin.dsl.register
 import org.gradle.kotlin.dsl.withType
 import org.gradle.plugins.signing.Sign
 import org.gradle.plugins.signing.SigningExtension
+import org.jetbrains.dokka.gradle.DokkaExtension
+import org.jetbrains.dokka.gradle.engine.parameters.VisibilityModifier
+import org.jetbrains.dokka.gradle.engine.plugins.DokkaHtmlPluginParameters
 
 class MavenCentralPublishConventionPlugin : Plugin<Project> {
     override fun apply(target: Project) {
@@ -33,13 +36,35 @@ class MavenCentralPublishConventionPlugin : Plugin<Project> {
 
             val javadocJar = tasks.register("javadocJar", Jar::class.java) {
                 archiveClassifier.set("javadoc")
-                from(tasks.getByName("dokkaHtml"))
+                from(tasks.getByName("dokkaGenerate"))
             }
 
             //The source only includes the README.md, delete this if we want to include the whole source
             val sourcesJar = tasks.register<Jar>("sourcesJar") {
                 archiveClassifier.set("sources")
                 from("README.md")
+            }
+
+            extensions.configure<DokkaExtension> {
+                this.dokkaPublications.named("html") {
+                    this.suppressInheritedMembers.set(true)
+                    this.failOnWarning.set(true)
+                }
+
+                this.dokkaSourceSets.named("main") {
+                    // Only document public and protected members
+                    this.documentedVisibilities(VisibilityModifier.Public, VisibilityModifier.Protected)
+                    this.sourceLink {
+                        this.localDirectory.set(project.file("src/main/kotlin"))
+                        this.remoteUrl("https://github.com/ForgeRock/ping-android-sdk/tree/master/${project.name}")
+                        this.remoteLineSuffix.set("#L")
+                    }
+                }
+
+                this.pluginsConfiguration.named("html", DokkaHtmlPluginParameters::class.java) {
+                    this.footerMessage.set("Ping Identity")
+                    this.homepageLink.set("https://github.com/ForgeRock/ping-android-sdk/")
+                }
             }
 
             extensions.configure<PublishingExtension> {

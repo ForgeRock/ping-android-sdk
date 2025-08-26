@@ -32,6 +32,7 @@ fun Text(
     var isValid by remember {
         mutableStateOf(true)
     }
+    var text by remember { mutableStateOf(field.value) }
 
     Row(
         modifier =
@@ -40,15 +41,13 @@ fun Text(
             .fillMaxWidth(),
     ) {
 
-        // var text by rememberSaveable { mutableStateOf("") }
-
         Spacer(modifier = Modifier.weight(1f, true))
 
         OutlinedTextField(
             modifier = Modifier.wrapContentWidth(Alignment.CenterHorizontally),
-            value = field.value,
+            value = text ,
             onValueChange = { value ->
-                // text = value
+                text = value
                 field.value = value
                 isValid = field.validate().isEmpty()
                 onNodeUpdated()

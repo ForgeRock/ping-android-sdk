@@ -25,7 +25,7 @@ import com.pingidentity.journey.callback.TextInputCallback
 fun TextInputCallback(textInputCallback: TextInputCallback, onNodeUpdated: () -> Unit) {
 
     var text by remember {
-        mutableStateOf("")
+        mutableStateOf(textInputCallback.defaultText)
     }
 
     Row(

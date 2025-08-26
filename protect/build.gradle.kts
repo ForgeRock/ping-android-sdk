@@ -9,8 +9,7 @@ description = "Ping Identity Protect SDK for Android"
 
 plugins {
     id("com.pingidentity.convention.android.library")
-    //TODO re-enable when central publish is ready
-    //id("com.pingidentity.convention.centralPublish")
+    id("com.pingidentity.convention.centralPublish")
     id("com.pingidentity.convention.jacoco")
     alias(libs.plugins.androidLibrary)
     alias(libs.plugins.kotlinAndroid)
