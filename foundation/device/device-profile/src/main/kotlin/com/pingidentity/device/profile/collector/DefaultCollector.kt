@@ -11,4 +11,5 @@ fun DefaultDeviceCollector(): MutableList<DeviceCollector<*>>.() -> Unit = {
     add(HardwareCollector)
     add(NetworkCollector())
     add(TelephonyCollector)
+    add(LocationCollector())
 }
