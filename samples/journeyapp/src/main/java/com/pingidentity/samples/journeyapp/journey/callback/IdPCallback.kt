@@ -23,6 +23,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.pingidentity.idp.journey.IdpCallback
+import com.pingidentity.samples.journeyapp.env.redirectUri
 
 @Composable
 fun IdPCallback(
@@ -43,7 +44,7 @@ fun IdPCallback(
         CircularProgressIndicator()
 
         LaunchedEffect(true) {
-            callback.authorize()
+            callback.authorize(redirectUri)
             currentOnNodeUpdated()
         }
     }

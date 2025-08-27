@@ -8,7 +8,7 @@
 package com.pingidentity.idp
 
 /**
- * Data class representing the result of an IDP authorization.
+ * Data class representing the result of an IDP authentication.
  *
  * @param token The token.
  * @param additionalParameters The additional parameters.

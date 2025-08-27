@@ -8,11 +8,15 @@
 package com.pingidentity.browser
 
 import android.app.Activity
-import android.content.ActivityNotFoundException
+import android.app.Application
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import androidx.activity.result.ActivityResult
 import androidx.activity.result.ActivityResultLauncher
+import androidx.core.net.toUri
+import androidx.test.core.app.ApplicationProvider
+import com.pingidentity.android.ContextProvider
 import io.mockk.mockk
 import io.mockk.verify
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -21,12 +25,20 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 @RunWith(RobolectricTestRunner::class)
-class IntentLauncherTest {
+class AuthTabIntentLauncherTest {
+
+    private val context: Context by lazy { ApplicationProvider.getApplicationContext<Application>() }
+
+    @BeforeTest
+    fun setUp() {
+        ContextProvider.init(context)
+    }
 
     @Test
     fun `launch with successful result`() = runTest {
@@ -35,10 +47,8 @@ class IntentLauncherTest {
         val state = MutableStateFlow<ActivityResult?>(null)
 
         // Create IntentLauncher
-        val intentLauncher = IntentLauncher(mockLauncher, state)
+        val intentLauncher = AuthTabIntentLauncher(mockLauncher, state)
 
-        // Prepare test intent and uri
-        val testIntent = Intent()
         val testUri = Uri.parse("content://test/uri")
 
         // Create a successful activity result
@@ -57,12 +67,12 @@ class IntentLauncherTest {
         }
 
         // Call launch method
-        val result = intentLauncher.launch(testIntent)
+        val result = intentLauncher.launch("https://example.com", testUri)
 
         // Verify
         assertTrue(result.isSuccess)
         assertEquals(testUri, result.getOrNull())
-        verify { mockLauncher.launch(testIntent) }
+        verify { mockLauncher.launch(any()) }
 
     }
 
@@ -73,10 +83,7 @@ class IntentLauncherTest {
         val state = MutableStateFlow<ActivityResult?>(null)
 
         // Create IntentLauncher
-        val intentLauncher = IntentLauncher(mockLauncher, state)
-
-        // Prepare test intent
-        val testIntent = Intent()
+        val intentLauncher = AuthTabIntentLauncher(mockLauncher, state)
 
         // Create a canceled activity result with browser cancel error
         val canceledResult = ActivityResult(
@@ -92,49 +99,12 @@ class IntentLauncherTest {
         }
 
         // Call launch method and expect BrowserCanceledException
-        val result = intentLauncher.launch(testIntent)
+        val result = intentLauncher.launch("https://example.com", "redirectUri://test.com".toUri())
 
         // Verify
         assertTrue(result.isFailure)
         assertTrue(result.exceptionOrNull() is BrowserCanceledException)
-        verify { mockLauncher.launch(testIntent) }
-    }
-
-    @Test
-    fun `launch with activity not found error`() = runTest {
-        // Prepare mocks
-        val mockLauncher = mockk<ActivityResultLauncher<Intent>>(relaxed = true)
-        val state = MutableStateFlow<ActivityResult?>(null)
-
-        // Create IntentLauncher
-        val intentLauncher = IntentLauncher(mockLauncher, state)
-
-        // Prepare test intent
-        val testIntent = Intent()
-
-        // Create a canceled activity result with activity not found error
-        val canceledResult = ActivityResult(
-            Activity.RESULT_CANCELED,
-            Intent().apply {
-                putExtra(CustomTabActivity.ERROR, CustomTabActivity.ERROR_ACTIVITY_NOT_FOUND)
-                putExtra(CustomTabActivity.ERROR_MESSAGE, "Test error message")
-            }
-        )
-
-        // Simulate launching and getting result
-        launch {
-            state.update { canceledResult }
-        }
-
-        // Call launch method and expect ActivityNotFoundException
-        val result = intentLauncher.launch(testIntent)
-
-        // Verify
-        assertTrue(result.isFailure)
-        assertTrue(result.exceptionOrNull() is ActivityNotFoundException)
-        assertEquals("Test error message", result.exceptionOrNull()?.message)
-        verify { mockLauncher.launch(testIntent) }
-
+        verify { mockLauncher.launch(any()) }
     }
 
     @Test
@@ -144,10 +114,7 @@ class IntentLauncherTest {
         val state = MutableStateFlow<ActivityResult?>(null)
 
         // Create IntentLauncher
-        val intentLauncher = IntentLauncher(mockLauncher, state)
-
-        // Prepare test intent
-        val testIntent = Intent()
+        val intentLauncher = AuthTabIntentLauncher(mockLauncher, state)
 
         // Create a successful activity result with no uri
         val successResultNoUri = ActivityResult(
@@ -161,13 +128,13 @@ class IntentLauncherTest {
         }
 
         // Call launch method and expect IllegalStateException
-        val result = intentLauncher.launch(testIntent)
+        val result = intentLauncher.launch("https://example.com",  "redirectUri://test.com".toUri())
 
         // Verify
         assertTrue(result.isFailure)
         assertTrue(result.exceptionOrNull() is IllegalStateException)
         assertEquals("No Uri found in response", result.exceptionOrNull()?.message)
-        verify { mockLauncher.launch(testIntent) }
+        verify { mockLauncher.launch(any()) }
 
     }
 
@@ -178,7 +145,7 @@ class IntentLauncherTest {
         val state = MutableStateFlow<ActivityResult?>(null)
 
         // Create IntentLauncher
-        val intentLauncher = IntentLauncher(mockLauncher, state)
+        val intentLauncher = AuthTabIntentLauncher(mockLauncher, state)
 
         // Prepare test intent
         val testIntent = Intent()
@@ -194,7 +161,7 @@ class IntentLauncherTest {
         }
 
         // Call launch method with pending flag
-        val result = intentLauncher.launch(testIntent, pending = true)
+        val result = intentLauncher.launch("https://example.com",  "redirectUri://test.com".toUri(), pending = true)
 
         // Verify
         assertTrue(result.isSuccess)

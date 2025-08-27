@@ -7,9 +7,11 @@
 
 package com.pingidentity.samples.journeyapp.env
 
+import android.net.Uri
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.core.net.toUri
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.lifecycle.ViewModel
@@ -62,6 +64,7 @@ val localhost =  Journey {
 
 var journey = forgeblock
 lateinit var oidcClient: OidcClient
+lateinit var redirectUri: Uri //For Social Login redirect parameter using Auth Tab
 
 class EnvViewModel : ViewModel() {
 
@@ -86,6 +89,8 @@ class EnvViewModel : ViewModel() {
         journey = server
 
         val oidcConfig = server.oidcConfig()
+
+        redirectUri = oidcConfig.redirectUri.toUri()
 
         oidcClient = OidcClient {
             clientId = oidcConfig.clientId

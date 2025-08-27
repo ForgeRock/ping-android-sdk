@@ -74,8 +74,6 @@ dependencies {
     implementation(project(":external-idp"))
 
     //To enable Native Google Sign-In, fall back to browser if Google SDK is not available.
-    implementation(libs.googleid)
-    implementation(libs.androidx.credentials.play.services.auth)
 
     implementation(libs.facebook.login)
 

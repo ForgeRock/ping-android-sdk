@@ -7,6 +7,7 @@
 
 package com.pingidentity.oidc.module
 
+import androidx.core.net.toUri
 import com.pingidentity.browser.BrowserLauncher
 import com.pingidentity.oidc.Constants.CODE
 import com.pingidentity.orchestrate.Module
@@ -24,7 +25,7 @@ import kotlinx.serialization.json.put
 internal const val IS_WEB = "IS_WEB"
 
 // Module to handle the request with browser interaction
-val Web = Module.of {
+val Web = Module.of(::WebModuleConfig) {
 
     init {
         // Indicate that this module is for web-based OIDC flows
@@ -36,32 +37,37 @@ val Web = Module.of {
         // When there is exception, it will be handled by the orchestrate module, which will return [FailureNode]
         val url = it.toUrl()
         logger.d("Launching browser for OIDC authorization flow with url $url")
-        val uri = BrowserLauncher.launch(url).getOrThrow()
+        BrowserLauncher.customTabsCustomizer = config.customTabsCustomizer
+        BrowserLauncher.authTabCustomizer = config.authTabCustomizer
+        BrowserLauncher.intentCustomizer = config.intentCustomizer
+        BrowserLauncher.logger = workflow.config.logger
+        val uri = BrowserLauncher.launch(url, workflow.oidcClientConfig().redirectUri.toUri())
+            .getOrThrow()
         val code = uri.getQueryParameter(CODE)
             ?: throw IllegalStateException("No authorization code found in response")
 
-                object : Response {
-                    override val request = it
+        object : Response {
+            override val request = it
 
-                    override suspend fun body(): String {
-                        return buildJsonObject {
-                            put(CODE, code)
-                        }.toString()
-                    }
-
-                    override fun status(): Int {
-                        return 200 // HTTP OK
-                    }
-
-                    override fun cookies(): Cookies {
-                        return emptyList()
-                    }
-
-                    override fun header(name: String): String? {
-                        return null
-                    }
-                }
+            override suspend fun body(): String {
+                return buildJsonObject {
+                    put(CODE, code)
+                }.toString()
             }
+
+            override fun status(): Int {
+                return 200 // HTTP OK
+            }
+
+            override fun cookies(): Cookies {
+                return emptyList()
+            }
+
+            override fun header(name: String): String? {
+                return null
+            }
+        }
+    }
 
     transform {
         val json = it.body().asJson()

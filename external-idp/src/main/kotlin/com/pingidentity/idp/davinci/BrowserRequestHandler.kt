@@ -7,6 +7,7 @@
 
 package com.pingidentity.idp.davinci
 
+import android.net.Uri
 import com.pingidentity.browser.BrowserLauncher
 import com.pingidentity.orchestrate.ContinueNode
 import com.pingidentity.orchestrate.Request
@@ -18,9 +19,13 @@ import java.net.URL
  * A handler class for managing browser-based Identity Provider (IdP) authorization.
  *
  * @property continueNode The continue node for the DaVinci flow.
+ * @property redirectUri The redirect URI for the browser-based IdP authentication.
+ * The redirect URI is used when using Auth Tab (https://developer.chrome.com/docs/android/custom-tabs/guide-auth-tab)
+ * When using Auth Tab, it is not necessary to define the redirect scheme under AndroidManifest.xml
  */
 internal class BrowserRequestHandler(
-    private val continueNode: ContinueNode
+    private val continueNode: ContinueNode,
+    private val redirectUri: Uri
 ) : IdpRequestHandler {
 
     /**
@@ -36,7 +41,7 @@ internal class BrowserRequestHandler(
             ?.jsonObject?.get("href")
             ?.jsonPrimitive?.content ?: throw IllegalStateException("Continue URL not found")
 
-        val result = BrowserLauncher.launch(URL(url))
+        val result = BrowserLauncher.launch(URL(url), redirectUri)
         return if (result.isSuccess) {
             Request().apply {
                 val continueToken = result.getOrThrow().toString()

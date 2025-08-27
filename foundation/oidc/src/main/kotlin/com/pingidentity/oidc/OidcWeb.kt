@@ -73,10 +73,10 @@ class OidcWeb(config: OidcWebConfig) {
          */
         operator fun invoke(block: OidcWebConfig.() -> Unit = {}): OidcWeb {
             val config = OidcWebConfig()
-            config.apply(block) // apply the configuration block
             config.apply {
                 config.module(Web) // register the web module
             }
+            config.apply(block) // apply the configuration block
             return OidcWeb(config)
         }
     }

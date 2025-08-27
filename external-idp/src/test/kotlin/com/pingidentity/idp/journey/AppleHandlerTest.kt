@@ -8,6 +8,7 @@
 package com.pingidentity.idp.journey
 
 import android.net.Uri
+import androidx.core.net.toUri
 import com.pingidentity.browser.BrowserLauncher
 import com.pingidentity.browser.BrowserLauncher.launch
 import com.pingidentity.idp.IdpClient
@@ -17,7 +18,6 @@ import io.mockk.mockk
 import io.mockk.mockkObject
 import io.mockk.unmockkObject
 import kotlinx.coroutines.test.runTest
-import org.bouncycastle.util.test.SimpleTest.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -36,7 +36,7 @@ class AppleHandlerTest {
 
     @Before
     fun setup() {
-        appleHandler = AppleHandler()
+        appleHandler = AppleHandler("https://example.com/callback".toUri())
 
         mockIdpClient = mockk<IdpClient> {
             every { clientId } returns "test.client.id"
@@ -63,7 +63,7 @@ class AppleHandlerTest {
     @Test
     fun `test authorize constructs correct request and returns form post entry`() = runTest {
         // Given
-        coEvery { launch(any()) } returns Result.success(mockUri)
+        coEvery { launch(any(), any()) } returns Result.success(mockUri)
 
         // When
         val result = appleHandler.authorize(mockIdpClient)
@@ -80,7 +80,7 @@ class AppleHandlerTest {
     fun `test authorize with failed browser launch`() = runTest {
         // Given
         val expectedException = RuntimeException("Browser launch failed")
-        coEvery { launch(any()) } returns Result.failure(expectedException)
+        coEvery { launch(any(), any()) } returns Result.failure(expectedException)
 
         // When
         val exception = runCatching { appleHandler.authorize(mockIdpClient) }
@@ -95,7 +95,7 @@ class AppleHandlerTest {
     fun `test authorize constructs URI with correct parameters`() = runTest {
         // Given
         val capturedUrl = mutableListOf<URL>()
-        coEvery { launch(capture(capturedUrl)) } returns Result.success(mockUri)
+        coEvery { launch(capture(capturedUrl), any()) } returns Result.success(mockUri)
 
         // When
         appleHandler.authorize(mockIdpClient)
@@ -123,7 +123,7 @@ class AppleHandlerTest {
         val emptyUri = mockk<Uri> {
             every { queryParameterNames } returns emptySet()
         }
-        coEvery { BrowserLauncher.launch(any()) } returns Result.success(emptyUri)
+        coEvery { launch(any(), any()) } returns Result.success(emptyUri)
 
         // When
         val result = appleHandler.authorize(mockIdpClient)
