@@ -10,8 +10,10 @@ import android.app.ActivityManager
 import android.content.Context
 import android.hardware.camera2.CameraManager
 import android.net.ConnectivityManager
+import android.net.Network
 import android.os.Environment
 import android.os.StatFs
+import android.telephony.TelephonyManager
 import android.util.DisplayMetrics
 import android.view.Display
 import android.view.WindowManager
@@ -45,6 +47,8 @@ class DeviceProfileCallbackTest {
         setupWindowManagerMocks()
         setupStorageMocks()
         setupMemoryMocks()
+        setupConnectivityConnectivityMocks()
+        setupTelephonyCollectorMocks()
     }
 
     @AfterTest
@@ -134,8 +138,24 @@ class DeviceProfileCallbackTest {
 
     private fun setupConnectivityConnectivityMocks() {
         val mockConnectivityManager = mockk<ConnectivityManager>()
-        every { mockContext.getSystemService(Context.CONNECTIVITY_SERVICE) }
+        val mockNetwork = mockk<Network>()
+        val mockNetworkInfo = mockk<android.net.NetworkInfo>()
+        every {
+            mockContext.getSystemService(Context.CONNECTIVITY_SERVICE)
+        } returns mockConnectivityManager
+        every { mockConnectivityManager.activeNetwork } returns mockNetwork
+        @Suppress("DEPRECATION")
+        every { mockConnectivityManager.activeNetworkInfo } returns mockNetworkInfo
+        every { mockNetworkInfo.isConnected } returns true
+    }
 
+    private fun setupTelephonyCollectorMocks() {
+        val mockTelephonyManager = mockk<TelephonyManager>()
+        every {
+            mockContext.getSystemService(Context.TELEPHONY_SERVICE)
+        } returns mockTelephonyManager
+        every { mockTelephonyManager.networkCountryIso } returns "Canada"
+        every { mockTelephonyManager.networkOperatorName } returns "Telus"
     }
 }
 
