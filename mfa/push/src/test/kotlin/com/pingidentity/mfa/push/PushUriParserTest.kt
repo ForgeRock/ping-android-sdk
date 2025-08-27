@@ -55,6 +55,29 @@ class PushUriParserTest {
         assertEquals("jaKZUQlypvRCEugWMVvUWcpNfUFW4pSiB9sVBcKZLis=", regParams["challenge"])
         assertEquals("amlbcookie=01", regParams["amlbCookie"])
     }
+
+    @Test
+    fun `test parse real MFA URI`() {
+        val uri = "mfauth://totp/ForgeRock:rodrigo@forgerock.com?a=aHR0cHM6Ly9vcGVuYW0tc2Rrcy5mb3JnZWJsb2Nrcy5jb206NDQzL2FtL2pzb24vYWxwaGEvcHVzaC9zbnMvbWVzc2FnZT9fYWN0aW9uPWF1dGhlbnRpY2F0ZQ&image=https://img.favpng.com/9/25/24/computer-icons-instagram-logo-sticker-png-favpng-LZmXr3KPyVbr8LkxNML458QV3.jpg&r=aHR0cHM6Ly9vcGVuYW0tc2Rrcy5mb3JnZWJsb2Nrcy5jb206NDQzL2FtL2pzb24vYWxwaGEvcHVzaC9zbnMvbWVzc2FnZT9fYWN0aW9uPXJlZ2lzdGVy&b=032b75&period=30&s=uo2Cl3tmuZF6v_U_n6x7sedgtvtTSoNJCOxmu1rP1WI&c=j_ho1QgRBsE0zeDpGdt9s4loRxrLwpRuOcNqKNQCLOo&digits=8&secret=RY7IQKMGXDI7KTOHD45PUQ6UMM======&l=YW1sYmNvb2tpZT0wMQ&m=REGISTER:c07f99ef-8c65-420f-bd3b-6b835a4868b01755815432333&issuer=Rm9yZ2VSb2Nr"
+        val credential = PushUriParser.parse(uri)
+
+        // Verify essential properties
+        assertNotNull(credential)
+        assertEquals("ForgeRock", credential.issuer)
+        assertEquals("rodrigo@forgerock.com", credential.accountName)
+        assertEquals("uo2Cl3tmuZF6v/U/n6x7sedgtvtTSoNJCOxmu1rP1WI=", credential.sharedSecret)
+        assertEquals("https://img.favpng.com/9/25/24/computer-icons-instagram-logo-sticker-png-favpng-LZmXr3KPyVbr8LkxNML458QV3.jpg", credential.imageURL) // TOTP secret
+
+        // Verify server endpoint contains expected base URL
+        val serverEndpoint = credential.serverEndpoint
+        assert(serverEndpoint.contains("openam-sdks.forgeblocks.com:443/am/json/alpha/push/sns/message"))
+
+        // Also try to get registration parameters
+        val regParams = PushUriParser.registrationParameters(uri)
+        assertEquals("REGISTER:c07f99ef-8c65-420f-bd3b-6b835a4868b01755815432333", regParams["messageId"])
+        assertEquals("j/ho1QgRBsE0zeDpGdt9s4loRxrLwpRuOcNqKNQCLOo=", regParams["challenge"])
+        assertEquals("amlbcookie=01", regParams["amlbCookie"])
+    }
     
     @Test(expected = IllegalArgumentException::class)
     fun `test parse invalid scheme URI`() {

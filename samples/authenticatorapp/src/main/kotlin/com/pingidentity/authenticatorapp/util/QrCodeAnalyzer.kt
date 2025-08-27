@@ -15,6 +15,7 @@ import androidx.camera.core.ImageProxy
 import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.common.InputImage
+import com.pingidentity.authenticatorapp.data.UriScheme
 import java.util.concurrent.TimeUnit
 
 /**
@@ -42,10 +43,14 @@ class QrCodeAnalyzer(private val onQrCodeDetected: (String) -> Unit) : ImageAnal
                 
                 scanner.process(inputImage)
                     .addOnSuccessListener { barcodes ->
-                        // Process QR codes and find the first matching barcode
+                        // Process QR codes and find the first valid barcode
                         val foundQrCode = barcodes.find { barcode ->
                             barcode.format == Barcode.FORMAT_QR_CODE && 
-                            barcode.rawValue?.startsWith("otpauth://") == true
+                            barcode.rawValue != null && (
+                                barcode.rawValue?.startsWith(UriScheme.OTPAUTH.value) == true ||
+                                barcode.rawValue?.startsWith(UriScheme.PUSHAUTH.value) == true ||
+                                barcode.rawValue?.startsWith(UriScheme.MFAUTH.value) == true
+                            )
                         }
                         
                         // If we found a matching QR code, process it

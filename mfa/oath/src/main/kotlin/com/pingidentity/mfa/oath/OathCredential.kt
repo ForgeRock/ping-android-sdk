@@ -23,7 +23,8 @@ import java.util.Date
 import java.util.UUID
 
 /**
- * OathCredential represents an OATH (TOTP/HOTP) credential.
+ * Represents an OATH (TOTP/HOTP) credential.
+ * This model holds all necessary information to generate OTP codes and identify the credential.
  *
  * @property id Unique identifier for the credential (local ID).
  * @property userId User identifier on the server.
@@ -49,12 +50,12 @@ import java.util.UUID
 @Serializable
 data class OathCredential(
     val id: String = UUID.randomUUID().toString(),
-    val userId: String = "",
-    val resourceId: String = "",
+    val userId: String? = null,
+    val resourceId: String? = null,
     val issuer: String,
-    val displayIssuer: String,
+    val displayIssuer: String = issuer,
     val accountName: String,
-    val displayAccountName: String,
+    val displayAccountName: String = accountName,
     @Serializable(with = OathTypeSerializer::class)
     val oathType: OathType,
     val secret: String,

@@ -12,7 +12,7 @@ import com.pingidentity.mfa.commons.UriParser
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
-import kotlin.coroutines.coroutineContext
+import androidx.core.net.toUri
 
 /**
  * Utility class for parsing OATH URIs.
@@ -48,7 +48,7 @@ object OathUriParser : UriParser() {
      */
     suspend fun parse(uri: String): OathCredential = withContext(Dispatchers.IO) {
         try {
-            val parsedUri = Uri.parse(uri)
+            val parsedUri = uri.toUri()
             
             // Check scheme
             val scheme = parsedUri.scheme?.lowercase() ?: ""
@@ -95,15 +95,15 @@ object OathUriParser : UriParser() {
             val userId = if (userIdParam != null && isBase64Encoded(userIdParam)) {
                 decodeBase64(userIdParam)
             } else {
-                userIdParam ?: ""
+                userIdParam
             }
-            
+
             // Resource ID - might be base64-encoded
             val resourceIdParam = parsedUri.getQueryParameter(OATH_RESOURCE_ID_PARAM)
             val resourceId = if (resourceIdParam != null && isBase64Encoded(resourceIdParam)) {
                 decodeBase64(resourceIdParam)
             } else {
-                resourceIdParam ?: ""
+                resourceIdParam
             }
 
             // Policies - might be base64-encoded
@@ -190,28 +190,27 @@ object OathUriParser : UriParser() {
         }
         
         // Add the additional parameters if they are present
-        if (credential.userId.isNotEmpty()) {
+        credential.userId?.takeIf { it.isNotEmpty() }?.let { userId ->
             // Base64 encode the userId parameter
-            val encodedUserId = encodeBase64(credential.userId)
+            val encodedUserId = encodeBase64(userId)
             uriBuilder.append("&$USER_ID_PARAM_OATH=").append(Uri.encode(encodedUserId))
         }
         
-        if (credential.resourceId.isNotEmpty()) {
+        credential.resourceId?.takeIf { it.isNotEmpty() }?.let { resourceId ->
             // Base64 encode the resourceId parameter
-            val encodedResourceId = encodeBase64(credential.resourceId)
+            val encodedResourceId = encodeBase64(resourceId)
             uriBuilder.append("&$OATH_RESOURCE_ID_PARAM=").append(Uri.encode(encodedResourceId))
         }
         
-        if (!credential.imageURL.isNullOrEmpty()) {
-            uriBuilder.append("&$IMAGE_URL_PARAM=").append(Uri.encode(credential.imageURL))
+        credential.imageURL?.takeIf { it.isNotEmpty() }?.let { imageUrl ->
+            uriBuilder.append("&$IMAGE_URL_PARAM=").append(Uri.encode(imageUrl))
         }
         
-        if (!credential.backgroundColor.isNullOrEmpty()) {
+        credential.backgroundColor?.takeIf { it.isNotEmpty() }?.let { backgroundColor ->
             // Remove # prefix if present for the parameter
-            val bgColor = formatBackgroundColor(credential.backgroundColor)
+            val bgColor = formatBackgroundColor(backgroundColor)
             uriBuilder.append("&$BACKGROUND_COLOR_PARAM=").append(Uri.encode(bgColor))
         }
-        
         uriBuilder.toString()
     }
 }

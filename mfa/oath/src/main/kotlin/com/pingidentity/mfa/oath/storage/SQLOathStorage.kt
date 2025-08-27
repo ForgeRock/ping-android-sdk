@@ -484,8 +484,8 @@ class SQLOathStorage private constructor(
     private fun createOathCredentialFromData(data: Map<String, Any?>): OathCredential? {
         try {
             val id = data[OATH_COLUMN_ID] as String
-            val userId = data[OATH_COLUMN_USER_ID] as String
-            val resourceId = data[OATH_COLUMN_RESOURCE_ID] as String
+            val userId = data[OATH_COLUMN_USER_ID] as? String
+            val resourceId = data[OATH_COLUMN_RESOURCE_ID] as? String
             val issuer = data[OATH_COLUMN_ISSUER] as String
             val displayIssuer = data[OATH_COLUMN_DISPLAY_ISSUER] as String
             val accountName = data[OATH_COLUMN_ACCOUNT_NAME] as String

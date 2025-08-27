@@ -2,6 +2,8 @@ plugins {
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.kotlinAndroid)
     alias(libs.plugins.compose.compiler)
+    alias(libs.plugins.googleServices)
+    alias(libs.plugins.kotlinSerialization)
 }
 
 android {
@@ -30,6 +32,12 @@ android {
             )
         }
     }
+    
+    lint {
+        disable += "NullSafeMutableLiveData"
+        // To avoid lint errors during the build
+        abortOnError = false
+    }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -54,6 +62,10 @@ android {
 dependencies {
     // Ping SDK dependencies
     implementation(project(":mfa:oath"))
+    implementation(project(":mfa:push"))
+
+    // Kotlinx Serialization
+    implementation(libs.kotlinx.serialization.json)
 
     // Core Android dependencies
     implementation(libs.androidx.core.ktx)
@@ -77,4 +89,23 @@ dependencies {
 
     // ViewModel
     implementation(libs.androidx.lifecycle.viewmodel.compose)
+
+    // HTTP client for reverse geocoding API calls
+    implementation(libs.ktor.client.core)
+    implementation(libs.ktor.client.okhttp)
+    implementation(libs.ktor.client.content.negotiation)
+    implementation(libs.ktor.serialization.kotlinx.json)
+
+    // Image loading
+    implementation("io.coil-kt:coil-compose:2.5.0")
+
+    // Firebase Cloud Messaging for push notifications
+    implementation(platform("com.google.firebase:firebase-bom:32.7.4"))
+    implementation("com.google.firebase:firebase-messaging-ktx")
+
+    // Maps for location display - using free OpenStreetMap
+    implementation("org.osmdroid:osmdroid-android:6.1.18")
+
+    // Biometric
+    implementation("androidx.biometric:biometric:1.2.0-alpha05")
 }

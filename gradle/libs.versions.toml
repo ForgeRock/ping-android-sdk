@@ -60,6 +60,7 @@ firebase-messaging = "23.3.0"
 sqliteJvm = "2.5.1"
 playServicesAuthBlockstore = "16.4.0"
 kotlinxCoroutinesPlayServices = "1.10.2"
+googleServicesPlugin = "4.4.1"
 
 [libraries]
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activityCompose" }
@@ -147,3 +148,4 @@ testLogger = { id = "com.adarshr.test-logger", version.ref = "testLogger" }
 compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 nexusPublish = { id = "io.github.gradle-nexus.publish-plugin", version.ref = "nexus" }
 dokka = { id = "org.jetbrains.dokka", version.ref = "dokka" }
+googleServices = { id = "com.google.gms.google-services", version.ref = "googleServicesPlugin" }
