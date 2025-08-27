@@ -8,6 +8,7 @@ package com.pingidentity.device.profile
 
 import android.app.ActivityManager
 import android.content.Context
+import android.content.pm.PackageManager
 import android.hardware.camera2.CameraManager
 import android.net.ConnectivityManager
 import android.net.Network
@@ -17,6 +18,8 @@ import android.telephony.TelephonyManager
 import android.util.DisplayMetrics
 import android.view.Display
 import android.view.WindowManager
+import com.google.android.gms.location.FusedLocationProviderClient
+import com.google.android.gms.location.LocationServices
 import com.pingidentity.android.ContextProvider
 import com.pingidentity.device.id.DeviceIdentifier
 import com.pingidentity.device.profile.collector.DeviceCollector
@@ -49,11 +52,14 @@ class DeviceProfileCallbackTest {
         setupMemoryMocks()
         setupConnectivityConnectivityMocks()
         setupTelephonyCollectorMocks()
+        setupLocationCollectionMocks()
     }
 
     @AfterTest
     fun tearDown() {
         unmockkStatic(Environment::class)
+        unmockkStatic("kotlinx.coroutines.tasks.TasksKt")
+        unmockkStatic(LocationServices::class)
     }
 
     @Test
@@ -156,6 +162,14 @@ class DeviceProfileCallbackTest {
         } returns mockTelephonyManager
         every { mockTelephonyManager.networkCountryIso } returns "Canada"
         every { mockTelephonyManager.networkOperatorName } returns "Telus"
+    }
+
+    private fun setupLocationCollectionMocks() {
+        val mockLocationClient = mockk<FusedLocationProviderClient>()
+        mockkStatic(LocationServices::class)
+        mockkStatic("kotlinx.coroutines.tasks.TasksKt")
+        every { LocationServices.getFusedLocationProviderClient(mockContext) } returns mockLocationClient
+        every { mockContext.checkSelfPermission(any()) } returns PackageManager.PERMISSION_GRANTED
     }
 }
 

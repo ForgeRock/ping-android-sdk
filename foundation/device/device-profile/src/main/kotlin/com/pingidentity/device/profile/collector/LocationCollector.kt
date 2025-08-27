@@ -46,7 +46,7 @@ private suspend fun getLocation(): LocationInfo? {
         location?.let {
             LocationInfo(
                 latitude = it.latitude,
-                longitude = it.longitude
+                longitude = it.longitude,
             )
         }
     } catch (_: Exception) {
