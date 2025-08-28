@@ -27,6 +27,7 @@ dependencies {
     implementation(project(":foundation:android"))
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.androidx.annotation)
+    implementation(libs.androidx.appcompat)
     implementation(libs.play.services.location)
     implementation(libs.kotlin.playservices.coroutine)
 
