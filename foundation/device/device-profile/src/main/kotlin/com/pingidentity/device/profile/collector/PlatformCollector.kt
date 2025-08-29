@@ -7,11 +7,27 @@
 
 package com.pingidentity.device.profile.collector
 
+import android.annotation.SuppressLint
 import android.os.Build
 import kotlinx.serialization.Serializable
 import java.util.Locale
 import java.util.TimeZone
 
+/**
+ * A device collector that gathers platform and device identification information.
+ *
+ * This collector retrieves comprehensive device information including hardware identifiers,
+ * device model details, branding information, and regional settings like locale and timezone.
+ * All information is collected synchronously from Android system properties and settings.
+ *
+ * **Collected Information:**
+ * - Device hardware identifier and model name
+ * - Brand and manufacturer information
+ * - Current locale and timezone settings
+ * - Platform type (always "android" for Android devices)
+ *
+ * @see PlatformInfo for the data structure containing all collected platform details
+ */
 val PlatformCollector by lazy {
     DeviceCollector<PlatformInfo>(key = "platform") {
         PlatformInfo(
@@ -25,6 +41,35 @@ val PlatformCollector by lazy {
     }
 }
 
+/**
+ * Data class containing comprehensive platform and device information.
+ *
+ * This class holds various device identifiers, regional settings, and platform details
+ * that can be used for device fingerprinting and analytics purposes.
+ *
+ * @property platform The platform type, defaults to "android" for Android devices
+ * @property version The platform version number, currently unused (null)
+ * @property device The device hardware identifier from [Build.DEVICE], defaults to "Device" if null
+ * @property deviceName The user-visible device name from [Build.MODEL]
+ * @property model The device model name from [Build.MODEL]
+ * @property brand The device brand/manufacturer from [Build.BRAND]
+ * @property locale The current system locale in format "language_COUNTRY" (e.g., "en_US")
+ * @property timeZone The current system timezone ID (e.g., "America/Vancouver", "UTC")
+ * @property jailBreakScore Security score indicating device modification level, currently unused (null)
+ *
+ * @sample
+ * ```kotlin
+ * val platformInfo = PlatformInfo(
+ *     device = "pixel6",
+ *     deviceName = "Pixel 6",
+ *     model = "Pixel 6",
+ *     brand = "google",
+ *     locale = "en_US",
+ *     timeZone = "America/New_York"
+ * )
+ * ```
+ */
+@SuppressLint("UnsafeOptInUsageError")
 @Serializable
 data class PlatformInfo(
     var platform: String = "android",

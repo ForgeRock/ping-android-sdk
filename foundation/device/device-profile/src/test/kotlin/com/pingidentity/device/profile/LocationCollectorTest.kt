@@ -29,6 +29,17 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 
+/**
+ * Unit tests for [LocationCollector] to verify location data collection functionality.
+ *
+ * This test class covers various scenarios including:
+ * - Successful location collection with granted permissions
+ * - Error handling when location services fail
+ * - Permission denial scenarios
+ *
+ * The tests use MockK to mock Android system services and Google Play Services
+ * to isolate the location collection logic from platform dependencies.
+ */
 class LocationCollectorTest {
     private val mockContext = mockk<Context>()
     private val mockFusedLocationClient = mockk<FusedLocationProviderClient>()
@@ -36,6 +47,14 @@ class LocationCollectorTest {
     private val mockLocation = mockk<Location>()
     private val locationCollector = LocationCollector()
 
+    /**
+     * Sets up mock objects and stubs for each test case.
+     *
+     * Configures mocks for:
+     * - Android Context and system services
+     * - Google Play Services location client
+     * - Coroutines Task extensions
+     */
     @BeforeTest
     fun setUp() {
         mockkObject(ContextProvider)
@@ -51,11 +70,18 @@ class LocationCollectorTest {
         every { mockLocation.longitude } returns MOCK_LONGITUDE
     }
 
+    /**
+     * Cleans up all mocks after each test to prevent interference between tests.
+     */
     @AfterTest
     fun tearDown() {
         unmockkAll()
     }
 
+    /**
+     * Verifies that location collection succeeds when permissions are granted
+     * and location data is available from the fused location provider.
+     */
     @Test
     fun `getLocation returns LocationInfo when permission is granted and location is available`() = runTest {
             // Arrange
@@ -70,6 +96,10 @@ class LocationCollectorTest {
             assertEquals(MOCK_LONGITUDE, locationInfo?.longitude)
         }
 
+    /**
+     * Verifies that location collection returns null when permissions are granted
+     * but the location task fails (e.g., location services disabled, GPS unavailable).
+     */
     @Test
     fun `getLocation returns null when permission is granted but task fails`() = runTest {
         // Arrange
@@ -83,6 +113,13 @@ class LocationCollectorTest {
         assertNull(locationInfo)
     }
 
+    /**
+     * Verifies that location collection returns null when both fine and coarse
+     * location permissions are denied by the user.
+     *
+     * Note: This test doesn't cover the permission request flow since that
+     * requires testing the activity interaction separately.
+     */
     @Test
     fun `getLocation returns null when permission is denied`() = runTest {
         // Arrange
