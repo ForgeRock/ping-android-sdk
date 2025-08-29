@@ -166,7 +166,7 @@ fun DiagnosticLogsScreen(
                 ) {
                     items(
                         items = logs,
-                        key = { log -> "${log.timestamp}-${log.level}-${log.message.hashCode()}" }
+                        key = { log -> log.id }
                     ) { logEntry ->
                         LogEntryCard(logEntry = logEntry)
                     }

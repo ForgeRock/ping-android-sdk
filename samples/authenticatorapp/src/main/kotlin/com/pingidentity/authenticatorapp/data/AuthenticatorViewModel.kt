@@ -10,8 +10,8 @@ package com.pingidentity.authenticatorapp.data
 import android.app.Application
 import android.content.Context
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.pingidentity.authenticatorapp.AuthenticatorApp
 import com.pingidentity.authenticatorapp.R
 import com.pingidentity.authenticatorapp.managers.AccountGroupingManager
 import com.pingidentity.authenticatorapp.managers.OathManager
@@ -48,7 +48,7 @@ class AuthenticatorViewModel(
     private val pushManager: PushManager,
     private val accountGroupingManager: AccountGroupingManager,
     private val testAccountFactory: TestAccountFactory
-) : AndroidViewModel(application) {
+) : AndroidViewModel(application), ViewModelProvider.Factory {
 
     private val _uiState = MutableStateFlow(AuthenticatorUiState())
     private val diagnosticLogger = DiagnosticLogger
@@ -75,6 +75,7 @@ class AuthenticatorViewModel(
     val testMode: StateFlow<Boolean>
         get() = userPreferences.testModeFlow
 
+
     /**
      * Initializes the ViewModel by setting up state flows and loading initial data.
      */
@@ -98,6 +99,26 @@ class AuthenticatorViewModel(
                 accountGroupingManager.updateAccountGroups(oathCreds, pushCreds)
                 // Update UI state when credentials change
                 updateUiStateFromManagers()
+            }
+        }
+        
+        // Observe combine accounts setting changes and update account groups
+        viewModelScope.launch {
+            userPreferences.combineAccountsFlow.collect { _ ->
+                // Force re-grouping when combine accounts setting changes
+                val currentState = _uiState.value
+                accountGroupingManager.updateAccountGroups(
+                    currentState.oathCredentials, 
+                    currentState.pushCredentials
+                )
+                updateUiStateFromManagers()
+            }
+        }
+        
+        // Observe account groups from AccountGroupingManager
+        viewModelScope.launch {
+            accountGroupingManager.accountGroups.collect { accountGroups ->
+                _uiState.update { it.copy(accountGroups = accountGroups) }
             }
         }
         
@@ -170,8 +191,7 @@ class AuthenticatorViewModel(
         _uiState.update { currentState ->
             currentState.copy(
                 oathCredentials = oathManager.oathCredentials.value,
-                pushCredentials = pushManager.pushCredentials.value,
-                accountGroups = accountGroupingManager.accountGroups.value
+                pushCredentials = pushManager.pushCredentials.value
             )
         }
     }
@@ -184,14 +204,6 @@ class AuthenticatorViewModel(
             try {
                 // Set initial loading state
                 _uiState.update { it.copy(isInitialLoading = true) }
-                
-                // Initialize clients first
-                val oathClient = AuthenticatorApp.getOathClient(getApplication())
-                val pushClient = AuthenticatorApp.getPushClient(getApplication())
-                
-                // Set clients in managers
-                oathManager.setClient(oathClient)
-                pushManager.setClient(pushClient)
                 
                 // Load all credentials and notifications
                 loadOathCredentials()
@@ -247,14 +259,6 @@ class AuthenticatorViewModel(
         }
     }
 
-    /**
-     * Save the current account order to preferences.
-     */
-    fun saveAccountOrder(accountGroups: List<AccountGroup>) {
-        viewModelScope.launch {
-            accountGroupingManager.saveAccountOrder(accountGroups)
-        }
-    }
 
     /**
      * Update the account groups order immediately in the UI state.
@@ -262,8 +266,10 @@ class AuthenticatorViewModel(
      */
     fun updateAccountGroupOrder(newAccountGroups: List<AccountGroup>) {
         accountGroupingManager.updateAccountGroupOrder(newAccountGroups)
-        // Also save to preferences
-        saveAccountOrder(newAccountGroups)
+        // Also save to preferences asynchronously
+        viewModelScope.launch {
+            accountGroupingManager.saveAccountOrder(newAccountGroups)
+        }
     }
 
     /**
@@ -293,12 +299,6 @@ class AuthenticatorViewModel(
         viewModelScope.launch {
             diagnosticLogger.d("SettingsScreen: setCombineAccounts: $enabled")
             userPreferences.setCombineAccounts(enabled)
-            // Force update account groups since this affects grouping
-            val currentState = _uiState.value
-            accountGroupingManager.updateAccountGroups(
-                currentState.oathCredentials, 
-                currentState.pushCredentials
-            )
         }
     }
 

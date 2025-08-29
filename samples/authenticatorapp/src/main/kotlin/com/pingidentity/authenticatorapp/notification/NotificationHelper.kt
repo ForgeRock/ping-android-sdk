@@ -18,7 +18,6 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.pingidentity.authenticatorapp.R
 import com.pingidentity.authenticatorapp.notification.NotificationActionReceiver.Companion.ACTION_APPROVE
-import com.pingidentity.authenticatorapp.notification.NotificationActionReceiver.Companion.ACTION_BIOMETRIC
 import com.pingidentity.authenticatorapp.notification.NotificationActionReceiver.Companion.ACTION_DENY
 import com.pingidentity.authenticatorapp.notification.NotificationActionReceiver.Companion.EXTRA_NOTIFICATION_ID
 import com.pingidentity.mfa.push.PushNotification
@@ -181,12 +180,16 @@ class NotificationHelper(private val context: Context) {
         builder: NotificationCompat.Builder,
         notificationId: String
     ) {
-        // Biometric action
-        val biometricIntent = Intent(context, NotificationActionReceiver::class.java).apply {
-            action = ACTION_BIOMETRIC
+        // Instead of using BroadcastReceiver, directly create an activity intent for biometric authentication
+        val biometricIntent = Intent(context, BiometricPromptActivity::class.java).apply {
+            // Add flags to ensure the activity is shown when the device is locked or screen is off
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or 
+                    Intent.FLAG_ACTIVITY_CLEAR_TASK
             putExtra(EXTRA_NOTIFICATION_ID, notificationId)
         }
-        val biometricPendingIntent = PendingIntent.getBroadcast(
+        
+        // Create a PendingIntent for the activity
+        val biometricPendingIntent = PendingIntent.getActivity(
             context,
             notificationId.hashCode(),
             biometricIntent,

@@ -40,9 +40,9 @@ import androidx.compose.ui.unit.dp
 import com.pingidentity.authenticatorapp.R
 import com.pingidentity.authenticatorapp.data.AuthenticatorViewModel
 import com.pingidentity.authenticatorapp.data.DiagnosticLogger
-import com.pingidentity.authenticatorapp.data.UriScheme
 import com.pingidentity.authenticatorapp.ui.components.BackNavigationTopAppBar
 import com.pingidentity.authenticatorapp.ui.components.ErrorAlertDialog
+import com.pingidentity.mfa.commons.UriScheme
 import com.pingidentity.mfa.oath.OathAlgorithm
 import com.pingidentity.mfa.oath.OathType
 

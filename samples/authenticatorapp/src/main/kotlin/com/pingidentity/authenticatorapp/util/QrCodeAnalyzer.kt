@@ -15,7 +15,7 @@ import androidx.camera.core.ImageProxy
 import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.common.InputImage
-import com.pingidentity.authenticatorapp.data.UriScheme
+import com.pingidentity.mfa.commons.UriScheme
 import java.util.concurrent.TimeUnit
 
 /**

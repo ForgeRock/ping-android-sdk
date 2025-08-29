@@ -35,6 +35,7 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Keyboard
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
@@ -90,7 +91,8 @@ fun AccountsScreen(
     onSettingsClick: () -> Unit,
     onAboutClick: () -> Unit,
     onEditAccountsClick: () -> Unit,
-    onTestModeClick: () -> Unit = {}
+    onTestModeClick: () -> Unit = {},
+    onNavigateToLogin: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
@@ -322,6 +324,21 @@ fun AccountsScreen(
                             Icon(
                                 imageVector = Icons.Default.Keyboard,
                                 contentDescription = "Add Manually"
+                            )
+                        }
+                        
+                        // Login option
+                        FloatingActionButton(
+                            onClick = {
+                                showFabMenu = false
+                                onNavigateToLogin()
+                            },
+                            modifier = Modifier.size(48.dp),
+                            containerColor = MaterialTheme.colorScheme.secondaryContainer
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Person,
+                                contentDescription = "Journey Login"
                             )
                         }
                     }

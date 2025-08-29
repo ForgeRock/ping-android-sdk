@@ -50,9 +50,9 @@ import androidx.core.content.ContextCompat
 import com.pingidentity.authenticatorapp.R
 import com.pingidentity.authenticatorapp.data.AuthenticatorViewModel
 import com.pingidentity.authenticatorapp.data.DiagnosticLogger
-import com.pingidentity.authenticatorapp.data.UriScheme
 import com.pingidentity.authenticatorapp.ui.components.BackNavigationTopAppBar
 import com.pingidentity.authenticatorapp.util.QrCodeAnalyzer
+import com.pingidentity.mfa.commons.UriScheme
 import java.util.concurrent.Executors
 
 /**

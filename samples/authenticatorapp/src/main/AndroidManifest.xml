@@ -65,6 +65,10 @@
             android:name=".notification.BiometricPromptActivity"
             android:exported="false"
             android:theme="@style/Theme.PingIdentityAuthenticator.AppCompat"
+            android:launchMode="singleTask"
+            android:taskAffinity=""
+            android:showOnLockScreen="true"
+            android:turnScreenOn="true"
             android:noHistory="true" />
             
         <!-- Push Notification Activity -->

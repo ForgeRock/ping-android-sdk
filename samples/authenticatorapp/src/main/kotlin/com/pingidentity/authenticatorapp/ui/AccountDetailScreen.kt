@@ -338,6 +338,9 @@ fun OathCredentialsSection(
                     DetailRow(label = stringResource(id = R.string.detail_row_period), value = stringResource(id = R.string.period_seconds, credential.period))
                 }
                 DetailRow(label = stringResource(id = R.string.detail_row_created), value = formatDate(context, credential.createdAt))
+                credential.userId?.let { userId ->
+                    DetailRow(label = stringResource(id = R.string.detail_row_user_id), value = userId)
+                }
             }
         }
     }
@@ -352,7 +355,6 @@ fun PushCredentialsSection(
         title = stringResource(id = R.string.account_detail_push)
     ) {
         Column {
-            
             pushCredentials.forEachIndexed { index, credential ->
                 if (index > 0) {
                     Spacer(modifier = Modifier.height(16.dp))
@@ -360,6 +362,9 @@ fun PushCredentialsSection(
 
                 DetailRow(label = stringResource(id = R.string.detail_row_platform), value = formatPlatform(context, credential.platform))
                 DetailRow(label = stringResource(id = R.string.detail_row_created), value = formatDate(context, credential.createdAt))
+                credential.userId?.let { userId ->
+                    DetailRow(label = stringResource(id = R.string.detail_row_user_id), value = userId)
+                }
             }
         }
     }

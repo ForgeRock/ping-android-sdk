@@ -41,6 +41,7 @@
     <string name="period_seconds">%d seconds</string>
     <string name="detail_row_created">Created</string>
     <string name="detail_row_platform">Platform</string>
+    <string name="detail_row_user_id">User ID</string>
     <string name="platform_ping_am">Ping Access Management</string>
     <string name="platform_ping_one">PingOne</string>
     <string name="date_today">Today</string>
@@ -104,6 +105,15 @@
     <string name="deny">Deny</string>
     <string name="approve">Approve</string>
     <string name="verify">Verify</string>
+    <string name="login_title">Login</string>
+    <string name="login_cancel">Cancel</string>
+    <string name="login_retry">Try Again</string>
+    <string name="login_success_message">MFA credential registered successfully</string>
+    <string name="login_loading_message">Authenticating…</string>
+    <string name="login_initial_message">Preparing authentication…</string>
+    <string name="login_unknown_error">Unknown error</string>
+    <string name="login_wait_message">Please Wait</string>
+    <string name="login_registering_message">Registering MFA credentials…</string>
     <string name="push_notifications_screen_title">Push Notifications</string>
     <string name="push_notifications_empty_state">No push notifications</string>
     <string name="push_notifications_pending_requests">Pending Requests</string>

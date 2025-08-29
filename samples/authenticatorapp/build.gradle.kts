@@ -63,6 +63,7 @@ dependencies {
     // Ping SDK dependencies
     implementation(project(":mfa:oath"))
     implementation(project(":mfa:push"))
+    implementation(project(":journey"))
 
     // Kotlinx Serialization
     implementation(libs.kotlinx.serialization.json)
@@ -97,15 +98,15 @@ dependencies {
     implementation(libs.ktor.serialization.kotlinx.json)
 
     // Image loading
-    implementation("io.coil-kt:coil-compose:2.5.0")
+    implementation(libs.coil.compose)
 
     // Firebase Cloud Messaging for push notifications
-    implementation(platform("com.google.firebase:firebase-bom:32.7.4"))
-    implementation("com.google.firebase:firebase-messaging-ktx")
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.messaging)
 
     // Maps for location display - using free OpenStreetMap
-    implementation("org.osmdroid:osmdroid-android:6.1.18")
+    implementation(libs.osmdroid.android)
 
     // Biometric
-    implementation("androidx.biometric:biometric:1.2.0-alpha05")
+    implementation(libs.androidx.biometric)
 }

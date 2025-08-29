@@ -48,19 +48,21 @@ dokka = "1.9.20"
 googleid = "1.1.1"
 facebook-login = "18.0.3"
 
-coilCompose = "2.4.0"
+coilCompose = "2.7.0"
 startupRuntime = "1.2.0"
 
 com-pingidentity-signals = "5.2.0"
 
 barcodeScanning = "17.3.0"
 cameraCamera2 = "1.4.2"
-lifecycleRuntimeKtx = "2.9.1"
-firebase-messaging = "23.3.0"
-sqliteJvm = "2.5.1"
+lifecycleRuntimeKtx = "2.9.3"
+firebase-messaging = "25.0.0"
 playServicesAuthBlockstore = "16.4.0"
 kotlinxCoroutinesPlayServices = "1.10.2"
-googleServicesPlugin = "4.4.1"
+googleServicesPlugin = "4.4.3"
+firebaseBom = "32.7.4"
+osmdroidAndroid = "6.1.20"
+biometric = "1.2.0-alpha05"
 
 [libraries]
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activityCompose" }
@@ -129,14 +131,16 @@ androidx-camera-view = { module = "androidx.camera:camera-view", version.ref = "
 androidx-lifecycle-runtime-ktx = { module = "androidx.lifecycle:lifecycle-runtime-ktx", version.ref = "lifecycleRuntimeKtx" }
 androidx-lifecycle-viewmodel-compose = { module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycleRuntimeKtx" }
 androidx-ui-graphics = { module = "androidx.compose.ui:ui-graphics" }
-androidx-sqlite = { group = "androidx.sqlite", name = "sqlite", version = "2.4.0" }
+androidx-sqlite = { group = "androidx.sqlite", name = "sqlite", version = "2.5.2" }
 sqlcipher = { group = "net.zetetic", name = "android-database-sqlcipher", version = "4.5.4" }
 commons-codec = { group = "commons-codec", name = "commons-codec", version = "1.15" }
 barcode-scanning = { module = "com.google.mlkit:barcode-scanning", version.ref = "barcodeScanning" }
-androidx-sqlite-jvm = { group = "androidx.sqlite", name = "sqlite-jvm", version.ref = "sqliteJvm" }
 play-services-auth-blockstore = { module = "com.google.android.gms:play-services-auth-blockstore", version.ref = "playServicesAuthBlockstore" }
 kotlinx-coroutines-play-services = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-play-services", version.ref = "kotlinxCoroutinesPlayServices" }
 firebase-messaging = { group = "com.google.firebase", name = "firebase-messaging", version.ref = "firebase-messaging" }
+firebase-bom = { module = "com.google.firebase:firebase-bom", version.ref = "firebaseBom" }
+osmdroid-android = { module = "org.osmdroid:osmdroid-android", version.ref = "osmdroidAndroid" }
+androidx-biometric = { module = "androidx.biometric:biometric", version.ref = "biometric" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }

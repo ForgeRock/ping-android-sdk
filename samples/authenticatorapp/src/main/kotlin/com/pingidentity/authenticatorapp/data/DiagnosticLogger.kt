@@ -16,12 +16,14 @@ import kotlinx.coroutines.flow.asStateFlow
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.util.UUID.randomUUID
 import java.util.concurrent.ConcurrentLinkedQueue
 
 /**
  * Data class representing a log entry.
  */
 data class LogEntry(
+    val id: String = randomUUID().toString(),
     val timestamp: String,
     val level: String,
     val message: String,

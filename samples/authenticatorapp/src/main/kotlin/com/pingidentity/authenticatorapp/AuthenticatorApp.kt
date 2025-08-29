@@ -12,6 +12,8 @@ import com.google.firebase.FirebaseApp
 import com.google.firebase.messaging.FirebaseMessaging
 import com.pingidentity.authenticatorapp.data.DiagnosticLogger
 import com.pingidentity.authenticatorapp.data.UserPreferences
+import com.pingidentity.journey.Journey
+import com.pingidentity.journey.module.Oidc
 import com.pingidentity.logger.Logger
 import com.pingidentity.logger.STANDARD
 import com.pingidentity.mfa.oath.OathClient
@@ -38,8 +40,12 @@ class AuthenticatorApp : Application() {
     @Volatile
     private lateinit var oathClient: OathMfaClient
 
+    @Volatile
+    private lateinit var journey: Journey
+
     private val pushClientDeferred = CompletableDeferred<PushMfaClient>()
     private val oathClientDeferred = CompletableDeferred<OathMfaClient>()
+    private val journeyDeferred = CompletableDeferred<Journey>()
 
     override fun onCreate() {
         super.onCreate()
@@ -62,6 +68,26 @@ class AuthenticatorApp : Application() {
         }
         
         CoroutineScope(Dispatchers.Default).launch {
+            // TODO: Update with your Journey configuration
+            // Initialize Journey SDK
+            journey = Journey {
+                logger = diagnosticLogger
+                serverUrl = "<YOUR_SERVER_URL>" // e.g. https://openam.example.com/am
+                realm = "<YOUR_REALM>" // e.g. /alpha
+                cookie = "<YOUR_COOKIE>" // e.g. iPlanetDirectoryPro
+                // Oidc as module
+                module(Oidc) {
+                    clientId = "<YOUR_CLIENT_ID>" // e.g. myclient
+                    discoveryEndpoint = "<YOUR_DISCOVERY_ENDPOINT>" // e.g. https://openam.example.com/am/oauth2/.well-known/openid-configuration?realm=/alpha
+                    // Scopes to request - adjust as needed
+                    scopes = mutableSetOf("openid", "email", "address", "profile", "phone")
+                    redirectUri = "<YOUR_REDIRECT_URI>" // e.g. myapp://callback
+                }
+            }
+            journeyDeferred.complete(journey)
+            diagnosticLogger.i("AuthenticatorApp: Journey client initialized")
+
+            // Initialize Push client
             pushClient = PushClient {
                 // Enable credential caching
                 enableCredentialCache = true
@@ -81,7 +107,7 @@ class AuthenticatorApp : Application() {
                 diagnosticLogger.e("Firebase not configured properly", e)
             }
 
-            // Initialize OATH client synchronously
+            // Initialize OATH client
             oathClient = OathClient {
                 // Enable credential caching
                 enableCredentialCache = true
@@ -112,6 +138,14 @@ class AuthenticatorApp : Application() {
                 return app.oathClientDeferred.getCompleted()
             }
             return app.oathClientDeferred.await()
+        }
+
+        suspend fun getJourney(context: Application): Journey {
+            val app = context as AuthenticatorApp
+            if (app.journeyDeferred.isCompleted) {
+                return app.journeyDeferred.getCompleted()
+            }
+            return app.journeyDeferred.await()
         }
     }
 }

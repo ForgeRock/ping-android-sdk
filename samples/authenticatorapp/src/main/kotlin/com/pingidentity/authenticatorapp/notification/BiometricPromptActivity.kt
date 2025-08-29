@@ -42,8 +42,6 @@ class BiometricPromptActivity : AppCompatActivity() {
 
     private lateinit var pushClient: PushMfaClient
     
-    private val authenticatorApp = application as AuthenticatorApp
-
     private val diagnosticLogger = DiagnosticLogger
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -69,7 +67,7 @@ class BiometricPromptActivity : AppCompatActivity() {
             // Initialize and handle biometric authentication
             LaunchedEffect(Unit) {
                 try {
-                    pushClient = AuthenticatorApp.getPushClient(authenticatorApp)
+                    pushClient = AuthenticatorApp.getPushClient(application as AuthenticatorApp)
                     
                     // Check if biometric authentication is available
                     val biometricManager = BiometricManager.from(context)

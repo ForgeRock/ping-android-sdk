@@ -162,14 +162,14 @@ class PushNotificationService : FirebaseMessagingService() {
     @RequiresPermission(android.Manifest.permission.POST_NOTIFICATIONS)
     fun handleNotification(notification: PushNotification) {
         diagnosticLogger.d("Handling notification: ${notification.id}")
-
-        // Always display a system notification regardless of app state
-        displaySystemNotification(notification)
-
+        
         // If app is in foreground, also display the notification full screen immediately
         if (isAppInForeground()) {
             diagnosticLogger.d("App is in foreground, launching notification activity")
             showFullScreenNotification(notification)
+        } else {
+            diagnosticLogger.d("App is in background, displaying system notification")
+            displaySystemNotification(notification)
         }
     }
 }

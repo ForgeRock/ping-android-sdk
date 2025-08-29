@@ -28,15 +28,6 @@ enum class NotificationStatus {
 }
 
 /**
- * Enum representing supported URI schemes for QR codes.
- */
-enum class UriScheme(val value: String) {
-    OTPAUTH("otpauth://"),
-    PUSHAUTH("pushauth://"),
-    MFAUTH("mfauth://")
-}
-
-/**
  * Data class to represent a group of credentials (OATH or Push) with the same issuer/account.
  * This is used to display a unified account view regardless of authentication method.
  */

@@ -63,7 +63,8 @@ class NotificationActionReceiver : BroadcastReceiver() {
     private fun approveNotification(context: Context, notificationId: String) {
         scope.launch {
             try {
-                val pushClient = AuthenticatorApp.getPushClient(context as Application)
+                val applicationContext = context.applicationContext
+                val pushClient = AuthenticatorApp.getPushClient(applicationContext as Application)
                 pushClient.approveNotification(notificationId)
             } catch (e: Exception) {
                 diagnosticLogger.e("Error approving notification: ${e.message}", e)
@@ -77,7 +78,8 @@ class NotificationActionReceiver : BroadcastReceiver() {
     private fun denyNotification(context: Context, notificationId: String) {
         scope.launch {
             try {
-                val pushClient = AuthenticatorApp.getPushClient(context as Application)
+                val applicationContext = context.applicationContext
+                val pushClient = AuthenticatorApp.getPushClient(applicationContext as Application)
                 pushClient.denyNotification(notificationId)
             } catch (e: Exception) {
                 diagnosticLogger.e("Error denying notification: ${e.message}", e)

@@ -70,7 +70,7 @@ class PushNotificationActivity : ComponentActivity() {
             // Load the notification when the composable is first launched
             LaunchedEffect(Unit) {
                 try {
-                    pushClient = AuthenticatorApp.getPushClient(context.applicationContext as Application)
+                    pushClient = AuthenticatorApp.getPushClient(application)
                     notificationItemState = loadNotification(notificationId)
                     isLoading = false
                 } catch (e: Exception) {

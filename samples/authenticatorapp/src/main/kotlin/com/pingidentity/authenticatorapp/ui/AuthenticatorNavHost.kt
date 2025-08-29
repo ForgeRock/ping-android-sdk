@@ -13,6 +13,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.pingidentity.authenticatorapp.data.AuthenticatorViewModel
+import com.pingidentity.authenticatorapp.data.LoginViewModel
 import com.pingidentity.authenticatorapp.util.NavigationAnimations
 
 /**
@@ -20,7 +21,8 @@ import com.pingidentity.authenticatorapp.util.NavigationAnimations
  */
 @Composable
 fun AuthenticatorNavHost(
-    viewModel: AuthenticatorViewModel = viewModel(),
+    authenticatorViewModel: AuthenticatorViewModel = viewModel(),
+    loginViewModel: LoginViewModel = viewModel(),
     initialDestination: String = "accounts"
 ) {
     // Create the NavController
@@ -32,7 +34,7 @@ fun AuthenticatorNavHost(
         // Main accounts list screen
         composable("accounts") {
             AccountsScreen(
-                viewModel = viewModel,
+                viewModel = authenticatorViewModel,
                 onScanQrCode = { navController.navigate("scanner") },
                 onAddManually = { navController.navigate("manual-entry") },
                 onAccountClick = { accountInfo -> navController.navigate("account/$accountInfo") },
@@ -40,7 +42,8 @@ fun AuthenticatorNavHost(
                 onSettingsClick = { navController.navigate("settings") },
                 onAboutClick = { navController.navigate("about") },
                 onEditAccountsClick = { navController.navigate("edit-accounts") },
-                onTestModeClick = { navController.navigate("test") }
+                onTestModeClick = { navController.navigate("test") },
+                onNavigateToLogin = { navController.navigate("login") }
             )
         }
 
@@ -53,7 +56,7 @@ fun AuthenticatorNavHost(
             popExitTransition = NavigationAnimations.popExitTransition
         ) {
             QrScannerScreen(
-                viewModel = viewModel,
+                viewModel = authenticatorViewModel,
                 onScanComplete = { navController.popBackStack() },
                 onDismiss = { navController.popBackStack() }
             )
@@ -68,9 +71,23 @@ fun AuthenticatorNavHost(
             popExitTransition = NavigationAnimations.popExitTransition
         ) {
             ManualEntryScreen(
-                viewModel = viewModel,
+                viewModel = authenticatorViewModel,
                 onEntryComplete = { navController.popBackStack() },
                 onDismiss = { navController.popBackStack() }
+            )
+        }
+
+        // Journey login screen
+        composable(
+            route = "login",
+            enterTransition = NavigationAnimations.enterTransition,
+            exitTransition = NavigationAnimations.exitTransition,
+            popEnterTransition = NavigationAnimations.popEnterTransition,
+            popExitTransition = NavigationAnimations.popExitTransition
+        ) {
+            LoginScreen(
+                viewModel = loginViewModel,
+                onNavigateBack = { navController.popBackStack() }
             )
         }
 
@@ -90,7 +107,7 @@ fun AuthenticatorNavHost(
             AccountDetailScreen(
                 issuer = issuer,
                 accountName = accountName,
-                viewModel = viewModel,
+                viewModel = authenticatorViewModel,
                 onDismiss = { navController.popBackStack() }
             )
         }
@@ -104,7 +121,7 @@ fun AuthenticatorNavHost(
             popExitTransition = NavigationAnimations.popExitTransition
         ) {
             PushNotificationsScreen(
-                viewModel = viewModel,
+                viewModel = authenticatorViewModel,
                 onNotificationClick = { notificationId ->
                     navController.navigate("notification/$notificationId")
                 },
@@ -121,20 +138,20 @@ fun AuthenticatorNavHost(
             popExitTransition = NavigationAnimations.popExitTransition
         ) { backStackEntry ->
             val notificationId = backStackEntry.arguments?.getString("notificationId") ?: ""
-            viewModel.getNotificationItemById(notificationId)?.let { notificationItem ->
+            authenticatorViewModel.getNotificationItemById(notificationId)?.let { notificationItem ->
                 NotificationResponseScreen(
                     notificationItem = notificationItem,
                     onDismiss = { navController.popBackStack() },
                     onApprove = {
-                        viewModel.approveNotification(notificationId)
+                        authenticatorViewModel.approveNotification(notificationId)
                         navController.popBackStack()
                     },
                     onDeny = {
-                        viewModel.denyNotification(notificationId)
+                        authenticatorViewModel.denyNotification(notificationId)
                         navController.popBackStack()
                     },
                     onChallengeSolution = { solution ->
-                        viewModel.approveChallengeNotification(notificationId, solution)
+                        authenticatorViewModel.approveChallengeNotification(notificationId, solution)
                         navController.popBackStack()
                     }
                 )
@@ -150,7 +167,7 @@ fun AuthenticatorNavHost(
             popExitTransition = NavigationAnimations.popExitTransition
         ) {
             SettingsScreen(
-                viewModel = viewModel,
+                viewModel = authenticatorViewModel,
                 onDismiss = { navController.popBackStack() },
                 onDiagnosticLogsClick = { navController.navigate("diagnostic-logs") }
             )
@@ -178,7 +195,7 @@ fun AuthenticatorNavHost(
             popExitTransition = NavigationAnimations.popExitTransition
         ) {
             TestScreen(
-                viewModel = viewModel,
+                viewModel = authenticatorViewModel,
                 onDismiss = { navController.popBackStack() }
             )
         }
@@ -205,7 +222,7 @@ fun AuthenticatorNavHost(
             popExitTransition = NavigationAnimations.popExitTransition
         ) {
             EditAccountsScreen(
-                viewModel = viewModel,
+                viewModel = authenticatorViewModel,
                 onDismiss = { navController.popBackStack() }
             )
         }
