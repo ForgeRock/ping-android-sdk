@@ -9,7 +9,6 @@ package com.pingidentity.journey.callback
 
 import com.pingidentity.journey.plugin.AbstractCallback
 import com.pingidentity.journey.plugin.Callback
-import com.pingidentity.journey.plugin.CallbackRegistry
 import com.pingidentity.journey.plugin.CallbackRegistry.callbacks
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
@@ -51,22 +50,22 @@ class MetadataCallback : AbstractCallback() {
         super.init(jsonObject)
         when {
             isProtectInitialize() -> {
-                return CallbackRegistry.callbacks()[PING_ONE_PROTECT_INITIALIZE_CALLBACK]?.let {
+                return callbacks()[PING_ONE_PROTECT_INITIALIZE_CALLBACK]?.let {
                     it().init(jsonObject)
                 } ?: this
             }
             isProtectEvaluation() -> {
-                return CallbackRegistry.callbacks()[PING_ONE_PROTECT_EVALUATION_CALLBACK]?.let {
+                return callbacks()[PING_ONE_PROTECT_EVALUATION_CALLBACK]?.let {
                     it().init(jsonObject)
                 } ?: this
             }
-            isFidoRegistration() -> callbacks()["Fido2RegistrationCallback"]?.invoke()
+            isFidoRegistration() -> return callbacks()["Fido2RegistrationCallback"]?.invoke()
                 ?: this
 
-            isFidoAuthentication() -> callbacks()["Fido2AuthenticationCallback"]?.invoke()
+            isFidoAuthentication() -> return callbacks()["Fido2AuthenticationCallback"]?.invoke()
                 ?: this
 
-            else -> this
+            else -> return this
         }
     }
 

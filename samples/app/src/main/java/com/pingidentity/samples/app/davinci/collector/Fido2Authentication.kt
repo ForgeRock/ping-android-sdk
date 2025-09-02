@@ -15,7 +15,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.material3.Button
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -29,6 +33,19 @@ fun Fido2Authentication(
     onNext: () -> Unit,
 ) {
     val coroutineScope = rememberCoroutineScope()
+    var showErrorDialog by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf("") }
+
+    if (showErrorDialog) {
+        ErrorDialog(
+            message = errorMessage,
+            onDismiss = { showErrorDialog = false },
+            onRetry = {
+                showErrorDialog = false
+                onStart()
+            }
+        )
+    }
 
     Row(
         modifier =
@@ -54,7 +71,8 @@ fun Fido2Authentication(
                             "Failed to Authenticate",
                             it
                         )
-                        onStart() //restart the flow, cause the url may expired
+                        errorMessage = it.message ?: "Authentication failed"
+                        showErrorDialog = true
                     }
                 }
             },
