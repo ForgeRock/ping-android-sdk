@@ -81,7 +81,7 @@ class DeviceProfileCallbackTest {
             }
             metadata {
                 add(PlatformCollector)
-                add(HardwareCollector)
+                add(HardwareCollector())
             }
         }
     }

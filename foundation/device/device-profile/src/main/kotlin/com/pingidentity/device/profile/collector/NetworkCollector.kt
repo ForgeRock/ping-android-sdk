@@ -34,7 +34,9 @@ import kotlinx.serialization.Serializable
  *
  * @see NetworkInfo for the data structure containing connectivity status
  */
-class NetworkCollector : DeviceCollector<NetworkInfo> {
+class NetworkCollector(
+    private val sdkVersionProvider: SdkVersionProvider = DefaultSdkVersionProvider()
+) : DeviceCollector<NetworkInfo> {
     override val key: String
         get() = "network"
 
@@ -55,35 +57,54 @@ class NetworkCollector : DeviceCollector<NetworkInfo> {
 
     override val serializer: KSerializer<NetworkInfo>
         get() = NetworkInfo.serializer()
+
+    /**
+     * Determines if the device currently has an active internet connection.
+     *
+     * This function uses different approaches based on the Android API level:
+     * - API 29+: Checks [NetworkCapabilities.NET_CAPABILITY_INTERNET] on the active network
+     * - API 28 and below: Uses the deprecated [android.net.NetworkInfo.isConnected] method
+     *
+     * @return true if the device has an active internet connection, false otherwise
+     * @throws SecurityException if [Manifest.permission.ACCESS_NETWORK_STATE] is not granted
+     */
+    @RequiresPermission(Manifest.permission.ACCESS_NETWORK_STATE)
+    private fun isConnected(): Boolean {
+        val connectivityManager = ContextProvider.context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        // For Android 10 (API 29) and above
+        if (sdkVersionProvider.getSdkInt() >= Build.VERSION_CODES.Q) {
+            val capabilities =
+                connectivityManager.getNetworkCapabilities(connectivityManager.activeNetwork)
+            return capabilities != null &&
+                    capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+        }
+        // For older versions
+        else {
+            // activeNetworkInfo is deprecated in API 29
+            @Suppress("Deprecation")
+            val networkInfo = connectivityManager.activeNetworkInfo
+            return networkInfo != null && networkInfo.isConnected
+        }
+    }
 }
 
 /**
- * Determines if the device currently has an active internet connection.
- *
- * This function uses different approaches based on the Android API level:
- * - API 29+: Checks [NetworkCapabilities.NET_CAPABILITY_INTERNET] on the active network
- * - API 28 and below: Uses the deprecated [android.net.NetworkInfo.isConnected] method
- *
- * @return true if the device has an active internet connection, false otherwise
- * @throws SecurityException if [Manifest.permission.ACCESS_NETWORK_STATE] is not granted
+ * Interface for providing SDK version information.
+ * This abstraction allows for easier testing by mocking the SDK version.
  */
-@RequiresPermission(Manifest.permission.ACCESS_NETWORK_STATE)
-private fun isConnected(): Boolean {
-    val connectivityManager = ContextProvider.context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-    // For Android 10 (API 29) and above
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-        val capabilities =
-            connectivityManager.getNetworkCapabilities(connectivityManager.activeNetwork)
-        return capabilities != null &&
-                capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-    }
-    // For older versions
-    else {
-        // activeNetworkInfo is deprecated in API 29
-        @Suppress("Deprecation")
-        val networkInfo = connectivityManager.activeNetworkInfo
-        return networkInfo != null && networkInfo.isConnected
-    }
+interface SdkVersionProvider {
+    /**
+     * Returns the current Android SDK version.
+     * @return The SDK version as an integer
+     */
+    fun getSdkInt(): Int
+}
+
+/**
+ * Default implementation of [SdkVersionProvider] that returns the actual SDK version.
+ */
+class DefaultSdkVersionProvider : SdkVersionProvider {
+    override fun getSdkInt(): Int = Build.VERSION.SDK_INT
 }
 
 /**

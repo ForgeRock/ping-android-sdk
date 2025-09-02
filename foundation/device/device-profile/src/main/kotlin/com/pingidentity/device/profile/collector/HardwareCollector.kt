@@ -18,6 +18,8 @@ import android.os.StatFs
 import android.util.DisplayMetrics
 import android.view.WindowManager
 import com.pingidentity.android.ContextProvider
+import com.pingidentity.device.profile.AndroidBuildProvider
+import com.pingidentity.device.profile.DefaultAndroidBuildProvider
 import kotlinx.serialization.Serializable
 import java.io.File
 
@@ -30,18 +32,25 @@ import java.io.File
  *
  * @see HardwareInfo for the data structure containing collected hardware details
  */
-val HardwareCollector by lazy {
-    DeviceCollector<HardwareInfo>(key = "hardware") {
-        HardwareInfo(
+class HardwareCollector(
+    private val androidBuildProvider: AndroidBuildProvider = DefaultAndroidBuildProvider()
+) : DeviceCollector<HardwareInfo> {
+    override val key: String
+        get() = "hardware"
+
+    override suspend fun collect(): HardwareInfo {
+        return HardwareInfo(
             display = DisplayCollector.collect(),
             camera = CameraCollector.collect(),
-            hardware = Build.HARDWARE ?: "HARDWARE",
-            manufacturer = Build.MANUFACTURER ?: "MANUFACTURER",
+            hardware = androidBuildProvider.getHardware() ?: "HARDWARE",
+            manufacturer = androidBuildProvider.getManufacturer() ?: "MANUFACTURER",
             storage = getStorageInfo(),
             memory = getMemoryInfo(),
             cpu = Runtime.getRuntime().availableProcessors(),
         )
     }
+
+    override val serializer = HardwareInfo.serializer()
 }
 
 /**
@@ -65,11 +74,7 @@ data class HardwareInfo(
     var cpu: Int,
     val display: Map<String, Int>?,
     val camera: Map<String, Int>?,
-) {
-    init {
-        hardware = Build.HARDWARE ?: "MyHardware"
-    }
-}
+)
 
 /**
  * Internal collector for gathering display metrics information.
