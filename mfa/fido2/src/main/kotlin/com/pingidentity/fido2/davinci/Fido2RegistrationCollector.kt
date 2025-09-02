@@ -7,14 +7,9 @@
 
 package com.pingidentity.fido2.davinci
 
-import androidx.credentials.CreatePublicKeyCredentialRequest
-import androidx.credentials.CreatePublicKeyCredentialResponse
-import androidx.credentials.CredentialManager
-import androidx.credentials.exceptions.CreateCredentialException
-import com.pingidentity.android.ContextProvider
 import com.pingidentity.davinci.plugin.Collector
+import com.pingidentity.fido2.Constants
 import com.pingidentity.fido2.Fido2
-import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -23,7 +18,6 @@ import kotlinx.serialization.json.int
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlin.io.encoding.Base64
-import kotlin.io.encoding.ExperimentalEncodingApi
 
 /**
  * A collector for FIDO2 registration.
@@ -43,8 +37,8 @@ class Fido2RegistrationCollector : AbstractFido2Collector() {
         return super.init(input)
             .also {
                 publicKeyCredentialCreationOptions =
-                    input["publicKeyCredentialCreationOptions"]?.jsonObject?.let { transform(it) }
-                        ?: throw IllegalArgumentException("Missing publicKeyCredentialCreationOptions")
+                    input[Constants.FIELD_PUBLIC_KEY_CREDENTIAL_CREATION_OPTIONS]?.jsonObject?.let { transform(it) }
+                        ?: throw IllegalArgumentException("Missing ${Constants.FIELD_PUBLIC_KEY_CREDENTIAL_CREATION_OPTIONS}")
             }
     }
 
@@ -53,7 +47,7 @@ class Fido2RegistrationCollector : AbstractFido2Collector() {
             null
         } else {
             buildJsonObject {
-                put("attestationValue", attestationValue)
+                put(Constants.FIELD_ATTESTATION_VALUE, attestationValue)
             }
         }
     }
@@ -76,20 +70,19 @@ class Fido2RegistrationCollector : AbstractFido2Collector() {
      * @param inputJson The input JSON object to transform.
      * @return The transformed JSON object with encoded user ID and challenge values.
      */
-    @OptIn(ExperimentalEncodingApi::class)
     private fun transform(inputJson: JsonObject): JsonObject {
         val map = inputJson.toMutableMap()
 
-        map["user"]?.let { user ->
+        map[Constants.FIELD_USER]?.let { user ->
             if (user is JsonObject) {
-                user.toMutableMap()["id"]?.let { id ->
+                user.toMutableMap()[Constants.FIELD_ID]?.let { id ->
                     if (id is JsonArray) {
                         val byteArray =
                             id.map { it.jsonPrimitive.int.toByte() }.toByteArray()
-                        map["user"] = buildJsonObject {
-                            put("id", JsonPrimitive(Base64.UrlSafe.encode(byteArray).trimEnd('=')))
+                        map[Constants.FIELD_USER] = buildJsonObject {
+                            put(Constants.FIELD_ID, JsonPrimitive(Base64.UrlSafe.encode(byteArray).trimEnd('=')))
                             user.forEach { key, value ->
-                                if (key != "id") {
+                                if (key != Constants.FIELD_ID) {
                                     put(key, value)
                                 }
                             }
@@ -99,10 +92,10 @@ class Fido2RegistrationCollector : AbstractFido2Collector() {
             }
         }
 
-        map["challenge"]?.let { challengeElement ->
+        map[Constants.FIELD_CHALLENGE]?.let { challengeElement ->
             if (challengeElement is JsonArray) {
                 val byteArray = challengeElement.map { it.jsonPrimitive.int.toByte() }.toByteArray()
-                map["challenge"] =
+                map[Constants.FIELD_CHALLENGE] =
                     JsonPrimitive(Base64.UrlSafe.encode(byteArray).trimEnd('='))
             }
         }

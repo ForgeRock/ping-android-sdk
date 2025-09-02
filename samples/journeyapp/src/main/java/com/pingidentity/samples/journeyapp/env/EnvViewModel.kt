@@ -62,14 +62,31 @@ val localhost =  Journey {
     }
 }
 
+val helix =  Journey {
+    logger = Logger.STANDARD
+
+    serverUrl = "https://openam-helix.forgeblocks.com/am"
+    realm = "alpha"
+    // Oidc as module
+    module(Oidc) {
+        clientId = "EverestUI"
+        discoveryEndpoint =
+            "https://openam-helix.forgeblocks.com/am/oauth2/.well-known/openid-configuration"
+        scopes = mutableSetOf("openid", "email", "address", "profile", "fr:iga:*")
+        redirectUri = "https://openam-helix.forgeblocks.com/dpc/login"
+        //storage = dataStore
+    }
+}
+
+
 var journey = forgeblock
 lateinit var oidcClient: OidcClient
 lateinit var redirectUri: Uri //For Social Login redirect parameter using Auth Tab
 
 class EnvViewModel : ViewModel() {
 
-    private val servers = listOf(forgeblock, localhost)
-    val oidcConfigs = listOf(forgeblock.oidcConfig(), localhost.oidcConfig() )
+    private val servers = listOf(forgeblock, localhost, helix)
+    val oidcConfigs = listOf(forgeblock.oidcConfig(), localhost.oidcConfig(), helix.oidcConfig() )
 
     var current by mutableStateOf(forgeblock.oidcConfig())
         private set

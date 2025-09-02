@@ -7,8 +7,8 @@
 
 package com.pingidentity.fido2.journey
 
+import com.pingidentity.fido2.Constants
 import com.pingidentity.fido2.Fido2
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
@@ -25,53 +25,65 @@ import kotlinx.serialization.json.putJsonArray
 import kotlinx.serialization.json.putJsonObject
 
 /**
- * Callback for FIDO2 registration.
- * This class handles the registration process for FIDO2 credentials.
+ * FIDO2 registration callback for ForgeRock Journey workflows.
+ *
+ * This callback handles the FIDO2 credential registration process within a Journey workflow.
+ * It processes credential creation options from the server, performs the registration
+ * using the device's FIDO2 capabilities, and formats the response for the Journey framework.
+ *
+ * The callback supports both legacy string-based and modern JSON-based response formats
+ * depending on the server capabilities. It also supports optional device naming for
+ * better credential management.
  */
 class Fido2RegistrationCallback : Fido2Callback() {
 
     /**
-     * The public key credential creation options for the registration.
-     * This is a JSON object that contains all necessary parameters for creating a new FIDO2 credential.
+     * The public key credential creation options for FIDO2 registration.
+     * This contains all the parameters needed for the registration ceremony,
+     * including user information, relying party details, and cryptographic preferences.
      */
     lateinit var publicKeyCredentialCreationOptions: JsonObject
         private set
+
+    /**
+     * Indicates whether the server supports JSON-formatted responses.
+     * When true, responses are sent as JSON objects; otherwise, as legacy strings.
+     */
     private var supportsJsonResponse: Boolean = false
 
     override fun init(name: String, value: JsonElement) {
-        when (name) {
-            "data" -> {
-                if (value is JsonObject) {
-                    supportsJsonResponse =
-                        value["supportsJsonResponse"]?.jsonPrimitive?.boolean ?: false
-                    publicKeyCredentialCreationOptions = transform(value)
-                } else {
-                    throw IllegalArgumentException("Expected JsonObject for 'data', but got ${value::class.simpleName}")
-                }
-            }
-
-            else -> throw IllegalArgumentException("Unknown callback name: $name")
+        if (name == Constants.FIELD_DATA && value is JsonObject) {
+            supportsJsonResponse = value[Constants.FIELD_SUPPORTS_JSON_RESPONSE]?.jsonPrimitive?.boolean ?: false
+            publicKeyCredentialCreationOptions = transform(value)
+        } else {
+            throw IllegalArgumentException("Expected JsonObject for 'data', got ${value::class.simpleName}")
         }
     }
 
     /**
-     * Register a new FIDO2 credential.
+     * Registers a new FIDO2 credential using the initialized creation options.
      *
-     * @return A [Result] containing the attestation value as a [JsonObject] or an error.
-     * the attestation value will be automatically injected to the registration flow.
+     * This method initiates the FIDO2 registration ceremony, prompting the user
+     * to create a new credential using available authenticators. Upon successful
+     * registration, it formats and submits the response to the Journey workflow.
+     *
+     * @param deviceName Optional name for the registered device/credential for easier identification
+     * @return A [Result] containing the attestation response as a [JsonObject] on success,
+     *         or an exception on failure. The response is automatically submitted to the workflow.
      */
     suspend fun register(deviceName: String? = null): Result<JsonObject> {
-        return Fido2.register(publicKeyCredentialCreationOptions).onSuccess { jsonObject ->
-            val response = jsonObject["response"]?.jsonObject ?: JsonObject(emptyMap())
+        return Fido2.register(publicKeyCredentialCreationOptions).onSuccess { response ->
+            val attestationResponse = response[Constants.FIELD_RESPONSE]?.jsonObject ?: JsonObject(emptyMap())
             var data = listOf(
-                (response["clientDataJSON"]?.jsonPrimitive?.content ?: "").base64ToJson(),
-                (response["attestationObject"]?.jsonPrimitive?.content ?: "").base64ToIntStr(),
-                jsonObject["rawId"]?.jsonPrimitive?.content ?: ""
-            ).joinToString("::")
+                attestationResponse[Constants.FIELD_CLIENT_DATA_JSON]?.jsonPrimitive?.content?.base64ToJson() ?: "",
+                attestationResponse[Constants.FIELD_ATTESTATION_OBJECT]?.jsonPrimitive?.content?.base64ToIntStr() ?: "",
+                response[Constants.FIELD_RAW_ID]?.jsonPrimitive?.content ?: ""
+            ).joinToString(Constants.DATA_SEPARATOR)
 
-            deviceName?.let { data += "::$it" }
+            deviceName?.let { data += "${Constants.DATA_SEPARATOR}$it" }
+
             val callbackValue = if (supportsJsonResponse) {
-                Json.encodeToString(Fido2JsonResponse("platform", data))
+                Json.encodeToString(Fido2JsonResponse(Constants.AUTHENTICATOR_PLATFORM, data))
             } else {
                 data
             }
@@ -84,98 +96,78 @@ class Fido2RegistrationCallback : Fido2Callback() {
     /**
      * Transform the input JSON object to prepare it for FIDO2 registration.
      *
-     * @param input The input JSON object to transform.
-     * @return The transformed JSON object.
+     * Converts the Journey-specific format to the standard WebAuthn format required
+     * by the Android Credential Manager API. This includes:
+     * - Converting challenge to proper Base64 URL encoding
+     * - Mapping relying party and user information to correct structure
+     * - Transforming credential parameters and exclusion lists
+     * - Setting authenticator selection criteria
+     *
+     * @param input The input JSON object from the Journey workflow
+     * @return The transformed JSON object compatible with WebAuthn standards
      */
     private fun transform(input: JsonObject): JsonObject {
         return buildJsonObject {
-            // challenge
-            put(
-                "challenge",
-                input["challenge"]?.jsonPrimitive?.content?.base64DefaultToUrlSafe() ?: ""
-            ) // Use ?: "" for default empty string if missing
+            put(Constants.FIELD_CHALLENGE, input[Constants.FIELD_CHALLENGE]?.jsonPrimitive?.content?.base64DefaultToUrlSafe() ?: "")
+            put(Constants.FIELD_TIMEOUT, input[Constants.FIELD_TIMEOUT]?.jsonPrimitive?.content?.toIntOrNull() ?: Constants.DEFAULT_TIMEOUT)
+            put(Constants.FIELD_ATTESTATION, input[Constants.FIELD_ATTESTATION_PREFERENCE]?.jsonPrimitive?.content ?: Constants.DEFAULT_ATTESTATION)
 
-            // rp
-            putJsonObject("rp") {
-                put("name", input["relyingPartyName"]?.jsonPrimitive?.content ?: "")
-                // Map "_relyingPartyId" to "id" in "rp". Provide a default if not found.
-                put(
-                    "id",
-                    input["_relyingPartyId"]?.jsonPrimitive?.content
-                        ?: "credential-manager-test.example.com"
-                )
+            putJsonObject(Constants.FIELD_RP) {
+                put(Constants.FIELD_NAME, input[Constants.FIELD_RELYING_PARTY_NAME]?.jsonPrimitive?.content ?: "")
+                put(Constants.FIELD_ID, input[Constants.FIELD_RELYING_PARTY_ID]?.jsonPrimitive?.content ?: Constants.DEFAULT_RELYING_PARTY_ID)
             }
 
-            // user
-            putJsonObject("user") {
-                put("id", input["userId"]?.jsonPrimitive?.content ?: "")
-                // Use 'let' to only add if the content is not null
-                input["userName"]?.jsonPrimitive?.content?.let {
-                    put("name", it)
-                }
-                input["displayName"]?.jsonPrimitive?.content?.let {
-                    put("displayName", it)
-                }
+            putJsonObject(Constants.FIELD_USER) {
+                put(Constants.FIELD_ID, input[Constants.FIELD_USER_ID]?.jsonPrimitive?.content ?: "")
+                input[Constants.FIELD_USER_NAME]?.jsonPrimitive?.content?.let { put(Constants.FIELD_NAME, it) }
+                input[Constants.FIELD_DISPLAY_NAME]?.jsonPrimitive?.content?.let { put(Constants.FIELD_DISPLAY_NAME, it) }
             }
 
-            // pubKeyCredParams
-            putJsonArray("pubKeyCredParams") {
-                input["_pubKeyCredParams"]?.jsonArray?.forEach { element ->
-                    val type = element.jsonObject["type"]?.jsonPrimitive?.content
-                    val alg = element.jsonObject["alg"]?.jsonPrimitive?.int
-                    if (type != null && alg != null) { // Only add if both type and alg are present
-                        addJsonObject {
-                            put("type", type)
-                            put("alg", alg)
+            putJsonArray(Constants.FIELD_PUB_KEY_CRED_PARAMS) {
+                input[Constants.FIELD_PUB_KEY_CRED_PARAMS_INTERNAL]?.jsonArray?.forEach { element ->
+                    element.jsonObject.let { param ->
+                        val type = param[Constants.FIELD_TYPE]?.jsonPrimitive?.content
+                        val alg = param[Constants.FIELD_ALG]?.jsonPrimitive?.int
+                        if (type != null && alg != null) {
+                            addJsonObject {
+                                put(Constants.FIELD_TYPE, type)
+                                put(Constants.FIELD_ALG, alg)
+                            }
                         }
                     }
                 }
             }
 
-            // timeout
-            // Convert to Int; default to a sensible timeout if parse fails or missing
-            put("timeout", input["timeout"]?.jsonPrimitive?.content?.toIntOrNull() ?: 60000)
+            putJsonArray(Constants.FIELD_EXCLUDE_CREDENTIALS) {
+                input[Constants.FIELD_EXCLUDE_CREDENTIALS_INTERNAL]?.jsonArray?.forEach { element ->
+                    element.jsonObject.let { credential ->
+                        val type = credential[Constants.FIELD_TYPE]?.jsonPrimitive?.content
+                        val idArray = credential[Constants.FIELD_ID]?.jsonArray
 
-            // attestation
-            put("attestation", input["attestationPreference"]?.jsonPrimitive?.content ?: "none")
-
-            // excludeCredentials
-            putJsonArray("excludeCredentials") {
-                input["_excludeCredentials"]?.jsonArray?.forEach { element ->
-                    val type = element.jsonObject["type"]?.jsonPrimitive?.content
-                    val idArray = element.jsonObject["id"]?.jsonArray
-
-                    if (type != null && idArray != null) {
-                        addJsonObject {
-                            put("type", type)
-                            // Convert JsonArray<Int> to ByteArray and then Base64Url encode it
-                            val byteArray =
-                                ByteArray(idArray.size) { i -> idArray[i].jsonPrimitive.int.toByte() }
-                            val encodedId =
-                                JsonPrimitive(byteArray.toBase64())
-                            put("id", encodedId)
+                        if (type != null && idArray != null) {
+                            addJsonObject {
+                                put(Constants.FIELD_TYPE, type)
+                                val byteArray = ByteArray(idArray.size) { i ->
+                                    idArray[i].jsonPrimitive.int.toByte()
+                                }
+                                put(Constants.FIELD_ID, JsonPrimitive(byteArray.toBase64()))
+                            }
                         }
                     }
                 }
             }
 
-            // authenticatorSelection
-            putJsonObject("authenticatorSelection") {
-                val inputAuthenticatorSelection = input["_authenticatorSelection"]?.jsonObject
-
-                inputAuthenticatorSelection?.let {
-                    it["authenticatorAttachment"]?.jsonPrimitive?.content?.let { attachment ->
-                        put("authenticatorAttachment", attachment)
+            putJsonObject(Constants.FIELD_AUTHENTICATOR_SELECTION) {
+                input[Constants.FIELD_AUTHENTICATOR_SELECTION_INTERNAL]?.jsonObject?.let { authSelection ->
+                    authSelection[Constants.FIELD_AUTHENTICATOR_ATTACHMENT]?.jsonPrimitive?.content?.let {
+                        put(Constants.FIELD_AUTHENTICATOR_ATTACHMENT, it)
                     }
-                    it["requireResidentKey"]?.jsonPrimitive?.boolean?.let { requireResidentKey ->
-                        put("requireResidentKey", requireResidentKey)
-                        // If requireResidentKey is true, residentKey should be "required"
-                        if (requireResidentKey) {
-                            put("residentKey", "required")
-                        }
+                    authSelection[Constants.FIELD_REQUIRE_RESIDENT_KEY]?.jsonPrimitive?.boolean?.let { requireResident ->
+                        put(Constants.FIELD_REQUIRE_RESIDENT_KEY, requireResident)
+                        if (requireResident) put(Constants.FIELD_RESIDENT_KEY, Constants.DEFAULT_RESIDENT_KEY_REQUIRED)
                     }
-                    it["userVerification"]?.jsonPrimitive?.content?.let { userVerification ->
-                        put("userVerification", userVerification)
+                    authSelection[Constants.FIELD_USER_VERIFICATION]?.jsonPrimitive?.content?.let {
+                        put(Constants.FIELD_USER_VERIFICATION, it)
                     }
                 }
             }

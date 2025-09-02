@@ -12,11 +12,24 @@ import androidx.startup.Initializer
 import com.pingidentity.journey.plugin.CallbackRegistry
 
 /**
- * This class is responsible for registering callbacks in the application.
- * It extends the Initializer interface, which means it is part of the initialization process of the application.
+ * Initializer class responsible for registering FIDO2 callbacks with the Journey framework.
+ *
+ * This class is part of the Android App Startup library initialization process and
+ * automatically registers FIDO2-related callbacks when the application starts.
+ * It registers both registration and authentication callback types.
  */
 class CallbackInitializer : Initializer<CallbackRegistry> {
 
+    /**
+     * Creates and configures the CallbackRegistry with FIDO2 callback registrations.
+     *
+     * This method is called automatically during app startup and registers:
+     * - Fido2RegistrationCallback for handling FIDO2 credential registration
+     * - Fido2AuthenticationCallback for handling FIDO2 authentication
+     *
+     * @param context The application context
+     * @return The configured CallbackRegistry instance
+     */
     override fun create(context: Context): CallbackRegistry {
         CallbackRegistry.register(
             "Fido2RegistrationCallback",
@@ -29,6 +42,11 @@ class CallbackInitializer : Initializer<CallbackRegistry> {
         return CallbackRegistry
     }
 
+    /**
+     * Returns the list of initializer dependencies.
+     *
+     * @return An empty list as this initializer has no dependencies
+     */
     override fun dependencies(): List<Class<out Initializer<*>>> {
         return emptyList()
     }

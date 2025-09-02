@@ -108,7 +108,18 @@ val fido by lazy {
     }
 }
 
-
+val helix =  DaVinci {
+    logger = Logger.STANDARD
+    // Oidc as module
+    module(Oidc) {
+        clientId = "EverestUI"
+        discoveryEndpoint =
+            "https://openam-helix.forgeblocks.com/am/oauth2/alpha/.well-known/openid-configuration"
+        scopes = mutableSetOf("openid", "email", "address", "profile", "fr:iga:*")
+        redirectUri = "https://openam-helix.forgeblocks.com/dpc/login"
+        //storage = dataStore
+    }
+}
 
 lateinit var daVinci: DaVinci
 lateinit var web: OidcWeb
@@ -116,8 +127,8 @@ lateinit var redirectUri: Uri //For Social Login redirect parameter using Auth T
 
 class EnvViewModel : ViewModel() {
 
-    private val servers = listOf(test, prod, social, fido)
-    val oidcConfigs = listOf(test.oidcConfig(), prod.oidcConfig(), social.oidcConfig(), fido.oidcConfig())
+    private val servers = listOf(test, prod, social, fido, helix)
+    val oidcConfigs = listOf(test.oidcConfig(), prod.oidcConfig(), social.oidcConfig(), fido.oidcConfig(), helix.oidcConfig())
 
     var current by mutableStateOf(prod.oidcConfig())
         private set
