@@ -7,13 +7,13 @@
 
 package com.pingidentity.orchestrate.module
 
+import com.pingidentity.logger.Logger
 import com.pingidentity.orchestrate.Module
 import com.pingidentity.orchestrate.Request
 import com.pingidentity.orchestrate.SharedContext
 import com.pingidentity.orchestrate.Workflow
 import com.pingidentity.storage.EncryptedDataStoreStorage
 import com.pingidentity.storage.EncryptedDataStoreStorageConfig
-import com.pingidentity.storage.EncryptedDataStoreStorageFactory
 import com.pingidentity.storage.Storage
 import com.pingidentity.utils.PingDsl
 import io.ktor.client.plugins.cookies.AcceptAllCookiesStorage
@@ -73,6 +73,11 @@ class CookieConfig {
     internal lateinit var cookieStorage: Storage<Cookies>
 
     /**
+     * Logger instance for logging.
+     */
+    var logger: Logger = Logger.logger
+
+    /**
      * A list of Cookies name that should be persisted to the storage.
      * For cookies that should not be persisted, do not add the cookie name to this list.
      */
@@ -91,6 +96,7 @@ class CookieConfig {
     internal var storageOption: EncryptedDataStoreStorageConfig.() -> Unit = {
         fileName = COM_PING_SDK_V_1_COOKIES
         keyAlias = COM_PING_SDK_V_1_COOKIES
+        logger = this@CookieConfig.logger
     }
 
     /**
@@ -141,6 +147,7 @@ val Cookie =
         }
 
         init {
+            config.logger = logger
             config.init()
             sharedContext[COOKIE_STORAGE] = config.cookieStorage
         }

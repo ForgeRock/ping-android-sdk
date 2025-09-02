@@ -8,9 +8,9 @@
 package com.pingidentity.journey.module
 
 import com.pingidentity.journey.SSOToken
+import com.pingidentity.logger.Logger
 import com.pingidentity.storage.EncryptedDataStoreStorage
 import com.pingidentity.storage.EncryptedDataStoreStorageConfig
-import com.pingidentity.storage.EncryptedDataStoreStorageFactory
 import com.pingidentity.storage.Storage
 import com.pingidentity.utils.PingDsl
 
@@ -18,6 +18,12 @@ private const val COM_PING_SDK_V_1_SESSION = "com.pingidentity.sdk.v1.session"
 
 @PingDsl
 class SessionConfig {
+
+    /**
+     * Logger instance for logging.
+     */
+    var logger: Logger = Logger.logger
+
     /**
      * Storage for storing SSOToken.
      */
@@ -36,6 +42,7 @@ class SessionConfig {
     internal var storageOption: EncryptedDataStoreStorageConfig.() -> Unit = {
         fileName = COM_PING_SDK_V_1_SESSION
         keyAlias = COM_PING_SDK_V_1_SESSION
+        logger = this@SessionConfig.logger
     }
 
     /**
