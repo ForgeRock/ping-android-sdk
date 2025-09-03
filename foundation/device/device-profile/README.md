@@ -17,7 +17,9 @@ customize the device data you need.
 - **🔗 AIC Journey Integration**: Built-in support for PingOne AIC Device Profile workflows
 - **📦 Serializable Output**: JSON-ready data structures for easy network transmission
 - **🔌 Extensible Framework**: Create custom collectors for any device signals you need
-- **🔒 Permission-Aware**: Handles Android permissions gracefully
+- **🔒 Permission-Aware**: Handles Android permissions gracefully with automatic permission requests
+- **📍 Location Services**: Built-in location collection with privacy-first permission handling
+- **🛡️ Testable Design**: Comprehensive test coverage with mockable components
 
 ---
 
@@ -36,9 +38,11 @@ customize the device data you need.
 
 This module helps you collect various device attributes through dedicated collectors:
 
-- **Hardware information**: Camera capabilities, display properties, sensors, memory, storage
-- **Platform details**: OS version, manufacturer, model, SDK version, build information
-- **Network information**: Connection type, carrier details, network capabilities
+- **Hardware information**: Camera capabilities, display properties, CPU cores, memory, storage
+- **Platform details**: OS version, manufacturer, model, brand, locale, timezone
+- **Network information**: Connection status, network capabilities
+- **Telephony information**: Carrier name, network country code
+- **Location data**: GPS coordinates (with automatic permission handling)
 - **Custom collectors**: Extend with your own logic for any device data
 
 ### Architecture
@@ -50,9 +54,18 @@ This module helps you collect various device attributes through dedicated collec
 │         Device Profile Module           │
 │  ┌─────────────┐  ┌─────────────────┐   │
 │  │ Collectors  │  │ AIC Integration │   │
+│  │             │  │                 │   │
+│  │ • Platform  │  │ • DeviceProfile │   │
+│  │ • Hardware  │  │   Callback      │   │
+│  │ • Network   │  │ • Permission    │   │
+│  │ • Telephony │  │   Management    │   │
+│  │ • Location  │  │                 │   │
 │  └─────────────┘  └─────────────────┘   │
 ├─────────────────────────────────────────┤
 │          Android Platform API           │
+│          AndroidBuildProvider           │
+│          Permission Handling            │
+│          Location Services              │
 └─────────────────────────────────────────┘
 ```
 ---
@@ -64,11 +77,14 @@ This module helps you collect various device attributes through dedicated collec
 The module respects Android's permission model. Some collectors may require specific permissions:
 
 ```xml
-<!-- Optional: For enhanced hardware detection -->
+<!-- Required for NetworkCollector -->
 <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-<uses-permission android:name="android.permission.READ_PHONE_STATE" />
 
-<!-- Note: Permissions are only used if the corresponding collectors are enabled -->
+<!-- Optional: For LocationCollector (will prompt user automatically) -->
+<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+
+<!-- Note: LocationCollector handles permission requests automatically -->
 ```
 
 ### Basic Usage
@@ -103,14 +119,39 @@ suspend fun collectDeviceProfile() {
 
 ```json
 {
-  "camera": {
-    "noOfCameras": 2
-  },
   "platform": {
-    "osVersion": "13",
+    "platform": "android",
+    "device": "flame",
+    "deviceName": "Pixel 4",
+    "model": "Pixel 4", 
+    "brand": "google",
+    "locale": "en_US",
+    "timeZone": "America/Vancouver"
+  },
+  "hardware": {
+    "hardware": "flame",
     "manufacturer": "Google",
-    "model": "Pixel 7",
-    "sdkVersion": 33
+    "storage": 64,
+    "memory": 6144,
+    "cpu": 8,
+    "display": {
+      "width": 1080,
+      "height": 2280
+    },
+    "camera": {
+      "noOfCameras": 2
+    }
+  },
+  "network": {
+    "connected": true
+  },
+  "telephony": {
+    "networkCountryIso": "US",
+    "carrierName": "Verizon"
+  },
+  "location": {
+    "latitude": 37.7749,
+    "longitude": -122.4194
   }
 }
 ```
@@ -121,57 +162,45 @@ suspend fun collectDeviceProfile() {
 
 The module provides several built-in collectors out of the box:
 
-### CameraCollector
-Collects camera-related information:
-```json
-{
-  "camera": {
-    "noOfCameras": 2
-  }
-}
-```
-
 ### PlatformCollector
-Gathers platform and OS information:
+Gathers platform and device identification information:
 ```json
 {
    "platform": {
-      "platform": "Android",
-      "version": "13",
-      "deviceName": "Google",
-      "brand": "Google",
-      "model": "Pixel 7",
-      "sdkVersion": 33,
-      "timeZone": "America/Vancouver",
+      "platform": "android",
+      "device": "flame",
+      "deviceName": "Pixel 4",
+      "model": "Pixel 4",
+      "brand": "google",
       "locale": "en_US",
-      "jailBreakScore": 1
+      "timeZone": "America/Vancouver"
    }
 }
 ```
 
 ### HardwareCollector
-Collects hardware specifications:
+Collects comprehensive hardware specifications:
 ```json
 {
    "hardware": {
-      "hardware": "ranchu",
+      "hardware": "flame",
       "manufacturer": "Google",
-      "storage": 5951,
-      "memory": 1968,
-      "cpu": 4,
+      "storage": 64,
+      "memory": 6144,
+      "cpu": 8,
       "display": {
          "width": 1080,
-         "height": 2148,
-         "orientation": 1
+         "height": 2280
       },
       "camera": {
-         "numberOfCameras": 2
+         "noOfCameras": 2
       }
    }
 }
 ```
 
-### NetworkCollector (Custom Example)
+### NetworkCollector
+Determines current network connectivity status:
 ```json
 {
    "network": {
@@ -179,6 +208,35 @@ Collects hardware specifications:
    }
 }
 ```
+
+### TelephonyCollector
+Collects carrier and network information:
+```json
+{
+   "telephony": {
+      "networkCountryIso": "US", 
+      "carrierName": "Verizon"
+   }
+}
+```
+
+### LocationCollector
+Collects GPS coordinates with automatic permission handling:
+```json
+{
+   "location": {
+      "latitude": 37.7749,
+      "longitude": -122.4194
+   }
+}
+```
+
+**Location Privacy Features:**
+- Automatically requests permissions when needed
+- Uses a transparent activity for seamless permission flow
+- Gracefully handles permission denials
+- Includes timeout protection (30 seconds)
+- Returns null if location is unavailable or denied
 
 ---
 
@@ -192,10 +250,15 @@ The module comes with several built-in collectors that you can use:
 import com.pingidentity.device.profile.collector.*
 
 val collectors = mutableListOf<DeviceCollector<*>>().apply {
-    add(CameraCollector)
-    add(PlatformCollector())
-    add(HardwareCollector)
+    add(PlatformCollector)
+    add(HardwareCollector())
+    add(NetworkCollector())
+    add(TelephonyCollector)
+    add(LocationCollector()) // Will handle permissions automatically
 }
+
+// Or use the default configuration
+val collectors = mutableListOf<DeviceCollector<*>>().apply(DefaultDeviceCollector())
 ```
 
 ### Creating Custom Collectors
@@ -216,81 +279,48 @@ val BatteryCollector = DeviceCollector<Map<String, Any>>("battery") {
 2. **Complex collector** by implementing the interface:
 
 ```kotlin
+class SecurityCollector : DeviceCollector<SecurityInfo> {
+    override val key = "security"
+    override val serializer = SecurityInfo.serializer()
 
-class NetworkCollector : DeviceCollector<NetworkInfo> {
-    override val key = "network"
-    override val serializer = serializer<NetworkInfo>()
-
-    override suspend fun collect(): NetworkInfo {
-        // Collect network information
-        return NetworkInfo(
-            isConnected = true,
-            type = "WIFI",
-            strength = 85
+    override suspend fun collect(): SecurityInfo {
+        return SecurityInfo(
+            isDeviceSecure = checkDeviceSecuritySettings(),
+            hasScreenLock = checkScreenLockStatus(),
+            biometricsAvailable = checkBiometricCapabilities()
         )
     }
 }
 
 @Serializable
-data class NetworkInfo(
-    val isConnected: Boolean,
-    val type: String,
-    val strength: Int
+data class SecurityInfo(
+    val isDeviceSecure: Boolean,
+    val hasScreenLock: Boolean,
+    val biometricsAvailable: Boolean
 )
 ```
 
-### Advanced Custom Collector Example
+### Testable Architecture
 
-Here's a more comprehensive example of a custom collector:
+The module is designed with testing in mind:
 
 ```kotlin
-class SecurityCollector : DeviceCollector<SecurityInfo> {
-    override val key = "security"
-    override val serializer = serializer<SecurityInfo>()
-
-    override suspend fun collect(): SecurityInfo? {
-        return try {
-            SecurityInfo(
-                hasBiometrics = checkBiometricAvailability(),
-                isDeviceSecure = isDeviceSecure(),
-                hasScreenLock = hasScreenLock(),
-                isRooted = checkRootStatus()
-            )
-        } catch (e: Exception) {
-            // Handle collection errors gracefully
-            null
+// Example: Testing HardwareCollector with mocked Build properties
+class HardwareCollectorTest {
+    @Test
+    fun `test hardware collection with custom build provider`() = runTest {
+        val mockBuildProvider = mockk<AndroidBuildProvider> {
+            every { getHardware() } returns "test-hardware"
+            every { getManufacturer() } returns "test-manufacturer"
         }
-    }
-
-    private fun checkBiometricAvailability(): Boolean {
-        // Implementation details...
-        return BiometricManager.from(context)
-            .canAuthenticate(BIOMETRIC_WEAK) == BIOMETRIC_SUCCESS
-    }
-
-    private fun isDeviceSecure(): Boolean {
-        // Implementation details...
-        return keyguardManager.isDeviceSecure
-    }
-
-    private fun hasScreenLock(): Boolean {
-        // Implementation details...
-        return keyguardManager.isKeyguardSecure
-    }
-
-    private fun checkRootStatus(): Boolean {
-        // Implementation details...
-        return RootBeer(context).isRooted
+        
+        val collector = HardwareCollector(mockBuildProvider)
+        val result = collector.collect()
+        
+        assertEquals("test-hardware", result.hardware)
+        assertEquals("test-manufacturer", result.manufacturer)
     }
 }
-
-@Serializable
-data class SecurityInfo(
-    val hasBiometrics: Boolean,
-    val isDeviceSecure: Boolean,
-    val hasScreenLock: Boolean,
-    val isRooted: Boolean
-)
 ```
 
 ### Conditional Collector Loading
@@ -299,20 +329,20 @@ data class SecurityInfo(
 fun createCollectors(context: Context): List<DeviceCollector<*>> {
     return mutableListOf<DeviceCollector<*>>().apply {
         // Always include basic collectors
-        add(PlatformCollector())
+        add(PlatformCollector)
+        add(HardwareCollector())
         
         // Conditionally add collectors based on permissions
-        if (ContextCompat.checkSelfPermission(context, CAMERA) == PERMISSION_GRANTED) {
-            add(CameraCollector)
+        if (ContextCompat.checkSelfPermission(context, ACCESS_NETWORK_STATE) == PERMISSION_GRANTED) {
+            add(NetworkCollector())
         }
         
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            add(BiometricCollector())
-        }
+        // LocationCollector handles its own permissions
+        add(LocationCollector())
         
         // Add based on device capabilities
         if (packageManager.hasSystemFeature(FEATURE_TELEPHONY)) {
-            add(TelephonyCollector())
+            add(TelephonyCollector)
         }
     }
 }
@@ -332,8 +362,8 @@ AIC Journeys.
 import com.pingidentity.device.profile.DeviceProfileCallback
 import kotlinx.coroutines.runBlocking
 
-deviceProfileCallback.collect()
-
+// Collect with default settings
+val result = deviceProfileCallback.collect()
 ```
 
 By default, `DeviceProfileCallback.collect()` will use all the default collectors provided by
@@ -344,7 +374,6 @@ By default, `DeviceProfileCallback.collect()` will use all the default collector
 You can customize which collectors are used:
 
 ```kotlin
-
 val profile = deviceProfileCallback.collect {
    // Set a custom device identifier if needed for AIC Journey tracking
    deviceIdentifier = object : DeviceIdentifier {
@@ -354,8 +383,10 @@ val profile = deviceProfileCallback.collect {
    // Add collectors in a metadata block
    metadata {
       // Add specific collectors relevant to your AIC risk assessment needs
-      add(CameraCollector)
-      add(PlatformCollector())
+      add(PlatformCollector)
+      add(HardwareCollector())
+      add(NetworkCollector())
+      add(LocationCollector()) // Will automatically handle permissions
    }
 
    // Add more collectors in another metadata block if needed
@@ -380,10 +411,22 @@ When using `DeviceProfileCallback`, the output is structured specifically for AI
 ```json
 {
   "identifier": "unique-device-id",
-  "metadata": {
-    "camera": { "noOfCameras": 2 },
-    "platform": { "osVersion": "13" },
-    "custom": { "batteryLevel": 85 }
+  "platform": {
+    "platform": "android",
+    "device": "flame",
+    "deviceName": "Pixel 4"
+  },
+  "hardware": {
+    "manufacturer": "Google",
+    "storage": 64,
+    "memory": 6144
+  },
+  "network": {
+    "connected": true
+  },
+  "location": {
+    "latitude": 37.7749,
+    "longitude": -122.4194
   }
 }
 ```
@@ -393,13 +436,15 @@ When using `DeviceProfileCallback`, the output is structured specifically for AI
 ```kotlin
 val result = deviceProfileCallback.collect {
     metadata {
-        add(CameraCollector)
-        add(PlatformCollector())
+        add(PlatformCollector)
+        add(HardwareCollector)
+        add(LocationCollector()) // May return null if permission denied
     }
 }
+
 result.onSuccess { profile ->
     // Submit to AIC service
-   
+    // Note: Some collectors may return null values if data unavailable
 }.onFailure { e ->
     // Handle collection errors
     Log.e("DeviceProfile", "Failed to collect profile", e)
@@ -425,9 +470,40 @@ interface DeviceCollector<T> {
 ```kotlin
 class DeviceProfileCallback {
     suspend fun collect(
-        block: DeviceProfileConfig.() -> Unit = {}
-    ):  Result<JsonObject>
+        block: DeviceProfileConfig.() -> Unit = DefaultProfile()
+    ): Result<JsonObject>
 }
+```
+
+### Built-in Collectors
+
+#### PlatformCollector
+```kotlin
+val PlatformCollector: DeviceCollector<PlatformInfo>
+```
+
+#### HardwareCollector
+```kotlin
+class HardwareCollector(
+    androidBuildProvider: AndroidBuildProvider = DefaultAndroidBuildProvider()
+) : DeviceCollector<HardwareInfo>
+```
+
+#### NetworkCollector  
+```kotlin
+class NetworkCollector(
+    sdkVersionProvider: SdkVersionProvider = DefaultSdkVersionProvider()
+) : DeviceCollector<NetworkInfo>
+```
+
+#### TelephonyCollector
+```kotlin
+val TelephonyCollector: DeviceCollector<TelephonyInfo>
+```
+
+#### LocationCollector
+```kotlin
+class LocationCollector : DeviceCollector<LocationInfo>
 ```
 
 ### Extension Functions
@@ -441,10 +517,24 @@ Collects data from all collectors and returns a JSON object.
 
 #### DefaultDeviceCollector()
 ```kotlin
-fun MutableList<DeviceCollector<*>>.DefaultDeviceCollector()
+fun DefaultDeviceCollector(): MutableList<DeviceCollector<*>>.() -> Unit
 ```
 
-Adds the default set of collectors to the list.
+Adds the default set of collectors to the list (Platform, Hardware, Network, Telephony, Location).
+
+### Utility Classes
+
+#### AndroidBuildProvider
+```kotlin
+interface AndroidBuildProvider {
+    fun getHardware(): String?
+    fun getManufacturer(): String?
+    fun getModel(): String?
+    fun getBrand(): String?
+    fun getDevice(): String?
+}
+```
+
+Provides testable access to Android Build properties.
 
 ---
-

@@ -6,6 +6,7 @@
  */
 package com.pingidentity.device.profile
 
+import android.annotation.SuppressLint
 import com.pingidentity.device.id.DefaultDeviceIdentifier
 import com.pingidentity.device.profile.collector.DefaultDeviceCollector
 import com.pingidentity.device.profile.collector.collect
@@ -36,9 +37,10 @@ suspend fun profile(block: DeviceProfileConfig.() -> Unit = DefaultProfile()): J
 
 val json = Json
 
+@SuppressLint("UnsafeOptInUsageError")
 @Serializable
 private data class DeviceProfileResult(
-    val identifier: String,
+    val identifier: suspend () -> String,
     val metadata: JsonElement
 )
 

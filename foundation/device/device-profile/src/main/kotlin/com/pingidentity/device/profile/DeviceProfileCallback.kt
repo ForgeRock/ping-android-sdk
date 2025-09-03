@@ -40,7 +40,7 @@ class DeviceProfileCallback : AbstractCallback() {
         }
 
         val prettyString = json.encodeToString(profile(block))
-        println(prettyString)
+
         if (metadata) {
             input(prettyString)
         }
