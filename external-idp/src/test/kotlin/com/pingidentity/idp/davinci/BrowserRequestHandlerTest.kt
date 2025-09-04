@@ -8,9 +8,17 @@
 package com.pingidentity.idp.davinci
 
 import android.net.Uri
+import androidx.core.net.toUri
 import com.pingidentity.browser.BrowserLauncher
 import com.pingidentity.orchestrate.ContinueNode
-import io.mockk.*
+import io.mockk.coEvery
+import io.mockk.coVerify
+import io.mockk.coVerifyAll
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.mockkObject
+import io.mockk.unmockkAll
+import io.mockk.verify
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -32,7 +40,7 @@ class BrowserRequestHandlerTest {
     @BeforeTest
     fun setup() {
         continueNode = mockk()
-        browserRequestHandler = BrowserRequestHandler(continueNode)
+        browserRequestHandler = BrowserRequestHandler(continueNode, "https://example.com/callback".toUri())
 
         mockkObject(BrowserLauncher)
     }
@@ -63,7 +71,7 @@ class BrowserRequestHandlerTest {
         assertEquals("Bearer $continueToken", request.builder.headers["Authorization"])
         coVerifyAll {
             continueNode.input
-            BrowserLauncher.launch(URL(authUrl))
+            BrowserLauncher.launch(URL(authUrl), any())
         }
     }
 
@@ -99,7 +107,7 @@ class BrowserRequestHandlerTest {
         }
         coVerifyAll {
             continueNode.input
-            BrowserLauncher.launch(any())
+            BrowserLauncher.launch(any(), any())
         }
     }
 
@@ -119,7 +127,30 @@ class BrowserRequestHandlerTest {
         }
         coVerifyAll {
             continueNode.input
-            BrowserLauncher.launch(URL(authUrl))
+            BrowserLauncher.launch(URL(authUrl), any())
+        }
+    }
+
+    @Test
+    fun `authorize captures redirect URL correctly`() = runTest {
+        // Arrange
+        val continueUrl = "https://api.example.com/continue"
+        val authUrl = "https://auth.example.com/login"
+        val redirectUri = "https://example.com/callback".toUri()
+        val continueToken = "abc123"
+        val successResult = Result.success(
+            "$redirectUri?continueToken=$continueToken".toUri()
+        )
+
+        setupContinueNodeMock(continueUrl)
+        mockBrowserLaunch(authUrl, successResult)
+
+        // Act
+        browserRequestHandler.authorize(authUrl)
+
+        // Assert
+        coVerify {
+            BrowserLauncher.launch(URL(authUrl), redirectUri)
         }
     }
 
@@ -143,9 +174,8 @@ class BrowserRequestHandlerTest {
 
     private fun mockBrowserLaunch(url: String, result: Result<Uri>) {
         coEvery {
-            BrowserLauncher.launch(URL(url))
+            BrowserLauncher.launch(URL(url), any())
         } returns result
     }
-
 
 }

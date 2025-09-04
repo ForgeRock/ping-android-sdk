@@ -23,11 +23,12 @@ dependencies {
 ## Set scheme in AndroidManifest.xml
 
 With the `browser` module dependency, the Ping SDK's OIDC module uses a Browser agent to launch the
-authorization request in a browser. By default, it uses Custom Tabs, but you can customize the
-browser behavior through the customTab properties.
+authorization request in a browser. By default, it uses Custom Tabs or Auth Tabs.
 
 To handle the redirect after authentication, you must define a scheme. This scheme must match the
 scheme used in your redirect URI.
+
+### Custom Scheme Configuration
 
 For example, if your redirect URI is `com.pingidentity.demo://callback`, then
 `com.pingidentity.demo`
@@ -44,6 +45,55 @@ android {
     }
 }
 ```
+
+### HTTPS Scheme Configuration
+
+If you're using HTTPS redirect URIs (e.g., `https://yourdomain.com/oauth2redirect`), you need to configure App Links to handle the redirect after authentication. This requires two steps:
+
+#### 1. Setup assetlinks.json file
+
+Create an `assetlinks.json` file on your web server as described in the [Android App Links documentation](https://developer.android.com/studio/write/app-link-indexing#associatesite). This file should be accessible at `https://yourdomain.com/.well-known/assetlinks.json`.
+
+Example `assetlinks.json`:
+```json
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.pingidentity.demo",
+      "sha256_cert_fingerprints": ["your_app_sha256_fingerprint"]
+    }
+  }
+]
+```
+
+#### 2. Update AndroidManifest.xml
+
+Add an intent filter to your app's `AndroidManifest.xml` file to handle the HTTPS redirect:
+
+```xml
+<activity
+    android:name="com.pingidentity.browser.CustomTabActivity"
+    android:exported="true"
+    android:launchMode="singleTop">
+    <intent-filter android:autoVerify="true">
+        <action android:name="android.intent.action.VIEW" />
+
+        <category android:name="android.intent.category.DEFAULT" />
+        <category android:name="android.intent.category.BROWSABLE" />
+
+        <data android:scheme="https" />
+        <data android:host="yourdomain.com" />
+        <data android:path="/oauth2redirect" />
+    </intent-filter>
+</activity>
+```
+
+**Important**: Make sure the `scheme`, `host`, and `path` in the intent filter exactly match your redirect URI. For example, if your redirect URI is `https://youtdomain.com/oauth2redirect`, then:
+- `android:scheme="https"`
+- `android:host="yourdomain.com"`
+- `android:path="/oauth2redirect"`
 
 ## Oidc Client Configuration
 
@@ -145,4 +195,4 @@ web.authorize(
   }.onFailure { throwable ->
     ...
   }
-``` 
+```

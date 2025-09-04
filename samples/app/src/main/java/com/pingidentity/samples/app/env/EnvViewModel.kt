@@ -7,9 +7,12 @@
 
 package com.pingidentity.samples.app.env
 
+import android.net.Uri
+import androidx.browser.customtabs.CustomTabsIntent
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.core.net.toUri
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.lifecycle.ViewModel
@@ -21,6 +24,7 @@ import com.pingidentity.logger.Logger
 import com.pingidentity.logger.STANDARD
 import com.pingidentity.oidc.OidcClientConfig
 import com.pingidentity.oidc.OidcWeb
+import com.pingidentity.oidc.module.Web
 import com.pingidentity.samples.app.User
 import com.pingidentity.samples.app.settingDataStore
 import kotlinx.coroutines.CoroutineScope
@@ -70,6 +74,7 @@ val social by lazy {
 
 lateinit var daVinci: DaVinci
 lateinit var web: OidcWeb
+lateinit var redirectUri: Uri //For Social Login redirect parameter using Auth Tab
 
 class EnvViewModel : ViewModel() {
 
@@ -92,6 +97,7 @@ class EnvViewModel : ViewModel() {
         daVinci = server
 
         val oidcConfig = server.oidcConfig()
+        redirectUri = oidcConfig.redirectUri.toUri()
 
         web = OidcWeb {
             logger = Logger.STANDARD
@@ -100,6 +106,24 @@ class EnvViewModel : ViewModel() {
                 discoveryEndpoint = oidcConfig.discoveryEndpoint
                 scopes = oidcConfig.scopes
                 redirectUri = oidcConfig.redirectUri
+                signOutRedirectUri = oidcConfig.signOutRedirectUri
+                loginHint = oidcConfig.loginHint
+                state = oidcConfig.state
+                nonce = oidcConfig.nonce
+                acrValues = oidcConfig.acrValues
+                prompt = oidcConfig.prompt
+                display = oidcConfig.display
+                uiLocales = oidcConfig.uiLocales
+                additionalParameters = oidcConfig.additionalParameters
+            }
+            module(Web) {
+                //Showcase Customization
+                customTabsCustomizer = {
+                    setColorScheme(CustomTabsIntent.COLOR_SCHEME_DARK)
+                }
+                authTabCustomizer = {
+                    setColorScheme(CustomTabsIntent.COLOR_SCHEME_DARK)
+                }
             }
         }
 

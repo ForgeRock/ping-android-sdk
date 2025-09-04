@@ -112,7 +112,7 @@ fun AppDrawer(
             icon = { Icon(Icons.AutoMirrored.Filled.Logout, null) },
             onClick = {
                 logoutViewModel.logout {
-                    navigateTo(DAVINCI)
+                    navigateTo(ENV_ROUTE)
                 }
                 closeDrawer()
             },

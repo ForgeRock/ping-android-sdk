@@ -7,6 +7,8 @@
 
 package com.pingidentity.idp.journey
 
+import android.net.Uri
+import androidx.core.net.toUri
 import com.pingidentity.idp.FacebookHandler
 import com.pingidentity.idp.GoogleHandler
 import com.pingidentity.idp.IdpClient
@@ -159,14 +161,18 @@ class IdpCallback : AbstractCallback(), JourneyAware, RequestInterceptor {
      * 2. Launches the external authentication flow
      * 3. Processes the authentication result
      *
+     * @param redirectUri The redirect URI for the browser-based IdP authentication (Apple Sign-In)
      * @param idpHandler Optional custom handler; if not provided, one will be selected based on [provider]
      * @return A [Result] containing the [IdpResult] if successful, or an error if the authentication failed
      */
-    suspend fun authorize(idpHandler: IdpHandler? = getIdpHandler()): Result<IdpResult> {
+    suspend fun authorize(
+        redirectUri: Uri = "".toUri(),
+        idpHandler: IdpHandler? = getIdpHandler(redirectUri)
+    ): Result<IdpResult> {
         idpHandler
             ?: return Result.failure(IllegalArgumentException("Unsupported provider: $provider"))
         try {
-            result = idpHandler.authorize(IdpClient(clientId, redirectUri, scopes, nonce))
+            result = idpHandler.authorize(IdpClient(clientId, this.redirectUri, scopes, nonce))
             tokenType = idpHandler.tokenType
         } catch (e: Exception) {
             yield()
@@ -182,13 +188,13 @@ class IdpCallback : AbstractCallback(), JourneyAware, RequestInterceptor {
      *
      * @return An [IdpHandler] implementation for the specified provider, or null if not supported
      */
-    private fun getIdpHandler(): IdpHandler? {
+    private fun getIdpHandler(redirectUri: Uri): IdpHandler? {
         return if (provider.lowercase().contains("google")) {
             GoogleHandler()
         } else if (provider.lowercase().contains("facebook")) {
             FacebookHandler()
         } else if (provider.lowercase().contains("apple")) {
-            AppleHandler()
+            AppleHandler(redirectUri)
         } else {
             null
         }

@@ -17,7 +17,15 @@ import com.pingidentity.orchestrate.WorkflowConfig
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
-import kotlinx.serialization.json.*
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.addJsonObject
+import kotlinx.serialization.json.buildJsonArray
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.putJsonArray
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
@@ -124,7 +132,7 @@ class IdpCallbackTest {
         val token = "test-token"
         val tokenType = "Bearer"
 
-        idpCallback.authorize(object : IdpHandler {
+        idpCallback.authorize(idpHandler = object : IdpHandler {
             override var tokenType: String = tokenType
 
             override suspend fun authorize(idpClient: IdpClient): IdpResult {
@@ -151,7 +159,7 @@ class IdpCallbackTest {
         // Given a callback with token and tokenType
         val tokenType = "Bearer"
 
-        val result = idpCallback.authorize(object : IdpHandler {
+        val result = idpCallback.authorize(idpHandler = object : IdpHandler {
             override var tokenType: String = tokenType
 
             override suspend fun authorize(idpClient: IdpClient): IdpResult {

@@ -7,6 +7,7 @@
 
 package com.pingidentity.idp.journey
 
+import android.net.Uri
 import androidx.core.net.toUri
 import com.pingidentity.browser.BrowserLauncher
 import com.pingidentity.idp.IdpClient
@@ -14,7 +15,7 @@ import com.pingidentity.idp.IdpHandler
 import com.pingidentity.idp.IdpResult
 import java.net.URL
 
-internal class AppleHandler : IdpHandler {
+internal class AppleHandler(private val redirectUri: Uri) : IdpHandler {
 
     override var tokenType: String = "authorization_code"
 
@@ -29,7 +30,7 @@ internal class AppleHandler : IdpHandler {
             .appendQueryParameter("nonce", idpClient.nonce)
             .build()
 
-        val result = BrowserLauncher.launch(URL(request.toString()))
+        val result = BrowserLauncher.launch(URL(request.toString()), redirectUri)
         val uri = result.getOrThrow()
 
         return IdpResult(
