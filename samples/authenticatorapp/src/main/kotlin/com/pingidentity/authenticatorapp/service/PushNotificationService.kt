@@ -10,7 +10,7 @@ import com.pingidentity.authenticatorapp.data.DiagnosticLogger
 import com.pingidentity.authenticatorapp.notification.NotificationActionReceiver
 import com.pingidentity.authenticatorapp.notification.NotificationHelper
 import com.pingidentity.authenticatorapp.notification.PushNotificationActivity
-import com.pingidentity.mfa.push.PushMfaClient
+import com.pingidentity.mfa.push.PushClient
 import com.pingidentity.mfa.push.PushNotification
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -23,7 +23,7 @@ import kotlinx.coroutines.launch
 class PushNotificationService : FirebaseMessagingService() {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    private var pushClient: PushMfaClient? = null
+    private var pushClient: PushClient? = null
 
     private val diagnosticLogger = DiagnosticLogger
 

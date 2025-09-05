@@ -15,7 +15,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
 import com.pingidentity.mfa.oath.OathCodeInfo
 import com.pingidentity.mfa.oath.OathCredential
-import com.pingidentity.mfa.oath.OathMfaClient
+import com.pingidentity.mfa.oath.OathClient
 
 /**
  * Manager class for handling all OATH credential operations.
@@ -25,7 +25,7 @@ import com.pingidentity.mfa.oath.OathMfaClient
  * @param diagnosticLogger DiagnosticLogger for logging
  */
 class OathManager(
-    private var oathClient: OathMfaClient? = null,
+    private var oathClient: OathClient? = null,
     private val diagnosticLogger: DiagnosticLogger
 ) {
     
@@ -44,7 +44,7 @@ class OathManager(
     /**
      * Sets the OATH client instance.
      */
-    fun setClient(client: OathMfaClient) {
+    fun setClient(client: OathClient) {
         this.oathClient = client
     }
 

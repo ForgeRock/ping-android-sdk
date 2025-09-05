@@ -7,6 +7,7 @@
 
 package com.pingidentity.authenticatorapp.ui
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -14,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -22,18 +24,26 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CleaningServices
 import androidx.compose.material.icons.filled.FindInPage
 import androidx.compose.material.icons.filled.GroupWork
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.LockOpen
+import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Sms
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.Timelapse
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -48,7 +58,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.pingidentity.authenticatorapp.R
+import com.pingidentity.authenticatorapp.data.AccountGroup
 import com.pingidentity.authenticatorapp.data.AuthenticatorViewModel
+import com.pingidentity.mfa.commons.policy.BiometricAvailablePolicy
+import com.pingidentity.mfa.commons.policy.DeviceTamperingPolicy
+
+private const val LOCKING_POLICY_CUSTOM = "customPolicy"
 
 /**
  * Screen for developer testing features.
@@ -62,6 +77,11 @@ fun TestScreen(
     var deviceToken by remember { mutableStateOf<String?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
     val uiState by viewModel.uiState.collectAsState()
+    
+    // Account locking dialog states
+    var showAccountSelectionDialog by remember { mutableStateOf(false) }
+    var selectedAccount by remember { mutableStateOf<AccountGroup?>(null) }
+    var showPolicySelectionDialog by remember { mutableStateOf(false) }
 
     // Handle success messages
     LaunchedEffect(uiState.message) {
@@ -161,6 +181,49 @@ fun TestScreen(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(stringResource(id = R.string.test_screen_create_random_mfa))
+                    }
+                }
+            }
+
+            // Account locking section
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp)
+                ) {
+                    Text(
+                        text = stringResource(id = R.string.test_screen_lock_accounts_title),
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Button(
+                        onClick = { showAccountSelectionDialog = true },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = uiState.accountGroups.isNotEmpty()
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Security,
+                            contentDescription = stringResource(id = R.string.test_screen_lock_accounts_button)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(stringResource(id = R.string.test_screen_lock_accounts_button))
+                    }
+                    
+                    if (uiState.accountGroups.isEmpty()) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = stringResource(id = R.string.test_screen_no_accounts_available),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 }
             }
@@ -268,5 +331,137 @@ fun TestScreen(
             }
 
         }
+    }
+    
+    // Account selection dialog
+    if (showAccountSelectionDialog) {
+        AlertDialog(
+            onDismissRequest = { showAccountSelectionDialog = false },
+            title = { Text(stringResource(id = R.string.test_screen_select_account_to_lock)) },
+            text = {
+                Column {
+                    uiState.accountGroups.forEach { accountGroup ->
+                        val isLocked = accountGroup.isLocked
+                        OutlinedButton(
+                            onClick = {
+                                selectedAccount = accountGroup
+                                showAccountSelectionDialog = false
+                                if (isLocked) {
+                                    // Unlock immediately
+                                    viewModel.unlockAccountGroup(accountGroup)
+                                } else {
+                                    // Show policy selection
+                                    showPolicySelectionDialog = true
+                                }
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 2.dp),
+                            colors = if (isLocked) {
+                                ButtonDefaults.outlinedButtonColors(
+                                    contentColor = MaterialTheme.colorScheme.error
+                                )
+                            } else {
+                                ButtonDefaults.outlinedButtonColors()
+                            }
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = accountGroup.displayIssuer,
+                                        style = MaterialTheme.typography.titleSmall
+                                    )
+                                    Text(
+                                        text = accountGroup.displayAccountName,
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
+                                }
+                                Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                                    Icon(
+                                        imageVector = if (isLocked) Icons.Default.Lock else Icons.Default.LockOpen,
+                                        contentDescription = if (isLocked) "Locked" else "Unlocked",
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = if (isLocked) "Locked" else "Unlocked",
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showAccountSelectionDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+    
+    // Policy selection dialog
+    if (showPolicySelectionDialog && selectedAccount != null) {
+        val policyOptions = listOf(
+            BiometricAvailablePolicy.POLICY_NAME to stringResource(id = R.string.test_screen_policy_biometric),
+            DeviceTamperingPolicy.POLICY_NAME to stringResource(id = R.string.test_screen_policy_tampering),
+            LOCKING_POLICY_CUSTOM to stringResource(id = R.string.test_screen_policy_custom)
+        )
+        var selectedPolicy by remember { mutableStateOf(policyOptions[0].first) }
+        
+        AlertDialog(
+            onDismissRequest = { 
+                showPolicySelectionDialog = false
+                selectedAccount = null
+            },
+            title = { Text(stringResource(id = R.string.test_screen_select_policy)) },
+            text = {
+                Column {
+                    policyOptions.forEach { (policy, displayName) ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
+                            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = selectedPolicy == policy,
+                                onClick = { selectedPolicy = policy }
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(displayName)
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        selectedAccount?.let { account ->
+                            viewModel.lockAccountGroup(account, selectedPolicy)
+                        }
+                        showPolicySelectionDialog = false
+                        selectedAccount = null
+                    }
+                ) {
+                    Text(stringResource(id = R.string.test_screen_lock_account))
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showPolicySelectionDialog = false
+                        selectedAccount = null
+                    }
+                ) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 }

@@ -145,8 +145,27 @@
     <string name="test_screen_notifications_title">Notifications</string>
     <string name="content_description_clean_up">Clean up</string>
     <string name="test_screen_clean_up_button">Clean Up Old Notifications</string>
+    <string name="test_screen_lock_accounts_title">Account Locking</string>
+    <string name="test_screen_lock_accounts_button">Manage Account Locks</string>
+    <string name="test_screen_select_account_to_lock">Select Account to Lock/Unlock</string>
+    <string name="test_screen_lock_account">Lock Account</string>
+    <string name="test_screen_unlock_account">Unlock Account</string>
+    <string name="test_screen_select_policy">Select Locking Policy</string>
+    <string name="test_screen_policy_biometric">Biometric Available</string>
+    <string name="test_screen_policy_tampering">Device Tampering</string>
+    <string name="test_screen_policy_custom">Custom Policy</string>
+    <string name="test_screen_account_locked_success">Account locked successfully</string>
+    <string name="test_screen_account_unlocked_success">Account unlocked successfully</string>
+    <string name="test_screen_no_accounts_available">No accounts available to lock</string>
     <string name="account_group_item_oath">OATH</string>
     <string name="account_group_item_push">PUSH</string>
     <string name="account_group_item_otp_placeholder">• • • • • •</string>
     <string name="account_group_item_otp_code_label">OTP Code</string>
+    
+    <!-- Account locking messages -->
+    <string name="account_locked_biometric_available">Biometrics are required but are unavailable. Please contact your account administrator for help.</string>
+    <string name="account_locked_device_tampering">The device might have been tampered with or rooted. Please contact the account administrator for help.</string>
+    <string name="account_locked_generic_policy">Account locked by the following policy: %s. Please contact the account administrator for help.</string>
+    <string name="account_locked_unknown_policy">Account is locked. Please contact the account administrator for help.</string>
+    <string name="account_locked_indicator">Account Locked</string>
 </resources>

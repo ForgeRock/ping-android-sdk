@@ -7,7 +7,10 @@
 
 package com.pingidentity.mfa.push
 
+import com.pingidentity.mfa.commons.exception.CredentialLockedException
 import com.pingidentity.mfa.commons.exception.MfaException
+import com.pingidentity.mfa.commons.exception.MfaPolicyViolationException
+import com.pingidentity.mfa.commons.policy.MfaPolicyEvaluator
 import com.pingidentity.mfa.commons.util.DeviceUtils
 import com.pingidentity.mfa.push.PushConstants.DEFAULT_DEVICE_NAME
 import com.pingidentity.mfa.push.PushConstants.DEFAULT_TTL_SECONDS
@@ -36,19 +39,21 @@ import java.util.concurrent.ConcurrentHashMap
 import kotlin.coroutines.coroutineContext
 
 /**
- * Service class for handling push operations.
+ * Service class for handling push operations with policy enforcement.
  *
  * This class provides functionality for managing push credentials and notifications,
- * including storing, retrieving, and processing push notifications.
+ * including storing, retrieving, and processing push notifications with policy evaluation.
  *
  * @property storage The storage implementation for persisting push credentials and notifications.
  * @property config The Push configuration.
  * @property httpClient The HTTP client for network operations.
+ * @property policyEvaluator The policy evaluator for credential policy validation.
  */
 internal class PushService(
     private val storage: PushStorage,
     private val config: PushConfiguration,
     private val httpClient: HttpClient,
+    private val policyEvaluator: MfaPolicyEvaluator,
     tokenManager: PushDeviceTokenManager? = null,
     handlers: Map<String, PushHandler>? = null
 ) {
@@ -100,15 +105,35 @@ internal class PushService(
     /**
      * Creates a Push Credential from a standard pushauth:// URI (typically from a QR code).
      * This method is used by PingAM to register devices for push notifications.
+     * Evaluates policies during MFA registration.
      *
      * @param uri The URI string in the format pushauth://push/issuer:accountName?params...
      * @return The created PushCredential.
+     * @throws IllegalArgumentException if the URI is invalid.
+     * @throws MfaPolicyViolationException if policies are violated during registration.
      * @throws MfaException if the credential cannot be created.
      */
     suspend fun addCredentialFromUri(uri: String): PushCredential {
         try {
             // Parse the URI to create a PushCredential
             val credential = PushUriParser.parse(uri)
+            
+            // Evaluate policies during registration if policies are present
+            if (!credential.policies.isNullOrBlank()) {
+                logger.d("Evaluating policies for new Push credential")
+                val policyResult = policyEvaluator.evaluate(config.context, credential.policies)
+                
+                if (policyResult.isFailure) {
+                    val policyName = policyResult.nonCompliancePolicyName ?: "unknown"
+                    logger.w("Push credential registration blocked by policy: $policyName")
+                    throw MfaPolicyViolationException(
+                        "This credential cannot be registered on this device. It violates the following policy: $policyName",
+                        policyResult.nonCompliancePolicy
+                    )
+                } else {
+                    logger.d("All policies passed for new Push credential")
+                }
+            }
 
             // Obtain device name
             val deviceName = try {
@@ -148,14 +173,33 @@ internal class PushService(
     }
 
     /**
-     * Add a push credential.
+     * Add a push credential with runtime policy evaluation.
+     * Following ForgeRock pattern: evaluate policies and lock credential if needed.
      *
      * @param credential The credential to add.
-     * @return The added credential.
+     * @return The added credential (potentially locked due to policy violation).
      * @throws MfaException if the credential cannot be added.
      */
     suspend fun addCredential(credential: PushCredential): PushCredential = withContext(Dispatchers.IO) {
         try {
+            // Evaluate policies at runtime if context is available and policies exist
+            if (!credential.policies.isNullOrBlank()) {
+                logger.d("Evaluating policies for Push credential: ${credential.id}")
+                val policyResult = policyEvaluator.evaluate(config.context, credential.policies)
+                
+                // If credential is not locked but policies are non-compliant, lock it
+                if (!credential.isLocked && policyResult.isFailure) {
+                    val policyName = policyResult.nonCompliancePolicyName ?: "unknown"
+                    logger.w("Locking Push credential due to policy violation: $policyName")
+                    credential.lockCredential(policyName)
+                }
+                // If credential is locked but policies are now compliant, unlock it
+                else if (credential.isLocked && policyResult.isSuccess) {
+                    logger.d("Unlocking previously locked Push credential: all policies are compliant")
+                    credential.unlockCredential()
+                }
+            }
+
             // Store in persistent storage
             storage.storePushCredential(credential)
 
@@ -164,7 +208,7 @@ internal class PushService(
                 credentialsCache[credential.id] = credential
             }
 
-            logger.d("Added push credential: ${credential.id}")
+            logger.d("Added Push credential with ID: ${credential.id} (locked: ${credential.isLocked})")
             return@withContext credential
         } catch (e: Exception) {
             coroutineContext.ensureActive()
@@ -189,9 +233,31 @@ internal class PushService(
             // Get all credentials from storage
             val credentials = storage.getAllPushCredentials()
 
-            // Update cache if enabled
-            if (config.enableCredentialCache) {
-                credentials.forEach { credential ->
+            // Loop credentials
+            credentials.forEach { credential ->
+                // Evaluate policies for each credential at runtime
+                if (!credential.policies.isNullOrBlank()) {
+                    val policyResult = policyEvaluator.evaluate(config.context, credential.policies)
+
+                    // If credential is not locked but policies are non-compliant, lock it
+                    if (!credential.isLocked && policyResult.isFailure) {
+                        val policyName = policyResult.nonCompliancePolicyName ?: "unknown"
+                        logger.w("Locking Push credential ${credential.id} due to policy violation: $policyName")
+                        credential.lockCredential(policyName)
+                        // Update storage with locked status
+                        storage.storePushCredential(credential)
+                    }
+                    // If credential is locked but policies are now compliant, unlock it
+                    else if (credential.isLocked && policyResult.isSuccess) {
+                        logger.d("Unlocking previously locked Push credential ${credential.id}: all policies are compliant")
+                        credential.unlockCredential()
+                        // Update storage with unlocked status
+                        storage.storePushCredential(credential)
+                    }
+                }
+
+                // Update cache if enabled
+                if (config.enableCredentialCache) {
                     credentialsCache[credential.id] = credential
                 }
             }
@@ -624,6 +690,12 @@ internal class PushService(
             val credential = storage.retrievePushCredential(notification.credentialId)
                 ?: throw MfaException("Credential not found: ${notification.credentialId}")
 
+            // Check if credential is locked due to policy violation
+            if (credential.isLocked) {
+                val lockingPolicy = credential.lockingPolicy ?: "unknown"
+                throw CredentialLockedException(lockingPolicy, "Credential is currently locked")
+            }
+
             // Get the appropriate handler for this platform
             val platform = credential.platform
             val handler = pushHandlers[platform] ?: throw MfaException("No handler for platform: $platform")
@@ -669,6 +741,12 @@ internal class PushService(
             // Get the credential
             val credential = storage.retrievePushCredential(notification.credentialId)
                 ?: throw MfaException("Credential not found: ${notification.credentialId}")
+
+            // Check if credential is locked due to policy violation
+            if (credential.isLocked) {
+                val lockingPolicy = credential.lockingPolicy ?: "unknown"
+                throw CredentialLockedException(lockingPolicy, "Credential is currently locked")
+            }
 
             // Get the appropriate handler for this platform
             val platform = credential.platform

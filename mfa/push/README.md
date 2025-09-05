@@ -1,6 +1,6 @@
 [![Ping Identity](https://www.pingidentity.com/content/dam/picr/nav/Ping-Logo-2.svg)](https://github.com/ForgeRock/ping-android-sdk)
 
-# Ping SDK - Push MFA Module
+# Ping SDK - MFA Push Module
 
 The Push module provides support for push notification-based multi-factor authentication. It supports both PingAM and PingOne push notification formats and enables applications to:
 
@@ -28,10 +28,10 @@ Add the following dependency to your app module's `build.gradle` file:
 
 ```gradle
 dependencies {
-    implementation 'com.pingidentity.sdk:mfa:push:1.0.0'
+    implementation 'com.pingidentity.sdk:mfa:push:<version>'
     
     // Firebase dependencies for push notifications
-    implementation 'com.google.firebase:firebase-messaging:23.1.0'
+    implementation 'com.google.firebase:firebase-messaging:<version>'
 }
 ```
 

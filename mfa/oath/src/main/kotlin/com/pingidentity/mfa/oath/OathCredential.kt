@@ -69,9 +69,9 @@ data class OathCredential(
     val imageURL: String? = null,
     val backgroundColor: String? = null,
     val policies: String? = null,
-    val lockingPolicy: String? = null,
+    var lockingPolicy: String? = null,
     @EncodeDefault
-    val isLocked: Boolean = false
+    var isLocked: Boolean = false
 ) {
     /**
      * The type of credential (TOTP or HOTP) as String.
@@ -110,7 +110,26 @@ data class OathCredential(
             return json.decodeFromString(jsonString)
         }
     }
-    
+
+    /**
+     * Lock this credential due to policy violations.
+     *
+     * @param policyName The name of the policy that caused the lock.
+     */
+    fun lockCredential(policyName: String) {
+        isLocked = true
+        lockingPolicy = policyName
+    }
+
+    /**
+     * Unlock this credential.
+     * Clears any locking policy information.
+     */
+    fun unlockCredential() {
+        isLocked = false
+        lockingPolicy = null
+    }
+
     /**
      * Convert this credential to a URI string.
      *

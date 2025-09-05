@@ -7,7 +7,12 @@
 
 package com.pingidentity.authenticatorapp.data
 
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
+import com.pingidentity.authenticatorapp.R
 import com.pingidentity.authenticatorapp.util.getTimeAgoString
+import com.pingidentity.mfa.commons.policy.BiometricAvailablePolicy
+import com.pingidentity.mfa.commons.policy.DeviceTamperingPolicy
 import com.pingidentity.mfa.oath.OathCredential
 import com.pingidentity.mfa.push.PushCredential
 import com.pingidentity.mfa.push.PushNotification
@@ -38,7 +43,20 @@ data class AccountGroup(
     val displayAccountName: String,
     val oathCredentials: List<OathCredential> = emptyList(),
     val pushCredentials: List<PushCredential> = emptyList()
-)
+) {
+    /**
+     * Check if this account group has any locked credentials.
+     */
+    val isLocked: Boolean
+        get() = oathCredentials.any { it.isLocked } || pushCredentials.any { it.isLocked }
+    
+    /**
+     * Get the locking policy name from the first locked credential.
+     */
+    val lockingPolicy: String?
+        get() = oathCredentials.firstOrNull { it.isLocked }?.lockingPolicy 
+            ?: pushCredentials.firstOrNull { it.isLocked }?.lockingPolicy
+}
 
 /**
  * Data class for push notification UI display with additional UI-specific fields.
@@ -363,5 +381,19 @@ data class LocationAddress(
      */
     fun formatForDisplay(): String {
         return "$city, $state, $country"
+    }
+}
+
+/**
+ * Get the appropriate lock message for a locked account based on the locking policy.
+ * Returns the string resource ID for the appropriate message.
+ */
+@Composable
+fun getLockMessage(lockingPolicy: String?): String {
+    return when (lockingPolicy?.lowercase()) {
+        BiometricAvailablePolicy.POLICY_NAME -> stringResource(id = R.string.account_locked_biometric_available)
+        DeviceTamperingPolicy.POLICY_NAME -> stringResource(id = R.string.account_locked_device_tampering)
+        null -> stringResource(id = R.string.account_locked_unknown_policy)
+        else -> stringResource(id = R.string.account_locked_generic_policy, lockingPolicy)
     }
 }

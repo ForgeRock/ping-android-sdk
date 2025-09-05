@@ -859,7 +859,7 @@ class OathClientAndroidTest {
     private suspend fun createTestClient(
         encryptionEnabled: Boolean = false,
         enableCredentialCache: Boolean = false
-    ): OathMfaClient {
+    ): OathClient {
         // Create storage with appropriate passphrase provider based on encryption setting
         val testStorage = SQLOathStorage {
             context = appContext

@@ -31,7 +31,7 @@ import androidx.core.content.ContextCompat
 import com.pingidentity.authenticatorapp.AuthenticatorApp
 import com.pingidentity.authenticatorapp.data.DiagnosticLogger
 import com.pingidentity.authenticatorapp.ui.theme.PingIdentityAuthenticatorTheme
-import com.pingidentity.mfa.push.PushMfaClient
+import com.pingidentity.mfa.push.PushClient
 import kotlinx.coroutines.launch
 
 /**
@@ -40,7 +40,7 @@ import kotlinx.coroutines.launch
  */
 class BiometricPromptActivity : AppCompatActivity() {
 
-    private lateinit var pushClient: PushMfaClient
+    private lateinit var pushClient: PushClient
     
     private val diagnosticLogger = DiagnosticLogger
 

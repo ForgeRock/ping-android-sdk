@@ -8,7 +8,9 @@
 package com.pingidentity.mfa.oath
 
 import com.pingidentity.mfa.commons.BaseMfaClient
+import com.pingidentity.mfa.commons.MfaClient
 import com.pingidentity.mfa.commons.exception.MfaInitializationException
+import com.pingidentity.mfa.commons.policy.MfaPolicyEvaluator
 import com.pingidentity.mfa.oath.storage.OathStorage
 import com.pingidentity.mfa.oath.storage.SQLOathStorage
 import com.pingidentity.storage.sqlite.passphrase.KeyStorePassphraseProvider
@@ -27,7 +29,7 @@ import kotlin.coroutines.coroutineContext
  */
 class OathClient internal constructor(
     private val configuration: OathConfiguration,
-) : BaseMfaClient(configuration, configuration.storage ?: defaultStorage(configuration)), OathMfaClient {
+) : BaseMfaClient(configuration, configuration.storage ?: defaultStorage(configuration)), MfaClient {
 
     // The storage used for persisting OATH credentials
     private lateinit var oathStorage: OathStorage
@@ -54,7 +56,7 @@ class OathClient internal constructor(
          * }
          * ```
          */
-        suspend operator fun invoke(block: OathConfiguration.() -> Unit = {}): OathMfaClient {
+        suspend operator fun invoke(block: OathConfiguration.() -> Unit = {}): OathClient {
             // Create configuration
             val configuration = OathConfiguration(block)
             configuration.storage = configuration.storage ?: defaultStorage(configuration)
@@ -98,10 +100,11 @@ class OathClient internal constructor(
             // Initialize the OathStorage
             oathStorage = storage as OathStorage
 
-            // Create the OATH service with the MFA configuration
+            // Create the OATH service with the MFA configuration and policy evaluator
             oathService = OathService(
                 oathStorage,
-                config
+                config,
+                configuration.policyEvaluator ?: MfaPolicyEvaluator()
             )
 
             logger.d("OATH client initialized successfully")
@@ -113,12 +116,12 @@ class OathClient internal constructor(
     }
 
     /**
-     * Add a new OATH credential from a URI.
+     * Creates an OATH Credential from a standard otpauth:// URI (typically from a QR code).
      *
      * @param uri The URI string in the format otpauth://totp/issuer:accountName?secret=SECRET&issuer=issuer&algorithm=SHA1&digits=6&period=30
      * @return A Result containing the created OathCredential or an Exception in case of failure.
      */
-    override suspend fun addCredentialFromUri(uri: String): Result<OathCredential> {
+    suspend fun addCredentialFromUri(uri: String): Result<OathCredential> {
         return try {
             checkInitialized()
             val credential = oathService.parseUri(uri)
@@ -133,10 +136,10 @@ class OathClient internal constructor(
     /**
      * Save an OATH credential.
      *
-     * @param credential The OathCredential to save.
-     * @return A Result containing the saved OathCredential or an Exception in case of failure.
+     * @param credential The OathCredential to add.
+     * @return A Result containing the created OathCredential or an Exception in case of failure.
      */
-    override suspend fun saveCredential(credential: OathCredential): Result<OathCredential> {
+    suspend fun saveCredential(credential: OathCredential): Result<OathCredential> {
         return try {
             checkInitialized()
             Result.success(oathService.addCredential(credential))
@@ -152,7 +155,7 @@ class OathClient internal constructor(
      *
      * @return A Result containing a list of all OathCredentials or an Exception in case of failure.
      */
-    override suspend fun getCredentials(): Result<List<OathCredential>> {
+    suspend fun getCredentials(): Result<List<OathCredential>> {
         return try {
             checkInitialized()
             Result.success(oathService.getCredentials())
@@ -169,7 +172,7 @@ class OathClient internal constructor(
      * @param credentialId The ID of the credential to get.
      * @return A Result containing the OathCredential (or null if not found) or an Exception in case of failure.
      */
-    override suspend fun getCredential(credentialId: String): Result<OathCredential?> {
+    suspend fun getCredential(credentialId: String): Result<OathCredential?> {
         return try {
             checkInitialized()
             Result.success(oathService.getCredential(credentialId))
@@ -186,7 +189,7 @@ class OathClient internal constructor(
      * @param credentialId The ID of the credential to remove.
      * @return A Result containing a Boolean indicating success or an Exception in case of failure.
      */
-    override suspend fun deleteCredential(credentialId: String): Result<Boolean> {
+    suspend fun deleteCredential(credentialId: String): Result<Boolean> {
         return try {
             checkInitialized()
             Result.success(oathService.removeCredential(credentialId))
@@ -203,7 +206,7 @@ class OathClient internal constructor(
      * @param credentialId The ID of the credential.
      * @return A Result containing the OTP code or an Exception in case of failure.
      */
-    override suspend fun generateCode(credentialId: String): Result<String> {
+    suspend fun generateCode(credentialId: String): Result<String> {
         return try {
             checkInitialized()
             val codeInfo = oathService.generateCodeForCredential(credentialId)
@@ -221,7 +224,7 @@ class OathClient internal constructor(
      * @param credentialId The ID of the credential.
      * @return A Result containing the OTP code and validity information or an Exception in case of failure.
      */
-    override suspend fun generateCodeWithValidity(credentialId: String): Result<OathCodeInfo> {
+    suspend fun generateCodeWithValidity(credentialId: String): Result<OathCodeInfo> {
         return try {
             checkInitialized()
             Result.success(oathService.generateCodeForCredential(credentialId))

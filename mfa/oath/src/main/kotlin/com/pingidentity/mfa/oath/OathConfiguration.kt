@@ -8,6 +8,7 @@
 package com.pingidentity.mfa.oath
 
 import com.pingidentity.mfa.commons.MfaConfiguration
+import com.pingidentity.mfa.commons.policy.MfaPolicyEvaluator
 import com.pingidentity.mfa.oath.storage.OathStorage
 
 /**
@@ -15,10 +16,12 @@ import com.pingidentity.mfa.oath.storage.OathStorage
  * Extends the base MfaConfiguration with OATH-specific settings.
  *
  * @property storage The storage implementation to use for OATH credentials. If null, no storage will be used.
+ * @property policyEvaluator The policy evaluator to use for credential policy validation. If null, default policies will be used.
  */
 
 class OathConfiguration: MfaConfiguration() {
      var storage: OathStorage? = null
+     var policyEvaluator: MfaPolicyEvaluator? = null
 
     companion object {
         /**

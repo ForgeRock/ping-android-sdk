@@ -48,7 +48,7 @@ import java.util.Collections
 class SharedPrefsOathStorageAndroidTest {
 
     private lateinit var storage: SharedPrefsOathStorage
-    private lateinit var client: OathMfaClient
+    private lateinit var client: OathClient
     private lateinit var context: Context
     private val testPrefsName = "test_oath_integration_prefs"
     

@@ -17,10 +17,12 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Timelapse
 import androidx.compose.material3.Card
@@ -44,6 +46,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.pingidentity.authenticatorapp.R
 import com.pingidentity.authenticatorapp.data.AccountGroup
+import com.pingidentity.authenticatorapp.data.getLockMessage
 import com.pingidentity.mfa.oath.OathCodeInfo
 import com.pingidentity.mfa.oath.OathType
 
@@ -68,6 +71,7 @@ fun AccountGroupItem(
     onCopyToClipboard: (String, String) -> Unit = { _, _ -> },
     copyOtpEnabled: Boolean = false,
     tapToRevealEnabled: Boolean = false,
+    currentTimeMillis: Long = System.currentTimeMillis(),
     modifier: Modifier = Modifier
 ) {
     LocalContext.current
@@ -77,10 +81,22 @@ fun AccountGroupItem(
     val firstOathCode = firstOathCredential?.let { codes[it.id] }
     
     // State for tap-to-reveal functionality
-    var isRevealed by remember(firstOathCode?.code) { mutableStateOf(!tapToRevealEnabled) }
+    // Reset revealed state when credential is unlocked or code changes
+    var isRevealed by remember(firstOathCredential?.isLocked, firstOathCode?.code) { 
+        mutableStateOf(!tapToRevealEnabled || (firstOathCredential?.isLocked == false && firstOathCode != null)) 
+    }
 
-    val progress = if (firstOathCode != null && firstOathCredential.oathType == OathType.TOTP) {
-        firstOathCode.progress.toFloat()
+    val progress = if (firstOathCode != null && firstOathCredential != null && firstOathCredential.oathType == OathType.TOTP) {
+        // Calculate real-time progress based on current time and credential period
+        val currentTimeSeconds = currentTimeMillis / 1000L
+        val periodSeconds = firstOathCredential.period.toLong()
+        if (periodSeconds > 0) {
+            val timeIntoCurrentPeriod = currentTimeSeconds % periodSeconds
+            val progressValue = timeIntoCurrentPeriod.toFloat() / periodSeconds.toFloat()
+            progressValue
+        } else {
+            0f
+        }
     } else {
         0f
     }
@@ -101,7 +117,11 @@ fun AccountGroupItem(
             .fillMaxWidth()
             .clickable(onClick = onItemClick),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+            containerColor = if (accountGroup.isLocked) 
+                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f) 
+            else 
+                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+        )
     ) {
         Column(
             modifier = Modifier
@@ -184,8 +204,8 @@ fun AccountGroupItem(
                     }
                 }
 
-                // OATH code display (only if there are OATH credentials)
-                if (hasOathCredentials) {
+                // OATH code display (only if there are OATH credentials and account is not locked)
+                if (hasOathCredentials && !accountGroup.isLocked) {
                     Box(
                         modifier = Modifier
                             .padding(start = 4.dp)
@@ -268,6 +288,34 @@ fun AccountGroupItem(
                             }
                         }
                     }
+                }
+            }
+            
+            // Show lock message if account is locked
+            if (accountGroup.isLocked) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(
+                            color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f),
+                            shape = RoundedCornerShape(4.dp)
+                        )
+                        .padding(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Lock,
+                        contentDescription = stringResource(id = R.string.account_locked_indicator),
+                        tint = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    val lockMessage = getLockMessage(accountGroup.lockingPolicy)
+                    Text(
+                        text = lockMessage,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
                 }
             }
         }
