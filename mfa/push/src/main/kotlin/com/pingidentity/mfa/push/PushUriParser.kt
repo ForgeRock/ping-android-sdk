@@ -112,7 +112,7 @@ object PushUriParser : UriParser() {
 
             // Parse other optional parameters
             val imageURLParam = parsedUri.getQueryParameter(IMAGE_URL_PARAM)
-            val imageURL = if (imageURLParam != null && isBase64Encoded(imageURLParam)) {
+            val imageURL = if (imageURLParam != null && scheme == PUSHAUTH_SCHEME) {
                 decodeBase64(imageURLParam)
             } else {
                 imageURLParam

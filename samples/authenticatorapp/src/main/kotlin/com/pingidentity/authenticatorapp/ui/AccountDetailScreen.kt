@@ -7,9 +7,7 @@
 
 package com.pingidentity.authenticatorapp.ui
 
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.tween
+import android.content.Context
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -24,23 +22,15 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -51,53 +41,80 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.pingidentity.authenticatorapp.R
 import com.pingidentity.authenticatorapp.data.AuthenticatorViewModel
+import com.pingidentity.authenticatorapp.ui.components.AccountAvatar
+import com.pingidentity.authenticatorapp.ui.components.BackNavigationTopAppBar
+import com.pingidentity.authenticatorapp.ui.components.CircularProgressTimer
+import com.pingidentity.authenticatorapp.ui.components.DetailRow
+import com.pingidentity.authenticatorapp.ui.components.ErrorAlertDialog
+import com.pingidentity.authenticatorapp.ui.components.InfoCard
+import com.pingidentity.mfa.oath.OathCodeInfo
+import com.pingidentity.mfa.oath.OathCredential
 import com.pingidentity.mfa.oath.OathType
+import com.pingidentity.mfa.push.PushCredential
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 
 /**
- * Screen for displaying account details.
+ * Screen for displaying account details with both OATH and PUSH credentials.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AccountDetailScreen(
-    accountId: String,
+    issuer: String,
+    accountName: String,
     viewModel: AuthenticatorViewModel,
     onDismiss: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val coroutineScope = rememberCoroutineScope()
+    rememberCoroutineScope()
     
-    // Find the credential with the given ID
-    val credential = uiState.credentials.find { it.id == accountId }
-    val codeInfo = uiState.generatedCodes[accountId]
+    // Find all credentials matching the issuer and account name
+    val oathCredentials = uiState.oathCredentials.filter { 
+        it.issuer == issuer && it.accountName == accountName 
+    }
+    val pushCredentials = uiState.pushCredentials.filter { 
+        it.issuer == issuer && it.accountName == accountName 
+    }
+    
+    // Get codes for all OATH credentials
+    val oathCodesMap = oathCredentials.associateWith { credential ->
+        uiState.generatedCodes[credential.id]
+    }
     
     // Clipboard manager to copy codes
     val clipboardManager = LocalClipboardManager.current
     var showCopyConfirmation by remember { mutableStateOf(false) }
     
-    // Auto-refresh for TOTP codes
-    LaunchedEffect(credential) {
-        if (credential != null && credential.oathType == OathType.TOTP) {
+    // Auto-refresh for TOTP codes for all OATH credentials
+    LaunchedEffect(oathCredentials) {
+        if (oathCredentials.isNotEmpty()) {
             while (true) {
-                viewModel.generateCode(credential.id)
+                oathCredentials.forEach { credential ->
+                    if (credential.oathType == OathType.TOTP) {
+                        viewModel.generateCode(credential.id)
+                    }
+                }
                 delay(1000)
             }
-        } else if (credential != null && codeInfo == null) {
-            // Generate initial code for HOTP
-            viewModel.generateCode(credential.id)
         }
     }
     
-    // Confirm deletion dialog state
-    var showDeleteConfirmation by remember { mutableStateOf(false) }
+    // Generate initial codes for HOTP credentials
+    LaunchedEffect(oathCredentials) {
+        oathCredentials.forEach { credential ->
+            if (credential.oathType == OathType.HOTP && oathCodesMap[credential] == null) {
+                viewModel.generateCode(credential.id)
+            }
+        }
+    }
+    
     
     // Copy toast timeout
     LaunchedEffect(showCopyConfirmation) {
@@ -107,21 +124,22 @@ fun AccountDetailScreen(
         }
     }
     
+    // Get display names from the first available credential
+    val displayIssuer = oathCredentials.firstOrNull()?.displayIssuer 
+        ?: pushCredentials.firstOrNull()?.displayIssuer 
+        ?: issuer
+    val displayAccountName = oathCredentials.firstOrNull()?.displayAccountName 
+        ?: pushCredentials.firstOrNull()?.displayAccountName 
+        ?: accountName
+    
+    // Use the display issuer for the title
+    val accountIssuer = displayIssuer.ifEmpty { stringResource(id = R.string.account_detail_empty_issuer) }
+    
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(text = credential?.issuer ?: "Account Details") },
-                navigationIcon = {
-                    IconButton(onClick = onDismiss) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                actions = {
-                    // Delete action
-                    IconButton(onClick = { showDeleteConfirmation = true }) {
-                        Icon(Icons.Default.Delete, contentDescription = "Delete Account")
-                    }
-                }
+            BackNavigationTopAppBar(
+                title = accountIssuer,
+                onBackClick = onDismiss
             )
         }
     ) { paddingValues ->
@@ -130,10 +148,10 @@ fun AccountDetailScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            if (credential == null) {
+            if (oathCredentials.isEmpty() && pushCredentials.isEmpty()) {
                 // Account not found
                 Text(
-                    text = "Account not found",
+                    text = stringResource(id = R.string.account_detail_no_credentials),
                     modifier = Modifier
                         .align(Alignment.Center)
                         .padding(16.dp)
@@ -143,111 +161,58 @@ fun AccountDetailScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(16.dp)
+                        .padding(8.dp)
                         .verticalScroll(rememberScrollState()),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    // OTP Code display with timer
-                    codeInfo?.let { info ->
-                        // Calculate progress for TOTP
-                        val progress = if (credential.oathType == OathType.TOTP) {
-                            info.progress.toFloat()
-                        } else {
-                            0f
-                        }
+                    // Account Image/Avatar
+                    val imageUrl = oathCredentials.firstOrNull()?.imageURL 
+                        ?: pushCredentials.firstOrNull()?.imageURL
+                    
+                    AccountAvatar(
+                        issuer = displayIssuer,
+                        accountName = displayAccountName,
+                        imageUrl = imageUrl,
+                        size = 60.dp
+                    )
+                    
+                    Spacer(modifier = Modifier.height(8.dp))
+                    
+                    // Issuer and Account Name below the logo
+                    Text(
+                        text = displayIssuer,
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold
+                    )
+                    
+                    Text(
+                        text = displayAccountName,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // OATH Section
+                    if (oathCredentials.isNotEmpty()) {
+                        OathCredentialsSection(
+                            oathCredentials = oathCredentials,
+                            oathCodesMap = oathCodesMap,
+                            onGenerateCode = { credentialId -> viewModel.generateCode(credentialId) },
+                            onCopyCode = { code ->
+                                clipboardManager.setText(AnnotatedString(code))
+                                showCopyConfirmation = true
+                            }
+                        )
                         
-                        // Code with countdown timer
-                        Box(
-                            modifier = Modifier
-                                .padding(vertical = 32.dp)
-                                .size(200.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            // Circular progress indicator for TOTP
-                            if (credential.oathType == OathType.TOTP) {
-                                CircularProgressTimer(
-                                    progress = progress,
-                                    modifier = Modifier.matchParentSize()
-                                )
-                            }
-                            
-                            // Show the actual code
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text(
-                                    text = info.code,
-                                    style = MaterialTheme.typography.displaySmall
-                                )
-                                
-                                Spacer(modifier = Modifier.height(16.dp))
-                                
-                                // Copy button
-                                Button(
-                                    onClick = {
-                                        clipboardManager.setText(AnnotatedString(info.code))
-                                        showCopyConfirmation = true
-                                    }
-                                ) {
-                                    Icon(Icons.Default.ContentCopy, contentDescription = null)
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text("Copy Code")
-                                }
-                                
-                                // Refresh button (for HOTP)
-                                if (credential.oathType == OathType.HOTP) {
-                                    Spacer(modifier = Modifier.height(8.dp))
-                                    Button(
-                                        onClick = {
-                                            coroutineScope.launch {
-                                                viewModel.generateCode(credential.id)
-                                            }
-                                        }
-                                    ) {
-                                        Icon(Icons.Default.Refresh, contentDescription = null)
-                                        Spacer(modifier = Modifier.width(8.dp))
-                                        Text("New Code")
-                                    }
-                                }
-                            }
-                        }
-                    } ?: run {
-                        // No code info available, show a generate button
-                        Button(
-                            onClick = {
-                                coroutineScope.launch {
-                                    viewModel.generateCode(credential.id)
-                                }
-                            },
-                            modifier = Modifier.padding(32.dp)
-                        ) {
-                            Text("Generate Code")
-                        }
+                        Spacer(modifier = Modifier.height(8.dp))
                     }
                     
-                    // Account details section
-                    Card(
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp)
-                        ) {
-                            DetailRow(label = "Issuer", value = credential.issuer)
-                            DetailRow(label = "Account", value = credential.accountName)
-                            DetailRow(label = "Type", value = credential.oathType.name)
-                            DetailRow(
-                                label = "Algorithm", 
-                                value = credential.oathAlgorithm.name
-                            )
-                            DetailRow(label = "Digits", value = credential.digits.toString())
-                            
-                            if (credential.oathType == OathType.TOTP) {
-                                DetailRow(
-                                    label = "Period", 
-                                    value = "${credential.period} seconds"
-                                )
-                            }
-                        }
+                    // PUSH Section
+                    if (pushCredentials.isNotEmpty()) {
+                        PushCredentialsSection(
+                            pushCredentials = pushCredentials
+                        )
                     }
                 }
             }
@@ -259,52 +224,16 @@ fun AccountDetailScreen(
                         .align(Alignment.BottomCenter)
                         .padding(16.dp)
                 ) {
-                    Text("Code copied to clipboard")
+                    Text(stringResource(id = R.string.account_detail_code_copied))
                 }
             }
             
-            // Delete confirmation dialog
-            if (showDeleteConfirmation) {
-                AlertDialog(
-                    onDismissRequest = { showDeleteConfirmation = false },
-                    title = { Text("Delete Account") },
-                    text = { Text("Are you sure you want to delete this account?") },
-                    confirmButton = {
-                        Button(
-                            onClick = {
-                                coroutineScope.launch {
-                                    credential?.id?.let { 
-                                        viewModel.removeCredential(it)
-                                        onDismiss()
-                                    }
-                                }
-                            },
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.error
-                            )
-                        ) {
-                            Text("Delete")
-                        }
-                    },
-                    dismissButton = {
-                        TextButton(onClick = { showDeleteConfirmation = false }) {
-                            Text("Cancel")
-                        }
-                    }
-                )
-            }
             
             // Error handling
             if (uiState.error != null) {
-                AlertDialog(
-                    onDismissRequest = { viewModel.clearError() },
-                    title = { Text("Error") },
-                    text = { Text(uiState.error!!) },
-                    confirmButton = {
-                        Button(onClick = { viewModel.clearError() }) {
-                            Text("OK")
-                        }
-                    }
+                ErrorAlertDialog(
+                    errorMessage = uiState.error!!,
+                    onDismiss = { viewModel.clearError() }
                 )
             }
         }
@@ -312,68 +241,157 @@ fun AccountDetailScreen(
 }
 
 @Composable
-fun DetailRow(
-    label: String,
-    value: String,
-    modifier: Modifier = Modifier
+fun OathCredentialsSection(
+    oathCredentials: List<OathCredential>,
+    oathCodesMap: Map<OathCredential, OathCodeInfo?>,
+    onGenerateCode: (String) -> Unit,
+    onCopyCode: (String) -> Unit
 ) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        horizontalArrangement = Arrangement.SpaceBetween
+    val context = LocalContext.current
+    InfoCard(
+        title = stringResource(id = R.string.account_detail_oath)
     ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        
-        Text(
-            text = value,
-            style = MaterialTheme.typography.bodyMedium
-        )
+        Column {
+            
+            oathCredentials.forEachIndexed { index, credential ->
+                if (index > 0) {
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+                
+                // Display code if available
+                val codeInfo = oathCodesMap[credential]
+                codeInfo?.let { info ->
+                    // Calculate progress for TOTP
+                    val progress = if (credential.oathType == OathType.TOTP) {
+                        info.progress.toFloat()
+                    } else {
+                        0f
+                    }
+                    
+                    // Code with countdown timer
+                    Box(
+                        modifier = Modifier
+                            .padding(vertical = 16.dp)
+                            .size(150.dp)
+                            .align(Alignment.CenterHorizontally),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        // Circular progress indicator for TOTP
+                        if (credential.oathType == OathType.TOTP) {
+                            CircularProgressTimer(
+                                progress = progress,
+                                modifier = Modifier.matchParentSize()
+                            )
+                        }
+                        
+                        // Show the actual code
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                text = info.code,
+                                style = MaterialTheme.typography.headlineMedium
+                            )
+                        }
+                    }
+                    
+                    // Action buttons
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally)
+                    ) {
+                        Button(
+                            onClick = { onCopyCode(info.code) }
+                        ) {
+                            Icon(Icons.Default.ContentCopy, contentDescription = null)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(stringResource(id = R.string.copy))
+                        }
+                        
+                        // Refresh button for HOTP
+                        if (credential.oathType == OathType.HOTP) {
+                            Button(
+                                onClick = { onGenerateCode(credential.id) }
+                            ) {
+                                Icon(Icons.Default.Refresh, contentDescription = null)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(stringResource(id = R.string.new_code))
+                            }
+                        }
+                    }
+                } ?: run {
+                    // No code available, show generate button
+                    Button(
+                        onClick = { onGenerateCode(credential.id) },
+                        modifier = Modifier
+                            .align(Alignment.CenterHorizontally)
+                            .padding(16.dp)
+                    ) {
+                        Text(stringResource(id = R.string.generate_code))
+                    }
+                }
+                
+                // Credential details
+                Spacer(modifier = Modifier.height(16.dp))
+                DetailRow(label = stringResource(id = R.string.detail_row_type), value = credential.oathType.name)
+                DetailRow(label = stringResource(id = R.string.detail_row_algorithm), value = credential.oathAlgorithm.name)
+                DetailRow(label = stringResource(id = R.string.detail_row_digits), value = credential.digits.toString())
+                if (credential.oathType == OathType.TOTP) {
+                    DetailRow(label = stringResource(id = R.string.detail_row_period), value = stringResource(id = R.string.period_seconds, credential.period))
+                }
+                DetailRow(label = stringResource(id = R.string.detail_row_created), value = formatDate(context, credential.createdAt))
+                credential.userId?.let { userId ->
+                    DetailRow(label = stringResource(id = R.string.detail_row_user_id), value = userId)
+                }
+            }
+        }
     }
 }
 
 @Composable
-fun CircularProgressTimer(
-    progress: Float,
-    modifier: Modifier = Modifier
+fun PushCredentialsSection(
+    pushCredentials: List<PushCredential>
 ) {
-    val animatedProgress = remember(progress) {
-        Animatable(initialValue = progress)
-    }
-    
-    LaunchedEffect(progress) {
-        animatedProgress.animateTo(
-            targetValue = progress,
-            animationSpec = tween(durationMillis = 500, easing = LinearEasing)
-        )
-    }
-    
-    val color = MaterialTheme.colorScheme.primary
-    val trackColor = MaterialTheme.colorScheme.surfaceVariant
-    
-    Box(
-        modifier = modifier.drawBehind {
-            // Draw background track
-            drawArc(
-                color = trackColor,
-                startAngle = 0f,
-                sweepAngle = 360f,
-                useCenter = false,
-                style = Stroke(width = 10f, cap = StrokeCap.Round)
-            )
-            
-            // Draw progress
-            drawArc(
-                color = color,
-                startAngle = -90f,
-                sweepAngle = 360f * (1f - animatedProgress.value),
-                useCenter = false,
-                style = Stroke(width = 10f, cap = StrokeCap.Round)
-            )
+    val context = LocalContext.current
+    InfoCard(
+        title = stringResource(id = R.string.account_detail_push)
+    ) {
+        Column {
+            pushCredentials.forEachIndexed { index, credential ->
+                if (index > 0) {
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+
+                DetailRow(label = stringResource(id = R.string.detail_row_platform), value = formatPlatform(context, credential.platform))
+                DetailRow(label = stringResource(id = R.string.detail_row_created), value = formatDate(context, credential.createdAt))
+                credential.userId?.let { userId ->
+                    DetailRow(label = stringResource(id = R.string.detail_row_user_id), value = userId)
+                }
+            }
         }
-    )
+    }
 }
+
+// Helper function to format platform name
+private fun formatPlatform(context: Context, platform: String): String {
+    return when (platform) {
+        "PING_AM" -> context.getString(R.string.platform_ping_am)
+        "PING_ONE" -> context.getString(R.string.platform_ping_one)
+        else -> platform
+    }
+}
+
+// Helper function to format date
+private fun formatDate(context: Context, date: java.util.Date): String {
+    val now = java.util.Date()
+    val diffInMillis = now.time - date.time
+    val diffInDays = diffInMillis / (1000 * 60 * 60 * 24)
+    
+    return when {
+        diffInDays == 0L -> context.getString(R.string.date_today)
+        diffInDays == 1L -> context.getString(R.string.date_yesterday)
+        diffInDays < 7 -> context.getString(R.string.date_days_ago, diffInDays)
+        diffInDays < 30 -> context.getString(R.string.date_weeks_ago, diffInDays / 7)
+        diffInDays < 365 -> context.getString(R.string.date_months_ago, diffInDays / 30)
+        else -> context.getString(R.string.date_years_ago, diffInDays / 365)
+    }
+}
+

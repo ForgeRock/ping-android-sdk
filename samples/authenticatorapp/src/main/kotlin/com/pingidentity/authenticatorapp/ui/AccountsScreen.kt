@@ -13,32 +13,34 @@ import androidx.compose.animation.core.VisibilityThreshold
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.BugReport
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Keyboard
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Timelapse
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -46,8 +48,9 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -60,18 +63,22 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import com.pingidentity.authenticatorapp.R
 import com.pingidentity.authenticatorapp.data.AuthenticatorViewModel
-import com.pingidentity.mfa.oath.OathCodeInfo
-import com.pingidentity.mfa.oath.OathCredential
+import com.pingidentity.authenticatorapp.ui.components.AccountGroupItem
+import com.pingidentity.authenticatorapp.ui.components.EmptyStateMessage
+import com.pingidentity.authenticatorapp.ui.components.ErrorAlertDialog
+import com.pingidentity.authenticatorapp.ui.components.LoadingIndicator
 import com.pingidentity.mfa.oath.OathType
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
- * Screen for displaying a list of accounts.
+ * Screen for displaying a list of accounts and push notifications.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -79,23 +86,30 @@ fun AccountsScreen(
     viewModel: AuthenticatorViewModel,
     onScanQrCode: () -> Unit,
     onAddManually: () -> Unit,
-    onAccountClick: (String) -> Unit
+    onAccountClick: (String) -> Unit,
+    onNotificationsClick: () -> Unit,
+    onSettingsClick: () -> Unit,
+    onAboutClick: () -> Unit,
+    onEditAccountsClick: () -> Unit,
+    onTestModeClick: () -> Unit = {},
+    onNavigateToLogin: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
     val coroutineScope = rememberCoroutineScope()
     
-    // Initialize the ViewModel when first launched
-    LaunchedEffect(Unit) {
-        viewModel.initialize(context)
-    }
+    // Collect settings state
+    val copyOtpEnabled by viewModel.copyOtp.collectAsState()
+    val tapToRevealEnabled by viewModel.tapToReveal.collectAsState()
+    
+    
     
     // Auto-refresh TOTP codes
-    LaunchedEffect(uiState.credentials) {
+    LaunchedEffect(uiState.oathCredentials) {
         var loop = 1
         while (true) {
             // Only refresh codes for TOTP credentials
-            uiState.credentials.forEach { credential ->
+            uiState.oathCredentials.forEach { credential ->
                 if (credential.oathType == OathType.TOTP) {
                     viewModel.generateCode(credential.id)
                 } else if (credential.oathType == OathType.HOTP && loop == 1) {
@@ -113,10 +127,163 @@ fun AccountsScreen(
     // Show fab menu state
     var showFabMenu by remember { mutableStateOf(false) }
     
+    // Show hamburger menu state
+    var showHamburgerMenu by remember { mutableStateOf(false) }
+    
+    // Snackbar state
+    val snackbarHostState = remember { SnackbarHostState() }
+    
+    // Handle success messages
+    LaunchedEffect(uiState.message) {
+        uiState.message?.let { message ->
+            snackbarHostState.showSnackbar(message)
+            viewModel.clearMessage()
+        }
+    }
+
+    // Handle error messages
+    LaunchedEffect(uiState.error) {
+        uiState.error?.let { error ->
+            snackbarHostState.showSnackbar(error)
+            viewModel.clearError()
+        }
+    }
+    
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(text = "Authenticator Sample") }
+                title = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Image(
+                            painter = painterResource(id = R.drawable.ping_logo),
+                            contentDescription = "Ping Identity Logo",
+                            modifier = Modifier
+                                .size(32.dp)
+                                .padding(end = 4.dp)
+                        )
+                                                Text(text = stringResource(id = R.string.accounts_screen_title))
+                    }
+                },
+                actions = {
+                    // Actions only visible when test mode is enabled
+                    val testModeEnabled by viewModel.testMode.collectAsState()
+                    if (testModeEnabled) {
+                        // Refresh button to manually refresh codes and check for notifications
+                        IconButton(onClick = {
+                            viewModel.refreshCredentials()
+                            viewModel.refreshNotifications()
+                        }) {
+                            Icon(
+                                imageVector = Icons.Default.Refresh,
+                                contentDescription = "Refresh"
+                            )
+                        }
+                        // Test mode button
+                        IconButton(onClick = { onTestModeClick() }) {
+                            Icon(
+                                imageVector = Icons.Default.BugReport,
+                                contentDescription = "Test Mode"
+                            )
+                        }
+                    }
+                    
+                    // Hamburger menu
+                    Box {
+                        IconButton(onClick = { showHamburgerMenu = true }) {
+                            Icon(
+                                imageVector = Icons.Default.MoreVert,
+                                contentDescription = "Menu"
+                            )
+                        }
+                        
+                        DropdownMenu(
+                            expanded = showHamburgerMenu,
+                            onDismissRequest = { showHamburgerMenu = false }
+                        ) {
+                            // Notifications with badge
+                            DropdownMenuItem(
+                                text = {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(
+                                            imageVector = Icons.Default.Notifications,
+                                            contentDescription = null,
+                                            modifier = Modifier.padding(end = 12.dp)
+                                        )
+                                        Text("Notifications")
+                                        
+                                        // Show a badge if there are pending notifications
+                                        if (uiState.pushNotificationItems.isNotEmpty()) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(8.dp)
+                                                    .background(
+                                                        color = MaterialTheme.colorScheme.error,
+                                                        shape = CircleShape
+                                                    )
+                                                    .padding(start = 8.dp)
+                                            )
+                                        }
+                                    }
+                                },
+                                onClick = {
+                                    showHamburgerMenu = false
+                                    onNotificationsClick()
+                                }
+                            )
+                            
+                            DropdownMenuItem(
+                                text = {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(
+                                            imageVector = Icons.Default.Edit,
+                                            contentDescription = null,
+                                            modifier = Modifier.padding(end = 12.dp)
+                                        )
+                                        Text("Edit Accounts")
+                                    }
+                                },
+                                onClick = {
+                                    showHamburgerMenu = false
+                                    onEditAccountsClick()
+                                }
+                            )
+                            
+                            DropdownMenuItem(
+                                text = {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(
+                                            imageVector = Icons.Default.Settings,
+                                            contentDescription = null,
+                                            modifier = Modifier.padding(end = 12.dp)
+                                        )
+                                        Text("Settings")
+                                    }
+                                },
+                                onClick = {
+                                    showHamburgerMenu = false
+                                    onSettingsClick()
+                                }
+                            )
+                            
+                            DropdownMenuItem(
+                                text = {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(
+                                            imageVector = Icons.Default.Info,
+                                            contentDescription = null,
+                                            modifier = Modifier.padding(end = 12.dp)
+                                        )
+                                                                                Text(stringResource(id = R.string.menu_about))
+                                    }
+                                },
+                                onClick = {
+                                    showHamburgerMenu = false
+                                    onAboutClick()
+                                }
+                            )
+                        }
+                    }
+                }
             )
         },
         floatingActionButton = {
@@ -159,6 +326,21 @@ fun AccountsScreen(
                                 contentDescription = "Add Manually"
                             )
                         }
+                        
+                        // Login option
+                        FloatingActionButton(
+                            onClick = {
+                                showFabMenu = false
+                                onNavigateToLogin()
+                            },
+                            modifier = Modifier.size(48.dp),
+                            containerColor = MaterialTheme.colorScheme.secondaryContainer
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Person,
+                                contentDescription = "Journey Login"
+                            )
+                        }
                     }
                 }
                 
@@ -170,10 +352,13 @@ fun AccountsScreen(
                 ) {
                     Icon(
                         imageVector = Icons.Default.Add,
-                        contentDescription = "Add Account"
+                                                contentDescription = stringResource(id = R.string.content_description_add_account)
                     )
                 }
             }
+        },
+        snackbarHost = {
+            SnackbarHost(hostState = snackbarHostState)
         }
     ) { paddingValues ->
         Box(
@@ -181,47 +366,63 @@ fun AccountsScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            if (uiState.credentials.isEmpty()) {
-                // Empty state
-                Column(
+            // Loading progress indicator at the top when refreshing
+            if (uiState.isRefreshing) {
+                LinearProgressIndicator(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .padding(16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Text(
-                        text = "No accounts added yet",
-                        style = MaterialTheme.typography.bodyLarge
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "Add an account by scanning a QR code or entering details manually",
-                        style = MaterialTheme.typography.bodyMedium
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
+                )
+            }
+            
+            when {
+                uiState.isInitialLoading -> {
+                    LoadingIndicator(
+                        message = stringResource(id = R.string.loading_credentials)
                     )
                 }
-            } else {
-                // List of accounts
+                uiState.accountGroups.isEmpty() -> {
+                    EmptyStateMessage(
+                        title = "No accounts added yet",
+                        subtitle = stringResource(id = R.string.accounts_empty_state_subtitle)
+                    )
+                }
+                else -> {
+                    // List of account groups
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     items(
-                        items = uiState.credentials,
-                        key = { it.id }
-                    ) { credential ->
-                        AccountItem(
-                            credential = credential,
-                            codeInfo = uiState.generatedCodes[credential.id],
-                            onRefreshCode = {
-                                if (credential.oathType == OathType.HOTP) {
-                                    coroutineScope.launch {
-                                        viewModel.generateCode(credential.id)
-                                    }
+                        items = uiState.accountGroups,
+                        key = { accountGroup ->
+                            // Create a unique key using issuer, account name, and all credential IDs
+                            val oathIds = accountGroup.oathCredentials.map { it.id }.sorted().joinToString(",")
+                            val pushIds = accountGroup.pushCredentials.map { it.id }.sorted().joinToString(",")
+                            "${accountGroup.issuer}-${accountGroup.accountName}-oath:$oathIds-push:$pushIds"
+                        }
+                    ) { accountGroup ->
+                        AccountGroupItem(
+                            accountGroup = accountGroup,
+                            codes = uiState.generatedCodes,
+                            onRefreshCode = { credentialId ->
+                                coroutineScope.launch {
+                                    viewModel.generateCode(credentialId)
                                 }
                             },
-                            onItemClick = { onAccountClick(credential.id) },
+                            onItemClick = { 
+                                // Pass the account group issuer and account name for navigation
+                                // This allows the detail screen to display all credentials for this account
+                                val encodedIssuer = java.net.URLEncoder.encode(accountGroup.issuer, "UTF-8")
+                                val encodedAccountName = java.net.URLEncoder.encode(accountGroup.accountName, "UTF-8")
+                                onAccountClick("$encodedIssuer/$encodedAccountName")
+                            },
+                            onCopyToClipboard = { text, label ->
+                                viewModel.copyToClipboard(context, text, label)
+                            },
+                            copyOtpEnabled = copyOtpEnabled,
+                            tapToRevealEnabled = tapToRevealEnabled,
                             modifier = Modifier.animateItem(
                                 fadeInSpec = null, fadeOutSpec = null, placementSpec = spring(
                                     stiffness = Spring.StiffnessMediumLow,
@@ -232,146 +433,14 @@ fun AccountsScreen(
                     }
                 }
             }
+            }
             
             // Error handling
             if (uiState.error != null) {
-                AlertDialog(
-                    onDismissRequest = { viewModel.clearError() },
-                    title = { Text("Error") },
-                    text = { Text(uiState.error!!) },
-                    confirmButton = {
-                        Button(onClick = { viewModel.clearError() }) {
-                            Text("OK")
-                        }
-                    }
+                ErrorAlertDialog(
+                    errorMessage = uiState.error!!,
+                    onDismiss = { viewModel.clearError() }
                 )
-            }
-        }
-    }
-}
-
-@Composable
-fun AccountItem(
-    credential: OathCredential,
-    codeInfo: OathCodeInfo?,
-    onRefreshCode: () -> Unit,
-    onItemClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val progress = if (codeInfo != null && credential.oathType == OathType.TOTP) {
-        codeInfo.progress.toFloat()
-    } else {
-        0f
-    }
-    
-    Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .clickable(onClick = onItemClick)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Issuer and account name
-                Column(
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text(
-                        text = credential.issuer,
-                        style = MaterialTheme.typography.titleMedium,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    
-                    Text(
-                        text = credential.accountName,
-                        style = MaterialTheme.typography.bodyMedium,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-                
-                // Code or refresh button
-                Box(
-                    modifier = Modifier
-                        .padding(start = 8.dp)
-                        .wrapContentWidth()
-                ) {
-                    codeInfo?.let { info ->
-                        Column(horizontalAlignment = Alignment.End) {
-                            Text(
-                                text = info.code,
-                                style = MaterialTheme.typography.headlineSmall
-                            )
-                            
-                            if (credential.oathType == OathType.TOTP) {
-                                // Progress indicator for TOTP
-                                LinearProgressIndicator(
-                                    progress = { 1f - progress },  // Reverse progress (countdown)
-                                    modifier = Modifier
-                                        .width(80.dp)
-                                        .padding(top = 4.dp),
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                            }
-                        }
-                    } ?: run {
-                        // If no code is generated yet, show a code placeholder button
-                        TextButton(onClick = onRefreshCode) {
-                            Text("* * * * * *")
-                        }
-                    }
-                }
-
-                Column(
-                    modifier = Modifier
-                        .padding(start = 8.dp)
-                        .wrapContentWidth()
-                ) {
-                    if (credential.oathType == OathType.TOTP) {
-                        IconButton(onClick = {}) {
-                            Icon(Icons.Default.Timelapse, contentDescription = null)
-                        }
-                    } else {
-                        IconButton(onClick = onRefreshCode) {
-                            Icon(Icons.Default.Refresh, contentDescription = null)
-                        }
-                    }
-
-                }
-            }
-            
-            // Show a horizontal line to indicate TOTP progress
-            if (credential.oathType == OathType.TOTP && codeInfo != null) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(2.dp)
-                        .padding(top = 8.dp)
-                ) {
-                    // Background progress bar
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(2.dp)
-                            .background(MaterialTheme.colorScheme.surfaceVariant)
-                    )
-                    
-                    // Actual progress
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth(1f - progress)
-                            .height(2.dp)
-                            .background(MaterialTheme.colorScheme.primary)
-                    )
-                }
             }
         }
     }

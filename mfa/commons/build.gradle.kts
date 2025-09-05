@@ -43,7 +43,6 @@ dependencies {
 
     // SQL Cipher for encrypted database
     implementation(libs.sqlcipher)
-    implementation(libs.androidx.sqlite.jvm)
 
     // Testing dependencies
     testImplementation(libs.junit)

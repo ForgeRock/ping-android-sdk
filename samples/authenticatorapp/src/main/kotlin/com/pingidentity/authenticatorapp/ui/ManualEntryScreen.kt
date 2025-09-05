@@ -16,19 +16,15 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -37,14 +33,27 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import com.pingidentity.authenticatorapp.R
 import com.pingidentity.authenticatorapp.data.AuthenticatorViewModel
+import com.pingidentity.authenticatorapp.data.DiagnosticLogger
+import com.pingidentity.authenticatorapp.ui.components.BackNavigationTopAppBar
+import com.pingidentity.authenticatorapp.ui.components.ErrorAlertDialog
+import com.pingidentity.mfa.commons.UriScheme
 import com.pingidentity.mfa.oath.OathAlgorithm
 import com.pingidentity.mfa.oath.OathType
 
 /**
- * Screen for manually adding an account.
+ * A screen that allows users to manually enter details for adding a new OTP credential.
+ * The screen includes fields for issuer, account name, secret key, OTP type, algorithm, digits, and period.
+ * Upon submission, the entered details are used to create an otpauth URI and add the credential via the ViewModel.
+ *
+ * @param viewModel The AuthenticatorViewModel instance for managing state and actions.
+ * @param onEntryComplete Callback invoked when the entry is successfully completed.
+ * @param onDismiss Callback invoked when the user chooses to dismiss the screen.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -60,27 +69,30 @@ fun ManualEntryScreen(
     var algorithm by remember { mutableStateOf(OathAlgorithm.SHA1) }
     var digits by remember { mutableStateOf("6") }
     var period by remember { mutableStateOf("30") }
-    
+
     val uiState by viewModel.uiState.collectAsState()
-    
+    val context = LocalContext.current
+    val diagnosticLogger = DiagnosticLogger
+    val snackbarHostState = remember { SnackbarHostState() }
+
     // Watch for credential addition success
-    LaunchedEffect(uiState.lastAddedCredential) {
-        if (uiState.lastAddedCredential != null) {
-            viewModel.clearLastAddedCredential()
+    LaunchedEffect(uiState.lastAddedOathCredential) {
+        if (uiState.lastAddedOathCredential != null) {
+            snackbarHostState.showSnackbar(context.getString(R.string.manual_entry_account_added_successfully))
+            viewModel.clearLastAddedOathCredential()
             onEntryComplete()
         }
     }
-    
+
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(text = "Add Account Manually") },
-                navigationIcon = {
-                    IconButton(onClick = onDismiss) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                }
+            BackNavigationTopAppBar(
+                title = stringResource(id = R.string.manual_entry_screen_title),
+                onBackClick = onDismiss
             )
+        },
+        snackbarHost = {
+            SnackbarHost(hostState = snackbarHostState)
         }
     ) { paddingValues ->
         Column(
@@ -95,39 +107,39 @@ fun ManualEntryScreen(
             OutlinedTextField(
                 value = issuer,
                 onValueChange = { issuer = it },
-                label = { Text("Issuer (e.g. Company)") },
+                label = { Text(stringResource(id = R.string.manual_entry_issuer_label)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true
             )
-            
+
             // Account name field
             OutlinedTextField(
                 value = accountName,
                 onValueChange = { accountName = it },
-                label = { Text("Account Name (e.g. email@example.com)") },
+                label = { Text(stringResource(id = R.string.manual_entry_account_name_label)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true
             )
-            
+
             // Secret key field
             OutlinedTextField(
                 value = secret,
                 onValueChange = { secret = it },
-                label = { Text("Secret Key") },
+                label = { Text(stringResource(id = R.string.manual_entry_secret_key_label)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true
             )
-            
+
             // OTP Type selection
             Text(
-                text = "OTP Type",
+                text = stringResource(id = R.string.manual_entry_otp_type_label),
                 style = MaterialTheme.typography.bodyLarge
             )
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                OathType.values().forEach { type ->
+                OathType.entries.forEach { type ->
                     FilterChip(
                         selected = oathType == type,
                         onClick = { oathType = type },
@@ -135,17 +147,17 @@ fun ManualEntryScreen(
                     )
                 }
             }
-            
+
             // Algorithm selection
             Text(
-                text = "Algorithm",
+                text = stringResource(id = R.string.manual_entry_algorithm_label),
                 style = MaterialTheme.typography.bodyLarge
             )
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                OathAlgorithm.values().forEach { alg ->
+                OathAlgorithm.entries.forEach { alg ->
                     FilterChip(
                         selected = algorithm == alg,
                         onClick = { algorithm = alg },
@@ -153,7 +165,7 @@ fun ManualEntryScreen(
                     )
                 }
             }
-            
+
             // Digits selection
             OutlinedTextField(
                 value = digits,
@@ -163,19 +175,19 @@ fun ManualEntryScreen(
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true
             )
-            
+
             // Period selection (only for TOTP)
             if (oathType == OathType.TOTP) {
                 OutlinedTextField(
                     value = period,
                     onValueChange = { if (it.isBlank() || it.toIntOrNull() != null) period = it },
-                    label = { Text("Period (seconds)") },
+                    label = { Text(stringResource(id = R.string.manual_entry_period_label)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true
                 )
             }
-            
+
             // Submit button
             Button(
                 onClick = {
@@ -189,28 +201,23 @@ fun ManualEntryScreen(
                         digits = digits.toIntOrNull() ?: 6,
                         period = period.toIntOrNull() ?: 30
                     )
-                    viewModel.addCredentialFromUri(uri)
+                    diagnosticLogger.d("ManualEntryScreen: Adding credential from URI")
+                    viewModel.addOathCredentialFromUri(uri)
                 },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = 16.dp),
                 enabled = issuer.isNotBlank() && accountName.isNotBlank() && secret.isNotBlank()
             ) {
-                Text("Add Account")
+                Text(stringResource(id = R.string.manual_entry_add_account_button))
             }
         }
-        
+
         // Error handling
         if (uiState.error != null) {
-            AlertDialog(
-                onDismissRequest = { viewModel.clearError() },
-                title = { Text("Error") },
-                text = { Text(uiState.error!!) },
-                confirmButton = {
-                    Button(onClick = { viewModel.clearError() }) {
-                        Text("OK")
-                    }
-                }
+            ErrorAlertDialog(
+                errorMessage = uiState.error!!,
+                onDismiss = { viewModel.clearError() }
             )
         }
     }
@@ -230,7 +237,7 @@ private fun buildOtpauthUri(
     period: Int
 ): String {
     return buildString {
-        append("otpauth://")
+        append(UriScheme.OTPAUTH.value)
         append(oathType.name.lowercase())
         append("/")
         append(issuer)
@@ -244,7 +251,7 @@ private fun buildOtpauthUri(
         append(algorithm.name)
         append("&digits=")
         append(digits)
-        
+
         if (oathType == OathType.TOTP) {
             append("&period=")
             append(period)

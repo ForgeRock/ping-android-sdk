@@ -624,18 +624,20 @@ internal class PushService(
             val credential = storage.retrievePushCredential(notification.credentialId)
                 ?: throw MfaException("Credential not found: ${notification.credentialId}")
 
-            // Update the notification status
-            notification.markApproved()
-            storage.updatePushNotification(notification)
-            
             // Get the appropriate handler for this platform
             val platform = credential.platform
             val handler = pushHandlers[platform] ?: throw MfaException("No handler for platform: $platform")
 
             // Send the approval with any additional parameters
             val result = handler.sendApproval(credential, notification, params)
-            
-            logger.d("Notification approved: ${notification.id}, result: $result")
+            if (result) {
+                // Update the notification status
+                notification.markApproved()
+                storage.updatePushNotification(notification)
+                logger.d("Notification approved: ${notification.id}")
+            } else {
+                logger.w("Failed to send approval for notification: ${notification.id}")
+            }
             
             return@withContext result
         } catch (e: Exception) {
@@ -667,10 +669,6 @@ internal class PushService(
             // Get the credential
             val credential = storage.retrievePushCredential(notification.credentialId)
                 ?: throw MfaException("Credential not found: ${notification.credentialId}")
-            
-            // Update the notification status
-            notification.markDenied()
-            storage.updatePushNotification(notification)
 
             // Get the appropriate handler for this platform
             val platform = credential.platform
@@ -678,9 +676,15 @@ internal class PushService(
 
             // Send the denial with any additional parameters
             val result = handler.sendDenial(credential, notification, params)
-            
-            logger.d("Notification denied: ${notification.id}, result: $result")
-            
+            if (result) {
+                // Update the notification status
+                notification.markDenied()
+                storage.updatePushNotification(notification)
+                logger.d("Notification denied: ${notification.id}")
+            } else {
+                logger.w("Failed to send denial for notification: ${notification.id}")
+            }
+
             return@withContext result
         } catch (e: Exception) {
             coroutineContext.ensureActive()
