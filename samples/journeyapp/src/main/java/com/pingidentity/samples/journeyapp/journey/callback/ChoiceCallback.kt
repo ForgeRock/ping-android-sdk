@@ -28,8 +28,8 @@ import com.pingidentity.journey.callback.ChoiceCallback
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChoiceCallback(callback: ChoiceCallback,  onNodeUpdated: () -> Unit) {
-    var expanded by remember { mutableStateOf(false) }
-    var selectedItem by remember {
+    var expanded by remember(callback) { mutableStateOf(false) }
+    var selectedItem by remember(callback) {
         mutableStateOf(callback.choices[callback.defaultChoice])
     }
 
@@ -80,4 +80,3 @@ fun ChoiceCallback(callback: ChoiceCallback,  onNodeUpdated: () -> Unit) {
         }
     }
 }
-

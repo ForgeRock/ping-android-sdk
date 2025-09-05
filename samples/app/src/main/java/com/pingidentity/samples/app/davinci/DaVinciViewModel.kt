@@ -35,7 +35,7 @@ class DaVinciViewModel : ViewModel() {
         viewModelScope.launch {
             val next = current.next()
             state.update {
-                it.copy(node = next)
+                it.copy(node = next, counter = it.counter + 1)
             }
             loading.update {
                 false
@@ -53,7 +53,7 @@ class DaVinciViewModel : ViewModel() {
             val next = daVinci.start()
 
             state.update {
-                it.copy(node = next)
+                it.copy(node = next, counter = it.counter + 1)
             }
             loading.update {
                 false

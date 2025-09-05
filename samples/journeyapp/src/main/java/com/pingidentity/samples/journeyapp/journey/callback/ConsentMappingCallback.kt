@@ -8,7 +8,6 @@
 package com.pingidentity.samples.journeyapp.journey.callback
 
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -24,12 +23,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.pingidentity.journey.callback.ConsentMappingCallback
-import com.pingidentity.journey.callback.TermsAndConditionsCallback
 
 @Composable
 fun ConsentMappingCallback(callback: ConsentMappingCallback, onNodeUpdated: () -> Unit) {
 
-    var input by remember {
+    var input by remember(callback) {
         mutableStateOf(false)
     }
 

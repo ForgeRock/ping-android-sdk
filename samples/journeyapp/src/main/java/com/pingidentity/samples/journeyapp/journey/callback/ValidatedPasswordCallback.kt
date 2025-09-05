@@ -32,14 +32,12 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
-import com.pingidentity.journey.callback.StringAttributeInputCallback
 import com.pingidentity.journey.callback.ValidatedPasswordCallback
-import com.pingidentity.journey.callback.ValidatedUsernameCallback
 
 @Composable
 fun ValidatedPasswordCallback(callback: ValidatedPasswordCallback, onNodeUpdated: () -> Unit) {
 
-    var input by remember {
+    var input by remember(callback) {
         mutableStateOf(callback.password)
     }
 
@@ -49,7 +47,7 @@ fun ValidatedPasswordCallback(callback: ValidatedPasswordCallback, onNodeUpdated
                 .padding(4.dp)
                 .fillMaxWidth(),
     ) {
-        var passwordVisibility by remember { mutableStateOf(false) }
+        var passwordVisibility by remember(callback) { mutableStateOf(false) }
 
         Spacer(modifier = Modifier.weight(1f, true))
 

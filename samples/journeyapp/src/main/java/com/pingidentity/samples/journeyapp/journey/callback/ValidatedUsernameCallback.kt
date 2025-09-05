@@ -25,7 +25,7 @@ import com.pingidentity.journey.callback.ValidatedUsernameCallback
 @Composable
 fun ValidatedUsernameCallback(callback: ValidatedUsernameCallback, onNodeUpdated: () -> Unit) {
 
-    var input by remember {
+    var input by remember(callback) {
         mutableStateOf(callback.username)
     }
 
