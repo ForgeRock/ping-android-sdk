@@ -64,6 +64,7 @@ android {
 dependencies {
 
     implementation(project(":foundation:android"))
+    implementation(project(":foundation:device:device-id"))
     val composeBom = platform(libs.androidx.compose.bom)
     implementation(composeBom)
 
