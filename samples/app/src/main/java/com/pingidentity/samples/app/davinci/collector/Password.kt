@@ -7,7 +7,6 @@
 
 package com.pingidentity.samples.app.davinci.collector
 
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -29,19 +28,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
-import com.pingidentity.davinci.collector.InvalidLength
-import com.pingidentity.davinci.collector.MaxRepeat
-import com.pingidentity.davinci.collector.MinCharacters
 import com.pingidentity.davinci.collector.PasswordCollector
-import com.pingidentity.davinci.collector.UniqueCharacter
-import com.pingidentity.davinci.collector.ValidationError
-import com.pingidentity.samples.app.theme.md_theme_light_primary
-import com.pingidentity.utils.Result
 
 @Composable
 fun Password(
@@ -49,11 +40,11 @@ fun Password(
     onNodeUpdated: () -> Unit,
 ) {
 
-    var isValid by remember {
+    var isValid by remember(field) {
         mutableStateOf(true)
     }
-    var verify by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf(field.value) }
+    var verify by remember(field) { mutableStateOf("") }
+    var password by remember(field) { mutableStateOf(field.value) }
 
 
     LaunchedEffect(field) {
@@ -121,7 +112,7 @@ fun Password(
                 .padding(4.dp)
                 .fillMaxWidth(),
         ) {
-            var passwordVisibility by remember { mutableStateOf(false) }
+            var passwordVisibility by remember(field) { mutableStateOf(false) }
 
 
             Spacer(modifier = Modifier.weight(1f, true))

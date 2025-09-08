@@ -43,8 +43,8 @@ fun PasswordCallback(
             .padding(4.dp)
             .fillMaxWidth(),
     ) {
-        var passwordVisibility by remember { mutableStateOf(false) }
-        var password by remember { mutableStateOf("") }
+        var passwordVisibility by remember(field) { mutableStateOf(false) }
+        var password by remember(field) { mutableStateOf("") }
 
         Spacer(modifier = Modifier.weight(1f, true))
 
@@ -80,4 +80,3 @@ fun PasswordCallback(
         Spacer(modifier = Modifier.weight(1f, true))
     }
 }
-

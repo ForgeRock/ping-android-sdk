@@ -15,20 +15,18 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableDoubleStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.core.text.isDigitsOnly
-import com.pingidentity.journey.callback.AttributeInputCallback
 import com.pingidentity.journey.callback.NumberAttributeInputCallback
 
 @Composable
 fun NumberAttributeInputCallback(callback: NumberAttributeInputCallback,  onNodeUpdated: () -> Unit) {
 
-    var input by remember {
+    var input by remember(callback) {
         mutableStateOf(callback.value.toString() ?: "")
     }
 
@@ -60,4 +58,3 @@ fun NumberAttributeInputCallback(callback: NumberAttributeInputCallback,  onNode
         )
     }
 }
-

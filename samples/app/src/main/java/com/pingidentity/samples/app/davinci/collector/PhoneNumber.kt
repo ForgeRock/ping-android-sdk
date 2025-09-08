@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Ping Identity. All rights reserved.
+ * Copyright (c) 2025 - 2025 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -36,17 +36,17 @@ import com.pingidentity.davinci.collector.PhoneNumberCollector
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PhoneNumber(field: PhoneNumberCollector, onNodeUpdated: () -> Unit) {
-    var expanded by remember { mutableStateOf(false) }
-    var selectedCountryCode by remember {
+    var expanded by remember(field) { mutableStateOf(false) }
+    var selectedCountryCode by remember(field) {
         val codeToUse = field.countryCode.ifEmpty { field.defaultCountryCode }
         mutableStateOf(
             countryCodes.firstOrNull { it.countryCode == codeToUse }
                 ?: countryCodes.first()
         )
     }
-    var phone by remember { mutableStateOf(field.phoneNumber) }
+    var phone by remember(field) { mutableStateOf(field.phoneNumber) }
 
-    var isValid by remember {
+    var isValid by remember(field) {
         mutableStateOf(true)
     }
 

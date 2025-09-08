@@ -29,7 +29,7 @@ fun NameCallback(
     onNodeUpdated: () -> Unit,
 ) {
 
-    var text by remember { mutableStateOf(field.name) }
+    var text by remember(field) { mutableStateOf(field.name) }
 
     Row(
         modifier =

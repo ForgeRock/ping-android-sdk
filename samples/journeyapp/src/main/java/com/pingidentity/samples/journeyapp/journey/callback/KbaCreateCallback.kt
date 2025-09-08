@@ -30,13 +30,13 @@ import com.pingidentity.journey.callback.KbaCreateCallback
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun KbaCreateCallback(callback: KbaCreateCallback,  onNodeUpdated: () -> Unit) {
-    var expanded by remember { mutableStateOf(false) }
-    var selectedItem by remember {
+    var expanded by remember(callback) { mutableStateOf(false) }
+    var selectedItem by remember(callback) {
         mutableStateOf(callback.predefinedQuestions[0])
     }
-    var isCustomQuestion by remember { mutableStateOf(false) }
-    var customQuestion by remember { mutableStateOf("") }
-    var answer by remember {
+    var isCustomQuestion by remember(callback) { mutableStateOf(false) }
+    var customQuestion by remember(callback) { mutableStateOf("") }
+    var answer by remember(callback) {
         mutableStateOf("")
     }
 

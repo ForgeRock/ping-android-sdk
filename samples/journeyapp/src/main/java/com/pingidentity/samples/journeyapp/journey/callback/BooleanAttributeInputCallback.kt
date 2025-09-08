@@ -25,7 +25,7 @@ import com.pingidentity.journey.callback.BooleanAttributeInputCallback
 @Composable
 fun BooleanAttributeInputCallback(callback: BooleanAttributeInputCallback, onNodeUpdated: () -> Unit) {
 
-    var input by remember {
+    var input by remember(callback) {
         mutableStateOf(callback.value)
     }
 

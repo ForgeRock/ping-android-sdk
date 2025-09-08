@@ -29,10 +29,10 @@ fun Text(
     onNodeUpdated: () -> Unit,
 ) {
 
-    var isValid by remember {
+    var isValid by remember(field) {
         mutableStateOf(true)
     }
-    var text by remember { mutableStateOf(field.value) }
+    var text by remember(field) { mutableStateOf(field.value) }
 
     Row(
         modifier =
