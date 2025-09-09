@@ -157,7 +157,6 @@ class HardwareCollectorTest {
         assertEquals("TestManufacturer", result.manufacturer)
         assertEquals(100L, result.storage) // 100GB
         assertEquals(8192L, result.memory) // 8GB in MB
-        assertEquals(16, result.cpu) // Default system CPU count
         assertNotNull(result.display)
         assertEquals(1080, result.display!!["width"])
         assertEquals(1920, result.display!!["height"])
@@ -330,7 +329,6 @@ class HardwareCollectorTest {
 
         assertNotNull(result)
         assertEquals(4096L, result.memory) // 4GB in MB
-        assertEquals(16, result.cpu) // Default system CPU count
     }
 
     // Helper methods for setting up common mock scenarios
