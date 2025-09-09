@@ -27,13 +27,18 @@ import com.pingidentity.device.profile.collector.HardwareCollector
 import com.pingidentity.device.profile.collector.PlatformCollector
 import com.pingidentity.device.profile.collector.collect
 import io.mockk.every
+import io.mockk.just
 import io.mockk.mockk
 import io.mockk.mockkConstructor
 import io.mockk.mockkStatic
+import io.mockk.runs
 import io.mockk.unmockkStatic
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.Serializable
 import java.io.File
+import java.security.KeyStore
+import java.security.PublicKey
+import java.security.cert.Certificate
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -60,6 +65,7 @@ class DeviceProfileCallbackTest {
         unmockkStatic(Environment::class)
         unmockkStatic("kotlinx.coroutines.tasks.TasksKt")
         unmockkStatic(LocationServices::class)
+        unmockkStatic(KeyStore::class)
     }
 
     @Test
@@ -67,7 +73,9 @@ class DeviceProfileCallbackTest {
         val callback = DeviceProfileCallback()
         callback.collect {
             deviceIdentifier = object : DeviceIdentifier {
-                override val id = "test"
+                override val id: suspend () -> String = {
+                    "test-device-id"
+                }
             }
             metadata {
                 add(DummyDeviceCollector())
@@ -88,6 +96,7 @@ class DeviceProfileCallbackTest {
 
     @Test
     fun `collect returns config with default`() = runTest {
+        setupKeyStoreMocks()
         val callback = DeviceProfileCallback()
         callback.collect()
     }
@@ -104,6 +113,19 @@ class DeviceProfileCallbackTest {
 
         // Use the collected profile (JsonObject)
         println(deviceProfile.toString())
+    }
+
+    private fun setupKeyStoreMocks() {
+        val mockKeyStore = mockk<KeyStore>()
+        val mockCertificate = mockk<Certificate>()
+        val mockPublicKey = mockk<PublicKey>()
+        mockkStatic(KeyStore::class)
+        every { KeyStore.getInstance("AndroidKeyStore") } returns mockKeyStore
+        every { mockKeyStore.load(null) } just runs
+        every { mockKeyStore.containsAlias(any()) } returns true
+        every { mockKeyStore.getCertificate(any()) } returns mockCertificate
+        every { mockCertificate.publicKey } returns mockPublicKey
+        every { mockPublicKey.encoded } returns "fake-certificate-data".toByteArray()
     }
 
     private fun setupCameraMocks() {
