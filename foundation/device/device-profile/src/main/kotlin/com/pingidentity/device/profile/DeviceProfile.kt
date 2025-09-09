@@ -27,7 +27,7 @@ fun DefaultProfile() : DeviceProfileConfig.() -> Unit  {
 suspend fun profile(block: DeviceProfileConfig.() -> Unit = DefaultProfile()): JsonObject {
     val config =  DeviceProfileConfig().apply(block)
     val result = DeviceProfileResult(
-        identifier = config.deviceIdentifier.id,
+        identifier = config.deviceIdentifier.id.invoke(),
         metadata = config.collectors.collect()
     )
 
@@ -40,7 +40,7 @@ val json = Json
 @SuppressLint("UnsafeOptInUsageError")
 @Serializable
 private data class DeviceProfileResult(
-    val identifier: suspend () -> String,
+    val identifier: String,
     val metadata: JsonElement
 )
 
