@@ -36,7 +36,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        api-level: [29]
+        api-level: [28]
 
     steps:
       # Clone the repo
