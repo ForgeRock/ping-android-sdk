@@ -21,7 +21,6 @@ android {
 
 dependencies {
 
-    api(project(":foundation:orchestrate"))
     api(libs.kotlinx.serialization.json)
     implementation(project(":foundation:android"))
     implementation(libs.kotlinx.coroutines.core)

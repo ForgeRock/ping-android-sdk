@@ -18,8 +18,6 @@ import android.os.StatFs
 import android.util.DisplayMetrics
 import android.view.WindowManager
 import com.pingidentity.android.ContextProvider
-import com.pingidentity.device.profile.AndroidBuildProvider
-import com.pingidentity.device.profile.DefaultAndroidBuildProvider
 import kotlinx.serialization.Serializable
 import java.io.File
 
