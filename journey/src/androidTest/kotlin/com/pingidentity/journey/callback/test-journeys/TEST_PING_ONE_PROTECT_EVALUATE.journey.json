@@ -1,0 +1,455 @@
+{
+  "meta": {
+    "exportDate": "2025-09-17T23:42:05.419Z",
+    "exportTool": "frodo",
+    "exportToolVersion": "v3.3.0 [v20.18.0]",
+    "exportedBy": "stoyan.petrov@forgerock.com",
+    "origin": "https://openam-sdks.forgeblocks.com/am",
+    "originAmVersion": "8.1.0"
+  },
+  "trees": {
+    "TEST_PING_ONE_PROTECT_EVALUATE": {
+      "circlesOfTrust": {},
+      "emailTemplates": {},
+      "innerNodes": {},
+      "nodes": {
+        "096b95d6-fda5-44e3-8ab4-bdd549ce954d": {
+          "_id": "096b95d6-fda5-44e3-8ab4-bdd549ce954d",
+          "_outcomes": [
+            {
+              "displayName": "evaluate-default",
+              "id": "evaluate-default"
+            },
+            {
+              "displayName": "evaluate-no-init",
+              "id": "evaluate-no-init"
+            },
+            {
+              "displayName": "evaluate-pause-off",
+              "id": "evaluate-pause-off"
+            }
+          ],
+          "_type": {
+            "_id": "ChoiceCollectorNode",
+            "collection": true,
+            "name": "Choice Collector"
+          },
+          "choices": [
+            "evaluate-default",
+            "evaluate-no-init",
+            "evaluate-pause-off"
+          ],
+          "defaultChoice": "default-init",
+          "prompt": "Select Test Case"
+        },
+        "1bc8d06e-5ccf-4c8e-9265-036f1c010447": {
+          "_id": "1bc8d06e-5ccf-4c8e-9265-036f1c010447",
+          "_outcomes": [
+            {
+              "displayName": "True",
+              "id": "true"
+            },
+            {
+              "displayName": "False",
+              "id": "false"
+            }
+          ],
+          "_type": {
+            "_id": "MessageNode",
+            "collection": true,
+            "name": "Message Node"
+          },
+          "message": {
+            "en": "Client Error"
+          },
+          "messageNo": {},
+          "messageYes": {}
+        },
+        "3b800d97-99de-45f7-b609-5427b1d2bfca": {
+          "_id": "3b800d97-99de-45f7-b609-5427b1d2bfca",
+          "_outcomes": [
+            {
+              "displayName": "High",
+              "id": "high"
+            },
+            {
+              "displayName": "Medium",
+              "id": "medium"
+            },
+            {
+              "displayName": "Low",
+              "id": "low"
+            },
+            {
+              "displayName": "Exceeds Score Threshold",
+              "id": "exceed"
+            },
+            {
+              "displayName": "Failure",
+              "id": "failure"
+            },
+            {
+              "displayName": "ClientError",
+              "id": "clientError"
+            }
+          ],
+          "_type": {
+            "_id": "product-PingOneProtectEvaluationNode",
+            "collection": true,
+            "name": "PingOne Protect Evaluation"
+          },
+          "deviceSharingType": "SHARED",
+          "flowType": "AUTHENTICATION",
+          "pauseBehavioralData": true,
+          "pingOneWorker": "TestSDKs",
+          "recommendedActions": [],
+          "scoreThreshold": "300",
+          "storeEvaluateResult": false,
+          "userType": "EXTERNAL"
+        },
+        "51e701cc-9e21-4ba0-bbfb-a456e25690f7": {
+          "_id": "51e701cc-9e21-4ba0-bbfb-a456e25690f7",
+          "_outcomes": [
+            {
+              "displayName": "High",
+              "id": "high"
+            },
+            {
+              "displayName": "Medium",
+              "id": "medium"
+            },
+            {
+              "displayName": "Low",
+              "id": "low"
+            },
+            {
+              "displayName": "Exceeds Score Threshold",
+              "id": "exceed"
+            },
+            {
+              "displayName": "Failure",
+              "id": "failure"
+            },
+            {
+              "displayName": "ClientError",
+              "id": "clientError"
+            }
+          ],
+          "_type": {
+            "_id": "product-PingOneProtectEvaluationNode",
+            "collection": true,
+            "name": "PingOne Protect Evaluation"
+          },
+          "deviceSharingType": "SHARED",
+          "flowType": "AUTHENTICATION",
+          "pauseBehavioralData": false,
+          "pingOneWorker": "TestSDKs",
+          "recommendedActions": [],
+          "scoreThreshold": "300",
+          "storeEvaluateResult": false,
+          "userType": "EXTERNAL"
+        },
+        "71d2960d-778a-4bca-92a7-ba2c9f7a5153": {
+          "_id": "71d2960d-778a-4bca-92a7-ba2c9f7a5153",
+          "_outcomes": [
+            {
+              "displayName": "True",
+              "id": "true"
+            },
+            {
+              "displayName": "False",
+              "id": "false"
+            }
+          ],
+          "_type": {
+            "_id": "MessageNode",
+            "collection": true,
+            "name": "Message Node"
+          },
+          "message": {
+            "en": "Success"
+          },
+          "messageNo": {},
+          "messageYes": {}
+        },
+        "7777b398-9f81-4786-8ff6-af19b0b3466a": {
+          "_id": "7777b398-9f81-4786-8ff6-af19b0b3466a",
+          "_outcomes": [
+            {
+              "displayName": "True",
+              "id": "true"
+            },
+            {
+              "displayName": "False",
+              "id": "false"
+            }
+          ],
+          "_type": {
+            "_id": "MessageNode",
+            "collection": true,
+            "name": "Message Node"
+          },
+          "message": {
+            "en": "Failure"
+          },
+          "messageNo": {},
+          "messageYes": {}
+        },
+        "a0d6ef0c-13f8-4003-ad7d-255b458b2067": {
+          "_id": "a0d6ef0c-13f8-4003-ad7d-255b458b2067",
+          "_outcomes": [
+            {
+              "displayName": "Outcome",
+              "id": "outcome"
+            }
+          ],
+          "_type": {
+            "_id": "UsernameCollectorNode",
+            "collection": true,
+            "name": "Username Collector"
+          }
+        },
+        "c7055010-2794-4375-b06e-106dd229bf5a": {
+          "_id": "c7055010-2794-4375-b06e-106dd229bf5a",
+          "_outcomes": [
+            {
+              "displayName": "True",
+              "id": "true"
+            },
+            {
+              "displayName": "False",
+              "id": "false"
+            }
+          ],
+          "_type": {
+            "_id": "MessageNode",
+            "collection": true,
+            "name": "Message Node"
+          },
+          "message": {
+            "en": "Exceeds Score Threshold"
+          },
+          "messageNo": {},
+          "messageYes": {}
+        },
+        "ce3e1807-bb25-4b31-9cd9-26dd928ea392": {
+          "_id": "ce3e1807-bb25-4b31-9cd9-26dd928ea392",
+          "_outcomes": [
+            {
+              "displayName": "True",
+              "id": "true"
+            },
+            {
+              "displayName": "False",
+              "id": "false"
+            }
+          ],
+          "_type": {
+            "_id": "product-PingOneProtectInitializeNode",
+            "collection": true,
+            "name": "PingOne Protect Initialize"
+          },
+          "behavioralDataCollection": true,
+          "consoleLogEnabled": false,
+          "deviceAttributesToIgnore": [],
+          "deviceKeyRsyncIntervals": 14,
+          "disableHub": false,
+          "disableTags": false,
+          "enableTrust": false,
+          "lazyMetadata": false,
+          "pingOneWorker": "TestSDKs"
+        },
+        "d17a3576-627d-4867-9c0b-e1481f1c5c55": {
+          "_id": "d17a3576-627d-4867-9c0b-e1481f1c5c55",
+          "_outcomes": [
+            {
+              "displayName": "Outcome",
+              "id": "outcome"
+            }
+          ],
+          "_type": {
+            "_id": "UsernameCollectorNode",
+            "collection": true,
+            "name": "Username Collector"
+          }
+        },
+        "d943220c-3b9b-463f-9d12-ec5746b79b15": {
+          "_id": "d943220c-3b9b-463f-9d12-ec5746b79b15",
+          "_outcomes": [
+            {
+              "displayName": "True",
+              "id": "true"
+            },
+            {
+              "displayName": "False",
+              "id": "false"
+            }
+          ],
+          "_type": {
+            "_id": "product-PingOneProtectInitializeNode",
+            "collection": true,
+            "name": "PingOne Protect Initialize"
+          },
+          "behavioralDataCollection": true,
+          "consoleLogEnabled": true,
+          "deviceAttributesToIgnore": [],
+          "deviceKeyRsyncIntervals": 14,
+          "disableHub": false,
+          "disableTags": false,
+          "enableTrust": false,
+          "lazyMetadata": false,
+          "pingOneWorker": "TestSDKs"
+        }
+      },
+      "saml2Entities": {},
+      "scripts": {},
+      "socialIdentityProviders": {},
+      "themes": [],
+      "tree": {
+        "_id": "TEST_PING_ONE_PROTECT_EVALUATE",
+        "enabled": true,
+        "entryNodeId": "096b95d6-fda5-44e3-8ab4-bdd549ce954d",
+        "identityResource": "managed/alpha_user",
+        "innerTreeOnly": false,
+        "mustRun": false,
+        "noSession": false,
+        "nodes": {
+          "096b95d6-fda5-44e3-8ab4-bdd549ce954d": {
+            "connections": {
+              "evaluate-default": "ce3e1807-bb25-4b31-9cd9-26dd928ea392",
+              "evaluate-no-init": "a0d6ef0c-13f8-4003-ad7d-255b458b2067",
+              "evaluate-pause-off": "d943220c-3b9b-463f-9d12-ec5746b79b15"
+            },
+            "displayName": "Choice Collector",
+            "nodeType": "ChoiceCollectorNode",
+            "x": 57,
+            "y": 115.80555558204651
+          },
+          "1bc8d06e-5ccf-4c8e-9265-036f1c010447": {
+            "connections": {
+              "false": "70e691a5-1e33-4ac3-a356-e7b6d60d92e0",
+              "true": "70e691a5-1e33-4ac3-a356-e7b6d60d92e0"
+            },
+            "displayName": "Client Error",
+            "nodeType": "MessageNode",
+            "x": 878,
+            "y": 495.015625
+          },
+          "3b800d97-99de-45f7-b609-5427b1d2bfca": {
+            "connections": {
+              "clientError": "1bc8d06e-5ccf-4c8e-9265-036f1c010447",
+              "exceed": "c7055010-2794-4375-b06e-106dd229bf5a",
+              "failure": "7777b398-9f81-4786-8ff6-af19b0b3466a",
+              "high": "71d2960d-778a-4bca-92a7-ba2c9f7a5153",
+              "low": "71d2960d-778a-4bca-92a7-ba2c9f7a5153",
+              "medium": "71d2960d-778a-4bca-92a7-ba2c9f7a5153"
+            },
+            "displayName": "PingOne Protect Evaluation (default)",
+            "nodeType": "product-PingOneProtectEvaluationNode",
+            "x": 575.0390625,
+            "y": 16.015625
+          },
+          "51e701cc-9e21-4ba0-bbfb-a456e25690f7": {
+            "connections": {
+              "clientError": "1bc8d06e-5ccf-4c8e-9265-036f1c010447",
+              "exceed": "c7055010-2794-4375-b06e-106dd229bf5a",
+              "failure": "7777b398-9f81-4786-8ff6-af19b0b3466a",
+              "high": "71d2960d-778a-4bca-92a7-ba2c9f7a5153",
+              "low": "71d2960d-778a-4bca-92a7-ba2c9f7a5153",
+              "medium": "71d2960d-778a-4bca-92a7-ba2c9f7a5153"
+            },
+            "displayName": "PingOne Protect Evaluation (pause off)",
+            "nodeType": "product-PingOneProtectEvaluationNode",
+            "x": 543.0390625,
+            "y": 318.015625
+          },
+          "71d2960d-778a-4bca-92a7-ba2c9f7a5153": {
+            "connections": {
+              "false": "70e691a5-1e33-4ac3-a356-e7b6d60d92e0",
+              "true": "70e691a5-1e33-4ac3-a356-e7b6d60d92e0"
+            },
+            "displayName": "Success",
+            "nodeType": "MessageNode",
+            "x": 861,
+            "y": 90.01040649414062
+          },
+          "7777b398-9f81-4786-8ff6-af19b0b3466a": {
+            "connections": {
+              "false": "70e691a5-1e33-4ac3-a356-e7b6d60d92e0",
+              "true": "70e691a5-1e33-4ac3-a356-e7b6d60d92e0"
+            },
+            "displayName": "Failure",
+            "nodeType": "MessageNode",
+            "x": 876,
+            "y": 371.015625
+          },
+          "a0d6ef0c-13f8-4003-ad7d-255b458b2067": {
+            "connections": {
+              "outcome": "3b800d97-99de-45f7-b609-5427b1d2bfca"
+            },
+            "displayName": "Username Collector",
+            "nodeType": "UsernameCollectorNode",
+            "x": 295.375,
+            "y": 187.01040649414062
+          },
+          "c7055010-2794-4375-b06e-106dd229bf5a": {
+            "connections": {
+              "false": "70e691a5-1e33-4ac3-a356-e7b6d60d92e0",
+              "true": "70e691a5-1e33-4ac3-a356-e7b6d60d92e0"
+            },
+            "displayName": "Exceeds Score",
+            "nodeType": "MessageNode",
+            "x": 873,
+            "y": 244.015625
+          },
+          "ce3e1807-bb25-4b31-9cd9-26dd928ea392": {
+            "connections": {
+              "false": "e301438c-0bd0-429c-ab0c-66126501069a",
+              "true": "a0d6ef0c-13f8-4003-ad7d-255b458b2067"
+            },
+            "displayName": "PingOne Protect Initialize",
+            "nodeType": "product-PingOneProtectInitializeNode",
+            "x": 269.0390625,
+            "y": 28.015625
+          },
+          "d17a3576-627d-4867-9c0b-e1481f1c5c55": {
+            "connections": {
+              "outcome": "51e701cc-9e21-4ba0-bbfb-a456e25690f7"
+            },
+            "displayName": "Username Collector",
+            "nodeType": "UsernameCollectorNode",
+            "x": 293.375,
+            "y": 460.0104064941406
+          },
+          "d943220c-3b9b-463f-9d12-ec5746b79b15": {
+            "connections": {
+              "false": "e301438c-0bd0-429c-ab0c-66126501069a",
+              "true": "d17a3576-627d-4867-9c0b-e1481f1c5c55"
+            },
+            "displayName": "PingOne Protect Initialize",
+            "nodeType": "product-PingOneProtectInitializeNode",
+            "x": 229.0390625,
+            "y": 285.015625
+          }
+        },
+        "staticNodes": {
+          "70e691a5-1e33-4ac3-a356-e7b6d60d92e0": {
+            "x": 1292,
+            "y": 118
+          },
+          "e301438c-0bd0-429c-ab0c-66126501069a": {
+            "x": 1307,
+            "y": 566
+          },
+          "startNode": {
+            "x": 21,
+            "y": 16
+          }
+        },
+        "uiConfig": {
+          "categories": "[]"
+        }
+      }
+    }
+  }
+}
