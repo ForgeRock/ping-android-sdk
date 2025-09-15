@@ -8,12 +8,17 @@
 package com.pingidentity.device.profile.collector
 
 import com.pingidentity.device.profile.json
+import com.pingidentity.logger.Logger
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.encodeToJsonElement
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.serializer
+
+interface LoggerAware {
+    var logger: Logger
+}
 
 /**
  * Represents a device collector that collects data of type [T].
@@ -37,7 +42,8 @@ inline fun <reified T : @Serializable Any> DeviceCollector(
     key: String,
     noinline collect: suspend () -> T?
 ): DeviceCollector<T> {
-    return object : DeviceCollector<T> {
+    return object : DeviceCollector<T>, LoggerAware {
+        override lateinit var logger: Logger
         override val key = key
         override val serializer: KSerializer<T> = serializer()
         override suspend fun collect(): T? = collect()

@@ -11,15 +11,12 @@ import android.annotation.SuppressLint
 import android.content.pm.PackageManager
 import android.location.Location
 import android.os.Build
-import android.os.Build.BRAND
-import android.os.Build.DEVICE
-import android.os.Build.HARDWARE
-import android.os.Build.MANUFACTURER
-import android.os.Build.MODEL
 import com.google.android.gms.location.LocationServices
 import com.pingidentity.android.ContextProvider
 import com.pingidentity.device.profile.LocationRequestActivity
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.tasks.await
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
@@ -38,6 +35,9 @@ internal object PermissionResultManager {
      * and completed by the LocationRequestActivity when the user responds to the permission dialog.
      */
     var permissionResultDeferred: CompletableDeferred<Boolean>? = null
+
+    // The lock to make the process thread-safe
+    val lock = Mutex()
 }
 
 /**
@@ -178,49 +178,51 @@ class LocationCollector : DeviceCollector<LocationInfo> {
  */
 @SuppressLint("MissingPermission")
 private suspend fun getLocation(): LocationInfo? {
-    val context = ContextProvider.context
+    return PermissionResultManager.lock.withLock {
+        val context = ContextProvider.context
 
-    val hasPermission = context.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
-            context.checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        val hasPermission = context.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
+                context.checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
 
-    if (!hasPermission) {
-        // Create a deferred object to wait for the result.
-        val deferred = CompletableDeferred<Boolean>()
-        PermissionResultManager.permissionResultDeferred = deferred
+        if (!hasPermission) {
+            // Create a deferred object to wait for the result.
+            val deferred = CompletableDeferred<Boolean>()
+            PermissionResultManager.permissionResultDeferred = deferred
 
-        try {
-            // Start the permission request activity
-            val intent = LocationRequestActivity.createIntent(context)
-            context.startActivity(intent)
+            try {
+                // Start the permission request activity
+                val intent = LocationRequestActivity.createIntent(context)
+                context.startActivity(intent)
 
-            // Suspend and wait for the Activity to complete the deferred.
-            // Add a timeout to prevent indefinite waiting if something goes wrong
-            val isGranted = kotlinx.coroutines.withTimeoutOrNull(30000) { // 30 second timeout
-                deferred.await()
-            } ?: false // If timeout occurs, treat as permission denied
+                // Suspend and wait for the Activity to complete the deferred.
+                // Add a timeout to prevent indefinite waiting if something goes wrong
+                val isGranted = kotlinx.coroutines.withTimeoutOrNull(30000) { // 30 second timeout
+                    deferred.await()
+                } ?: false // If timeout occurs, treat as permission denied
 
-            // If permission was denied, stop and return null.
-            if (!isGranted) {
-                return null
+                // If permission was denied, stop and return null.
+                if (!isGranted) {
+                    return@withLock null // Return null from the withLock block
+                }
+                // If granted, the function will continue below.
+            } catch (e: Exception) {
+                // Handle any exceptions during permission request
+                return@withLock null
+            } finally {
+                // Clean up the deferred reference
+                PermissionResultManager.permissionResultDeferred = null
             }
-            // If granted, the function will continue below.
-        } catch (e: Exception) {
-            // Handle any exceptions during permission request
-            return null
-        } finally {
-            // Clean up the deferred reference
-            PermissionResultManager.permissionResultDeferred = null
         }
-    }
 
-    val locationClient = LocationServices.getFusedLocationProviderClient(context)
-    return try {
-        val location: Location? = locationClient.lastLocation.await()
-        location?.let {
-            LocationInfo(latitude = it.latitude, longitude = it.longitude)
+        val locationClient = LocationServices.getFusedLocationProviderClient(context)
+        return try {
+            val location: Location? = locationClient.lastLocation.await()
+            location?.let {
+                LocationInfo(latitude = it.latitude, longitude = it.longitude)
+            }
+        } catch (_: Exception) {
+            null
         }
-    } catch (_: Exception) {
-        null
     }
 }
 

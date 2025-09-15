@@ -73,6 +73,7 @@ fun ContinueNode(
                     TermsAndConditionsCallback(it, onNodeUpdated)
                 }
                 is DeviceProfileCallback -> {
+                    showNext = false
                     DeviceProfileCallback(it, onNext)
                 }
 

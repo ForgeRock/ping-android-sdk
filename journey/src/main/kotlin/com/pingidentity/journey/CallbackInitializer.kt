@@ -9,7 +9,6 @@ package com.pingidentity.journey
 
 import android.content.Context
 import androidx.startup.Initializer
-import com.pingidentity.device.profile.DeviceProfileCallback
 import com.pingidentity.journey.callback.BooleanAttributeInputCallback
 import com.pingidentity.journey.callback.ChoiceCallback
 import com.pingidentity.journey.callback.ConfirmationCallback
@@ -55,7 +54,6 @@ class CallbackInitializer : Initializer<CallbackRegistry> {
         CallbackRegistry.register("TextOutputCallback", ::TextOutputCallback)
         CallbackRegistry.register("ValidatedCreatePasswordCallback", ::ValidatedPasswordCallback)
         CallbackRegistry.register("ValidatedCreateUsernameCallback", ::ValidatedUsernameCallback)
-        CallbackRegistry.register("DeviceProfileCallback", ::DeviceProfileCallback)
         return CallbackRegistry
     }
 

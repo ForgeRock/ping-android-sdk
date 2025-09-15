@@ -25,11 +25,13 @@ dependencies {
     implementation(project(":foundation:journey-plugin"))
     implementation(project(":foundation:utils"))
     implementation(project(":foundation:android"))
+    implementation(project(":foundation:logger"))
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.androidx.annotation)
     implementation(libs.androidx.appcompat)
     implementation(libs.play.services.location)
     implementation(libs.kotlin.playservices.coroutine)
+    implementation(libs.androidx.startup.runtime)
 
     testImplementation(libs.kotlin.test)
     testImplementation(libs.kotlinx.coroutines.test)

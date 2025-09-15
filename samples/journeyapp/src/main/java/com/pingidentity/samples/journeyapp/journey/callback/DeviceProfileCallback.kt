@@ -30,6 +30,22 @@ import androidx.compose.ui.unit.dp
 import com.pingidentity.device.profile.DeviceProfileCallback
 import kotlinx.coroutines.launch
 
+/**
+ * A Composable UI component for handling device profile collection during authentication flows.
+ *
+ * This composable automatically initiates device profile collection when displayed and shows
+ * a loading indicator with progress message to inform the user that device profiling is in progress.
+ * Once the collection completes successfully, it automatically proceeds to the next step in the journey.
+ *
+ * The UI displays a centered loading spinner with the message "Gathering Device Profile..."
+ * during the collection process. The component handles the entire lifecycle of device profile
+ * collection without requiring user interaction.
+ *
+ * @param deviceProfileCallback The DeviceProfileCallback instance that handles the actual
+ *                             device profile collection process
+ * @param onNext Callback function invoked when device profile collection completes successfully,
+ *              typically used to proceed to the next step in the authentication journey
+ */
 @Composable
 fun DeviceProfileCallback(
     deviceProfileCallback: DeviceProfileCallback,
