@@ -6,8 +6,8 @@
 
 package com.pingidentity.device.profile.collector
 
-import android.annotation.SuppressLint
 import com.pingidentity.device.profile.DeviceProfileConfig
+import kotlinx.serialization.InternalSerializationApi
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
@@ -39,7 +39,7 @@ class DeviceProfileCollector(
  * @property metadata The collected metadata as a JSON element, containing
  *                   device-specific information gathered by the collectors
  */
-@SuppressLint("UnsafeOptInUsageError")
+@OptIn(InternalSerializationApi::class)
 @Serializable
 data class DeviceProfileResult(
     val identifier: String,

@@ -87,13 +87,13 @@ class DeviceProfileCallback : AbstractCallback(), JourneyAware {
         val config = DeviceProfileConfig()
         config.metadata = metadata
         config.location = location
-        
+
         config.apply(block)
 
         val result = DeviceProfileCollector(config)
-        json = Json.encodeToJsonElement(result.collect()).jsonObject
-        input(json.toString())
-        return Result.success(json)
+        val profile = Json.encodeToJsonElement(result.collect()).jsonObject
+        input(profile.toString())
+        return Result.success(profile)
     }
 }
 

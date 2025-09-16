@@ -37,6 +37,7 @@ import io.mockk.runs
 import io.mockk.unmockkStatic
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
 import java.io.File
 import java.security.KeyStore
 import java.security.PublicKey
@@ -73,6 +74,7 @@ class DeviceProfileCallbackTest {
     @Test
     fun `collect returns config with custom collector`() = runTest {
         val callback = DeviceProfileCallback()
+        // callback.init()
         callback.collect {
             deviceIdentifier = object : DeviceIdentifier {
                 override val id: suspend () -> String = {
