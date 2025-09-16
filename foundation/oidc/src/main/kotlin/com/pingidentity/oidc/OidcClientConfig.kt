@@ -90,6 +90,7 @@ class OidcClientConfig {
     internal var storageOption: EncryptedDataStoreStorageConfig.() -> Unit = {
         fileName = COM_PING_SDK_V_1_TOKENS
         keyAlias = COM_PING_SDK_V_1_TOKENS
+        logger = this@OidcClientConfig.logger
     }
 
     /**

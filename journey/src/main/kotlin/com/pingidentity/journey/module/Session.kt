@@ -23,6 +23,7 @@ import com.pingidentity.orchestrate.Module
 val Session = Module.of(::SessionConfig) {
 
     init {
+        config.logger = logger
         sharedContext[SESSION_CONFIG] = config
         config.init()
     }
