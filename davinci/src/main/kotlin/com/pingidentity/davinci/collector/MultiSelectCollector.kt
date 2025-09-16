@@ -26,9 +26,10 @@ open class MultiSelectCollector : FieldCollector<MutableList<String>>() {
 
     var value: MutableList<String> = mutableListOf()
 
-    override fun init(input: JsonObject) {
+    override fun init(input: JsonObject): MultiSelectCollector {
         super.init(input)
         options = Option.options(input)
+        return this
     }
 
     override fun init(input: JsonElement) {

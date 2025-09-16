@@ -16,6 +16,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.pingidentity.fido2.journey.Fido2AuthenticationCallback
+import com.pingidentity.fido2.journey.Fido2RegistrationCallback
 import com.pingidentity.idp.journey.IdpCallback
 import com.pingidentity.idp.journey.SelectIdpCallback
 import com.pingidentity.journey.callback.BooleanAttributeInputCallback
@@ -94,12 +96,20 @@ fun ContinueNode(
                     PingOneProtectInitialize(it, onNext)
                     showNext = false
                 }
+
                 is PingOneProtectEvaluationCallback -> {
                     PingOneProtectEvaluation(it, onNext)
                     showNext = false
                 }
 
-
+                is Fido2RegistrationCallback -> {
+                    Fido2Registration(it, onNext)
+                    showNext = false
+                }
+                is Fido2AuthenticationCallback -> {
+                    Fido2Authentication(it, onNext)
+                    showNext = false
+                }
             }
         }
         if (showNext) {

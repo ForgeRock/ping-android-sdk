@@ -31,7 +31,7 @@ interface Collector<T> : Action {
      *
      * @param input The JsonObject used to initialize the Collector.
      */
-    fun init(input: JsonObject)
+    fun init(input: JsonObject) : Collector<T>
 
     /**
      * Initializes the default values of the Collector with the given input.

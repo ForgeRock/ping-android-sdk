@@ -8,9 +8,12 @@
 package com.pingidentity.davinci.collector
 
 import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.boolean
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+
+private const val VALIDATION = "validation"
+private const val REGEX = "regex"
+private const val ERROR_MESSAGE = "errorMessage"
 
 /**
  * Abstract class representing a validated collector.
@@ -24,14 +27,15 @@ abstract class ValidatedCollector : SingleValueCollector() {
         private set
 
 
-    override fun init(input: JsonObject) {
+    override fun init(input: JsonObject) : ValidatedCollector {
         super.init(input)
-        validation = input["validation"]?.jsonObject?.let {
+        validation = input[VALIDATION]?.jsonObject?.let {
             Validation(
-                Regex(it["regex"]?.jsonPrimitive?.content ?: ""),
-                it["errorMessage"]?.jsonPrimitive?.content ?: ""
+                Regex(it[REGEX]?.jsonPrimitive?.content ?: ""),
+                it[ERROR_MESSAGE]?.jsonPrimitive?.content ?: ""
             )
         }
+        return this
     }
 
     /**

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Ping Identity. All rights reserved.
+ * Copyright (c) 2025 - 2025 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -16,6 +16,9 @@ import kotlinx.serialization.json.put
 
 private const val COUNTRY_CODE = "countryCode"
 private const val PHONE_NUMBER = "phoneNumber"
+
+private const val DEFAULT_COUNTRY_CODE = "defaultCountryCode"
+private const val VALIDATE_PHONE_NUMBER = "validatePhoneNumber"
 
 /**
  * A collector for phone number.
@@ -34,10 +37,11 @@ class PhoneNumberCollector : FieldCollector<JsonObject>(), Validator {
     // phone number
     var phoneNumber: String = ""
 
-    override fun init(input: JsonObject) {
+    override fun init(input: JsonObject) : PhoneNumberCollector {
         super.init(input)
-        defaultCountryCode = input["defaultCountryCode"]?.jsonPrimitive?.content ?: ""
-        validatePhoneNumber = input["validatePhoneNumber"]?.jsonPrimitive?.boolean ?: false
+        defaultCountryCode = input[DEFAULT_COUNTRY_CODE]?.jsonPrimitive?.content ?: ""
+        validatePhoneNumber = input[VALIDATE_PHONE_NUMBER]?.jsonPrimitive?.boolean ?: false
+        return this
     }
 
     override fun init(input: JsonElement) {

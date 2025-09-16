@@ -7,9 +7,16 @@
 
 package com.pingidentity.journey.callback
 
+import com.pingidentity.fido2.journey.Fido2AuthenticationCredentialCallback
+import com.pingidentity.fido2.journey.Fido2RegistrationCallback
+import com.pingidentity.journey.plugin.Journey
+import com.pingidentity.logger.CONSOLE
+import com.pingidentity.logger.Logger
+import com.pingidentity.orchestrate.WorkflowConfig
 import com.pingidentity.protect.journey.CallbackInitializer
 import com.pingidentity.protect.journey.PingOneProtectEvaluationCallback
 import com.pingidentity.protect.journey.PingOneProtectInitializeCallback
+import io.mockk.every
 import io.mockk.mockk
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
@@ -25,8 +32,16 @@ class MetadataCallbackTest {
 
     private lateinit var jsonObject: JsonObject
 
+    private val journey: Journey = mockk()
+    private val config: WorkflowConfig = mockk()
+    private val logger: Logger = Logger.CONSOLE
+
     @BeforeTest
     fun setUp() {
+
+        every { journey.config } returns config
+        every { config.logger } returns logger
+
         jsonObject = Json.parseToJsonElement(
             """
             {
@@ -55,6 +70,7 @@ class MetadataCallbackTest {
     @Test
     fun initializesCorrectly() {
         val callback = MetadataCallback()
+        callback.journey = journey
         callback.init(jsonObject)
 
         assertEquals("webauthn_authentication", callback.value["_action"]?.jsonPrimitive?.content)
@@ -71,11 +87,112 @@ class MetadataCallbackTest {
     @Test
     fun payloadReturnsCorrectly() {
         val callback = MetadataCallback()
+        callback.journey = journey
         callback.init(jsonObject)
 
         val payload = callback.payload()
         assertEquals("webauthn_authentication", payload["output"]?.jsonArray?.get(0)?.jsonObject?.get("value")?.jsonObject?.get("_action")?.jsonPrimitive?.content)
         assertEquals("qnMsxgya8h6mUc6OyRu8jJ6Oq16tHV3cgE7juXGMDbg=", payload["output"]?.jsonArray?.get(0)?.jsonObject?.get("value")?.jsonObject?.get("challenge")?.jsonPrimitive?.content)
+    }
+
+    @Test
+    fun `test init with fido registration`() {
+        com.pingidentity.fido2.journey.CallbackInitializer().create(mockk())
+        jsonObject = Json.parseToJsonElement(
+            """
+            {
+              "type": "MetadataCallback",
+              "output": [
+                {
+                  "name": "data",
+                  "value": {
+                    "_action": "webauthn_registration",
+                    "_type": "WebAuthn"
+                  }
+                }
+              ]
+            }
+            """
+        ) as JsonObject
+        val callback = MetadataCallback()
+        callback.journey = journey
+        val actualCallback = callback.init(jsonObject)
+        assertTrue(actualCallback is Fido2RegistrationCallback)
+    }
+
+    @Test
+    fun `test init with fido authentication`() {
+        com.pingidentity.fido2.journey.CallbackInitializer().create(mockk())
+        jsonObject = Json.parseToJsonElement(
+            """
+            {
+              "type": "MetadataCallback",
+              "output": [
+                {
+                  "name": "data",
+                  "value": {
+                    "_action": "webauthn_authentication",
+                    "_type": "WebAuthn"
+                  }
+                }
+              ]
+            }
+            """
+        ) as JsonObject
+        val callback = MetadataCallback()
+        callback.journey = journey
+        val actualCallback = callback.init(jsonObject)
+        assertTrue(actualCallback is Fido2AuthenticationCredentialCallback)
+    }
+
+    @Test
+    fun `test init with fido registration fallback`() {
+        com.pingidentity.fido2.journey.CallbackInitializer().create(mockk())
+        jsonObject = Json.parseToJsonElement(
+            """
+            {
+              "type": "MetadataCallback",
+              "output": [
+                {
+                  "name": "data",
+                  "value": {
+                    "_type": "WebAuthn",
+                    "pubKeyCredParams": []
+                  }
+                }
+              ]
+            }
+            """
+        ) as JsonObject
+        val callback = MetadataCallback()
+        callback.journey = journey
+        val actualCallback = callback.init(jsonObject)
+        assertTrue(actualCallback is Fido2RegistrationCallback)
+    }
+
+    @Test
+    fun `test init with fido authentication fallback`() {
+        com.pingidentity.fido2.journey.CallbackInitializer().create(mockk())
+        jsonObject = Json.parseToJsonElement(
+            """
+            {
+              "type": "MetadataCallback",
+              "output": [
+                {
+                  "name": "data",
+                  "value": {
+                    "_type": "WebAuthn",
+                    "allowCredentials": []
+                  }
+                }
+              ]
+            }
+            """
+        ) as JsonObject
+        val callback = MetadataCallback()
+        callback.journey = journey
+        val actualCallback = callback.init(jsonObject)
+        assertTrue(actualCallback is Fido2AuthenticationCredentialCallback)
     }
 
     @Test
@@ -109,6 +226,7 @@ class MetadataCallbackTest {
                     """
         ) as JsonObject
         val callback = MetadataCallback()
+        callback.journey = journey
         val actualCallback = callback.init(jsonObject)
         assertTrue(actualCallback is PingOneProtectInitializeCallback)
         assertTrue("02fb4743-189a-4bc7-9d6c-a919edfe6447" == actualCallback.envId)
@@ -142,6 +260,7 @@ class MetadataCallbackTest {
                     """
         ) as JsonObject
         val callback = MetadataCallback()
+        callback.journey = journey
         val actualCallback = callback.init(jsonObject)
         assertTrue(actualCallback is PingOneProtectEvaluationCallback)
         assertTrue(actualCallback.pauseBehavioralData)

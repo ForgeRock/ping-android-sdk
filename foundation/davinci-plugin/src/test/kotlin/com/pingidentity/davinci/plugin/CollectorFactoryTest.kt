@@ -7,6 +7,7 @@
 
 package com.pingidentity.davinci.plugin
 
+import io.mockk.mockk
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
@@ -31,7 +32,7 @@ class CollectorFactoryTest {
             add(buildJsonObject { put("type", "type2") })
         }
 
-        val callbacks = CollectorFactory.collector(jsonArray)
+        val callbacks = CollectorFactory.collector(mockk(), jsonArray)
         assertEquals("dummy", (callbacks[0] as DummyCallback).value)
         assertEquals("dummy2", (callbacks[1] as Dummy2Callback).value)
 
@@ -44,7 +45,7 @@ class CollectorFactoryTest {
             add(buildJsonObject { put("type", "invalidType") })
         }
 
-        val callbacks = CollectorFactory.collector(jsonArray)
+        val callbacks = CollectorFactory.collector(mockk(), jsonArray)
 
         assertTrue(callbacks.isEmpty())
     }
@@ -53,21 +54,24 @@ class CollectorFactoryTest {
     fun `Should return empty list when jsonArray is empty`() {
         val jsonArray = buildJsonArray { }
 
-        val callbacks = CollectorFactory.collector(jsonArray)
+        val callbacks = CollectorFactory.collector(mockk(), jsonArray)
 
         assertTrue(callbacks.isEmpty())
     }
 }
 
 class DummyCallback : Collector<Nothing> {
-    lateinit var value : String
-    override fun init(input: JsonObject) {
+    lateinit var value: String
+    override fun init(input: JsonObject): DummyCallback {
         value = "dummy"
+        return this
     }
 }
+
 class Dummy2Callback : Collector<Nothing> {
-    lateinit var value : String
-    override fun init(input: JsonObject) {
+    lateinit var value: String
+    override fun init(input: JsonObject): Dummy2Callback {
         value = "dummy2"
+        return this
     }
 }

@@ -11,6 +11,9 @@ import com.pingidentity.davinci.plugin.Collector
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
+private const val CONTENT = "content"
+private const val KEY = "key"
+
 /**
  * Class representing a LABEL type.
  *
@@ -25,9 +28,10 @@ class LabelCollector : Collector<Nothing> {
         private set
 
 
-    override fun init(input: JsonObject) {
-        content = input["content"]?.jsonPrimitive?.content ?: ""
-        key = input["key"]?.jsonPrimitive?.content ?: ""
+    override fun init(input: JsonObject) : LabelCollector{
+        content = input[CONTENT]?.jsonPrimitive?.content ?: ""
+        key = input[KEY]?.jsonPrimitive?.content ?: ""
+        return this
     }
 
     override fun id(): String {

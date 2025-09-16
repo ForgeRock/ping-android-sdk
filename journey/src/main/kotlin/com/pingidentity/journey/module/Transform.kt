@@ -73,7 +73,7 @@ private fun transform(
     val callbacks = mutableListOf<Callback>()
     if (AUTH_ID in json) {
         json[CALLBACKS]?.jsonArray?.let {
-            callbacks.addAll(CallbackRegistry.callback(it))
+            callbacks.addAll(CallbackRegistry.callback(journey, it))
         }
         return object : ContinueNode(context, journey, json, callbacks) {
             private fun asJson(): JsonObject {
@@ -100,7 +100,7 @@ private fun transform(
                 return callbacks.request(context, request)
             }
         }.apply {
-            CallbackRegistry.inject(journey, this)
+            CallbackRegistry.inject(this)
         }
     } else {
         // Expect success

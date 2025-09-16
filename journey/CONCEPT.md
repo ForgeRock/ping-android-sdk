@@ -1,11 +1,4 @@
-<p align="center">
-  <a href="https://github.com/ForgeRock/ping-android-sdk">
-    <img src="https://www.pingidentity.com/content/dam/picr/nav/Ping-Logo-2.svg" alt="Ping Identity Logo" width="200">
-  </a>
-  <hr/>
-</p>
-
-# Journey Module Concept
+[![Ping Identity](https://www.pingidentity.com/content/dam/picr/nav/Ping-Logo-2.svg)](https://github.com/ForgeRock/ping-android-sdk)# Journey Module Concept
 
 This document describes the plugins for the Journey Module, which integrate
 with  [Orchestrate](https://github.com/ForgeRock/ping-android-sdk/tree/develop/foundation/orchestrate) Module .
