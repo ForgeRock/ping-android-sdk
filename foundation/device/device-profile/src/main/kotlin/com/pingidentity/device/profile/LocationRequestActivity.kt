@@ -35,7 +35,7 @@ class LocationRequestActivity : ComponentActivity() {
     /**
      * Permission launcher that handles the location permission request flow.
      *
-     * This launcher requests ACCESS_FINE_LOCATION permission and delivers the result
+     * This launcher requests ACCESS_COARSE_LOCATION, ACCESS_FINE_LOCATION permission and delivers the result
      * to the waiting LocationCollector through PermissionResultManager.
      */
     private val requestPermissionLauncher =
