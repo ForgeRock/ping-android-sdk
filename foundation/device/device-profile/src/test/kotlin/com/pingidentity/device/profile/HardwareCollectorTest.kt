@@ -17,6 +17,7 @@ import android.util.DisplayMetrics
 import android.view.Display
 import android.view.WindowManager
 import com.pingidentity.android.ContextProvider
+import com.pingidentity.device.profile.collector.AndroidBuildProvider
 import com.pingidentity.device.profile.collector.HardwareCollector
 import io.mockk.every
 import io.mockk.mockk

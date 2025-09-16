@@ -9,14 +9,18 @@ package com.pingidentity.device.profile
 import com.pingidentity.device.id.DefaultDeviceIdentifier
 import com.pingidentity.device.id.DeviceIdentifier
 import com.pingidentity.device.profile.collector.DeviceCollector
+import com.pingidentity.device.profile.collector.DeviceProfileCollector
 import com.pingidentity.journey.plugin.AbstractCallback
 import com.pingidentity.journey.plugin.Journey
 import com.pingidentity.journey.plugin.JourneyAware
 import com.pingidentity.logger.Logger
 import com.pingidentity.logger.WARN
 import com.pingidentity.utils.PingDsl
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.encodeToJsonElement
+import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
 /**
@@ -83,11 +87,13 @@ class DeviceProfileCallback : AbstractCallback(), JourneyAware {
         val config = DeviceProfileConfig()
         config.metadata = metadata
         config.location = location
+        
         config.apply(block)
 
-        input(profile(block))
-
-        return Result.success(profile(block))
+        val result = DeviceProfileCollector(config)
+        json = Json.encodeToJsonElement(result.collect()).jsonObject
+        input(json.toString())
+        return Result.success(json)
     }
 }
 

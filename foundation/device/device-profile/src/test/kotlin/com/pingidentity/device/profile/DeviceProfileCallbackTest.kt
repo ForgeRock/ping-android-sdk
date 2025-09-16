@@ -26,6 +26,8 @@ import com.pingidentity.device.profile.collector.DeviceCollector
 import com.pingidentity.device.profile.collector.HardwareCollector
 import com.pingidentity.device.profile.collector.PlatformCollector
 import com.pingidentity.device.profile.collector.collect
+import com.pingidentity.logger.Logger
+import com.pingidentity.logger.WARN
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
@@ -77,6 +79,8 @@ class DeviceProfileCallbackTest {
                     "test-device-id"
                 }
             }
+            logger = Logger.WARN
+
             metadata {
                 add(DummyDeviceCollector())
                 add(DeviceCollector("test") {
