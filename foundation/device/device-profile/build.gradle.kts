@@ -29,9 +29,11 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.androidx.annotation)
     implementation(libs.androidx.appcompat)
-    implementation(libs.play.services.location)
-    implementation(libs.kotlin.playservices.coroutine)
     implementation(libs.androidx.startup.runtime)
+
+    // Make it optional for developer
+    compileOnly(libs.play.services.location)
+    compileOnly(libs.kotlin.playservices.coroutine)
 
     testImplementation(libs.kotlin.test)
     testImplementation(libs.kotlinx.coroutines.test)

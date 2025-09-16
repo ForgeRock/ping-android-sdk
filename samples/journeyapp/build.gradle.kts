@@ -86,6 +86,10 @@ dependencies {
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.material.icons.extended)
 
+    // For fetching Device location
+    implementation(libs.play.services.location)
+    implementation(libs.kotlin.playservices.coroutine)
+
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
