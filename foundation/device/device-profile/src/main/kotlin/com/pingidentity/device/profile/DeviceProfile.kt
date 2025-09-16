@@ -9,6 +9,8 @@ package com.pingidentity.device.profile
 import android.annotation.SuppressLint
 import com.pingidentity.device.id.DefaultDeviceIdentifier
 import com.pingidentity.device.profile.collector.DefaultDeviceCollector
+import com.pingidentity.device.profile.collector.LocationCollector
+import com.pingidentity.device.profile.collector.LocationInfo
 import com.pingidentity.device.profile.collector.LoggerAware
 import com.pingidentity.device.profile.collector.collect
 import kotlinx.serialization.Serializable
@@ -55,7 +57,8 @@ suspend fun profile(block: DeviceProfileConfig.() -> Unit = DefaultProfile()): J
 
     val result = DeviceProfileResult(
         identifier = config.deviceIdentifier.id.invoke(),
-        metadata = config.collectors.collect()
+        metadata = if (config.metadata) config.collectors.collect() else null,
+        location = if (config.location) LocationCollector().collect() else null,
     )
 
     return json.encodeToJsonElement(result).jsonObject
@@ -85,5 +88,6 @@ internal val json = Json {
 @Serializable
 private data class DeviceProfileResult(
     val identifier: String,
-    val metadata: JsonElement
+    val metadata: JsonElement? = null,
+    val location: LocationInfo? = null,
 )

@@ -39,4 +39,6 @@ dependencies {
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.core.ktx)
     testImplementation(libs.mockk)
+    testImplementation(libs.play.services.location)
+    testImplementation(libs.kotlin.playservices.coroutine)
 }

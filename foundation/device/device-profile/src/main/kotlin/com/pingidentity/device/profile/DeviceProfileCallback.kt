@@ -15,7 +15,6 @@ import com.pingidentity.journey.plugin.JourneyAware
 import com.pingidentity.logger.Logger
 import com.pingidentity.logger.WARN
 import com.pingidentity.utils.PingDsl
-import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -80,10 +79,14 @@ class DeviceProfileCallback : AbstractCallback(), JourneyAware {
      * @return A [Result] containing the collected device profile as a [JsonObject],
      *         or an error if collection fails.
      */
-    suspend fun collect(block: DeviceProfileConfig.() -> Unit = DefaultProfile()): Result<JsonObject> {
-        if (metadata) {
-            input(profile(block))
-        }
+    suspend fun collect(block: DeviceProfileConfig.() -> Unit = {}): Result<JsonObject> {
+        val config = DeviceProfileConfig()
+        config.metadata = metadata
+        config.location = location
+        config.apply(block)
+
+        input(profile(block))
+
         return Result.success(profile(block))
     }
 }
@@ -97,6 +100,18 @@ class DeviceProfileCallback : AbstractCallback(), JourneyAware {
  */
 @PingDsl
 class DeviceProfileConfig {
+    /**
+     * Indicates whether metadata collection is enabled for this callback.
+     * This value is set during initialization based on server configuration.
+     */
+    var metadata: Boolean = false
+
+    /**
+     * Indicates whether location collection is enabled for this callback.
+     * This value is set during initialization based on server configuration.
+     */
+    var location: Boolean = false
+
     /**
      * Logger instance used for logging during device profile collection.
      * Defaults to [Logger.WARN] level logging.
