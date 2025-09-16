@@ -39,9 +39,10 @@ class LocationRequestActivity : ComponentActivity() {
      * to the waiting LocationCollector through PermissionResultManager.
      */
     private val requestPermissionLauncher =
-        registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted: Boolean ->
+        registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions: Map<String, Boolean> ->
             // Complete the SDK's deferred object with the result
-            PermissionResultManager.permissionResultDeferred?.complete(isGranted)
+            val allGranted = permissions.values.all { it }
+            PermissionResultManager.permissionResultDeferred?.complete(allGranted)
 
             // Use a small delay to ensure the permission result is fully processed
             // before finishing the activity. This prevents potential race conditions
@@ -60,7 +61,12 @@ class LocationRequestActivity : ComponentActivity() {
         requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LOCKED
 
         // Immediately request the location permission
-        requestPermissionLauncher.launch(Manifest.permission.ACCESS_COARSE_LOCATION)
+        requestPermissionLauncher.launch(
+            arrayOf(
+                Manifest.permission.ACCESS_COARSE_LOCATION,
+                Manifest.permission.ACCESS_FINE_LOCATION,
+            )
+        )
     }
 
     /**

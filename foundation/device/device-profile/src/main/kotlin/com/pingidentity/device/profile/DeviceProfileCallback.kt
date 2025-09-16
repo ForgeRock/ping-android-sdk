@@ -81,14 +81,8 @@ class DeviceProfileCallback : AbstractCallback(), JourneyAware {
      *         or an error if collection fails.
      */
     suspend fun collect(block: DeviceProfileConfig.() -> Unit = DefaultProfile()): Result<JsonObject> {
-        val json = Json {
-            prettyPrint = true
-        }
-
-        val prettyString = json.encodeToString(profile(block))
-
         if (metadata) {
-            input(prettyString)
+            input(profile(block))
         }
         return Result.success(profile(block))
     }
