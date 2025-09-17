@@ -10,6 +10,8 @@ package com.pingidentity.mfa.commons.policy
 import android.content.Context
 import com.pingidentity.logger.Logger
 import com.pingidentity.mfa.commons.json
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
 
@@ -33,13 +35,13 @@ class MfaPolicyEvaluator private constructor(
      * @param credentialPolicies JSON string containing policy configurations from credential.
      * @return MfaPolicyResult indicating compliance status.
      */
-    fun evaluate(context: Context, credentialPolicies: String?): MfaPolicyResult {
+    suspend fun evaluate(context: Context, credentialPolicies: String?): MfaPolicyResult = withContext(Dispatchers.Default) {
         if (credentialPolicies.isNullOrBlank()) {
             logger.d("No policies configured, considering compliant by default.")
-            return MfaPolicyResult.success()
+            return@withContext MfaPolicyResult.success()
         }
 
-        return try {
+        return@withContext try {
             val policiesJson = json.parseToJsonElement(credentialPolicies).jsonObject
             evaluate(context, policiesJson)
         } catch (e: Exception) {
@@ -56,20 +58,20 @@ class MfaPolicyEvaluator private constructor(
      * @param policiesJson JSON object containing policy configurations.
      * @return MfaPolicyResult indicating compliance status.
      */
-    fun evaluate(context: Context, policiesJson: JsonObject): MfaPolicyResult {
+    suspend fun evaluate(context: Context, policiesJson: JsonObject): MfaPolicyResult = withContext(Dispatchers.Default) {
         for (policy in policies) {
             val policyName = policy.getName()
 
             // Check if this policy is configured in the JSON
             if (policiesJson.containsKey(policyName)) {
                 try {
-                    // Set the policy data from JSON configuration
-                    policy.data = policiesJson[policyName]?.jsonObject
+                    // Get the policy data from JSON configuration
+                    val policyData = policiesJson[policyName]?.jsonObject
 
-                    // Evaluate the policy
-                    if (!policy.evaluate(context)) {
+                    // Evaluate the policy with data as parameter
+                    if (!policy.evaluate(context, policyData)) {
                         logger.d("Policy '$policyName' evaluation failed.")
-                        return MfaPolicyResult.failure(policy)
+                        return@withContext MfaPolicyResult.failure(policy)
                     }
                 } catch (e: Exception) {
                     logger.w("Error evaluating policy '$policyName': ${e.message}")
@@ -80,7 +82,7 @@ class MfaPolicyEvaluator private constructor(
         }
 
         logger.d("All policies evaluated successfully.")
-        return MfaPolicyResult.success()
+        return@withContext MfaPolicyResult.success()
     }
 
     /**
@@ -106,7 +108,7 @@ class MfaPolicyEvaluator private constructor(
      * Config class for constructing MfaPolicyEvaluator instances.
      */
     class Config {
-        var policies: List<MfaPolicy> = listOf(BiometricAvailablePolicy(), DeviceTamperingPolicy())
+        var policies: List<MfaPolicy> = listOf(BiometricAvailablePolicy, DeviceTamperingPolicy)
         var logger: Logger = Logger.logger
     }
 

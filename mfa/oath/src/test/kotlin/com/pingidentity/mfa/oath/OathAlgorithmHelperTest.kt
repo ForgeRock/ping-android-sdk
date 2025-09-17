@@ -10,6 +10,7 @@ package com.pingidentity.mfa.oath
 import com.pingidentity.logger.Logger
 import io.mockk.every
 import io.mockk.mockk
+import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
@@ -49,7 +50,7 @@ class OathAlgorithmHelperTest {
     // TOTP Tests
     
     @Test
-    fun `test TOTP code generation with SHA1`() {
+    fun `test TOTP code generation with SHA1`() = runTest {
         // Given - Create a TOTP credential with SHA1
         val credential = createTotpCredential(
             secret = testSecretSHA1,
@@ -70,7 +71,7 @@ class OathAlgorithmHelperTest {
     }
     
     @Test
-    fun `test TOTP code generation with SHA256`() {
+    fun `test TOTP code generation with SHA256`() = runTest {
         // Given - Create a TOTP credential with SHA256
         val credential = createTotpCredential(
             secret = testSecretSHA256,
@@ -91,7 +92,7 @@ class OathAlgorithmHelperTest {
     }
     
     @Test
-    fun `test TOTP code generation with SHA512`() {
+    fun `test TOTP code generation with SHA512`() = runTest {
         // Given - Create a TOTP credential with SHA512
         val credential = createTotpCredential(
             secret = testSecretSHA512,
@@ -112,7 +113,7 @@ class OathAlgorithmHelperTest {
     }
 
     @Test
-    fun `test TOTP code generation with 8 digits`() {
+    fun `test TOTP code generation with 8 digits`() = runTest {
         // Given - Create a TOTP credential with 8 digits
         val credential = createTotpCredential(
             secret = testSecretSHA1,
@@ -128,7 +129,7 @@ class OathAlgorithmHelperTest {
     }
     
     @Test
-    fun `test TOTP code changes after period expiry`() {
+    fun `test TOTP code changes after period expiry`() = runTest {
         // Given - Create two identical TOTP credentials
         val credential1 = createTotpCredential(
             secret = testSecretSHA1,
@@ -153,7 +154,7 @@ class OathAlgorithmHelperTest {
     }
     
     @Test
-    fun `test TOTP code remains stable during period`() {
+    fun `test TOTP code remains stable during period`() = runTest {
         // Given - Create a TOTP credential
         val credential = createTotpCredential(
             secret = testSecretSHA1,
@@ -170,7 +171,7 @@ class OathAlgorithmHelperTest {
     }
 
     @Test
-    fun `test TOTP with custom period`() {
+    fun `test TOTP with custom period`() = runTest {
         // Given - Create a TOTP credential with custom period
         val customPeriod = 60
         val credential = createTotpCredential(
@@ -191,7 +192,7 @@ class OathAlgorithmHelperTest {
     // HOTP Tests
     
     @Test
-    fun `test HOTP code generation with SHA1`() {
+    fun `test HOTP code generation with SHA1`() = runTest {
         // Given - Create a HOTP credential with SHA1 and initial counter 0
         val credential = createHotpCredential(
             secret = testSecretSHA1,
@@ -213,7 +214,7 @@ class OathAlgorithmHelperTest {
     }
     
     @Test
-    fun `test HOTP code generation with SHA256`() {
+    fun `test HOTP code generation with SHA256`() = runTest {
         // Given - Create a HOTP credential with SHA256
         val credential = createHotpCredential(
             secret = testSecretSHA256,
@@ -235,7 +236,7 @@ class OathAlgorithmHelperTest {
     }
     
     @Test
-    fun `test HOTP code generation with SHA512`() {
+    fun `test HOTP code generation with SHA512`() = runTest {
         // Given - Create a HOTP credential with SHA512
         val credential = createHotpCredential(
             secret = testSecretSHA512,
@@ -257,7 +258,7 @@ class OathAlgorithmHelperTest {
     }
 
     @Test
-    fun `test HOTP code generation with 8 digits`() {
+    fun `test HOTP code generation with 8 digits`() = runTest {
         // Given - Create a HOTP credential with 8 digits
         val credential = createHotpCredential(
             secret = testSecretSHA1,
@@ -274,7 +275,7 @@ class OathAlgorithmHelperTest {
     }
     
     @Test
-    fun `test HOTP code changes with different counter values`() {
+    fun `test HOTP code changes with different counter values`() = runTest {
         // Given - Create two identical HOTP credentials with different counters
         val credential1 = createHotpCredential(
             secret = testSecretSHA1,
@@ -299,7 +300,7 @@ class OathAlgorithmHelperTest {
     }
     
     @Test
-    fun `test HOTP code generation increments counter`() {
+    fun `test HOTP code generation increments counter`() = runTest {
         // Given - Create a HOTP credential
         val initialCounter = 10L
         val credential = createHotpCredential(

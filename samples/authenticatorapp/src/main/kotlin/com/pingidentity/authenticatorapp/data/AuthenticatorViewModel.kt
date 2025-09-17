@@ -76,6 +76,9 @@ class AuthenticatorViewModel(
     val testMode: StateFlow<Boolean>
         get() = userPreferences.testModeFlow
 
+    val themeMode: StateFlow<ThemeMode>
+        get() = userPreferences.themeModeFlow
+
 
     /**
      * Initializes the ViewModel by setting up state flows and loading initial data.
@@ -327,6 +330,16 @@ class AuthenticatorViewModel(
         viewModelScope.launch {
             diagnosticLogger.d("SettingsScreen: setTestMode: $enabled")
             userPreferences.setTestMode(enabled)
+        }
+    }
+
+    /**
+     * Updates the theme mode setting
+     */
+    fun setThemeMode(themeMode: ThemeMode) {
+        viewModelScope.launch {
+            diagnosticLogger.d("SettingsScreen: setThemeMode: $themeMode")
+            userPreferences.setThemeMode(themeMode)
         }
     }
 

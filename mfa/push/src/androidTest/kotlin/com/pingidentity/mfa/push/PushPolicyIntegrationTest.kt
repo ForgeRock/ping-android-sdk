@@ -72,8 +72,8 @@ class PushPolicyIntegrationTest {
 
         val policyEvaluator = MfaPolicyEvaluator {
             policies = listOf(
-                BiometricAvailablePolicy(),
-                DeviceTamperingPolicy()
+                BiometricAvailablePolicy,
+                DeviceTamperingPolicy
             )
         }
 

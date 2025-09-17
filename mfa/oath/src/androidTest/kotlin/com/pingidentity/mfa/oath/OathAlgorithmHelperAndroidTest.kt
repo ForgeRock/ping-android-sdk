@@ -8,6 +8,7 @@
 package com.pingidentity.mfa.oath
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import kotlinx.coroutines.test.runTest
 import org.apache.commons.codec.binary.Base32
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -174,7 +175,7 @@ class OathAlgorithmImplementationTest {
      * Test against the OathAlgorithmHelper implementation
      */
     @Test
-    fun testAgainstOathAlgorithmHelper() {
+    fun testAgainstOathAlgorithmHelper() = runTest {
         // Create a credential
         val credential = OathCredential(
             issuer = "Test Issuer",

@@ -7,8 +7,11 @@
 
 package com.pingidentity.authenticatorapp.ui
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -16,17 +19,27 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ListAlt
 import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Dns
 import androidx.compose.material.icons.filled.GroupWork
 import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import com.pingidentity.authenticatorapp.data.AuthenticatorViewModel
+import com.pingidentity.authenticatorapp.data.ThemeMode
 import com.pingidentity.authenticatorapp.ui.components.BackNavigationTopAppBar
 import com.pingidentity.authenticatorapp.ui.components.SettingItem
 
@@ -51,6 +64,10 @@ fun SettingsScreen(
     val combineAccounts by viewModel.combineAccounts.collectAsState()
     val diagnosticLogging by viewModel.diagnosticLogging.collectAsState()
     val testMode by viewModel.testMode.collectAsState()
+    val themeMode by viewModel.themeMode.collectAsState()
+    
+    // Dialog state for theme selection
+    var showThemeDialog by remember { mutableStateOf(false) }
     
     Scaffold(
         topBar = {
@@ -84,6 +101,17 @@ fun SettingsScreen(
                 description = "OTP codes are hidden by default. To reveal the code, tap on the card",
                 checked = tapToReveal,
                 onToggle = { viewModel.setTapToReveal(it) }
+            )
+
+            HorizontalDivider()
+
+            // Theme Setting
+            SettingItem(
+                icon = Icons.Default.DarkMode,
+                title = "Theme",
+                description = "Choose between light, dark, or follow system theme: ${getThemeDisplayName(themeMode)}",
+                hasNavigation = true,
+                onNavigate = { showThemeDialog = true }
             )
 
             HorizontalDivider()
@@ -130,5 +158,72 @@ fun SettingsScreen(
                 onToggle = { viewModel.setTestMode(it) }
             )
         }
+    }
+    
+    // Theme selection dialog
+    if (showThemeDialog) {
+        ThemeSelectionDialog(
+            currentTheme = themeMode,
+            onThemeSelected = { selectedTheme ->
+                viewModel.setThemeMode(selectedTheme)
+                showThemeDialog = false
+            },
+            onDismiss = { showThemeDialog = false }
+        )
+    }
+}
+
+/**
+ * Dialog for selecting the app theme
+ */
+@Composable
+private fun ThemeSelectionDialog(
+    currentTheme: ThemeMode,
+    onThemeSelected: (ThemeMode) -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text("Choose Theme")
+        },
+        text = {
+            Column {
+                ThemeMode.entries.forEach { theme ->
+                    Row(
+                        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onThemeSelected(theme) }
+                            .padding(vertical = 4.dp)
+                    ) {
+                        RadioButton(
+                            selected = currentTheme == theme,
+                            onClick = { onThemeSelected(theme) }
+                        )
+                        Text(
+                            text = getThemeDisplayName(theme),
+                            modifier = Modifier.padding(start = 8.dp)
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+
+/**
+ * Get display name for theme mode
+ */
+private fun getThemeDisplayName(themeMode: ThemeMode): String {
+    return when (themeMode) {
+        ThemeMode.LIGHT -> "Light"
+        ThemeMode.DARK -> "Dark"
+        ThemeMode.SYSTEM -> "Follow System"
     }
 }

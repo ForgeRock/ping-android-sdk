@@ -20,11 +20,6 @@ import kotlinx.serialization.json.JsonObject
 abstract class MfaPolicy {
     
     /**
-     * Configuration data for this policy, parsed from JSON policies string.
-     */
-    var data: JsonObject? = null
-    
-    /**
      * Get the unique name identifier for this policy.
      * 
      * @return The policy name as a string.
@@ -35,14 +30,15 @@ abstract class MfaPolicy {
      * Evaluate this policy against the current device context.
      * 
      * @param context The Android context for accessing system services.
+     * @param data Configuration data for this policy, parsed from JSON policies string.
      * @return true if the policy requirements are met, false otherwise.
      */
-    abstract fun evaluate(context: Context): Boolean
+    abstract suspend fun evaluate(context: Context, data: JsonObject?): Boolean
     
     /**
      * Returns a string representation of this policy.
      */
     override fun toString(): String {
-        return "${this::class.simpleName}(name='${getName()}', data=$data)"
+        return "${this::class.simpleName}(name='${getName()}')"
     }
 }

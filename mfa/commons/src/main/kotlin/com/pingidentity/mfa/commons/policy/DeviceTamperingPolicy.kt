@@ -8,6 +8,7 @@
 package com.pingidentity.mfa.commons.policy
 
 import android.content.Context
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.jsonPrimitive
 
@@ -23,40 +24,32 @@ import kotlinx.serialization.json.jsonPrimitive
  * The score threshold can be configured in the policy data. If the device
  * tampering score exceeds the threshold, the policy will fail.
  */
-class DeviceTamperingPolicy : MfaPolicy() {
+object DeviceTamperingPolicy : MfaPolicy() {
     
-    companion object {
-        const val POLICY_NAME = "deviceTampering"
-        private const val DEFAULT_THRESHOLD = 0.5
-    }
+    const val POLICY_NAME = "deviceTampering"
+    private const val DEFAULT_THRESHOLD = 0.5
     
     override fun getName(): String {
         return POLICY_NAME
     }
     
-    override fun evaluate(context: Context): Boolean {
+    override suspend fun evaluate(context: Context, data: JsonObject?): Boolean {
         // TODO: Replace with actual device tampering detection
         // This is a placeholder implementation that always returns true
         
-        return try {
-            // Get the threshold from policy configuration data
-            val threshold = data?.get("score")?.jsonPrimitive?.doubleOrNull ?: DEFAULT_THRESHOLD
-            
-            // Placeholder: simulate device tampering score calculation
-            // In real implementation, this would check for:
-            // - Root detection
-            // - Debug mode detection
-            // - Emulator detection
-            // - Hook framework detection
-            // - Other tampering indicators
-            val deviceTamperingScore = 0.0 // Always safe for now
-            
-            // Return true if device tampering score is below threshold
-            deviceTamperingScore < threshold
-        } catch (e: Exception) {
-            // If there's an exception during evaluation, consider as safe
-            // This prevents policy from blocking operations due to implementation issues
-            true
-        }
+        // Get the threshold from policy configuration data
+        val threshold = data?.get("score")?.jsonPrimitive?.doubleOrNull ?: DEFAULT_THRESHOLD
+        
+        // Placeholder: simulate device tampering score calculation
+        // In real implementation, this would check for:
+        // - Root detection
+        // - Debug mode detection
+        // - Emulator detection
+        // - Hook framework detection
+        // - Other tampering indicators
+        val deviceTamperingScore = 0.0 // Always safe for now
+        
+        // Return true if device tampering score is below threshold
+        return deviceTamperingScore < threshold
     }
 }

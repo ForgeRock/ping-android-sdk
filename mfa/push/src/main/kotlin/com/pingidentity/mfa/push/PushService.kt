@@ -30,9 +30,7 @@ import com.pingidentity.mfa.push.PushConstants.KEY_TTL
 import com.pingidentity.mfa.push.PushConstants.KEY_USER_ID
 import com.pingidentity.mfa.push.storage.PushStorage
 import io.ktor.client.HttpClient
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
-import kotlinx.coroutines.withContext
 import java.util.Date
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
@@ -45,20 +43,20 @@ import kotlin.coroutines.coroutineContext
  * including storing, retrieving, and processing push notifications with policy evaluation.
  *
  * @property storage The storage implementation for persisting push credentials and notifications.
- * @property config The Push configuration.
+ * @property configuration The Push configuration.
  * @property httpClient The HTTP client for network operations.
  * @property policyEvaluator The policy evaluator for credential policy validation.
  */
 internal class PushService(
     private val storage: PushStorage,
-    private val config: PushConfiguration,
+    private val configuration: PushConfiguration,
     private val httpClient: HttpClient,
     private val policyEvaluator: MfaPolicyEvaluator,
     tokenManager: PushDeviceTokenManager? = null,
     handlers: Map<String, PushHandler>? = null
 ) {
     // Using logger from PushConfiguration
-    private val logger = config.logger
+    private val logger = configuration.logger
 
     // Device token manager
     private val deviceTokenManager by lazy {
@@ -90,14 +88,14 @@ internal class PushService(
         )
 
         // If no custom handlers, return default handlers
-        if (config.customPushHandlers.isEmpty()) {
+        if (configuration.customPushHandlers.isEmpty()) {
             return defaultHandlers
         }
 
         // Merge default handlers with custom handlers (custom handlers take precedence)
         val mergedHandlers = defaultHandlers.toMutableMap<String, PushHandler>()
-        mergedHandlers.putAll(config.customPushHandlers)
-        logger.d("Added ${config.customPushHandlers.size} custom push handlers")
+        mergedHandlers.putAll(configuration.customPushHandlers)
+        logger.d("Added ${configuration.customPushHandlers.size} custom push handlers")
 
         return mergedHandlers
     }
@@ -121,7 +119,7 @@ internal class PushService(
             // Evaluate policies during registration if policies are present
             if (!credential.policies.isNullOrBlank()) {
                 logger.d("Evaluating policies for new Push credential")
-                val policyResult = policyEvaluator.evaluate(config.context, credential.policies)
+                val policyResult = policyEvaluator.evaluate(configuration.context, credential.policies)
                 
                 if (policyResult.isFailure) {
                     val policyName = policyResult.nonCompliancePolicyName ?: "unknown"
@@ -137,7 +135,7 @@ internal class PushService(
 
             // Obtain device name
             val deviceName = try {
-                DeviceUtils.getDeviceName(config.context)
+                DeviceUtils.getDeviceName(configuration.context)
             } catch (e: Exception) {
                 logger.w("Failed to get device name, using default", e)
                 DEFAULT_DEVICE_NAME
@@ -180,36 +178,22 @@ internal class PushService(
      * @return The added credential (potentially locked due to policy violation).
      * @throws MfaException if the credential cannot be added.
      */
-    suspend fun addCredential(credential: PushCredential): PushCredential = withContext(Dispatchers.IO) {
+    suspend fun addCredential(credential: PushCredential): PushCredential {
         try {
             // Evaluate policies at runtime if context is available and policies exist
-            if (!credential.policies.isNullOrBlank()) {
-                logger.d("Evaluating policies for Push credential: ${credential.id}")
-                val policyResult = policyEvaluator.evaluate(config.context, credential.policies)
-                
-                // If credential is not locked but policies are non-compliant, lock it
-                if (!credential.isLocked && policyResult.isFailure) {
-                    val policyName = policyResult.nonCompliancePolicyName ?: "unknown"
-                    logger.w("Locking Push credential due to policy violation: $policyName")
-                    credential.lockCredential(policyName)
-                }
-                // If credential is locked but policies are now compliant, unlock it
-                else if (credential.isLocked && policyResult.isSuccess) {
-                    logger.d("Unlocking previously locked Push credential: all policies are compliant")
-                    credential.unlockCredential()
-                }
+            logger.d("Evaluating policies for OATH credential: ${credential.id}")
+            evaluateAndUpdateCredentialPolicies(credential, store = false)
+
+            // Add to cache only if caching is enabled
+            if (configuration.enableCredentialCache) {
+                credentialsCache[credential.id] = credential
             }
 
             // Store in persistent storage
             storage.storePushCredential(credential)
 
-            // Add to cache only if caching is enabled
-            if (config.enableCredentialCache) {
-                credentialsCache[credential.id] = credential
-            }
-
             logger.d("Added Push credential with ID: ${credential.id} (locked: ${credential.isLocked})")
-            return@withContext credential
+            return credential
         } catch (e: Exception) {
             coroutineContext.ensureActive()
             logger.e("Failed to add push credential: ${e.message}", e)
@@ -223,11 +207,11 @@ internal class PushService(
      * @return A list of all credentials.
      * @throws MfaException if the credentials cannot be retrieved.
      */
-    suspend fun getCredentials(): List<PushCredential> = withContext(Dispatchers.IO) {
+    suspend fun getCredentials(): List<PushCredential> {
         try {
             // If caching is enabled and cache has data, use it
-            if (config.enableCredentialCache && credentialsCache.isNotEmpty()) {
-                return@withContext credentialsCache.values.toList()
+            if (configuration.enableCredentialCache && credentialsCache.isNotEmpty()) {
+                return credentialsCache.values.toList()
             }
 
             // Get all credentials from storage
@@ -236,33 +220,15 @@ internal class PushService(
             // Loop credentials
             credentials.forEach { credential ->
                 // Evaluate policies for each credential at runtime
-                if (!credential.policies.isNullOrBlank()) {
-                    val policyResult = policyEvaluator.evaluate(config.context, credential.policies)
-
-                    // If credential is not locked but policies are non-compliant, lock it
-                    if (!credential.isLocked && policyResult.isFailure) {
-                        val policyName = policyResult.nonCompliancePolicyName ?: "unknown"
-                        logger.w("Locking Push credential ${credential.id} due to policy violation: $policyName")
-                        credential.lockCredential(policyName)
-                        // Update storage with locked status
-                        storage.storePushCredential(credential)
-                    }
-                    // If credential is locked but policies are now compliant, unlock it
-                    else if (credential.isLocked && policyResult.isSuccess) {
-                        logger.d("Unlocking previously locked Push credential ${credential.id}: all policies are compliant")
-                        credential.unlockCredential()
-                        // Update storage with unlocked status
-                        storage.storePushCredential(credential)
-                    }
-                }
+                evaluateAndUpdateCredentialPolicies(credential)
 
                 // Update cache if enabled
-                if (config.enableCredentialCache) {
+                if (configuration.enableCredentialCache) {
                     credentialsCache[credential.id] = credential
                 }
             }
 
-            return@withContext credentials
+            return credentials
         } catch (e: Exception) {
             coroutineContext.ensureActive()
             logger.e("Failed to get push credentials: ${e.message}", e)
@@ -277,11 +243,11 @@ internal class PushService(
      * @return The credential, or null if not found.
      * @throws MfaException if the credential cannot be retrieved.
      */
-    suspend fun getCredential(credentialId: String): PushCredential? = withContext(Dispatchers.IO) {
+    suspend fun getCredential(credentialId: String): PushCredential? {
         try {
             // Check cache first if caching is enabled
             var credential: PushCredential? = null
-            if (config.enableCredentialCache) {
+            if (configuration.enableCredentialCache) {
                 credential = credentialsCache[credentialId]
             }
 
@@ -290,12 +256,12 @@ internal class PushService(
                 credential = storage.retrievePushCredential(credentialId)
 
                 // Update cache if credential was found and caching is enabled
-                if (credential != null && config.enableCredentialCache) {
+                if (credential != null && configuration.enableCredentialCache) {
                     credentialsCache[credentialId] = credential
                 }
             }
 
-            return@withContext credential
+            return credential
         } catch (e: Exception) {
             coroutineContext.ensureActive()
             logger.e("Failed to get push credential with ID $credentialId: ${e.message}", e)
@@ -310,10 +276,10 @@ internal class PushService(
      * @return True if the credential was removed, false if it didn't exist.
      * @throws MfaException if the credential cannot be removed.
      */
-    suspend fun removeCredential(credentialId: String): Boolean = withContext(Dispatchers.IO) {
+    suspend fun removeCredential(credentialId: String): Boolean {
         try {
             // Remove from cache if enabled
-            if (config.enableCredentialCache) {
+            if (configuration.enableCredentialCache) {
                 credentialsCache.remove(credentialId)
             }
 
@@ -324,7 +290,7 @@ internal class PushService(
                 logger.d("Removed push credential with ID: $credentialId")
             }
 
-            return@withContext removed
+            return removed
         } catch (e: Exception) {
             coroutineContext.ensureActive()
             logger.e("Failed to remove push credential with ID $credentialId: ${e.message}", e)
@@ -342,7 +308,7 @@ internal class PushService(
      * @return True if the token was updated successfully, false otherwise.
      * @throws MfaException if the device token cannot be set.
      */
-    suspend fun setDeviceToken(deviceToken: String, credentialId: String? = null): Boolean = withContext(Dispatchers.IO) {
+    suspend fun setDeviceToken(deviceToken: String, credentialId: String? = null): Boolean {
         try {
             val shouldUpdate = deviceTokenManager.shouldUpdateToken(deviceToken)
 
@@ -351,10 +317,10 @@ internal class PushService(
                 logger.d("Device token has changed, updating")
                 logger.d("Previous device token: ${deviceTokenManager.getDeviceTokenId()}")
                 logger.d("Setting device token to: $deviceToken")
-                return@withContext updateDeviceToken(deviceToken, credentialId)
+                return updateDeviceToken(deviceToken, credentialId)
             } else {
                 logger.d("Device token has not changed, no update needed")
-                return@withContext true
+                return true
             }
         } catch (e: Exception) {
             coroutineContext.ensureActive()
@@ -371,29 +337,29 @@ internal class PushService(
      * @return True if the token was updated successfully, false otherwise
      * @throws MfaException if the device token cannot be updated
      */
-    private suspend fun updateDeviceToken(deviceToken: String, credentialId: String? = null): Boolean = withContext(Dispatchers.IO) {
+    private suspend fun updateDeviceToken(deviceToken: String, credentialId: String? = null): Boolean {
         try {
             val localUpdateSuccess = deviceTokenManager.updateDeviceToken(deviceToken)
             if (!localUpdateSuccess) {
                 logger.e("Failed to update device token locally")
-                return@withContext false
+                return false
             }
-            
+
             // Get device name
             val deviceName = try {
-                DeviceUtils.getDeviceName(config.context)
+                DeviceUtils.getDeviceName(configuration.context)
             } catch (e: Exception) {
                 logger.w("Failed to get device name, using default", e)
                 DEFAULT_DEVICE_NAME
             }
-            
+
             // If no credentialId is provided, update all registered credentials
             if (credentialId == null) {
                 logger.d("Updating device token for all registered credentials")
                 val credentials = storage.getAllPushCredentials()
                 if (credentials.isEmpty()) {
                     logger.d("No credentials found to update")
-                    return@withContext true
+                    return true
                 }
 
                 var allSuccess = true
@@ -418,14 +384,14 @@ internal class PushService(
                     }
                 }
 
-                return@withContext allSuccess
+                return allSuccess
             } else {
                 logger.d("Updating device token for specific credential ID: $credentialId")
 
                 // Get the specific credential for server update
                 val credential = storage.retrievePushCredential(credentialId) ?: run {
                     logger.w("Credential not found for ID: $credentialId")
-                    return@withContext false
+                    return false
                 }
 
                 // Get the appropriate handler for this platform
@@ -437,7 +403,7 @@ internal class PushService(
                     KEY_DEVICE_NAME to deviceName
                 )
 
-                return@withContext handler.setDeviceToken(credential, deviceToken, params)
+                return handler.setDeviceToken(credential, deviceToken, params)
             }
         } catch (e: Exception) {
             coroutineContext.ensureActive()
@@ -451,13 +417,13 @@ internal class PushService(
      * 
      * @return The current device token, or null if not set
      */
-    suspend fun getDeviceToken(): String? = withContext(Dispatchers.IO) {
+    suspend fun getDeviceToken(): String? {
         try {
-            return@withContext deviceTokenManager.getDeviceTokenId()
+            return deviceTokenManager.getDeviceTokenId()
         } catch (e: Exception) {
             coroutineContext.ensureActive()
             logger.e("Failed to get device token: ${e.message}", e)
-            return@withContext null
+            return null
         }
     }
 
@@ -470,23 +436,23 @@ internal class PushService(
      * @return The push notification, or null if the message is invalid.
      * @throws MfaException if the message cannot be processed.
      */
-    suspend fun processNotification(messageData: Map<String, Any>): PushNotification? = withContext(Dispatchers.IO) {
+    suspend fun processNotification(messageData: Map<String, Any>): PushNotification? {
         try {
             // Identify the platform based on the message format
             val platform = identifyPlatform(messageData)
-            
+
             if (platform == null) {
                 logger.d("Unknown push notification format")
-                return@withContext null
+                return null
             }
 
             // Get the appropriate handler for this platform
             val handler = pushHandlers[platform] ?: throw MfaException("No handler for platform: $platform")
-            
+
             // Parse the message
             val parsedData = handler.parseMessage(messageData)
-            
-            return@withContext processAndStoreParsedData(parsedData)
+
+            return processAndStoreParsedData(parsedData)
         } catch (e: Exception) {
             coroutineContext.ensureActive()
             logger.e("Failed to process push notification: ${e.message}", e)
@@ -503,23 +469,23 @@ internal class PushService(
      * @return The push notification, or null if the message is invalid.
      * @throws MfaException if the message cannot be processed.
      */
-    suspend fun processNotification(message: String): PushNotification? = withContext(Dispatchers.IO) {
+    suspend fun processNotification(message: String): PushNotification? {
         try {
             // Identify the platform based on the message format
             val platform = identifyPlatform(message)
-            
+
             if (platform == null) {
                 logger.d("Unknown push notification format in string")
-                return@withContext null
+                return null
             }
 
             // Get the appropriate handler for this platform
             val handler = pushHandlers[platform] ?: throw MfaException("No handler for platform: $platform")
-            
+
             // Parse the message
             val parsedData = handler.parseMessage(message)
-            
-            return@withContext processAndStoreParsedData(parsedData)
+
+            return processAndStoreParsedData(parsedData)
         } catch (e: Exception) {
             coroutineContext.ensureActive()
             logger.e("Failed to process push notification from string: ${e.message}", e)
@@ -674,16 +640,16 @@ internal class PushService(
      * @throws MfaException if the notification cannot be approved.
      * @see PushClient.approveNotification which wraps this in a Result
      */
-    suspend fun approveNotification(notificationId: String, params: Map<String, Any> = emptyMap()): Boolean = withContext(Dispatchers.IO) {
+    suspend fun approveNotification(notificationId: String, params: Map<String, Any> = emptyMap()): Boolean {
         try {
             // Get the notification
             val notification = storage.retrievePushNotification(notificationId)
                 ?: throw MfaException("Notification not found: $notificationId")
-            
+
             // Check if the notification is pending
             if (!notification.pending) {
                 logger.d("Cannot approve notification: ${notification.id}, already responded")
-                return@withContext false
+                return false
             }
 
             // Get the credential
@@ -710,8 +676,8 @@ internal class PushService(
             } else {
                 logger.w("Failed to send approval for notification: ${notification.id}")
             }
-            
-            return@withContext result
+
+            return result
         } catch (e: Exception) {
             coroutineContext.ensureActive()
             logger.e("Failed to approve notification: ${e.message}", e)
@@ -726,18 +692,18 @@ internal class PushService(
      * @return True if the notification was denied successfully.
      * @throws MfaException if the notification cannot be denied.
      */
-    suspend fun denyNotification(notificationId: String, params: Map<String, Any> = emptyMap()): Boolean = withContext(Dispatchers.IO) {
+    suspend fun denyNotification(notificationId: String, params: Map<String, Any> = emptyMap()): Boolean {
         try {
             // Get the notification
             val notification = storage.retrievePushNotification(notificationId)
                 ?: throw MfaException("Notification not found: $notificationId")
-            
+
             // Check if the notification is pending
             if (!notification.pending) {
                 logger.d("Cannot deny notification: ${notification.id}, already responded")
-                return@withContext false
+                return false
             }
-            
+
             // Get the credential
             val credential = storage.retrievePushCredential(notification.credentialId)
                 ?: throw MfaException("Credential not found: ${notification.credentialId}")
@@ -763,7 +729,7 @@ internal class PushService(
                 logger.w("Failed to send denial for notification: ${notification.id}")
             }
 
-            return@withContext result
+            return result
         } catch (e: Exception) {
             coroutineContext.ensureActive()
             logger.e("Failed to deny notification: ${e.message}", e)
@@ -777,9 +743,9 @@ internal class PushService(
      * @return A list of all pending notifications.
      * @throws MfaException if the notifications cannot be retrieved.
      */
-    suspend fun getPendingNotifications(): List<PushNotification> = withContext(Dispatchers.IO) {
+    suspend fun getPendingNotifications(): List<PushNotification> {
         try {
-            return@withContext storage.getPendingPushNotifications()
+            return storage.getPendingPushNotifications()
         } catch (e: Exception) {
             coroutineContext.ensureActive()
             logger.e("Failed to get pending notifications: ${e.message}", e)
@@ -793,9 +759,9 @@ internal class PushService(
      * @return A list of all stored notifications.
      * @throws MfaException if the notifications cannot be retrieved.
      */
-    suspend fun getAllNotifications(): List<PushNotification> = withContext(Dispatchers.IO) {
+    suspend fun getAllNotifications(): List<PushNotification> {
         try {
-            return@withContext storage.getAllPushNotifications()
+            return storage.getAllPushNotifications()
         } catch (e: Exception) {
             coroutineContext.ensureActive()
             logger.e("Failed to get all notifications: ${e.message}", e)
@@ -810,14 +776,61 @@ internal class PushService(
      * @return The notification, or null if not found.
      * @throws MfaException if the notification cannot be retrieved.
      */
-    suspend fun getNotification(notificationId: String): PushNotification? = withContext(Dispatchers.IO) {
+    suspend fun getNotification(notificationId: String): PushNotification? {
         try {
-            return@withContext storage.retrievePushNotification(notificationId)
+            return storage.retrievePushNotification(notificationId)
         } catch (e: Exception) {
             coroutineContext.ensureActive()
             logger.e("Failed to get notification: ${e.message}", e)
             throw MfaException("Failed to get notification", e)
         }
+    }
+
+    /**
+     * Evaluates policies for a credential and updates its lock status accordingly.
+     * Also updates storage if the lock status changes.
+     *
+     * @param credential The credential to evaluate policies for
+     * @param store Whether to store the updated credential in storage (default true)
+     * @return The credential with potentially updated lock status
+     */
+    private suspend fun evaluateAndUpdateCredentialPolicies(
+        credential: PushCredential,
+        store: Boolean = true): PushCredential {
+        if (credential.policies.isNullOrBlank()) {
+            return credential
+        }
+
+        val policyResult = policyEvaluator.evaluate(configuration.context, credential.policies)
+
+        // If credential is not locked but policies are non-compliant, lock it
+        if (!credential.isLocked && policyResult.isFailure) {
+            val policyName = policyResult.nonCompliancePolicyName ?: "unknown"
+            logger.w("Locking Push credential ${credential.id} due to policy violation: $policyName")
+            credential.lockCredential(policyName)
+            // Update storage with locked status
+            if (store) storage.storePushCredential(credential)
+        }
+        // If credential is locked but policies are now compliant, unlock it
+        else if (credential.isLocked && policyResult.isSuccess) {
+            logger.i("Unlocking previously locked Push credential ${credential.id}: all policies are compliant")
+            credential.unlockCredential()
+            // Update storage with unlocked status
+            if (store) storage.storePushCredential(credential)
+        }
+        // If credential is locked and policies fail with a different policy, update the locking policy
+        else if (credential.isLocked && policyResult.isFailure) {
+            val newPolicyName = policyResult.nonCompliancePolicyName ?: "unknown"
+            val currentLockingPolicy = credential.lockingPolicy
+
+            if (newPolicyName != currentLockingPolicy) {
+                logger.w("Updating locking policy for Push credential ${credential.id} from '$currentLockingPolicy' to '$newPolicyName'")
+                credential.lockCredential(newPolicyName)
+                if (store) storage.storePushCredential(credential)
+            }
+        }
+
+        return credential
     }
 
     /**

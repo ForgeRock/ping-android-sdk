@@ -18,6 +18,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -27,6 +28,7 @@ import androidx.lifecycle.lifecycleScope
 import com.pingidentity.authenticatorapp.data.AuthenticatorViewModel
 import com.pingidentity.authenticatorapp.data.DiagnosticLogger
 import com.pingidentity.authenticatorapp.data.LoginViewModel
+import com.pingidentity.authenticatorapp.data.ThemeMode
 import com.pingidentity.authenticatorapp.data.UserPreferences
 import com.pingidentity.authenticatorapp.managers.AccountGroupingManager
 import com.pingidentity.authenticatorapp.managers.JourneyManager
@@ -77,20 +79,28 @@ class MainActivity : ComponentActivity() {
         checkNotificationPermission()
 
         setContent {
-            PingIdentityAuthenticatorTheme {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
-                ) {
-                    if (areViewModelsInitialized) {
+            if (areViewModelsInitialized) {
+                val themeMode by authenticatorViewModel.themeMode.collectAsState()
+                PingIdentityAuthenticatorTheme(themeMode = themeMode) {
+                    Surface(
+                        modifier = Modifier.fillMaxSize(),
+                        color = MaterialTheme.colorScheme.background
+                    ) {
                         AuthenticatorNavHost(
                             authenticatorViewModel = authenticatorViewModel,
                             loginViewModel = loginViewModel,
                             initialDestination = getInitialDestination()
                         )
-                    } else {
-                        // You could add a proper loading screen here if needed,
-                        // while ViewModels are being initialized
+                    }
+                }
+            } else {
+                // Show a basic loading screen with system theme while ViewModels initialize
+                PingIdentityAuthenticatorTheme(themeMode = ThemeMode.SYSTEM) {
+                    Surface(
+                        modifier = Modifier.fillMaxSize(),
+                        color = MaterialTheme.colorScheme.background
+                    ) {
+                        // You could add a proper loading screen here if needed
                     }
                 }
             }

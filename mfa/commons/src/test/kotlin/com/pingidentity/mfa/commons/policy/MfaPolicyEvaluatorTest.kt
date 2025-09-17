@@ -3,6 +3,8 @@ package com.pingidentity.mfa.commons.policy
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import com.pingidentity.logger.Logger
+import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import org.junit.Assert.assertEquals
@@ -31,7 +33,7 @@ class MfaPolicyEvaluatorTest {
     @Test
     fun `test dsl with single policy`() {
         val evaluator = MfaPolicyEvaluator {
-            policies = listOf(BiometricAvailablePolicy())
+            policies = listOf(BiometricAvailablePolicy)
         }
 
         assertEquals(1, evaluator.getPolicies().size)
@@ -41,8 +43,8 @@ class MfaPolicyEvaluatorTest {
     fun `test dsl with multiple policies`() {
         val evaluator = MfaPolicyEvaluator {
             policies = listOf(
-                BiometricAvailablePolicy(),
-                DeviceTamperingPolicy()
+                BiometricAvailablePolicy,
+                DeviceTamperingPolicy
             )
         }
 
@@ -62,8 +64,8 @@ class MfaPolicyEvaluatorTest {
     @Test
     fun `test dsl with policies array`() {
         val newPolicies = arrayOf(
-            BiometricAvailablePolicy(),
-            DeviceTamperingPolicy()
+            BiometricAvailablePolicy,
+            DeviceTamperingPolicy
         )
 
         val evaluator = MfaPolicyEvaluator {
@@ -76,8 +78,8 @@ class MfaPolicyEvaluatorTest {
     @Test
     fun `test dsl with policies collection`() {
         val newPolicies = listOf(
-            BiometricAvailablePolicy(),
-            DeviceTamperingPolicy()
+            BiometricAvailablePolicy,
+            DeviceTamperingPolicy
         )
 
         val evaluator = MfaPolicyEvaluator {
@@ -91,12 +93,12 @@ class MfaPolicyEvaluatorTest {
     fun `test dsl duplicate policy prevention`() {
         val evaluator = MfaPolicyEvaluator {
             policies = listOf(
-                BiometricAvailablePolicy(),
-                BiometricAvailablePolicy()
+                BiometricAvailablePolicy,
+                BiometricAvailablePolicy
             )
         }
 
-        // The list will contain duplicates, which is expected for a List
+        // With objects, both references are the same instance
         assertEquals(2, evaluator.getPolicies().size)
     }
 
@@ -112,11 +114,11 @@ class MfaPolicyEvaluatorTest {
 
     @Test
     fun `test getPolicy with existing policy`() {
-        val biometricPolicy = BiometricAvailablePolicy()
+        val biometricPolicy = BiometricAvailablePolicy
         val evaluator = MfaPolicyEvaluator {
             policies = listOf(
                 biometricPolicy,
-                DeviceTamperingPolicy()
+                DeviceTamperingPolicy
             )
         }
 
@@ -135,11 +137,11 @@ class MfaPolicyEvaluatorTest {
     }
 
     @Test
-    fun `test dsl withLogger`() {
+    fun `test dsl withLogger`() = runTest {
         val testLogger = TestLogger()
         val evaluator = MfaPolicyEvaluator {
             logger = testLogger
-            policies = listOf(BiometricAvailablePolicy())
+            policies = listOf(BiometricAvailablePolicy)
         }
 
         val result = evaluator.evaluate(context, null)
@@ -150,7 +152,7 @@ class MfaPolicyEvaluatorTest {
 
 
     @Test
-    fun `test evaluate with null policies`() {
+    fun `test evaluate with null policies`() = runTest {
         val evaluator = MfaPolicyEvaluator()
 
         val result = evaluator.evaluate(context, null)
@@ -160,7 +162,7 @@ class MfaPolicyEvaluatorTest {
     }
 
     @Test
-    fun `test evaluate with empty policies`() {
+    fun `test evaluate with empty policies`() = runTest {
         val evaluator = MfaPolicyEvaluator()
 
         val result = evaluator.evaluate(context, "")
@@ -170,7 +172,7 @@ class MfaPolicyEvaluatorTest {
     }
 
     @Test
-    fun `test evaluate with blank policies`() {
+    fun `test evaluate with blank policies`() = runTest {
         val evaluator = MfaPolicyEvaluator()
 
         val result = evaluator.evaluate(context, "   ")
@@ -180,9 +182,9 @@ class MfaPolicyEvaluatorTest {
     }
 
     @Test
-    fun `test evaluate with valid policies json`() {
+    fun `test evaluate with valid policies json`() = runTest {
         val evaluator = MfaPolicyEvaluator {
-            policies = listOf(BiometricAvailablePolicy())
+            policies = listOf(BiometricAvailablePolicy)
         }
 
         val policiesJson = """{"biometricAvailable": {}}"""
@@ -194,9 +196,9 @@ class MfaPolicyEvaluatorTest {
     }
 
     @Test
-    fun `test evaluate with device tampering policy`() {
+    fun `test evaluate with device tampering policy`() = runTest {
         val evaluator = MfaPolicyEvaluator {
-            policies = listOf(DeviceTamperingPolicy())
+            policies = listOf(DeviceTamperingPolicy)
         }
 
         val policiesJson = """{"deviceTampering": {"score": 0.8}}"""
@@ -208,7 +210,7 @@ class MfaPolicyEvaluatorTest {
     }
 
     @Test
-    fun `test evaluate with invalid json`() {
+    fun `test evaluate with invalid json`() = runTest {
         val evaluator = MfaPolicyEvaluator()
 
         val result = evaluator.evaluate(context, "{invalid json")
@@ -219,9 +221,9 @@ class MfaPolicyEvaluatorTest {
     }
 
     @Test
-    fun `test evaluate with complex policies`() {
+    fun `test evaluate with complex policies`() = runTest {
         val evaluator = MfaPolicyEvaluator {
-            policies = policies + listOf(BiometricAvailablePolicy(), DeviceTamperingPolicy())
+            policies = listOf(BiometricAvailablePolicy, DeviceTamperingPolicy)
         }
 
         val policiesJson = """{
@@ -239,9 +241,9 @@ class MfaPolicyEvaluatorTest {
     }
 
     @Test
-    fun `test evaluate with json object`() {
+    fun `test evaluate with json object`() = runTest {
         val evaluator = MfaPolicyEvaluator {
-            policies = listOf(DeviceTamperingPolicy())
+            policies = listOf(DeviceTamperingPolicy)
         }
 
         val policiesJson = buildJsonObject {
@@ -258,7 +260,7 @@ class MfaPolicyEvaluatorTest {
     }
 
     @Test
-    fun `test evaluate multiple policies all pass`() {
+    fun `test evaluate multiple policies all pass`() = runTest {
         val evaluator = MfaPolicyEvaluator()
 
         val policiesJson = """{
@@ -273,7 +275,7 @@ class MfaPolicyEvaluatorTest {
     }
 
     @Test
-    fun `test evaluate with failing policy`() {
+    fun `test evaluate with failing policy`() = runTest {
         val evaluator = MfaPolicyEvaluator {
             policies = listOf(FailingTestPolicy())
         }
@@ -290,7 +292,7 @@ class MfaPolicyEvaluatorTest {
 // Test policy that always fails
 class FailingTestPolicy : MfaPolicy() {
     override fun getName(): String = "failingTestPolicy"
-    override fun evaluate(context: Context): Boolean {
+    override suspend fun evaluate(context: Context, data: JsonObject?): Boolean {
         return false
     }
 }

@@ -72,8 +72,8 @@ class OathPolicyIntegrationTest {
 
         val policyEvaluator = MfaPolicyEvaluator {
             policies = listOf(
-                BiometricAvailablePolicy(),
-                DeviceTamperingPolicy()
+                BiometricAvailablePolicy,
+                DeviceTamperingPolicy
             )
         }
 
