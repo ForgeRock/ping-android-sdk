@@ -18,6 +18,7 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
 
@@ -132,6 +133,9 @@ class DefaultAndroidBuildProvider : AndroidBuildProvider {
  * It handles location permission requests automatically by launching a permission request activity
  * when necessary. The collection process is asynchronous and may prompt the user for permissions.
  *
+ * @param timeout The maximum time to wait for permission result in milliseconds (default 30000ms).
+ * Can be adjusted based on expected user interaction time.
+ *
  * **Required Permissions:**
  * - [Manifest.permission.ACCESS_FINE_LOCATION] or [Manifest.permission.ACCESS_COARSE_LOCATION]
  *
@@ -140,7 +144,7 @@ class DefaultAndroidBuildProvider : AndroidBuildProvider {
  *
  * @see LocationInfo for the data structure containing latitude and longitude coordinates
  */
-class LocationCollector : DeviceCollector<LocationInfo> {
+class LocationCollector(private val timeout: Long = 30000) : DeviceCollector<LocationInfo> {
     override val key: String
         get() = "location"
 
@@ -160,7 +164,7 @@ class LocationCollector : DeviceCollector<LocationInfo> {
      */
     @SuppressLint("MissingPermission")
     override suspend fun collect(): LocationInfo? {
-        return getLocation()
+        return getLocation(timeout)
     }
 
     override val serializer: KSerializer<LocationInfo>
@@ -174,10 +178,12 @@ class LocationCollector : DeviceCollector<LocationInfo> {
  * permission requesting via activity launch, and actual location retrieval using the
  * Google Play Services fused location provider.
  *
+ * @param timeout The maximum time to wait for permission result in milliseconds (default 30000ms).
+ *
  * @return [LocationInfo] with coordinates if successful, null if any step fails
  */
 @SuppressLint("MissingPermission")
-private suspend fun getLocation(): LocationInfo? {
+private suspend fun getLocation(timeout: Long = 30000): LocationInfo? {
     return PermissionResultManager.lock.withLock {
         val context = ContextProvider.context
 
@@ -196,7 +202,7 @@ private suspend fun getLocation(): LocationInfo? {
 
                 // Suspend and wait for the Activity to complete the deferred.
                 // Add a timeout to prevent indefinite waiting if something goes wrong
-                val isGranted = kotlinx.coroutines.withTimeoutOrNull(30000) { // 30 second timeout
+                val isGranted = withTimeoutOrNull(timeout) {
                     deferred.await()
                 } ?: false // If timeout occurs, treat as permission denied
 
