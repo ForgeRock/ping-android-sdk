@@ -37,7 +37,13 @@ import io.mockk.runs
 import io.mockk.unmockkStatic
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonArray
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import java.io.File
 import java.security.KeyStore
 import java.security.PublicKey
@@ -45,15 +51,40 @@ import java.security.cert.Certificate
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
+import kotlin.test.assertEquals
 
+/**
+ * Comprehensive test suite for [DeviceProfileCallback] functionality.
+ *
+ * This test class validates the device profile collection process, including:
+ * - Callback initialization with JSON configuration
+ * - Device metadata collection with various collectors
+ * - Location collection capabilities
+ * - Custom collector integration
+ * - Mock setup for Android system services
+ *
+ * The tests use extensive mocking to simulate Android system behavior and ensure
+ * consistent test results across different environments.
+ */
 class DeviceProfileCallbackTest {
 
     private val mockContext = mockk<Context>()
+    private lateinit var jsonObject: JsonObject
 
+    /**
+     * Sets up the test environment before each test execution.
+     *
+     * Initializes:
+     * - Mock Android context
+     * - JSON configuration object
+     * - System service mocks (camera, storage, memory, connectivity, etc.)
+     * - Location services mocks
+     */
     @BeforeTest
     fun setup() {
         every { mockContext.applicationContext } returns mockContext
         ContextProvider.init(mockContext)
+        setupJsonMock()
         setupCameraMocks()
         setupWindowManagerMocks()
         setupStorageMocks()
@@ -63,6 +94,9 @@ class DeviceProfileCallbackTest {
         setupLocationCollectionMocks()
     }
 
+    /**
+     * Cleans up resources and unmocks static methods after each test.
+     */
     @AfterTest
     fun tearDown() {
         unmockkStatic(Environment::class)
@@ -71,10 +105,19 @@ class DeviceProfileCallbackTest {
         unmockkStatic(KeyStore::class)
     }
 
+    /**
+     * Tests device profile collection with custom collectors.
+     *
+     * Verifies that:
+     * - Custom collectors can be added to the metadata collection
+     * - Different types of collectors work together
+     * - Null collectors are handled gracefully
+     * - Device identifier integration works correctly
+     */
     @Test
     fun `collect returns config with custom collector`() = runTest {
         val callback = DeviceProfileCallback()
-        // callback.init()
+        callback.init(jsonObject)
         callback.collect {
             deviceIdentifier = object : DeviceIdentifier {
                 override val id: suspend () -> String = {
@@ -100,13 +143,63 @@ class DeviceProfileCallbackTest {
         }
     }
 
+    /**
+     * Tests device profile collection with default configuration.
+     *
+     * Validates the basic collection functionality without custom configuration,
+     * ensuring the callback works with minimal setup.
+     */
     @Test
     fun `collect returns config with default`() = runTest {
         setupKeyStoreMocks()
+        setupJsonMock()
         val callback = DeviceProfileCallback()
+        callback.init(jsonObject)
         callback.collect()
     }
 
+    /**
+     * Tests device profile collection with all features enabled.
+     *
+     * Verifies:
+     * - Metadata collection is properly enabled
+     * - Location collection works when enabled
+     * - JSON payload structure is correct
+     * - Output contains expected device identifier and metadata
+     */
+    @Test
+    fun `collect returns config with all options enabled`() = runTest {
+        setupKeyStoreMocks()
+        setupJsonMock(
+            metadataEnabled = true,
+            locationEnabled = true,
+        )
+        val callback = DeviceProfileCallback()
+        callback.init(jsonObject)
+        callback.collect {
+            deviceIdentifier = object : DeviceIdentifier {
+                override val id: suspend () -> String = {
+                    "test-device-id"
+                }
+            }
+            logger = Logger.WARN
+
+            metadata {
+                add(DummyDeviceCollector())
+            }
+        }
+        assertEquals(
+            "{\"identifier\":\"test-device-id\",\"metadata\":{\"dummyCollector\":{\"name\":\"testName\",\"value\":\"testValue\"}}}",
+            callback.payload()["input"]?.jsonArray?.get(0)?.jsonObject?.get("value")?.jsonPrimitive?.content
+        )
+    }
+
+    /**
+     * Tests the extension function for device collector list processing.
+     *
+     * Validates that multiple collectors can be processed together
+     * and produce a valid JSON device profile output.
+     */
     @Test
     fun `extension function test`() = runTest {
 
@@ -121,6 +214,42 @@ class DeviceProfileCallbackTest {
         println(deviceProfile.toString())
     }
 
+    /**
+     * Creates a mock JSON configuration object for callback initialization.
+     *
+     * @param metadataEnabled Whether metadata collection should be enabled
+     * @param locationEnabled Whether location collection should be enabled
+     * @param message Optional message to include in configuration
+     */
+    private fun setupJsonMock(
+        metadataEnabled: Boolean = false,
+        locationEnabled: Boolean = false,
+        message: String = "",
+    ) {
+        jsonObject = buildJsonObject {
+            put("output", buildJsonArray {
+                add(buildJsonObject {
+                    put("name", JsonPrimitive("metadata"))
+                    put("value", JsonPrimitive(metadataEnabled))
+                })
+                add(buildJsonObject {
+                    put("name", JsonPrimitive("location"))
+                    put("value", JsonPrimitive(locationEnabled))
+                })
+                add(buildJsonObject {
+                    put("name", JsonPrimitive("message"))
+                    put("value", JsonPrimitive(message))
+                })
+            })
+        }
+    }
+
+    /**
+     * Sets up mocks for Android KeyStore operations.
+     *
+     * Mocks certificate and public key operations required for
+     * secure device identification processes.
+     */
     private fun setupKeyStoreMocks() {
         val mockKeyStore = mockk<KeyStore>()
         val mockCertificate = mockk<Certificate>()
@@ -134,6 +263,12 @@ class DeviceProfileCallbackTest {
         every { mockPublicKey.encoded } returns "fake-certificate-data".toByteArray()
     }
 
+    /**
+     * Sets up mocks for Camera system service.
+     *
+     * Configures mock camera manager to return a predefined list
+     * of available cameras for hardware profiling.
+     */
     private fun setupCameraMocks() {
         val mockCameraManager = mockk<CameraManager>()
         val mockCameraIdList = arrayOf("camera1", "camera2")
@@ -141,6 +276,12 @@ class DeviceProfileCallbackTest {
         every { mockCameraManager.cameraIdList } returns mockCameraIdList
     }
 
+    /**
+     * Sets up mocks for WindowManager and Display services.
+     *
+     * Configures display metrics (width, height) for screen
+     * dimension collection in device profiling.
+     */
     private fun setupWindowManagerMocks() {
         val mockWindowManager = mockk<WindowManager>()
         val mockDisplay = mockk<Display>()
@@ -153,6 +294,12 @@ class DeviceProfileCallbackTest {
         }
     }
 
+    /**
+     * Sets up mocks for storage-related operations.
+     *
+     * Mocks Environment class and StatFs for storage capacity
+     * measurements in device hardware profiling.
+     */
     private fun setupStorageMocks() {
         mockkStatic(Environment::class)
         mockkConstructor(StatFs::class)
@@ -161,6 +308,12 @@ class DeviceProfileCallbackTest {
         every { Environment.getDataDirectory() } returns mockFile
     }
 
+    /**
+     * Sets up mocks for memory-related operations.
+     *
+     * Configures ActivityManager to return mock memory information
+     * for device RAM profiling.
+     */
     private fun setupMemoryMocks() {
         val mockActivityManager = mockk<ActivityManager>()
         every { mockContext.getSystemService(Context.ACTIVITY_SERVICE) } returns mockActivityManager
@@ -170,6 +323,12 @@ class DeviceProfileCallbackTest {
         }
     }
 
+    /**
+     * Sets up mocks for network connectivity services.
+     *
+     * Configures ConnectivityManager to simulate network connection
+     * status for connectivity profiling.
+     */
     private fun setupConnectivityConnectivityMocks() {
         val mockConnectivityManager = mockk<ConnectivityManager>()
         val mockNetwork = mockk<Network>()
@@ -183,6 +342,12 @@ class DeviceProfileCallbackTest {
         every { mockNetworkInfo.isConnected } returns true
     }
 
+    /**
+     * Sets up mocks for telephony services.
+     *
+     * Configures TelephonyManager to return mock network operator
+     * and country information for carrier profiling.
+     */
     private fun setupTelephonyCollectorMocks() {
         val mockTelephonyManager = mockk<TelephonyManager>()
         every {
@@ -192,6 +357,12 @@ class DeviceProfileCallbackTest {
         every { mockTelephonyManager.networkOperatorName } returns "Telus"
     }
 
+    /**
+     * Sets up mocks for location services.
+     *
+     * Configures FusedLocationProviderClient and permission checks
+     * for GPS-based location collection in device profiling.
+     */
     private fun setupLocationCollectionMocks() {
         val mockLocationClient = mockk<FusedLocationProviderClient>()
         mockkStatic(LocationServices::class)
@@ -201,6 +372,12 @@ class DeviceProfileCallbackTest {
     }
 }
 
+/**
+ * Test implementation of [DeviceCollector] that returns dummy data.
+ *
+ * Used in tests to verify custom collector integration without
+ * depending on actual device hardware or system services.
+ */
 class DummyDeviceCollector : DeviceCollector<Dummy> {
     override val key: String = "dummyCollector"
     override val serializer = Dummy.serializer()
@@ -209,12 +386,30 @@ class DummyDeviceCollector : DeviceCollector<Dummy> {
     }
 }
 
+/**
+ * Test collector instance created using the DeviceCollector factory function.
+ *
+ * Demonstrates the alternative way to create collectors using
+ * the lambda-based factory method.
+ */
 val Dummy2DeviceCollector = DeviceCollector("dummy2") {
     Dummy2("testName2", "testValue2")
 }
 
+/**
+ * Test data class representing dummy device information.
+ *
+ * @property name The name field for testing
+ * @property value The value field for testing
+ */
 @Serializable
 data class Dummy(var name: String, var value: String)
 
+/**
+ * Secondary test data class for multiple collector testing.
+ *
+ * @property name The name field for testing
+ * @property value The value field for testing
+ */
 @Serializable
 data class Dummy2(var name: String, var value: String)
