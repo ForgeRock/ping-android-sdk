@@ -85,7 +85,14 @@ private val DisplayCollector by lazy {
         val windowManager = ContextProvider.context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
         try {
             val metrics = DisplayMetrics()
-            windowManager.defaultDisplay.getMetrics(metrics)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                windowManager.currentWindowMetrics.bounds.let {
+                    metrics.widthPixels = it.width()
+                    metrics.heightPixels = it.height()
+                }
+            } else {
+                windowManager.defaultDisplay.getMetrics(metrics)
+            }
             mutableMapOf(
                 "width" to metrics.widthPixels,
                 "height" to metrics.heightPixels,
