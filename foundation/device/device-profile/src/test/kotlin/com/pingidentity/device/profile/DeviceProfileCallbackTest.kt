@@ -126,7 +126,7 @@ class DeviceProfileCallbackTest {
             }
             logger = Logger.WARN
 
-            metadata {
+            collectors {
                 add(DummyDeviceCollector())
                 add(DeviceCollector("test") {
                     Dummy2("testName2", "testValue2")
@@ -136,7 +136,7 @@ class DeviceProfileCallbackTest {
                     null
                 })
             }
-            metadata {
+            collectors {
                 add(PlatformCollector)
                 add(HardwareCollector())
             }
@@ -184,7 +184,7 @@ class DeviceProfileCallbackTest {
             }
             logger = Logger.WARN
 
-            metadata {
+            collectors {
                 add(DummyDeviceCollector())
             }
         }
