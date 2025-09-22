@@ -28,7 +28,7 @@ class MetadataCallbackE2ETest : BaseJourneyTest() {
     }
 
     @Test
-    fun namePasswordCallbackTest() = runTest {
+    fun metadataCallbackTest() = runTest {
         var node = defaultJourney.start(tree) as ContinueNode
 
         node.handleLoginCallbacks()
