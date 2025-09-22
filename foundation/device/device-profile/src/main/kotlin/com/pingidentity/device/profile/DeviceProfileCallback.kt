@@ -188,7 +188,11 @@ class DeviceProfileCallback : AbstractCallback(), JourneyAware {
         config.apply(block)
 
         val result = DeviceProfileCollector(config)
-        val profile = Json.encodeToJsonElement(result.collect()).jsonObject
+        val json = Json {
+            ignoreUnknownKeys = true
+            explicitNulls = false
+        }
+        val profile = json.encodeToJsonElement(result.collect()).jsonObject
 
         input(profile.toString())
         return Result.success(profile)
