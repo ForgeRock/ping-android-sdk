@@ -4,7 +4,7 @@
  * of the MIT license. See the LICENSE file for details.
  */
 
-package com.pingidentity.device.profile
+package com.pingidentity.device.profile.collector
 
 import android.app.ActivityManager
 import android.content.Context
@@ -17,8 +17,6 @@ import android.util.DisplayMetrics
 import android.view.Display
 import android.view.WindowManager
 import com.pingidentity.android.ContextProvider
-import com.pingidentity.device.profile.collector.AndroidBuildProvider
-import com.pingidentity.device.profile.collector.HardwareCollector
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkObject

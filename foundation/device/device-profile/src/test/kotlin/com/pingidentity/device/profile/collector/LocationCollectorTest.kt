@@ -4,7 +4,7 @@
  * of the MIT license. See the LICENSE file for details.
  */
 
-package com.pingidentity.device.profile
+package com.pingidentity.device.profile.collector
 
 import android.Manifest
 import android.content.Context
@@ -14,7 +14,6 @@ import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.tasks.Task
 import com.pingidentity.android.ContextProvider
-import com.pingidentity.device.profile.collector.LocationCollector
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk

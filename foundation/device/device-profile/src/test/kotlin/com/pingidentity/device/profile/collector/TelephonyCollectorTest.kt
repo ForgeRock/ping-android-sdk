@@ -4,12 +4,11 @@
  * of the MIT license. See the LICENSE file for details.
  */
 
-package com.pingidentity.device.profile
+package com.pingidentity.device.profile.collector
 
 import android.content.Context
 import android.telephony.TelephonyManager
 import com.pingidentity.android.ContextProvider
-import com.pingidentity.device.profile.collector.TelephonyCollector
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkObject

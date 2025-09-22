@@ -4,9 +4,9 @@
  * of the MIT license. See the LICENSE file for details.
  */
 
-package com.pingidentity.device.profile
+package com.pingidentity.device.profile.collector
 
-import com.pingidentity.device.profile.collector.PlatformCollector
+import android.os.Build
 import kotlinx.coroutines.test.runTest
 import java.util.Locale
 import java.util.TimeZone
@@ -74,24 +74,24 @@ class PlatformCollectorTest {
         // if the Build field *were* null.
         // This is more of a documentation of intent for this limited test setup.
 
-        if (android.os.Build.DEVICE == null) {
+        if (Build.DEVICE == null) {
             assertEquals("Device", platformInfo?.device)
         } else {
-            assertEquals(android.os.Build.DEVICE, platformInfo?.device)
+            assertEquals(Build.DEVICE, platformInfo?.device)
         }
 
-        if (android.os.Build.MODEL == null) {
+        if (Build.MODEL == null) {
             assertEquals("", platformInfo?.deviceName)
             assertEquals("", platformInfo?.model)
         } else {
-            assertEquals(android.os.Build.MODEL, platformInfo?.deviceName)
-            assertEquals(android.os.Build.MODEL, platformInfo?.model)
+            assertEquals(Build.MODEL, platformInfo?.deviceName)
+            assertEquals(Build.MODEL, platformInfo?.model)
         }
 
-        if (android.os.Build.BRAND == null) {
+        if (Build.BRAND == null) {
             assertEquals("", platformInfo?.brand)
         } else {
-            assertEquals(android.os.Build.BRAND, platformInfo?.brand)
+            assertEquals(Build.BRAND, platformInfo?.brand)
         }
     }
 }

@@ -4,7 +4,7 @@
  * of the MIT license. See the LICENSE file for details.
  */
 
-package com.pingidentity.device.profile
+package com.pingidentity.device.profile.collector
 
 import android.content.Context
 import android.net.ConnectivityManager
@@ -12,8 +12,6 @@ import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.NetworkInfo
 import com.pingidentity.android.ContextProvider
-import com.pingidentity.device.profile.collector.NetworkCollector
-import com.pingidentity.device.profile.collector.SdkVersionProvider
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkObject
