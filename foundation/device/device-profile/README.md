@@ -60,6 +60,8 @@ This module helps you collect various device attributes through dedicated collec
 │  │ • Network   │  │ • Permission    │   │
 │  │ • Telephony │  │   Management    │   │
 │  │ • Location  │  │                 │   │
+│  │ • Bluetooth │  │                 │   │
+│  │ • Browser   │  │                 │   │
 │  └─────────────┘  └─────────────────┘   │
 ├─────────────────────────────────────────┤
 │          Android Platform API           │
@@ -149,6 +151,12 @@ suspend fun collectDeviceProfile() {
     "networkCountryIso": "US",
     "carrierName": "Verizon"
   },
+  "bluetooth": {
+    "supported": true
+  },
+  "browser": {
+    "userAgent": "Mozilla/5.0 (Linux; Android 10; Pixel 4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.106 Mobile Safari/537.36"
+  },
   "location": {
     "latitude": 37.7749,
     "longitude": -122.4194
@@ -228,6 +236,26 @@ Collects GPS coordinates with automatic permission handling:
       "latitude": 37.7749,
       "longitude": -122.4194
    }
+}
+```
+
+### BluetoothCollector
+Checks if Bluetooth is supported on the device:
+```json
+{
+    "bluetooth": {
+        "supported": true
+    }
+}
+```
+
+### BrowserCollector
+Gathers the default browser's user agent string:
+```json
+{
+    "browser": {
+        "userAgent": "Mozilla/5.0 (Linux; Android 10; Pixel 4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.106 Mobile Safari/537.36"
+    }
 }
 ```
 
@@ -366,8 +394,10 @@ import kotlinx.coroutines.runBlocking
 val result = deviceProfileCallback.collect()
 ```
 
-By default, `DeviceProfileCallback.collect()` will use all the default collectors provided by
-`DefaultDeviceCollector()`, organized in a format compatible with AIC.
+By default, `DeviceProfileCallback.collect()` will not use the default collectors provided by
+`DefaultDeviceCollector()`, but it the responsibility of the developer to pass the required 
+collectors. The function `DeviceProfileCallback.collect()` will provide an organized collection 
+in a format compatible with AIC.
 
 ### Customizing AIC Journey Device Profile Collection
 
@@ -381,7 +411,7 @@ val profile = deviceProfileCallback.collect {
    }
 
    // Add collectors in a metadata block
-   metadata {
+   collectors {
       // Add specific collectors relevant to your AIC risk assessment needs
       add(PlatformCollector)
       add(HardwareCollector())
@@ -390,7 +420,7 @@ val profile = deviceProfileCallback.collect {
    }
 
    // Add more collectors in another metadata block if needed
-   metadata {
+   collectors {
       // Add custom collectors for enhanced AIC risk signals
       add(DeviceCollector("battery") {
          mapOf("level" to 95, "isCharging" to true)
@@ -435,7 +465,7 @@ When using `DeviceProfileCallback`, the output is structured specifically for AI
 
 ```kotlin
 val result = deviceProfileCallback.collect {
-    metadata {
+    collectors {
         add(PlatformCollector)
         add(HardwareCollector)
         add(LocationCollector()) // May return null if permission denied
