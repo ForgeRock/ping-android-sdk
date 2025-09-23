@@ -19,7 +19,10 @@ import com.pingidentity.device.detector.RootProgramFileDetector
 import com.pingidentity.device.detector.RootRequiredAppDetector
 import com.pingidentity.device.detector.SuCommandDetector
 import com.pingidentity.device.detector.TamperDetector
+import com.pingidentity.logger.Logger
+import com.pingidentity.logger.WARN
 import com.pingidentity.utils.PingDsl
+import kotlin.math.max
 
 
 /**
@@ -98,6 +101,15 @@ class DeviceTamperConfig {
     internal val tamperDetectors: MutableList<TamperDetector> = mutableListOf()
 
     /**
+     * Logger instance for logging within the tamper detection process.
+     *
+     * This property allows customization of the logging behavior. By default, it is set to
+     * log warnings and above. Developers can provide their own logger implementation to
+     * integrate with existing logging frameworks or systems.
+     */
+    var logger: Logger = Logger.WARN
+
+    /**
      * Configures the list of tamper detectors to be used in the analysis.
      *
      * This method accepts a configuration block that operates on the internal list
@@ -136,15 +148,28 @@ class DeviceTamperConfig {
  * ```
  *
  * @param block Configuration block for setting up tamper detectors. Defaults to using [DefaultTamperDetector]
- * @return `true` if any detector indicates the device has been tampered with, `false` otherwise
+ * @return A confidence score where:
+ *         - `1.0` indicates high confidence that tampering is detected
+ *         - `0.0` indicates no tampering detected
+ *         - Values between 0.0 and 1.0 indicate varying levels of suspicion
  * @throws SecurityException if detection cannot be performed due to security restrictions
  *
  * @since 1.0
  */
 suspend fun analyze(
     block: DeviceTamperConfig.() -> Unit = { detector(DefaultTamperDetector()) }
-): Boolean {
-    val config = DeviceTamperConfig().apply(block)
+): Double {
+    val config = DeviceTamperConfig()
+    config.logger = Logger.WARN
+    config.apply(block)
+
     val detectors = config.tamperDetectors
-    return detectors.any { it.isTampered(ContextProvider.context) }
+    var max = 0.0
+    for (detector in detectors) {
+        max = max(max, detector.isTampered(ContextProvider.context))
+        if (max >= 1) {
+            return max
+        }
+    }
+    return max
 }

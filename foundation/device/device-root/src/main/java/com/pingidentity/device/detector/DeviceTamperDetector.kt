@@ -7,6 +7,7 @@
 package com.pingidentity.device.detector
 
 import android.content.Context
+import com.pingidentity.logger.Logger
 
 /**
  * Interface for detecting device tampering conditions such as rooting, jailbreaking, or other security compromises.
@@ -68,6 +69,15 @@ interface TamperDetector {
  */
 inline fun TamperDetector(
     crossinline block: suspend () -> Double
-) = object : TamperDetector {
-    override suspend fun isTampered(context: Context): Double = block()
+): TamperDetector {
+    return object : TamperDetector, LoggerAware {
+
+        override lateinit var logger: Logger
+
+        override suspend fun isTampered(context: Context): Double = block()
+    }
+}
+
+interface LoggerAware {
+    var logger: Logger
 }
