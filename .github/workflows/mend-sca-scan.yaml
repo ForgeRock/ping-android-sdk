@@ -1,0 +1,136 @@
+#
+# Copyright (c) 2024 - 2025 Ping Identity Corporation. All rights reserved.
+#
+# This software may be modified and distributed under the terms
+# of the MIT license. See the LICENSE file for details.
+#
+
+name: Run Mend SCA Scan
+on:
+  workflow_call:
+    secrets:
+      MEND_EMAIL:
+        description: Mend email
+        required: true
+      MEND_USER_KEY:
+        description: Mend user key
+        required: true
+      SLACK_WEBHOOK:
+        description: Slack Notifier Incoming Webhook
+        required: true
+      
+jobs:
+  mend-sca-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clone the repository
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          repository: ${{github.event.pull_request.head.repo.full_name}}
+          fetch-depth: 0
+
+      - name: Download and cache the Mend CLI executable
+        id: cache-mend
+        uses: actions/cache@v3
+        env:
+          mend-cache-name: cache-mend-executable
+        with:
+          path: /usr/local/bin/mend
+          key: ${{ runner.os }}-${{ env.mend-cache-name }}-${{ hashFiles('/usr/local/bin/mend') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ env.mend-cache-name }}-
+
+      - if: ${{ steps.cache-mend.outputs.cache-hit != 'true' }}
+        name: Download Mend CLI executable (cache miss...)
+        continue-on-error: true
+        shell: bash
+        run: |
+          curl https://downloads.mend.io/cli/linux_amd64/mend -o /usr/local/bin/mend && chmod +x /usr/local/bin/mend
+
+      - name: Mend SCA scan
+        env:
+          MEND_EMAIL: ${{ secrets.MEND_EMAIL }}
+          MEND_USER_KEY: ${{ secrets.MEND_USER_KEY }}
+          MEND_URL: ${{ vars.MEND_SERVER_URL }}
+        shell: bash
+        timeout-minutes: 20
+        run: |
+          # Run Mend scan and tee output to both console and file
+          mend dep --no-color -s ${{ vars.MEND_PRODUCT_NAME }}//${{ vars.MEND_PROJECT_NAME }} -u 2>&1 | tee mend-sca-scan-result.txt
+
+          # Extract scan results with more robust parsing
+          MEND_SCA_SCAN_URL=$(grep -Eo 'https://[^[:space:]\"]+' mend-sca-scan-result.txt | grep 'saas.whitesourcesoftware.com' || echo '')
+          MEND_SCA_SCAN_SUMMARY=$(grep -E "Detected.*vulnerabilities" mend-sca-scan-result.txt || echo 'No vulnerabilities detected')
+          
+          # Initialize counts with default value of 0
+          MEND_SCA_CRITICAL_COUNT=0
+          MEND_SCA_HIGH_COUNT=0
+          MEND_SCA_MEDIUM_COUNT=0
+          MEND_SCA_LOW_COUNT=0
+
+          # Extract vulnerability counts with error handling
+          if grep -q "Critical" mend-sca-scan-result.txt; then
+            MEND_SCA_CRITICAL_COUNT=$(grep -Eo '[0-9]+ Critical' mend-sca-scan-result.txt | awk '{print $1}')
+          fi
+          if grep -q "High" mend-sca-scan-result.txt; then
+            MEND_SCA_HIGH_COUNT=$(grep -Eo '[0-9]+ High' mend-sca-scan-result.txt | awk '{print $1}')
+          fi
+          if grep -q "Medium" mend-sca-scan-result.txt; then
+            MEND_SCA_MEDIUM_COUNT=$(grep -Eo '[0-9]+ Medium' mend-sca-scan-result.txt | awk '{print $1}')
+          fi
+          if grep -q "Low" mend-sca-scan-result.txt; then
+            MEND_SCA_LOW_COUNT=$(grep -Eo '[0-9]+ Low' mend-sca-scan-result.txt | awk '{print $1}')
+          fi
+
+          # Set environment variables with error checking
+          if [ ! -z "$MEND_SCA_SCAN_URL" ]; then
+            echo "MEND_SCA_SCAN_URL=$MEND_SCA_SCAN_URL" >> $GITHUB_ENV
+          fi
+          echo "MEND_SCA_SCAN_SUMMARY=$MEND_SCA_SCAN_SUMMARY" >> $GITHUB_ENV
+          echo "MEND_SCA_CRITICAL_COUNT=$MEND_SCA_CRITICAL_COUNT" >> $GITHUB_ENV
+          echo "MEND_SCA_HIGH_COUNT=$MEND_SCA_HIGH_COUNT" >> $GITHUB_ENV
+          echo "MEND_SCA_MEDIUM_COUNT=$MEND_SCA_MEDIUM_COUNT" >> $GITHUB_ENV
+          echo "MEND_SCA_LOW_COUNT=$MEND_SCA_LOW_COUNT" >> $GITHUB_ENV
+
+      - name: Fail if Critical or High SCA vulnerabilities are found
+        shell: bash
+        run: |
+          if [ "$MEND_SCA_CRITICAL_COUNT" -gt 0 ] || [ "$MEND_SCA_HIGH_COUNT" -gt 0 ]; then
+            echo "❌ SCA scan detected critical/high vulnerabilities."
+            exit 1
+          else
+            echo "✅ No critical/high SCA vulnerabilities."
+          fi
+
+      - name: Upload SCA scan report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mend-sca-report
+          path: mend-sca-scan-result.txt
+
+      - name: Send slack notification
+        uses: 8398a7/action-slack@v3
+        if: always()
+        with:
+          status: custom
+          fields: all
+          custom_payload: |
+            {
+              "text": "*Mend SCA Scan Results*",
+              "attachments": [
+                {
+                  "color": "${{ job.status == 'success' && 'good' || 'danger' }}",
+                  "fields": [
+                    {
+                      "title": "SCA scan",
+                      "value": "${{ env.MEND_SCA_SCAN_SUMMARY }}\n<${{ env.MEND_SCA_SCAN_URL }}|View full SCA report>",
+                      "short": false
+                    }
+                  ]
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
