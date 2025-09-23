@@ -73,15 +73,87 @@ jobs:
           echo "MEND_SAST_LOW_COUNT=$MEND_SAST_LOW_COUNT" >> $GITHUB_ENV
           echo "MEND_SAST_SCAN_URL=$MEND_SAST_SCAN_URL" >> $GITHUB_ENV
 
-      - name: Fail if Critical or High SAST vulnerabilities are found
+      - name: Show the SAST Report in Summary
+        shell: bash
+        run: |
+          # Determine badge color based on severity
+          if [ "$MEND_SAST_CRITICAL_COUNT" -gt 0 ]; then
+            BADGE_COLOR="red"
+            BADGE_TEXT="${MEND_SAST_CRITICAL_COUNT}_critical"
+          elif [ "$MEND_SAST_HIGH_COUNT" -gt 0 ]; then
+            BADGE_COLOR="orange"
+            BADGE_TEXT="${MEND_SAST_HIGH_COUNT}_high"
+          elif [ "$MEND_SAST_MEDIUM_COUNT" -gt 0 ]; then
+            BADGE_COLOR="yellow"
+            BADGE_TEXT="${MEND_SAST_MEDIUM_COUNT}_medium"
+          elif [ "$MEND_SAST_LOW_COUNT" -gt 0 ]; then
+            BADGE_COLOR="blue"
+            BADGE_TEXT="${MEND_SAST_LOW_COUNT}_low"
+          else
+            BADGE_COLOR="brightgreen"
+            BADGE_TEXT="clean"
+          fi
+
+          BADGE_URL="https://img.shields.io/badge/SAST-${BADGE_TEXT}-${BADGE_COLOR}"
+
+          echo "## Mend SAST Report ![SAST Badge](${BADGE_URL})" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Add a table summarizing results
+          echo "| Severity | Count |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| 🔴 Critical | $MEND_SAST_CRITICAL_COUNT |" >> $GITHUB_STEP_SUMMARY
+          echo "| 🟠 High     | $MEND_SAST_HIGH_COUNT |" >> $GITHUB_STEP_SUMMARY
+          echo "| 🟡 Medium   | $MEND_SAST_MEDIUM_COUNT |" >> $GITHUB_STEP_SUMMARY
+          echo "| 🔵 Low      | $MEND_SAST_LOW_COUNT |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Add Mend report link if available
+          if [ -n "$MEND_SAST_SCAN_URL" ]; then
+            echo "**🔗 [View Full Mend SAST Report]($MEND_SAST_SCAN_URL)**" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          # Add expandable section with raw scan output
+          echo "<details><summary>Expand for details</summary>" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          cat mend-sast-scan-result.txt >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "</details>" >> $GITHUB_STEP_SUMMARY
+
+      # Step 1: Decide Check Conclusion
+      - name: Determine Mend SAST Check Conclusion
+        id: sast_conclusion
         shell: bash
         run: |
           if [ "$MEND_SAST_CRITICAL_COUNT" -gt 0 ] || [ "$MEND_SAST_HIGH_COUNT" -gt 0 ]; then
-            echo "❌ SAST scan detected critical/high vulnerabilities."
-            exit 1
+            echo "conclusion=failure" >> $GITHUB_OUTPUT
           else
-            echo "✅ No critical/high SAST vulnerabilities."
+            echo "conclusion=success" >> $GITHUB_OUTPUT
           fi
+
+      # Step 2: Publish Mend SAST Check
+      - name: Publish Mend SAST Check
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const body = fs.readFileSync('mend-sast-scan-result.txt', 'utf8');
+
+            await github.rest.checks.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              name: "Mend SAST Report",
+              head_sha: context.sha,
+              status: "completed",
+              conclusion: "${{ steps.sast_conclusion.outputs.conclusion }}",
+              output: {
+                title: "Mend SAST Report",
+                summary: `Critical: ${process.env.MEND_SAST_CRITICAL_COUNT}, High: ${process.env.MEND_SAST_HIGH_COUNT}`,
+                text: "```\n" + body + "\n```"
+              }
+            });
 
       - name: Upload SAST scan report
         uses: actions/upload-artifact@v4

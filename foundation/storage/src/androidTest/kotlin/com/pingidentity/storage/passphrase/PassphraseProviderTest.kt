@@ -26,6 +26,7 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Assume
 import org.junit.Before
+import org.junit.Ignore
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.security.KeyStore
@@ -136,6 +137,7 @@ class PassphraseProviderTest {
     }
     
     @Test
+    @Ignore("We don't support PassphraseProvider for now")
     fun testBlockStorePassphraseProvider() = runTest {
         // Skip test if API level is below 30 (Android 11)
         Assume.assumeTrue("BlockStore requires API 30+", Build.VERSION.SDK_INT >= Build.VERSION_CODES.R)

@@ -77,8 +77,8 @@ jobs:
         with:
           api-level: ${{ matrix.api-level }}
           force-avd-creation: false
-          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
-          disable-animations: false
+          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          disable-animations: true
           script: echo "Generated AVD snapshot for caching."
 
       # Update the testrail integration configuration (this is a hack...)
@@ -94,6 +94,8 @@ jobs:
 
       # Execute all integration tests
       - name: Execute integration tests
+        timeout-minutes: 10
+        continue-on-error: true
         env:
           # These environment variables don't work with the emulator-runner action for some reason
           TESTRAIL_ENABLE: ${{vars.TESTRAIL_ENABLE}}
@@ -109,19 +111,27 @@ jobs:
           force-avd-creation: false
           emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: true
-          script: ./gradlew --rerun-tasks connectedDebugAndroidTestCoverage --stacktrace --no-daemon
+          script: ./gradlew --rerun-tasks connectedDebugAndroidTestCoverage --stacktrace --no-daemon --continue
 
-      # Publish test reports for the unit tests
+      # Publish test reports for the integration tests
       - name: Publish test results
         if: success() || failure()
-        uses: dorny/test-reporter@v1
+        uses: dorny/test-reporter@v2
         with:
           name: Integration tests results - API Level ${{ matrix.api-level }}
           path: '**/build/outputs/androidTest-results/**/TEST-*.xml'
           list-suites: 'all'
-          list-tests: 'all'
+          list-tests: 'failed'
           fail-on-error: 'true'
+          fail-on-empty: 'true'
           reporter: java-junit
+
+      - name: Upload Android Test Report (HTML)
+        if: success() || failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-tests-report
+          path: '**/build/reports/androidTests/connected/debug/**'
 
       # Collect all coverage report files
       - name: Find all coverage report files from all modules

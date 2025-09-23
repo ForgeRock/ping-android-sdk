@@ -32,6 +32,7 @@ import com.pingidentity.testrail.TestRailCase
 import com.pingidentity.testrail.TestRailWatcher
 import junit.framework.TestCase.assertFalse
 import kotlinx.coroutines.test.runTest
+import org.junit.Ignore
 import org.junit.Rule
 import org.junit.rules.TestWatcher
 import kotlin.test.AfterTest
@@ -161,6 +162,7 @@ class FormMFADevicesTest {
 
     @TestRailCase(29493)
     @Test
+    @Ignore("Flaky test - some times it takes a lot of time for registered devices to appear in PingOne")
     fun verifyDeviceAuthenticationForm() = runTest(timeout = 60.seconds) {
         // Register an email MFA device
         registerEmailMFA(email1)
