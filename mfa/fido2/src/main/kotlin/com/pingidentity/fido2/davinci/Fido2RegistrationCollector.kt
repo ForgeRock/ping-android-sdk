@@ -7,10 +7,10 @@
 
 package com.pingidentity.fido2.davinci
 
-import androidx.credentials.CreatePublicKeyCredentialRequest
 import com.pingidentity.davinci.plugin.Collector
 import com.pingidentity.fido2.Constants
 import com.pingidentity.fido2.Fido2Client
+import com.pingidentity.fido2.Fido2RegistrationCustomizer
 import com.pingidentity.fido2.toBase64
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
@@ -68,14 +68,12 @@ class Fido2RegistrationCollector : AbstractFido2Collector() {
      * the attestation value will be automatically injected to the registration flow.
      */
     suspend fun register(
-        block: (JsonObject) -> CreatePublicKeyCredentialRequest = {
-            CreatePublicKeyCredentialRequest(
-                it.toString()
-            )
-        }
+        block: Fido2RegistrationCustomizer.() -> Unit = {}
     ): Result<JsonObject> {
         logger.d("Starting FIDO2 registration")
-        return Fido2Client.register(block(publicKeyCredentialCreationOptions)).onSuccess {
+        return Fido2Client {
+            logger = this@Fido2RegistrationCollector.logger
+        }.register(publicKeyCredentialCreationOptions, block).onSuccess {
             logger.d("FIDO2 registration successful")
             attestationValue = it
         }.onFailure { exception ->

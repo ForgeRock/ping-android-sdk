@@ -24,7 +24,7 @@ import kotlinx.serialization.json.jsonPrimitive
  * and authentication operations by delegating to specialized collector implementations.
  *
  * The collector examines the "action" field in the input JSON to determine whether
- * to create a [Fido2RegistrationCollector] or [Fido2AuthenticationCredentialCollector].
+ * to create a [Fido2RegistrationCollector] or [Fido2AuthenticationCollector].
  */
 open class Fido2Collector : Collector<JsonObject>, DaVinciAware {
 
@@ -36,7 +36,7 @@ open class Fido2Collector : Collector<JsonObject>, DaVinciAware {
      * This method examines the "action" field in the input JSON and creates the
      * corresponding collector:
      * - "REGISTER" creates a [Fido2RegistrationCollector]
-     * - "AUTHENTICATE" creates a [Fido2AuthenticationCredentialCollector]
+     * - "AUTHENTICATE" creates a [Fido2AuthenticationCollector]
      *
      * @param input The JSON object containing the action and other initialization parameters
      * @return The appropriate FIDO2 collector instance for the specified action
@@ -47,15 +47,7 @@ open class Fido2Collector : Collector<JsonObject>, DaVinciAware {
             ?: throw IllegalArgumentException("$FIELD_ACTION is required")
         return when (action) {
             ACTION_REGISTER -> Fido2RegistrationCollector()
-            ACTION_AUTHENTICATE -> {
-                try {
-                    Class.forName("com.google.android.gms.fido.Fido")
-                    Fido2AuthenticationClientCollector()
-                } catch (e: ClassNotFoundException) {
-                    Fido2AuthenticationCredentialCollector()
-                }
-            }
-
+            ACTION_AUTHENTICATE -> Fido2AuthenticationCollector()
             else -> throw IllegalArgumentException("$FIELD_ACTION: $action is not supported")
         }.apply {
             this.davinci = this@Fido2Collector.davinci

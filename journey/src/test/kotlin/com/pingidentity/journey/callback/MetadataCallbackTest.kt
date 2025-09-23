@@ -7,7 +7,7 @@
 
 package com.pingidentity.journey.callback
 
-import com.pingidentity.fido2.journey.Fido2AuthenticationCredentialCallback
+import com.pingidentity.fido2.journey.Fido2AuthenticationCallback
 import com.pingidentity.fido2.journey.Fido2RegistrationCallback
 import com.pingidentity.journey.plugin.Journey
 import com.pingidentity.logger.CONSOLE
@@ -142,7 +142,7 @@ class MetadataCallbackTest {
         val callback = MetadataCallback()
         callback.journey = journey
         val actualCallback = callback.init(jsonObject)
-        assertTrue(actualCallback is Fido2AuthenticationCredentialCallback)
+        assertTrue(actualCallback is Fido2AuthenticationCallback)
     }
 
     @Test
@@ -192,7 +192,7 @@ class MetadataCallbackTest {
         val callback = MetadataCallback()
         callback.journey = journey
         val actualCallback = callback.init(jsonObject)
-        assertTrue(actualCallback is Fido2AuthenticationCredentialCallback)
+        assertTrue(actualCallback is Fido2AuthenticationCallback)
     }
 
     @Test

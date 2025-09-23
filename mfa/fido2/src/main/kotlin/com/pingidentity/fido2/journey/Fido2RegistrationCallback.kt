@@ -7,7 +7,6 @@
 
 package com.pingidentity.fido2.journey
 
-import androidx.credentials.CreatePublicKeyCredentialRequest
 import com.pingidentity.fido2.Constants
 import com.pingidentity.fido2.Constants.DATA_SEPARATOR
 import com.pingidentity.fido2.Constants.DEFAULT_ATTESTATION
@@ -42,6 +41,7 @@ import com.pingidentity.fido2.Constants.FIELD_USER_NAME
 import com.pingidentity.fido2.Constants.FIELD_USER_VERIFICATION
 import com.pingidentity.fido2.Constants.RESIDENT_KEY_DISCOURAGED
 import com.pingidentity.fido2.Fido2Client
+import com.pingidentity.fido2.Fido2RegistrationCustomizer
 import com.pingidentity.fido2.base64DefaultToUrlSafe
 import com.pingidentity.fido2.base64ToIntStr
 import com.pingidentity.fido2.base64ToStr
@@ -137,12 +137,12 @@ class Fido2RegistrationCallback : Fido2Callback() {
      */
     suspend fun register(
         deviceName: String? = null,
-        block: (JsonObject) -> CreatePublicKeyCredentialRequest = {
-            CreatePublicKeyCredentialRequest(it.toString())
-        }
+        block: Fido2RegistrationCustomizer.() -> Unit = {}
     ): Result<JsonObject> {
         logger.d("Starting FIDO2 registration with device name: $deviceName")
-        return Fido2Client.register(block(publicKeyCredentialCreationOptions)).onSuccess { response ->
+        return Fido2Client {
+            logger = this@Fido2RegistrationCallback.logger
+        }.register(publicKeyCredentialCreationOptions, block).onSuccess { response ->
             logger.d("FIDO2 registration successful")
             val attestationResponse =
                 response[Constants.FIELD_RESPONSE]?.jsonObject ?: JsonObject(emptyMap())
@@ -346,7 +346,7 @@ class Fido2RegistrationCallback : Fido2Callback() {
                             FIELD_RESIDENT_KEY,
                             DEFAULT_RESIDENT_KEY_REQUIRED
                         ) else
-                            put(FIELD_RESIDENT_KEY, RESIDENT_KEY_DISCOURAGED )
+                            put(FIELD_RESIDENT_KEY, RESIDENT_KEY_DISCOURAGED)
                     }
                     authSelection[FIELD_RESIDENT_KEY]?.jsonPrimitive?.content?.let {
                         put(FIELD_RESIDENT_KEY, it)

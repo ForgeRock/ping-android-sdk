@@ -21,6 +21,7 @@ android {
 
 dependencies {
     implementation(project(":foundation:android"))
+    implementation(project(":foundation:utils"))
     implementation(project(":foundation:logger"))
     implementation(project(":foundation:davinci-plugin"))
     implementation(project(":foundation:journey-plugin"))

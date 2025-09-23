@@ -17,7 +17,8 @@ import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkObject
-import kotlinx.coroutines.runBlocking
+import io.mockk.unmockkObject
+import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -30,6 +31,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 
@@ -37,6 +39,29 @@ import kotlin.test.Test
 class Fido2RegistrationCollectorTest {
 
     private lateinit var collector: Fido2RegistrationCollector
+    private lateinit var mockFido2Client: Fido2Client
+
+    @BeforeTest
+    fun setup() {
+        val daVinci = mockk<DaVinci>()
+        val config = mockk<WorkflowConfig>()
+        val logger = Logger.CONSOLE
+        every { daVinci.config } returns config
+        every { config.logger } returns logger
+
+        collector = Fido2RegistrationCollector()
+        collector.davinci = daVinci
+
+        mockFido2Client = mockk()
+        mockkObject(Fido2Client.Companion)
+        every { Fido2Client.invoke(any()) } returns mockFido2Client
+    }
+
+    @AfterTest
+    fun tearDown() {
+        unmockkObject(Fido2Client.Companion)
+    }
+
 
     private fun getRegistrationInput(): JsonObject = buildJsonObject {
         put("type", JsonPrimitive("FIDO2"))
@@ -48,16 +73,26 @@ class Fido2RegistrationCollectorTest {
                 put("name", JsonPrimitive("pingone.ca"))
             })
             put("user", buildJsonObject {
-                put("id", JsonArray(listOf(
-                    JsonPrimitive(24), JsonPrimitive(-76), JsonPrimitive(-64)
-                )))
+                put(
+                    "id", JsonArray(
+                        listOf(
+                            JsonPrimitive(24), JsonPrimitive(-76), JsonPrimitive(-64)
+                        )
+                    )
+                )
                 put("displayName", JsonPrimitive("test@example.com"))
                 put("name", JsonPrimitive("test@example.com"))
             })
-            put("challenge", JsonArray(listOf(
-                JsonPrimitive(-68), JsonPrimitive(87), JsonPrimitive(-120)
-            )))
-            put("pubKeyCredParams", JsonArray(listOf(
+            put(
+                "challenge", JsonArray(
+                    listOf(
+                        JsonPrimitive(-68), JsonPrimitive(87), JsonPrimitive(-120)
+                    )
+                )
+            )
+            put(
+                "pubKeyCredParams", JsonArray(
+                listOf(
                 buildJsonObject {
                     put("type", JsonPrimitive("public-key"))
                     put("alg", JsonPrimitive("-7"))
@@ -71,17 +106,6 @@ class Fido2RegistrationCollectorTest {
         put("required", JsonPrimitive(true))
     }
 
-    @BeforeTest
-    fun setup() {
-        val daVinci = mockk<DaVinci>()
-        val config = mockk<WorkflowConfig>()
-        val logger = Logger.CONSOLE
-        every { daVinci.config } returns config
-        every { config.logger } returns logger
-
-        collector = Fido2RegistrationCollector()
-        collector.davinci = daVinci
-    }
 
     @Test
     fun `init should parse and transform input correctly`() {
@@ -108,12 +132,11 @@ class Fido2RegistrationCollectorTest {
     }
 
     @Test
-    fun `payload should return attestationValue after register`() = runBlocking {
+    fun `payload should return attestationValue after register`() = runTest {
         collector.init(getRegistrationInput())
         val attestation = buildJsonObject { put("test", JsonPrimitive("value")) }
 
-        mockkObject(Fido2Client)
-        coEvery { Fido2Client.register(any()) } returns Result.success(attestation)
+        coEvery { mockFido2Client.register(any(), any()) } returns Result.success(attestation)
 
         collector.register()
         val payload = collector.payload()
@@ -123,12 +146,11 @@ class Fido2RegistrationCollectorTest {
     }
 
     @Test
-    fun `register should propagate failure`() = runBlocking {
+    fun `register should propagate failure`() = runTest {
         collector.init(getRegistrationInput())
 
-        mockkObject(Fido2Client)
         val exception = Exception("Registration failed")
-        coEvery { Fido2Client.register(any()) } returns Result.failure(exception)
+        coEvery { mockFido2Client.register(any(), any()) } returns Result.failure(exception)
 
         val result = collector.register()
 

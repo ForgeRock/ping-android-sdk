@@ -7,7 +7,6 @@
 
 package com.pingidentity.fido2.journey
 
-import androidx.credentials.GetPublicKeyCredentialOption
 import androidx.credentials.exceptions.GetCredentialCancellationException
 import com.pingidentity.fido2.Constants
 import com.pingidentity.fido2.Fido2Client
@@ -45,13 +44,13 @@ import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 
-class Fido2AuthenticationCredentialCallbackTest {
+class Fido2AuthenticationCallbackTest {
 
     private lateinit var continueNode: ContinueNode
     private lateinit var mockWorkflow: Workflow
     private lateinit var mockWorkflowConfig: WorkflowConfig
     private lateinit var valueCallback: ValueCallback
-
+    private lateinit var mockFido2Client: Fido2Client
     @BeforeTest
     fun setUp() {
         mockWorkflow = mockk<Workflow>()
@@ -84,12 +83,15 @@ class Fido2AuthenticationCredentialCallbackTest {
         every { mockWorkflow.config } returns mockWorkflowConfig
         every { mockWorkflowConfig.logger } returns Logger.CONSOLE
 
-        mockkObject(Fido2Client)
+
+        mockFido2Client = mockk()
+        mockkObject(Fido2Client.Companion)
+        every { Fido2Client.invoke(any()) } returns mockFido2Client
     }
 
     @AfterTest
     fun tearDown() {
-        unmockkObject(Fido2Client)
+        unmockkObject(Fido2Client.Companion)
     }
 
     @Test
@@ -117,7 +119,7 @@ class Fido2AuthenticationCredentialCallbackTest {
             }
         }
 
-        val callback = Fido2AuthenticationCredentialCallback()
+        val callback = Fido2AuthenticationCallback()
         callback.journey = mockWorkflow
         callback.init(sampleJson)
 
@@ -351,7 +353,7 @@ class Fido2AuthenticationCredentialCallbackTest {
             }
         }
 
-        val callback = Fido2AuthenticationCredentialCallback()
+        val callback = Fido2AuthenticationCallback()
         callback.journey = mockWorkflow
         callback.init(sampleJson)
 
@@ -398,7 +400,7 @@ class Fido2AuthenticationCredentialCallbackTest {
             }
         }
 
-        val callback = Fido2AuthenticationCredentialCallback()
+        val callback = Fido2AuthenticationCallback()
         callback.continueNode = continueNode
         callback.journey = mockWorkflow
         callback.init(sampleJson)
@@ -420,7 +422,7 @@ class Fido2AuthenticationCredentialCallbackTest {
             put("rawId", "rawId")
         }
 
-        coEvery { Fido2Client.authenticate(any<GetPublicKeyCredentialOption>()) } returns Result.success(fakeResponse)
+        coEvery { mockFido2Client.authenticate(any(), any()) } returns Result.success(fakeResponse)
 
         val result = callback.authenticate()
         assertTrue(result.isSuccess)
@@ -458,7 +460,7 @@ class Fido2AuthenticationCredentialCallbackTest {
             }
         }
 
-        val callback = Fido2AuthenticationCredentialCallback()
+        val callback = Fido2AuthenticationCallback()
         callback.continueNode = continueNode
         callback.journey = mockWorkflow
         callback.init(sampleJson)
@@ -480,7 +482,7 @@ class Fido2AuthenticationCredentialCallbackTest {
             put("rawId", "rawId")
         }
 
-        coEvery { Fido2Client.authenticate(any<GetPublicKeyCredentialOption>()) } returns Result.success(fakeResponse)
+        coEvery { mockFido2Client.authenticate(any(), any()) } returns Result.success(fakeResponse)
 
         val result = callback.authenticate()
         assertTrue(result.isSuccess)
@@ -518,13 +520,13 @@ class Fido2AuthenticationCredentialCallbackTest {
             }
         }
 
-        val callback = Fido2AuthenticationCredentialCallback()
+        val callback = Fido2AuthenticationCallback()
         callback.continueNode = continueNode
         callback.journey = mockWorkflow
         callback.init(sampleJson)
 
         // Mock Fido2.authenticate to always fail
-        coEvery { Fido2Client.authenticate(any<GetPublicKeyCredentialOption>()) } returns Result.failure(
+        coEvery { mockFido2Client.authenticate(any(), any()) } returns Result.failure(
             GetCredentialCancellationException("auth error")
         )
 

@@ -7,7 +7,6 @@
 
 package com.pingidentity.fido2.davinci
 
-import androidx.credentials.GetPublicKeyCredentialOption
 import com.pingidentity.davinci.plugin.DaVinci
 import com.pingidentity.fido2.Constants
 import com.pingidentity.fido2.Fido2Client
@@ -18,6 +17,7 @@ import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkObject
+import io.mockk.unmockkObject
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
@@ -30,12 +30,38 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 
-class Fido2AuthenticationCredentialCollectorTest {
+class Fido2AuthenticationCollectorTest {
 
-    private lateinit var collector: Fido2AuthenticationCredentialCollector
+    private lateinit var collector: Fido2AuthenticationCollector
+    private lateinit var mockFido2Client: Fido2Client
+
+    @BeforeTest
+    fun setup() {
+        val daVinci = mockk<DaVinci>()
+        val config = mockk<WorkflowConfig>()
+        val logger = Logger.CONSOLE
+        every { daVinci.config } returns config
+        every { config.logger } returns logger
+
+        collector = Fido2AuthenticationCollector()
+        collector.davinci = daVinci
+
+        mockFido2Client = mockk()
+        mockkObject(Fido2Client.Companion)
+        every { Fido2Client.invoke(any()) } returns mockFido2Client
+
+    }
+
+    @AfterTest
+    fun tearDown() {
+        unmockkObject(Fido2Client.Companion)
+    }
+
+
 
     private fun getInput(): JsonObject = buildJsonObject {
         put("type", JsonPrimitive("FIDO2"))
@@ -62,18 +88,7 @@ class Fido2AuthenticationCredentialCollectorTest {
         put("required", JsonPrimitive(true))
     }
 
-    @BeforeTest
-    fun setup() {
-        val daVinci = mockk<DaVinci>()
-        val config = mockk<WorkflowConfig>()
-        val logger = Logger.CONSOLE
-        every { daVinci.config } returns config
-        every { config.logger } returns logger
 
-        collector = Fido2AuthenticationCredentialCollector()
-        collector.davinci = daVinci
-
-    }
 
     @Test
     fun `init should parse and transform input correctly`() {
@@ -98,8 +113,7 @@ class Fido2AuthenticationCredentialCollectorTest {
     fun `payload should return assertionValue after authenticate`() = runTest {
         collector.init(getInput())
         val assertion = buildJsonObject { put("test", JsonPrimitive("value")) }
-        mockkObject(Fido2Client)
-        coEvery { Fido2Client.authenticate(any<GetPublicKeyCredentialOption>()) } returns Result.success(assertion)
+        coEvery { mockFido2Client.authenticate(any(), any()) } returns Result.success(assertion)
         collector.authenticate()
         val payload = collector.payload()
         assertNotNull(payload)
@@ -109,9 +123,8 @@ class Fido2AuthenticationCredentialCollectorTest {
     @Test
     fun `authenticate should propagate failure`() = runTest {
         collector.init(getInput())
-        mockkObject(Fido2Client)
         val exception = Exception("fail")
-        coEvery { Fido2Client.authenticate(any<GetPublicKeyCredentialOption>()) } returns Result.failure(exception)
+        coEvery { mockFido2Client.authenticate(any(), any()) } returns Result.failure(exception)
         val result = collector.authenticate()
         assertTrue(result.isFailure)
         assertEquals(exception, result.exceptionOrNull())

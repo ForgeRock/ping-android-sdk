@@ -220,37 +220,48 @@ of your application.
 
 ## Customizing Credential Requests
 
-Both FIDO2 registration and authentication support customization of the credential request objects. This allows you to configure specific options such as timeout values, preferred authenticator types, or immediate availability preferences.
+Both FIDO2 registration and authentication support customization of the credential request objects. This allows you to configure specific options such as timeout values, preferred authenticator types, or immediate availability preferences using a DSL-style customizer.
 
 ### Registration Customization
 
-You can customize the `CreatePublicKeyCredentialRequest` by providing a lambda function to the `register()` method:
+You can customize the `CreatePublicKeyCredentialRequest` by providing a lambda to the `register()` method. This is useful for setting preferences like `preferImmediatelyAvailableCredentials`.
 
-#### DaVinci Collector or AIC Callback
+#### DaVinci Collector or Journey Callback
 
 ```kotlin
-val result = collector.register { publicKeyOptions ->
-  CreatePublicKeyCredentialRequest(
-    requestJson = publicKeyOptions.toString(),
-    preferImmediatelyAvailableCredentials = true,
-    isAutoSelectAllowed = false
-  )
+val result = collector.register {
+    onCreatePublicKeyCredentialRequest { originalRequest ->
+        // Customize and return a new request
+        CreatePublicKeyCredentialRequest(
+            requestJson = originalRequest.requestJson,
+            preferImmediatelyAvailableCredentials = true
+        )
+    }
 }
 ```
 
 ### Authentication Customization
 
-You can customize the `GetPublicKeyCredentialOption` by providing a lambda function to the `authenticate()` method:
+You can customize the authentication request for both **Credential Manager** and **Google Play Services FIDO2 API** by providing a lambda to the `authenticate()` method. The SDK automatically uses the appropriate customizer based on the API being used.
 
-#### DaVinci Collector or AIC Callback
+#### DaVinci Collector or Journey Callback
 
 ```kotlin
-val result = collector.authenticate { publicKeyOptions ->
-  GetPublicKeyCredentialOption(
-    requestJson = publicKeyOptions.toString(),
-    preferImmediatelyAvailableCredentials = true,
-    isAutoSelectAllowed = false
-  )
+val result = collector.authenticate {
+    // Customizer for Android Credential Manager API
+    onGetPublicKeyCredentialOption { originalOption ->
+        GetPublicKeyCredentialOption(
+            requestJson = originalOption.requestJson,
+            preferImmediatelyAvailableCredentials = true
+        )
+    }
+
+    // Customizer for Google Play Services FIDO2 API
+    onPublicKeyCredentialRequestOptions { originalOptions ->
+        originalOptions.toBuilder()
+            .setTimeoutSeconds(30.0) // Example: change timeout
+            .build()
+    }
 }
 ```
 

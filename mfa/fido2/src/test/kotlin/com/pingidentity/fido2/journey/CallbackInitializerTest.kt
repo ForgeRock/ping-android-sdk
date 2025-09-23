@@ -55,7 +55,7 @@ class CallbackInitializerTest {
         verify {
             CallbackRegistry.register(
                 "Fido2AuthenticationCallback",
-                ::Fido2AuthenticationClientCallback
+                ::Fido2AuthenticationCallback
             )
         }
         assertEquals(CallbackRegistry, result)

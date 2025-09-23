@@ -54,6 +54,8 @@ class Fido2RegistrationCallbackTest {
     private lateinit var mockWorkflow: Workflow
     private lateinit var mockWorkflowConfig: WorkflowConfig
     private lateinit var valueCallback: ValueCallback
+    private lateinit var mockFido2Client: Fido2Client
+
 
     @BeforeTest
     fun setUp() {
@@ -87,12 +89,15 @@ class Fido2RegistrationCallbackTest {
         every { mockWorkflow.config } returns mockWorkflowConfig
         every { mockWorkflowConfig.logger } returns Logger.CONSOLE
 
-        mockkObject(Fido2Client)
+        mockFido2Client = mockk()
+        mockkObject(Fido2Client.Companion)
+        every { Fido2Client.invoke(any()) } returns mockFido2Client
+
     }
 
     @AfterTest
     fun tearDown() {
-        unmockkObject(Fido2Client)
+        unmockkObject(Fido2Client.Companion)
     }
 
     @Test
@@ -228,7 +233,8 @@ class Fido2RegistrationCallbackTest {
             put("rawId", "EDSe1siof-wv7zm_TeocJKml")
         }
 
-        coEvery { Fido2Client.register(any()) } returns Result.success(fakeResponse)
+
+        coEvery { mockFido2Client.register(any(), any()) } returns Result.success(fakeResponse)
 
         val result = callback.register("Test Device")
         assertTrue(result.isSuccess)
@@ -288,7 +294,7 @@ class Fido2RegistrationCallbackTest {
             put("rawId", "rawId")
         }
 
-        coEvery { Fido2Client.register(any()) } returns Result.success(fakeResponse)
+        coEvery { mockFido2Client.register(any(), any()) } returns Result.success(fakeResponse)
 
         val result = callback.register()
         assertTrue(result.isSuccess)
@@ -337,7 +343,7 @@ class Fido2RegistrationCallbackTest {
         callback.init(sampleJson)
 
         // Mock Fido2.register to always fail
-        coEvery { Fido2Client.register(any()) } returns Result.failure(
+        coEvery { mockFido2Client.register(any(), any()) } returns Result.failure(
             CreateCredentialCancellationException("registration error")
         )
 

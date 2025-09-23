@@ -62,7 +62,7 @@ class Fido2CollectorTest {
         collector.davinci = mockDaVinci
         val result = collector.init(input)
 
-        assertTrue(result is Fido2AuthenticationClientCollector)
+        assertTrue(result is Fido2AuthenticationCollector)
     }
 
     @Test
@@ -115,8 +115,8 @@ class Fido2CollectorTest {
         collector.davinci = mockDaVinci
         val result = collector.init(getAuthenticationInput())
 
-        assertTrue(result is Fido2AuthenticationClientCollector)
-        val authCollector = result as Fido2AuthenticationClientCollector
+        assertTrue(result is Fido2AuthenticationCollector)
+        val authCollector = result as Fido2AuthenticationCollector
         assertTrue(authCollector.key == "fido2")
         assertTrue(authCollector.label == "Continue")
         assertTrue(authCollector.trigger == "BUTTON")

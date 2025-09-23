@@ -24,35 +24,22 @@ class CallbackInitializer : Initializer<CallbackRegistry> {
     /**
      * Creates and configures the CallbackRegistry with FIDO2 callback registrations.
      *
-     * This method is called automatically during app startup and registers:
-     * - Fido2RegistrationCallback for handling FIDO2 credential registration
-     * - Either Fido2AuthenticationClientCallback (Google Play Services) or
-     *   Fido2AuthenticationCredentialCallback (Credential Manager) for authentication
+     * This method is called automatically during app startup and registers the FIDO2 callbacks
+     * with the Journey framework. It registers:
+     * - **Fido2RegistrationCallback**: For handling FIDO2 credential registration operations
+     * - **Fido2AuthenticationCallback**: For handling FIDO2 authentication operations
      *
-     * The authentication callback selection follows this priority:
-     * 1. If Google Play Services FIDO is available: Use Fido2AuthenticationClientCallback
-     * 2. Otherwise: Use Fido2AuthenticationCredentialCallback (Credential Manager)
-     *
-     * This approach ensures broader device compatibility by preferring the more established
-     * Google Play Services API when available, while falling back to the newer Credential
-     * Manager API on devices where Google Play Services FIDO is not present.
-     *
-     * @param context The application context
-     * @return The configured CallbackRegistry instance
+     * @param context The application context used for callback registration
+     * @return The configured CallbackRegistry instance with FIDO2 callbacks registered
      */
     override fun create(context: Context): CallbackRegistry {
+        // Register the FIDO2 registration callback
         CallbackRegistry.register("Fido2RegistrationCallback", ::Fido2RegistrationCallback)
 
-        // Check if Google Play Services FIDO is available for broader device compatibility
-        val authenticationCallback = try {
-            Class.forName("com.google.android.gms.fido.Fido")
-            ::Fido2AuthenticationClientCallback
-        } catch (e: ClassNotFoundException) {
-            // Fall back to Credential Manager implementation
-            ::Fido2AuthenticationCredentialCallback
-        }
+        // Register the unified FIDO2 authentication callback
+        // This implementation automatically selects the best available API at runtime
+        CallbackRegistry.register("Fido2AuthenticationCallback", ::Fido2AuthenticationCallback)
 
-        CallbackRegistry.register("Fido2AuthenticationCallback", authenticationCallback)
         return CallbackRegistry
     }
 
