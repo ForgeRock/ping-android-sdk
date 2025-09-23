@@ -390,14 +390,15 @@ AIC Journeys.
 import com.pingidentity.device.profile.DeviceProfileCallback
 import kotlinx.coroutines.runBlocking
 
-// Collect with default settings
-val result = deviceProfileCallback.collect()
+// Collect with default settings - use DefaultDeviceCollector
+val result = deviceProfileCallback.collect {
+    collectors.apply(DefaultDeviceCollector())
+}
 ```
 
 By default, `DeviceProfileCallback.collect()` will not use the default collectors provided by
-`DefaultDeviceCollector()`, but it the responsibility of the developer to pass the required 
-collectors. The function `DeviceProfileCallback.collect()` will provide an organized collection 
-in a format compatible with AIC.
+`DefaultDeviceCollector()` unless being passed in the `collect()` block. This allows you to
+customize which collectors are used for AIC Journey profiles.
 
 ### Customizing AIC Journey Device Profile Collection
 
