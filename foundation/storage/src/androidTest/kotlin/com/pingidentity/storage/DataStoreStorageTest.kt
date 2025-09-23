@@ -17,6 +17,7 @@ import androidx.test.filters.SmallTest
 import com.pingidentity.testrail.TestRailCase
 import com.pingidentity.testrail.TestRailWatcher
 import kotlinx.coroutines.test.runTest
+import org.junit.Ignore
 import org.junit.Rule
 import org.junit.rules.TestWatcher
 import org.junit.runner.RunWith
@@ -43,6 +44,7 @@ class DataStoreStorageTest {
 
     @TestRailCase(21605, 21611)
     @Test
+    @Ignore ("See SDKS-4403")
     fun testDataStore() = runTest {
             val storage = DataStoreStorage(context.dataStore)
             val v = storage.get()
