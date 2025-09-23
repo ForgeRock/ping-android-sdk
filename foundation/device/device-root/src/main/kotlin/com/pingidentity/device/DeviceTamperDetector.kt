@@ -10,6 +10,7 @@ import com.pingidentity.android.ContextProvider
 import com.pingidentity.device.detector.BuildTagsDetector
 import com.pingidentity.device.detector.BusyBoxProgramFileDetector
 import com.pingidentity.device.detector.DangerousPropertyDetector
+import com.pingidentity.device.detector.LoggerAware
 import com.pingidentity.device.detector.NativeDetector
 import com.pingidentity.device.detector.PermissionDetector
 import com.pingidentity.device.detector.RootApkDetector
@@ -60,7 +61,7 @@ import kotlin.math.max
  * @since 1.0
  */
 internal fun DefaultTamperDetector(): MutableList<TamperDetector>.() -> Unit = {
-    add(BuildTagsDetector)
+    add(BuildTagsDetector())
     add(BusyBoxProgramFileDetector())
     add(DangerousPropertyDetector())
     add(NativeDetector())
@@ -157,10 +158,10 @@ class DeviceTamperConfig {
  * @since 1.0
  */
 suspend fun analyze(
-    block: DeviceTamperConfig.() -> Unit = { detector(DefaultTamperDetector()) }
+    block: DeviceTamperConfig.() -> Unit = { }
 ): Double {
     val config = DeviceTamperConfig()
-    config.logger = Logger.WARN
+    config.tamperDetectors.forEach { if (it is LoggerAware) it.logger = config.logger }
     config.apply(block)
 
     val detectors = config.tamperDetectors

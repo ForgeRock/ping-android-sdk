@@ -78,6 +78,15 @@ inline fun TamperDetector(
     }
 }
 
+/**
+ * Interface for detectors that require logging capability.
+ *
+ * Implement this interface in detectors that need to log information, warnings, or errors
+ * during tamper detection. The logger instance can be injected or set by the detection framework.
+ */
 interface LoggerAware {
+    /**
+     * Logger instance used for logging within the detector.
+     */
     var logger: Logger
 }

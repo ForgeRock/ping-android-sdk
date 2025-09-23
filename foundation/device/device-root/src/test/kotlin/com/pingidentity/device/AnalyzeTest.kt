@@ -16,8 +16,7 @@ import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
-import kotlin.test.assertFalse
-import kotlin.test.assertTrue
+import kotlin.test.assertEquals
 
 /**
  * Comprehensive test suite for the device tampering analysis functionality.
@@ -72,14 +71,12 @@ class AnalyzeTest {
         val result = analyze {
             detector {
                 add(TamperDetector {
-                    true
+                    1.0
                 })
             }
         }
 
-        assertTrue("Should be tampered") {
-            result
-        }
+        assertEquals(1.0, result, "Should be tampered")
     }
 
     /**
@@ -95,7 +92,7 @@ class AnalyzeTest {
     fun testScanWithDefaultDetector() = runTest {
         mockPackageManager()
         val result = analyze()
-        assertTrue(result) // Assuming no root detected by default detectors
+        assertEquals(0.0, result) // Assuming no root detected by default detectors
     }
 
     /**
@@ -112,13 +109,11 @@ class AnalyzeTest {
     fun `mix with custom and predefined`() = runTest {
         val result = analyze {
             detector {
-                add(TamperDetector { false })
-                add(BuildTagsDetector)
+                add(TamperDetector { 0.0 })
+                add(BuildTagsDetector())
             }
         }
-        assertFalse("Should not be tampered") {
-            result
-        }
+        assertEquals(0.0, result,"Should not be tampered")
     }
 
     /**
@@ -141,6 +136,6 @@ class AnalyzeTest {
         every { ContextProvider.context.packageManager } returns packageManager
         every {
             packageManager.getPackageInfo(any<String>(), any<Int>())
-        } returns mockk()
+        } throws PackageManager.NameNotFoundException()
     }
 }

@@ -6,6 +6,7 @@
 
 package com.pingidentity.device.detector
 
+import android.content.Context
 import android.os.Build
 
 /**
@@ -37,9 +38,12 @@ import android.os.Build
  * @see Build.TAGS
  * @see TamperDetector
  */
-val BuildTagsDetector by lazy {
-    TamperDetector {
-        if (Build.TAGS != null && Build.TAGS.contains(TEST_KEYS)) {
+class BuildTagsDetector(
+    private val androidBuildProvider: AndroidBuildProvider = DefaultAndroidBuildProvider()
+) : TamperDetector {
+    override suspend fun isTampered(context: Context): Double {
+        val buildTags = androidBuildProvider.getBuildTags()
+        return if (buildTags != null && buildTags.contains(TEST_KEYS)) {
             1.0
         } else {
             0.0
@@ -54,4 +58,12 @@ val BuildTagsDetector by lazy {
  * using test keys instead of official release keys, indicating a potentially
  * compromised or unofficial firmware.
  */
-private const val TEST_KEYS = "test-keys"
+internal const val TEST_KEYS = "test-keys"
+
+interface AndroidBuildProvider {
+    fun getBuildTags(): String? = null
+}
+
+class DefaultAndroidBuildProvider : AndroidBuildProvider {
+    override fun getBuildTags(): String? = Build.TAGS
+}
