@@ -29,7 +29,7 @@ class BuildTagsDetectorTest {
     @Test
     fun `BuildTags detector checks for test keys in build tags`() = runTest {
         every { mockAndroidBuildProvider.getBuildTags() } returns TEST_KEYS
-        val result = buildTagsDetector.isTampered(context)
+        val result = buildTagsDetector.analyze(context)
         assertEquals(1.0,result)
     }
 }

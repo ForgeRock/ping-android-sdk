@@ -48,7 +48,7 @@ abstract class SystemPropertyDetector : TamperDetector {
      * @param context The Android context (not used in this implementation but required by interface)
      * @return `true` if any suspicious system properties are detected, `false` otherwise
      */
-    override suspend fun isTampered(context: Context): Double {
+    override suspend fun analyze(context: Context): Double {
         return if (exists(getProperties())) {
             1.0
         } else {

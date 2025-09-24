@@ -75,7 +75,7 @@ class NativeDetector : FileDetector() {
      *         - `1.0` indicates tampering detected via native checks
      *         - `0.0` indicates no tampering detected or native library unavailable
      */
-    override suspend fun isTampered(context: Context): Double {
+    override suspend fun analyze(context: Context): Double {
         if (!libraryLoaded) return 0.0
 
         val pathList = PATHS.flatMap { path ->

@@ -41,7 +41,7 @@ import android.os.Build
 class BuildTagsDetector(
     private val androidBuildProvider: AndroidBuildProvider = DefaultAndroidBuildProvider()
 ) : TamperDetector {
-    override suspend fun isTampered(context: Context): Double {
+    override suspend fun analyze(context: Context): Double {
         val buildTags = androidBuildProvider.getBuildTags()
         return if (buildTags != null && buildTags.contains(TEST_KEYS)) {
             1.0

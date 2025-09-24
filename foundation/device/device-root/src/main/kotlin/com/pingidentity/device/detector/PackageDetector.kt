@@ -83,7 +83,7 @@ abstract class PackageDetector : TamperDetector {
      *         - `1.0` indicates suspicious packages were detected
      *         - `0.0` indicates no suspicious packages were found
      */
-    override suspend fun isTampered(context: Context): Double {
+    override suspend fun analyze(context: Context): Double {
         return if (exists(context, getPackages())) {
             1.0
         } else {

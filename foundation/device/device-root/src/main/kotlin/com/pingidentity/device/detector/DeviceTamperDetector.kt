@@ -32,7 +32,6 @@ interface TamperDetector {
      * This method performs security checks to detect if the device has been modified
      * in ways that could compromise security, such as:
      * - Root access on Android devices
-     * - Jailbreak on iOS devices
      * - Modified system files
      * - Debugging tools or emulators
      * - Custom ROMs or firmware
@@ -45,7 +44,7 @@ interface TamperDetector {
      *         - Values between 0.0 and 1.0 indicate varying levels of suspicion
      * @throws SecurityException if security checks cannot be performed
      */
-    suspend fun isTampered(context: Context): Double
+    suspend fun analyze(context: Context): Double
 }
 
 /**
@@ -74,7 +73,7 @@ inline fun TamperDetector(
 
         override lateinit var logger: Logger
 
-        override suspend fun isTampered(context: Context): Double = block()
+        override suspend fun analyze(context: Context): Double = block()
     }
 }
 

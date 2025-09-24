@@ -71,7 +71,7 @@ class PermissionDetector : TamperDetector {
      *         - `1.0` indicates critical system directories are mounted as writable
      *         - `0.0` indicates all critical directories are properly read-only
      */
-    override suspend fun isTampered(context: Context): Double {
+    override suspend fun analyze(context: Context): Double {
         val sdkVersion = Build.VERSION.SDK_INT
         for (line in mountReader()) {
             val args = line.split(" ")

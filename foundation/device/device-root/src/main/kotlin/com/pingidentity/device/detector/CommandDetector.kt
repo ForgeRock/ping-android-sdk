@@ -70,7 +70,7 @@ abstract class CommandDetector : TamperDetector {
      *         - `1.0` indicates suspicious commands were detected
      *         - `0.0` indicates no suspicious commands were found
      */
-    override suspend fun isTampered(context: Context): Double {
+    override suspend fun analyze(context: Context): Double {
         for (command in getCommands()) {
             if (exists(command)) {
                 return 1.0

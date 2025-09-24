@@ -62,7 +62,7 @@ class RootApkDetector : TamperDetector {
      *         - `1.0` indicates root management APK files were detected
      *         - `0.0` indicates no root APK files were found
      */
-    override suspend fun isTampered(context: Context): Double {
+    override suspend fun analyze(context: Context): Double {
         return if (exists(ROOT_APK)) {
             1.0
         } else {

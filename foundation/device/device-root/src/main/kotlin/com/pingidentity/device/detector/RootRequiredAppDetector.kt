@@ -84,8 +84,8 @@ class RootRequiredAppDetector : PackageDetector() {
      * @param context The Android context used for package detection
      * @return `true` if any root-dependent applications are detected, `false` otherwise
      */
-    override suspend fun isTampered(context: Context): Double {
-        return super.isTampered(context)
+    override suspend fun analyze(context: Context): Double {
+        return super.analyze(context)
     }
 
     companion object {

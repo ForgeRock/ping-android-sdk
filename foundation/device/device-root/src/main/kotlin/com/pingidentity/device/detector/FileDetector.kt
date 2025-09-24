@@ -54,7 +54,7 @@ abstract class FileDetector : TamperDetector {
      *         - `1.0` indicates suspicious files were detected
      *         - `0.0` indicates no suspicious files were found
      */
-    override suspend fun isTampered(context: Context): Double {
+    override suspend fun analyze(context: Context): Double {
         return if (getFilenames().any { exists(it) }) {
             1.0
         } else {

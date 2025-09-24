@@ -167,7 +167,7 @@ suspend fun analyze(
     val detectors = config.tamperDetectors
     var max = 0.0
     for (detector in detectors) {
-        max = max(max, detector.isTampered(ContextProvider.context))
+        max = max(max, detector.analyze(ContextProvider.context))
         if (max >= 1) {
             return max
         }

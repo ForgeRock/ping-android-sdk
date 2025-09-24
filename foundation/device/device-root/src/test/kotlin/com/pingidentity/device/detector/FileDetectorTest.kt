@@ -37,28 +37,28 @@ class FileDetectorTest {
             }
         }
 
-        val result = testDetector.isTampered(context)
+        val result = testDetector.analyze(context)
         assertEquals(0.0, result)
     }
 
     @Test
     fun `BusyBoxProgramFileDetector detects busybox file presence`(): Unit = runTest {
         val busyBoxDetector = BusyBoxProgramFileDetector()
-        val result = busyBoxDetector.isTampered(context)
+        val result = busyBoxDetector.analyze(context)
         assertEquals(0.0, result)
     }
 
     @Test
     fun `NativeDetector detects su file presence`(): Unit = runTest {
         val nativeDetector = NativeDetector()
-        val result = nativeDetector.isTampered(context)
+        val result = nativeDetector.analyze(context)
         assertEquals(0.0, result)
     }
 
     @Test
     fun `RootProgramFileDetector detects root program filenames to check for tampering detection`() = runTest {
         val rootProgramFileDetector = RootProgramFileDetector()
-        val result = rootProgramFileDetector.isTampered(context)
+        val result = rootProgramFileDetector.analyze(context)
         assertEquals(1.0, result)
     }
 }
