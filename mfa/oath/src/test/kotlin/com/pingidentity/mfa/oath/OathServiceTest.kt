@@ -40,6 +40,7 @@ class OathServiceTest {
     
     // Mock objects
     private lateinit var mockStorage: OathStorage
+    private lateinit var mockPolicyEvaluator: com.pingidentity.mfa.commons.policy.MfaPolicyEvaluator
     private lateinit var configWithCache: com.pingidentity.mfa.commons.MfaConfiguration
     private lateinit var configWithoutCache: com.pingidentity.mfa.commons.MfaConfiguration
     
@@ -56,6 +57,9 @@ class OathServiceTest {
         // Set up mock storage client
         mockStorage = mockk()
         
+        // Set up mock policy evaluator
+        mockPolicyEvaluator = mockk(relaxed = true)
+        
         // Create mock configurations
         val mockLogger = mockk<com.pingidentity.logger.Logger>(relaxed = true)
         
@@ -68,9 +72,9 @@ class OathServiceTest {
             every { logger } returns mockLogger
         }
         
-        // Initialize service variants with mock storage
-        oathServiceWithCache = OathService(mockStorage, configWithCache)
-        oathServiceWithoutCache = OathService(mockStorage, configWithoutCache)
+        // Initialize service variants with mock storage and policy evaluator
+        oathServiceWithCache = OathService(mockStorage, configWithCache, mockPolicyEvaluator)
+        oathServiceWithoutCache = OathService(mockStorage, configWithoutCache, mockPolicyEvaluator)
         
         // Create test credential
         testCredentialId = UUID.randomUUID().toString()

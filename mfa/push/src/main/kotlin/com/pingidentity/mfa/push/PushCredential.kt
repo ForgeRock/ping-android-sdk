@@ -60,9 +60,9 @@ data class PushCredential(
     val imageURL: String? = null,
     val backgroundColor: String? = null,
     val policies: String? = null,
-    val lockingPolicy: String? = null,
+    var lockingPolicy: String? = null,
     @EncodeDefault
-    val isLocked: Boolean = false,
+    var isLocked: Boolean = false,
     val platform: String = PushPlatform.PING_AM.name
 ) {
 
@@ -112,7 +112,26 @@ data class PushCredential(
             return PushUriParser.parse(uri)
         }
     }
-    
+
+    /**
+     * Lock this credential due to policy violations.
+     *
+     * @param policyName The name of the policy that caused the lock.
+     */
+    fun lockCredential(policyName: String) {
+        isLocked = true
+        lockingPolicy = policyName
+    }
+
+    /**
+     * Unlock this credential.
+     * Clears any locking policy information.
+     */
+    fun unlockCredential() {
+        isLocked = false
+        lockingPolicy = null
+    }
+
     /**
      * Converts this credential to a JSON string representation.
      *

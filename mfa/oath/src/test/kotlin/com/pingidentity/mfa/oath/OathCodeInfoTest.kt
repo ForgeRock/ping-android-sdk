@@ -26,7 +26,7 @@ class OathCodeInfoTest {
     private val testCode = "123456"
     
     @Test
-    fun testForTotp_withValidParams() {
+    fun `test for TOTP with valid params`() {
         val timeRemaining = 15
         val totalPeriod = 30
         val expectedProgress = 0.5 // 1.0 - (15/30)
@@ -41,7 +41,7 @@ class OathCodeInfoTest {
     }
     
     @Test
-    fun testForTotp_withZeroTotalPeriod() {
+    fun `test for TOTP with zero total period`() {
         val timeRemaining = 15
         val totalPeriod = 0
         
@@ -55,7 +55,7 @@ class OathCodeInfoTest {
     }
     
     @Test
-    fun testForHotp_withValidParams() {
+    fun `test for HOTP with valid params`() {
         val counter = 10L
         
         val codeInfo = OathCodeInfo.forHotp(testCode, counter)
@@ -68,7 +68,7 @@ class OathCodeInfoTest {
     }
     
     @Test
-    fun testToJson_forTotp() {
+    fun `test to JSON for TOTP`() {
         val codeInfo = OathCodeInfo.forTotp(testCode, 15, 30)
         
         val json = codeInfo.toJson()
@@ -81,7 +81,7 @@ class OathCodeInfoTest {
     }
     
     @Test
-    fun testToJson_forHotp() {
+    fun `test to JSON for HOTP`() {
         val codeInfo = OathCodeInfo.forHotp(testCode, 10)
         
         val json = codeInfo.toJson()
@@ -94,7 +94,7 @@ class OathCodeInfoTest {
     }
     
     @Test
-    fun testFromJson_forTotp() {
+    fun `test from JSON for TOTP`() {
         val jsonString = """
             {
                 "code": "$testCode",
@@ -115,7 +115,7 @@ class OathCodeInfoTest {
     }
     
     @Test
-    fun testFromJson_forHotp() {
+    fun `test from JSON for HOTP`() {
         val jsonString = """
             {
                 "code": "$testCode",
@@ -136,7 +136,7 @@ class OathCodeInfoTest {
     }
     
     @Test
-    fun testJsonSerialization_roundTrip() {
+    fun `test JSON serialization round trip`() {
         val originalCodeInfo = OathCodeInfo(
             code = testCode,
             timeRemaining = 15,
@@ -160,7 +160,7 @@ class OathCodeInfoTest {
     }
     
     @Test
-    fun testFromJson_withExtraFields() {
+    fun `test from JSON with extra fields`() {
         val jsonString = """
             {
                 "code": "$testCode",
@@ -182,7 +182,7 @@ class OathCodeInfoTest {
     }
     
     @Test
-    fun testFromJson_withMalformedJson() {
+    fun `test from JSON with malformed JSON`() {
         val jsonString = """
             {
                 "code": "$testCode",

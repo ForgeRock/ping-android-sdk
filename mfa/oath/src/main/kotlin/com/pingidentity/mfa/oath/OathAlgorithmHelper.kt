@@ -8,6 +8,8 @@
 package com.pingidentity.mfa.oath
 
 import com.pingidentity.logger.Logger
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.apache.commons.codec.binary.Base32
 import java.nio.ByteBuffer
 import javax.crypto.Mac
@@ -29,8 +31,8 @@ internal object OathAlgorithmHelper {
      * @param logger Optional logger for logging events during code generation
      * @return OathCodeInfo containing the code and validity information.
      */
-    fun generateCode(credential: OathCredential, logger: Logger? = null): OathCodeInfo {
-        return when (credential.oathType) {
+    suspend fun generateCode(credential: OathCredential, logger: Logger? = null): OathCodeInfo = withContext(Dispatchers.Default) {
+        return@withContext when (credential.oathType) {
             OathType.TOTP -> generateTotpCode(credential, logger)
             OathType.HOTP -> generateHotpCode(credential, logger)
         }

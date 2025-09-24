@@ -12,7 +12,9 @@ import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.drawable.Drawable
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -34,6 +36,7 @@ import androidx.compose.material.icons.filled.DesktopMac
 import androidx.compose.material.icons.filled.Laptop
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.PhoneAndroid
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Pin
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Close
@@ -77,6 +80,8 @@ import com.pingidentity.authenticatorapp.data.NotificationStatus
 import com.pingidentity.authenticatorapp.data.PushNotificationItem
 import com.pingidentity.authenticatorapp.service.LocationService
 import com.pingidentity.authenticatorapp.ui.components.AccountAvatar
+import com.pingidentity.mfa.commons.policy.BiometricAvailablePolicy
+import com.pingidentity.mfa.commons.policy.DeviceTamperingPolicy
 import com.pingidentity.mfa.push.PushType
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
@@ -484,6 +489,53 @@ fun NotificationResponseScreen(
                         ) {
                             Text(stringResource(id = R.string.close))
                         }
+                    }
+                }
+            } else if (notificationItem.credential?.isLocked == true) {
+                // Show lock message for locked credentials
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth(0.9f)
+                            .background(
+                                color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f),
+                                shape = RoundedCornerShape(8.dp)
+                            )
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Lock,
+                            contentDescription = stringResource(id = R.string.account_locked_indicator),
+                            tint = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        val lockMessage = when (notificationItem.credential?.lockingPolicy?.lowercase()) {
+                            BiometricAvailablePolicy.POLICY_NAME -> stringResource(id = R.string.account_locked_biometric_available)
+                            DeviceTamperingPolicy.POLICY_NAME -> stringResource(id = R.string.account_locked_device_tampering)
+                            null -> stringResource(id = R.string.account_locked_unknown_policy)
+                            else -> stringResource(id = R.string.account_locked_generic_policy, notificationItem.credential?.lockingPolicy!!)
+                        }
+                        Text(
+                            text = lockMessage,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+                    
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
+                    Button(
+                        onClick = onDismiss,
+                        modifier = Modifier.fillMaxWidth(0.7f)
+                    ) {
+                        Text(stringResource(id = R.string.close))
                     }
                 }
             } else if (notificationItem.status == NotificationStatus.PENDING) {

@@ -33,7 +33,7 @@ import com.pingidentity.authenticatorapp.data.createPushNotificationItem
 import com.pingidentity.authenticatorapp.notification.NotificationActionReceiver.Companion.EXTRA_NOTIFICATION_ID
 import com.pingidentity.authenticatorapp.ui.NotificationResponseScreen
 import com.pingidentity.authenticatorapp.ui.theme.PingIdentityAuthenticatorTheme
-import com.pingidentity.mfa.push.PushMfaClient
+import com.pingidentity.mfa.push.PushClient
 import kotlinx.coroutines.launch
 
 /**
@@ -42,7 +42,7 @@ import kotlinx.coroutines.launch
  */
 class PushNotificationActivity : ComponentActivity() {
 
-    private lateinit var pushClient: PushMfaClient
+    private lateinit var pushClient: PushClient
 
     private val diagnosticLogger = DiagnosticLogger
 

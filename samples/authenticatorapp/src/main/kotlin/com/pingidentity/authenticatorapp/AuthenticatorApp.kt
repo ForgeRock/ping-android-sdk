@@ -17,9 +17,7 @@ import com.pingidentity.journey.module.Oidc
 import com.pingidentity.logger.Logger
 import com.pingidentity.logger.STANDARD
 import com.pingidentity.mfa.oath.OathClient
-import com.pingidentity.mfa.oath.OathMfaClient
 import com.pingidentity.mfa.push.PushClient
-import com.pingidentity.mfa.push.PushMfaClient
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -35,16 +33,16 @@ import kotlinx.coroutines.tasks.await
 @OptIn(ExperimentalCoroutinesApi::class)
 class AuthenticatorApp : Application() {
     @Volatile
-    private lateinit var pushClient: PushMfaClient
+    private lateinit var pushClient: PushClient
 
     @Volatile
-    private lateinit var oathClient: OathMfaClient
+    private lateinit var oathClient: OathClient
 
     @Volatile
     private lateinit var journey: Journey
 
-    private val pushClientDeferred = CompletableDeferred<PushMfaClient>()
-    private val oathClientDeferred = CompletableDeferred<OathMfaClient>()
+    private val pushClientDeferred = CompletableDeferred<PushClient>()
+    private val oathClientDeferred = CompletableDeferred<OathClient>()
     private val journeyDeferred = CompletableDeferred<Journey>()
 
     override fun onCreate() {
@@ -122,7 +120,7 @@ class AuthenticatorApp : Application() {
     }
 
     companion object {
-        suspend fun getPushClient(context: Application): PushMfaClient {
+        suspend fun getPushClient(context: Application): PushClient {
             val app = context as? AuthenticatorApp
                 ?: throw IllegalStateException("Context must be AuthenticatorApp")
 
@@ -132,7 +130,7 @@ class AuthenticatorApp : Application() {
             return app.pushClientDeferred.await()
         }
 
-        suspend fun getOathClient(context: Application): OathMfaClient {
+        suspend fun getOathClient(context: Application): OathClient {
             val app = context as AuthenticatorApp
             if (app.oathClientDeferred.isCompleted) {
                 return app.oathClientDeferred.getCompleted()

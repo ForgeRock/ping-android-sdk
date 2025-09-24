@@ -47,6 +47,7 @@ class PushServiceTest {
     private lateinit var mockHttpClient: HttpClient
     private lateinit var mockContext: Context
     private lateinit var mockLogger: Logger
+    private lateinit var mockPolicyEvaluator: com.pingidentity.mfa.commons.policy.MfaPolicyEvaluator
     private lateinit var configWithCache: PushConfiguration
     private lateinit var configWithoutCache: PushConfiguration
 
@@ -68,6 +69,7 @@ class PushServiceTest {
         mockHttpClient = mockk()
         mockContext = mockk()
         mockLogger = mockk(relaxed = true)
+        mockPolicyEvaluator = mockk(relaxed = true)
 
         // Create mock configurations
         configWithCache = mockk<PushConfiguration>().apply {
@@ -87,9 +89,9 @@ class PushServiceTest {
         // Mock PushUriParser
         mockkObject(PushUriParser)
 
-        // Initialize service variants with mock storage and HTTP client
-        pushServiceWithCache = PushService(mockStorage, configWithCache, mockHttpClient)
-        pushServiceWithoutCache = PushService(mockStorage, configWithoutCache, mockHttpClient)
+        // Initialize service variants with mock storage, HTTP client, and policy evaluator
+        pushServiceWithCache = PushService(mockStorage, configWithCache, mockHttpClient, mockPolicyEvaluator)
+        pushServiceWithoutCache = PushService(mockStorage, configWithoutCache, mockHttpClient, mockPolicyEvaluator)
 
         // Create test credential
         testCredentialId = UUID.randomUUID().toString()
@@ -243,8 +245,9 @@ class PushServiceTest {
 
         val pushService = PushService(
             storage = mockStorage,
-            config = configWithCache,
+            configuration = configWithCache,
             httpClient = mockHttpClient,
+            policyEvaluator = mockPolicyEvaluator,
             handlers = mapOf(PushPlatform.PING_AM.name to mockHandler)
         )
 
@@ -279,8 +282,9 @@ class PushServiceTest {
 
         val pushService = PushService(
             storage = mockStorage,
-            config = configWithCache,
+            configuration = configWithCache,
             httpClient = mockHttpClient,
+            policyEvaluator = mockPolicyEvaluator,
             handlers = mapOf(PushPlatform.PING_AM.name to mockHandler)
         )
 
@@ -308,8 +312,9 @@ class PushServiceTest {
 
         val pushService = PushService(
             storage = mockStorage,
-            config = configWithCache,
+            configuration = configWithCache,
             httpClient = mockHttpClient,
+            policyEvaluator = mockPolicyEvaluator,
             handlers = mapOf(PushPlatform.PING_AM.name to mockHandler)
         )
 
@@ -336,8 +341,9 @@ class PushServiceTest {
 
         val pushService = PushService(
             storage = mockStorage,
-            config = configWithCache,
+            configuration = configWithCache,
             httpClient = mockHttpClient,
+            policyEvaluator = mockPolicyEvaluator,
             handlers = mapOf(PushPlatform.PING_AM.name to mockHandler)
         )
 
@@ -389,8 +395,9 @@ class PushServiceTest {
         val pushService = spyk(
             PushService(
                 storage = mockStorage,
-                config = configWithCache,
+                configuration = configWithCache,
                 httpClient = mockHttpClient,
+                policyEvaluator = mockPolicyEvaluator,
                 tokenManager = mockDeviceTokenManager,
                 handlers = mapOf(PushPlatform.PING_AM.name to mockHandler)
             )
@@ -418,8 +425,9 @@ class PushServiceTest {
         val pushService = spyk(
             PushService(
                 storage = mockStorage,
-                config = configWithCache,
+                configuration = configWithCache,
                 httpClient = mockHttpClient,
+                policyEvaluator = mockPolicyEvaluator,
                 tokenManager = mockDeviceTokenManager
             )
         )
@@ -446,8 +454,9 @@ class PushServiceTest {
         val mockHandler = mockk<PushHandler>()
         val pushService = PushService(
             storage = mockStorage,
-            config = configWithCache,
+            configuration = configWithCache,
             httpClient = mockHttpClient,
+            policyEvaluator = mockPolicyEvaluator,
             tokenManager = mockDeviceTokenManager,
             handlers = mapOf(PushPlatform.PING_AM.name to mockHandler)
         )
@@ -479,8 +488,9 @@ class PushServiceTest {
         val mockHandler = mockk<PushHandler>()
         val pushService = PushService(
             storage = mockStorage,
-            config = configWithCache,
+            configuration = configWithCache,
             httpClient = mockHttpClient,
+            policyEvaluator = mockPolicyEvaluator,
             tokenManager = mockDeviceTokenManager,
             handlers = mapOf(PushPlatform.PING_AM.name to mockHandler)
         )
@@ -511,8 +521,9 @@ class PushServiceTest {
         val mockDeviceTokenManager = mockk<PushDeviceTokenManager>()
         val pushService = PushService(
             storage = mockStorage,
-            config = configWithCache,
+            configuration = configWithCache,
             httpClient = mockHttpClient,
+            policyEvaluator = mockPolicyEvaluator,
             tokenManager = mockDeviceTokenManager
         )
 

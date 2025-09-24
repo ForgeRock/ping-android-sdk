@@ -7,6 +7,8 @@
 
 plugins {
     id("com.pingidentity.convention.android.library")
+//    id("com.pingidentity.convention.centralPublish") // we are not publishing this module for now
+    id("com.pingidentity.convention.jacoco")
     alias(libs.plugins.androidLibrary)
     alias(libs.plugins.kotlinAndroid)
     alias(libs.plugins.kotlinSerialization)
@@ -14,9 +16,12 @@ plugins {
 
 android {
     namespace = "com.pingidentity.mfa.oath"
-    
-    defaultConfig {
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+    buildTypes {
+        debug {
+            enableAndroidTestCoverage = true
+            enableUnitTestCoverage = true
+        }
     }
 }
 

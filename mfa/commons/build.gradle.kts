@@ -32,6 +32,9 @@ dependencies {
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.kotlinx.serialization.json)
 
+    // Biometric authentication support
+    implementation(libs.androidx.biometric)
+
     // JWT Generation and Validation
     implementation(libs.nimbus.jose.jwt)
 
@@ -51,4 +54,5 @@ dependencies {
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.ktor.client.mock)
     testImplementation(libs.kotlin.test)
+    testImplementation(libs.core.ktx)
 }

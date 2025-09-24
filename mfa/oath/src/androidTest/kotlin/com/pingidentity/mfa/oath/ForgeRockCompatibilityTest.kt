@@ -9,6 +9,7 @@ package com.pingidentity.mfa.oath
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import kotlinx.coroutines.test.runTest
 import org.forgerock.android.auth.FRAClient
 import org.forgerock.android.auth.FRAListener
 import org.forgerock.android.auth.Mechanism
@@ -54,7 +55,7 @@ class ForgeRockCompatibilityTest {
      * Test compatibility between ForgeRock TOTP and Ping TOTP implementations with SHA-1 algorithm.
      */
     @Test
-    fun testTotpSha1Compatibility() {
+    fun testTotpSha1Compatibility() = runTest {
         // Use unique identifier to avoid duplicate mechanism errors
         val uniqueId = getUniqueId()
 
@@ -89,7 +90,7 @@ class ForgeRockCompatibilityTest {
      * Test compatibility between ForgeRock TOTP and Ping TOTP implementations with SHA-256 algorithm.
      */
     @Test
-    fun testTotpSha256Compatibility() {
+    fun testTotpSha256Compatibility() = runTest {
         // Use unique identifier to avoid duplicate mechanism errors
         val uniqueId = getUniqueId()
         
@@ -124,7 +125,7 @@ class ForgeRockCompatibilityTest {
      * Test compatibility between ForgeRock TOTP and Ping TOTP implementations with SHA-512 algorithm.
      */
     @Test
-    fun testTotpSha512Compatibility() {
+    fun testTotpSha512Compatibility() = runTest {
         // Use unique identifier to avoid duplicate mechanism errors
         val uniqueId = getUniqueId()
         
@@ -159,7 +160,7 @@ class ForgeRockCompatibilityTest {
      * Test compatibility between ForgeRock TOTP and Ping TOTP implementations with custom period.
      */
     @Test
-    fun testTotpCustomPeriodCompatibility() {
+    fun testTotpCustomPeriodCompatibility() = runTest {
         val customPeriod = 60
         // Use unique identifier to avoid duplicate mechanism errors
         val uniqueId = getUniqueId()
@@ -195,7 +196,7 @@ class ForgeRockCompatibilityTest {
      * Test compatibility between ForgeRock TOTP and Ping TOTP implementations with 8 digits.
      */
     @Test
-    fun testTotpCustomDigitsCompatibility() {
+    fun testTotpCustomDigitsCompatibility() = runTest {
         val customDigits = 8
         // Use unique identifier to avoid duplicate mechanism errors
         val uniqueId = getUniqueId()
@@ -236,7 +237,7 @@ class ForgeRockCompatibilityTest {
      * ForgeRock and Ping HOTP algorithms. It's kept for documentation purposes.
      */
     @Test
-    fun testHotpSha1Compatibility() {
+    fun testHotpSha1Compatibility() = runTest {
         val counter = 42L
         // Use unique identifier to avoid duplicate mechanism errors
         val uniqueId = getUniqueId()
@@ -275,7 +276,7 @@ class ForgeRockCompatibilityTest {
      * ForgeRock and Ping HOTP algorithms. It's kept for documentation purposes.
      */
     @Test
-    fun testHotpSha256Compatibility() {
+    fun testHotpSha256Compatibility() = runTest {
         val counter = 5L
         // Use unique identifier to avoid duplicate mechanism errors
         val uniqueId = getUniqueId()
@@ -314,7 +315,7 @@ class ForgeRockCompatibilityTest {
      * ForgeRock and Ping HOTP algorithms. It's kept for documentation purposes.
      */
     @Test
-    fun testHotpSha512Compatibility() {
+    fun testHotpSha512Compatibility() = runTest {
         val counter = 10L
         // Use unique identifier to avoid duplicate mechanism errors
         val uniqueId = getUniqueId()
@@ -353,7 +354,7 @@ class ForgeRockCompatibilityTest {
      * ForgeRock and Ping HOTP algorithms. It's kept for documentation purposes.
      */
     @Test
-    fun testHotpCustomDigitsCompatibility() {
+    fun testHotpCustomDigitsCompatibility() = runTest {
         val counter = 15L
         val customDigits = 8
         // Use unique identifier to avoid duplicate mechanism errors

@@ -19,6 +19,7 @@ import com.pingidentity.authenticatorapp.managers.PushManager
 import com.pingidentity.authenticatorapp.managers.TestAccountFactory
 import com.pingidentity.logger.Logger
 import com.pingidentity.logger.STANDARD
+import com.pingidentity.mfa.commons.exception.CredentialLockedException
 import com.pingidentity.mfa.oath.OathCodeInfo
 import com.pingidentity.mfa.oath.OathCredential
 import com.pingidentity.mfa.push.PushCredential
@@ -74,6 +75,9 @@ class AuthenticatorViewModel(
 
     val testMode: StateFlow<Boolean>
         get() = userPreferences.testModeFlow
+
+    val themeMode: StateFlow<ThemeMode>
+        get() = userPreferences.themeModeFlow
 
 
     /**
@@ -330,6 +334,16 @@ class AuthenticatorViewModel(
     }
 
     /**
+     * Updates the theme mode setting
+     */
+    fun setThemeMode(themeMode: ThemeMode) {
+        viewModelScope.launch {
+            diagnosticLogger.d("SettingsScreen: setThemeMode: $themeMode")
+            userPreferences.setThemeMode(themeMode)
+        }
+    }
+
+    /**
      * Refreshes all credentials (OATH and Push).
      */
     fun refreshCredentials() {
@@ -509,12 +523,99 @@ class AuthenticatorViewModel(
     }
 
     /**
+     * Locks an account by applying the specified policy to all credentials in the account group.
+     * 
+     * @param accountGroup The account group to lock
+     * @param policyName The name of the locking policy to apply
+     */
+    fun lockAccountGroup(accountGroup: AccountGroup, policyName: String) {
+        viewModelScope.launch {
+            try {
+                // Lock all OATH credentials in the group
+                accountGroup.oathCredentials.forEach { credential ->
+                    val lockedCredential = credential.copy()
+                    lockedCredential.lockCredential(policyName)
+                    oathManager.updateCredential(lockedCredential).onFailure { e ->
+                        throw e
+                    }
+                }
+                
+                // Lock all Push credentials in the group
+                accountGroup.pushCredentials.forEach { credential ->
+                    val lockedCredential = credential.copy()
+                    lockedCredential.lockCredential(policyName)
+                    pushManager.updateCredential(lockedCredential).onFailure { e ->
+                        throw e
+                    }
+                }
+                
+                _uiState.update { 
+                    it.copy(message = getApplication<Application>().getString(R.string.test_screen_account_locked_success))
+                }
+            } catch (e: Exception) {
+                _uiState.update { 
+                    it.copy(error = e.message ?: "Failed to lock account") 
+                }
+            }
+        }
+    }
+
+    /**
+     * Unlocks an account by removing the lock from all credentials in the account group.
+     * 
+     * @param accountGroup The account group to unlock
+     */
+    fun unlockAccountGroup(accountGroup: AccountGroup) {
+        viewModelScope.launch {
+            try {
+                // Unlock all OATH credentials in the group
+                accountGroup.oathCredentials.forEach { credential ->
+                    val unlockedCredential = credential.copy()
+                    unlockedCredential.unlockCredential()
+                    oathManager.updateCredential(unlockedCredential).onFailure { e ->
+                        throw e
+                    }
+                }
+                
+                // Unlock all Push credentials in the group
+                accountGroup.pushCredentials.forEach { credential ->
+                    val unlockedCredential = credential.copy()
+                    unlockedCredential.unlockCredential()
+                    pushManager.updateCredential(unlockedCredential).onFailure { e ->
+                        throw e
+                    }
+                }
+                
+                // Generate codes immediately for unlocked OATH credentials
+                accountGroup.oathCredentials.forEach { credential ->
+                    generateCode(credential.id)
+                }
+                
+                _uiState.update { 
+                    it.copy(message = getApplication<Application>().getString(R.string.test_screen_account_unlocked_success))
+                }
+            } catch (e: Exception) {
+                _uiState.update { 
+                    it.copy(error = e.message ?: "Failed to unlock account") 
+                }
+            }
+        }
+    }
+
+    /**
      * Generates a code for a credential.
      */
     fun generateCode(credentialId: String) {
         viewModelScope.launch {
             oathManager.generateCode(credentialId).onFailure { e ->
-                _uiState.update { it.copy(error = e.message ?: "Failed to generate code") }
+                if (e is CredentialLockedException) {
+                    // Ignore locked credential errors for code generation
+                    diagnosticLogger.d("Credential $credentialId is locked, cannot generate code")
+                } else {
+                    _uiState.update {
+                        it.copy(error = e.message ?: "Failed to generate code")
+                    }
+                }
             }
         }
     }

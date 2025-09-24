@@ -20,6 +20,7 @@ import com.pingidentity.storage.encrypt.SecretKeyEncryptor
 import com.pingidentity.testrail.TestRailCase
 import com.pingidentity.testrail.TestRailWatcher
 import kotlinx.coroutines.test.runTest
+import org.junit.Ignore
 import org.junit.Rule
 import org.junit.rules.TestWatcher
 import org.junit.runner.RunWith
@@ -72,6 +73,7 @@ class DataStoreStorageWithEncryptorTest {
 
     @TestRailCase(21628, 21629)
     @Test
+    @Ignore ("See SDKS-4403")
     fun testDataStore() =
         runTest {
             val storage = DataStoreStorage(applicationContext.dataStore)

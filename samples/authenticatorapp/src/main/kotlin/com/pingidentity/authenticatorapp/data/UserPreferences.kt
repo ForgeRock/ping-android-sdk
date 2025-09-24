@@ -16,6 +16,15 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.withContext
 
 /**
+ * Theme modes for the app
+ */
+enum class ThemeMode {
+    LIGHT,
+    DARK,
+    SYSTEM
+}
+
+/**
  * Manages user preferences for the Authenticator app using SharedPreferences.
  */
 class UserPreferences(context: Context) {
@@ -39,6 +48,9 @@ class UserPreferences(context: Context) {
     
     private val _testModeFlow = MutableStateFlow(isTestModeEnabled())
     val testModeFlow: StateFlow<Boolean> = _testModeFlow
+    
+    private val _themeModeFlow = MutableStateFlow(getThemeMode())
+    val themeModeFlow: StateFlow<ThemeMode> = _themeModeFlow
 
     /**
      * Check if copy OTP on tap is enabled.
@@ -141,6 +153,31 @@ class UserPreferences(context: Context) {
     }
     
     /**
+     * Get the current theme mode.
+     * Defaults to SYSTEM if not set.
+     */
+    fun getThemeMode(): ThemeMode {
+        val themeName = prefs.getString(KEY_THEME_MODE, ThemeMode.SYSTEM.name) ?: ThemeMode.SYSTEM.name
+        return try {
+            ThemeMode.valueOf(themeName)
+        } catch (e: IllegalArgumentException) {
+            ThemeMode.SYSTEM
+        }
+    }
+    
+    /**
+     * Set the theme mode.
+     */
+    suspend fun setThemeMode(themeMode: ThemeMode) {
+        withContext(Dispatchers.IO) {
+            prefs.edit {
+                putString(KEY_THEME_MODE, themeMode.name)
+            }
+            _themeModeFlow.value = themeMode
+        }
+    }
+    
+    /**
      * Get the saved account order as a list of account keys (issuer-accountName).
      */
     fun getAccountOrder(): List<String> {
@@ -170,6 +207,7 @@ class UserPreferences(context: Context) {
         private const val KEY_COMBINE_ACCOUNTS = "combine_accounts"
         private const val KEY_DIAGNOSTIC_LOGGING = "diagnostic_logging"
         private const val KEY_TEST_MODE = "test_mode"
+        private const val KEY_THEME_MODE = "theme_mode"
         private const val KEY_ACCOUNT_ORDER = "account_order"
         private const val ACCOUNT_ORDER_SEPARATOR = "|||"
     }

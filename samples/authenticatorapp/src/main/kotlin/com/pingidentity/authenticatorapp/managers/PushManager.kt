@@ -22,7 +22,6 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import com.pingidentity.mfa.push.PushClient
 import com.pingidentity.mfa.push.PushCredential
-import com.pingidentity.mfa.push.PushMfaClient
 import com.pingidentity.mfa.push.PushNotification
 
 /**
@@ -33,7 +32,7 @@ import com.pingidentity.mfa.push.PushNotification
  * @param diagnosticLogger DiagnosticLogger for logging
  */
 class PushManager(
-    private var pushClient: PushMfaClient? = null,
+    private var pushClient: PushClient? = null,
     private val diagnosticLogger: DiagnosticLogger
 ) {
     
@@ -64,7 +63,7 @@ class PushManager(
     /**
      * Sets the Push client instance.
      */
-    fun setClient(client: PushMfaClient) {
+    fun setClient(client: PushClient) {
         this.pushClient = client
     }
 

@@ -37,13 +37,13 @@ Add the dependencies for the MFA modules you need in your app's `build.gradle` o
 
 ```kotlin
 // For OATH (TOTP/HOTP) support
-implementation("com.pingidentity.android:mfa:oath:1.0.0")
+implementation("com.pingidentity.android:mfa:oath:<version>")
 
 // For Push notification support
-implementation("com.pingidentity.android:mfa:push:1.0.0")
+implementation("com.pingidentity.android:mfa:push:<version>")
 
 // For FIDO2 (WebAuthn) support
-implementation("com.pingidentity.android:mfa:fido2:1.0.0")
+implementation("com.pingidentity.android:mfa:fido2:<version>")
 ```
 
 ## Architecture Overview

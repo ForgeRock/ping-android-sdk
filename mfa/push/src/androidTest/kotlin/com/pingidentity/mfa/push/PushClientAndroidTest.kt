@@ -62,7 +62,7 @@ class PushClientAndroidTest {
 
     private suspend fun createTestClient(
         withCustomHandlers: Boolean? = false
-    ): PushMfaClient {
+    ): PushClient {
         val testStorage = SQLPushStorage {
             context = appContext
             passphraseProvider = NonePassphraseProvider()

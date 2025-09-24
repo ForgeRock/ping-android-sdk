@@ -34,7 +34,7 @@ class OathCredentialTest {
     private val testAccountName = "testuser@example.com"
 
     @Test
-    fun testCreateOathCredential() {
+    fun `test create OATH credential`() {
         val credential = OathCredential(
             issuer = testIssuer,
             displayIssuer = testIssuer,
@@ -70,7 +70,7 @@ class OathCredentialTest {
     }
 
     @Test
-    fun testCreateOathCredentialWithAllParameters() {
+    fun `test create OATH credential with all parameters`() {
         val testId = UUID.randomUUID().toString()
         val testUserId = "user123"
         val testResourceId = "resource456"
@@ -128,7 +128,7 @@ class OathCredentialTest {
     }
 
     @Test
-    fun testFromUri_TOTP() = runTest {
+    fun `test from URI TOTP`() = runTest {
         val uri = "otpauth://totp/Test%20Issuer:testuser@example.com?secret=JBSWY3DPEHPK3PXP&issuer=Test%20Issuer&algorithm=SHA1&digits=6&period=30"
         val credential = OathCredential.fromUri(uri)
 
@@ -146,7 +146,7 @@ class OathCredentialTest {
     }
 
     @Test
-    fun testFromUri_HOTP() = runTest {
+    fun `test from URI HOTP`() = runTest {
         val uri = "otpauth://hotp/Test%20Issuer:testuser@example.com?secret=JBSWY3DPEHPK3PXP&issuer=Test%20Issuer&algorithm=SHA1&digits=6&counter=10"
         val credential = OathCredential.fromUri(uri)
 
@@ -164,12 +164,12 @@ class OathCredentialTest {
     }
 
     @Test(expected = IllegalArgumentException::class)
-    fun testFromUri_InvalidScheme() = runTest {
+    fun `test from URI with invalid scheme`() = runTest {
         OathCredential.fromUri("invalid://totp/Test%20Issuer:testuser@example.com?secret=JBSWY3DPEHPK3PXP")
     }
 
     @Test
-    fun testToUri_TOTP() = runTest {
+    fun `test to URI TOTP`() = runTest {
         val credential = OathCredential(
             issuer = testIssuer,
             displayIssuer = testIssuer,
@@ -189,7 +189,7 @@ class OathCredentialTest {
     }
 
     @Test
-    fun testToUri_HOTP() = runTest {
+    fun `test to URI HOTP`() = runTest {
         val credential = OathCredential(
             issuer = testIssuer,
             displayIssuer = testIssuer,
@@ -212,7 +212,7 @@ class OathCredentialTest {
     }
 
     @Test
-    fun testToJson() {
+    fun `test to JSON`() {
         val credential = OathCredential(
             id = "test-id-123",
             userId = "user123",
@@ -254,7 +254,7 @@ class OathCredentialTest {
     }
 
     @Test
-    fun testFromJson() {
+    fun `test from JSON`() {
         val jsonString = """
             {
                 "id": "test-id-123",
@@ -299,7 +299,7 @@ class OathCredentialTest {
     }
 
     @Test
-    fun testJsonSerialization() {
+    fun `test JSON serialization`() {
         val originalCredential = OathCredential(
             id = "test-id-123",
             userId = "user123",
@@ -332,7 +332,7 @@ class OathCredentialTest {
     }
 
     @Test
-    fun testToString() {
+    fun `test to string`() {
         val credential = OathCredential(
             id = "test-id-123",
             issuer = testIssuer,

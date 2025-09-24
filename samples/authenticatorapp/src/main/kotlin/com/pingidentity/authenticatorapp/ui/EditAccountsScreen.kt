@@ -145,19 +145,27 @@ fun EditAccountsScreen(
                         EditableAccountItem(
                             accountGroup = accountGroup,
                             onDeleteClick = { 
-                                accountToDelete = accountGroup
-                                // Determine what types of credentials this account has
-                                val hasOath = accountGroup.oathCredentials.isNotEmpty()
-                                val hasPush = accountGroup.pushCredentials.isNotEmpty()
-                                deleteType = if (hasOath && hasPush) {
-                                    null // Will show selection dialog
-                                } else if (hasOath) {
-                                    DeleteType.OATH_ONLY
-                                } else {
-                                    DeleteType.PUSH_ONLY
+                                // Only allow deletion if account is not locked
+                                if (!accountGroup.isLocked) {
+                                    accountToDelete = accountGroup
+                                    // Determine what types of credentials this account has
+                                    val hasOath = accountGroup.oathCredentials.isNotEmpty()
+                                    val hasPush = accountGroup.pushCredentials.isNotEmpty()
+                                    deleteType = if (hasOath && hasPush) {
+                                        null // Will show selection dialog
+                                    } else if (hasOath) {
+                                        DeleteType.OATH_ONLY
+                                    } else {
+                                        DeleteType.PUSH_ONLY
+                                    }
                                 }
                             },
-                            onEditClick = { accountToEdit = accountGroup },
+                            onEditClick = { 
+                                // Only allow editing if account is not locked
+                                if (!accountGroup.isLocked) {
+                                    accountToEdit = accountGroup
+                                }
+                            },
                             onMoveUp = {
                                 val newList = uiState.accountGroups.toMutableList()
                                 val currentIndex = newList.indexOf(accountGroup)

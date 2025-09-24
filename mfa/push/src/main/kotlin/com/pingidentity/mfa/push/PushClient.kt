@@ -9,7 +9,9 @@ package com.pingidentity.mfa.push
 
 import com.google.firebase.messaging.RemoteMessage
 import com.pingidentity.mfa.commons.BaseMfaClient
+import com.pingidentity.mfa.commons.MfaClient
 import com.pingidentity.mfa.commons.exception.MfaInitializationException
+import com.pingidentity.mfa.commons.policy.MfaPolicyEvaluator
 import com.pingidentity.mfa.push.storage.PushStorage
 import com.pingidentity.mfa.push.storage.SQLPushStorage
 import com.pingidentity.storage.sqlite.passphrase.KeyStorePassphraseProvider
@@ -28,7 +30,7 @@ import kotlin.coroutines.coroutineContext
  */
 class PushClient internal constructor(
     private val configuration: PushConfiguration,
-) : BaseMfaClient(configuration, configuration.storage ?: defaultStorage(configuration)), PushMfaClient {
+) : BaseMfaClient(configuration, configuration.storage ?: defaultStorage(configuration)), MfaClient {
 
     // The storage used for persisting push credentials and notifications
     private lateinit var pushStorage: PushStorage
@@ -60,7 +62,7 @@ class PushClient internal constructor(
          * }
          * ```
          */
-        suspend operator fun invoke(block: PushConfiguration.() -> Unit = {}): PushMfaClient {
+        suspend operator fun invoke(block: PushConfiguration.() -> Unit = {}): PushClient {
             // Create configuration
             val configuration = PushConfiguration(block)
             configuration.storage = configuration.storage ?: defaultStorage(configuration)
@@ -107,8 +109,13 @@ class PushClient internal constructor(
             // Initialize the HttpClient first
             super.initHttp(config.timeoutMs)
             
-            // Create the Push service and set up with the HttpClient
-            pushService = PushService(pushStorage, config as PushConfiguration, httpClient)
+            // Create the Push service with policy evaluator
+            pushService = PushService(
+                pushStorage, 
+                config as PushConfiguration, 
+                httpClient,
+                (config as PushConfiguration).policyEvaluator ?: MfaPolicyEvaluator()
+            )
 
             // Initialize the notification cleanup manager
             cleanupManager = NotificationCleanupManager(
@@ -127,12 +134,11 @@ class PushClient internal constructor(
 
     /**
      * Creates a Push Credential from a standard pushauth:// URI (typically from a QR code).
-     * This method is used by PingAM to register devices for push notifications.
      *
      * @param uri The URI string in the format pushauth://push/issuer:accountName?params...
      * @return A Result containing the created PushCredential or an Exception in case of failure.
      */
-    override suspend fun addCredentialFromUri(uri: String): Result<PushCredential> {
+    suspend fun addCredentialFromUri(uri: String): Result<PushCredential> {
         return try {
             checkInitialized()
             Result.success(pushService.addCredentialFromUri(uri))
@@ -149,7 +155,7 @@ class PushClient internal constructor(
      * @param credential The PushCredential to save.
      * @return A Result containing the saved PushCredential or an Exception in case of failure.
      */
-    override suspend fun saveCredential(credential: PushCredential): Result<PushCredential> {
+    suspend fun saveCredential(credential: PushCredential): Result<PushCredential> {
         return try {
             checkInitialized()
             Result.success(pushService.addCredential(credential))
@@ -165,7 +171,7 @@ class PushClient internal constructor(
      *
      * @return A Result containing a list of all PushCredentials or an Exception in case of failure.
      */
-    override suspend fun getCredentials(): Result<List<PushCredential>> {
+    suspend fun getCredentials(): Result<List<PushCredential>> {
         return try {
             checkInitialized()
             Result.success(pushService.getCredentials())
@@ -182,7 +188,7 @@ class PushClient internal constructor(
      * @param credentialId The ID of the credential to get.
      * @return A Result containing the PushCredential (or null if not found) or an Exception in case of failure.
      */
-    override suspend fun getCredential(credentialId: String): Result<PushCredential?> {
+    suspend fun getCredential(credentialId: String): Result<PushCredential?> {
         return try {
             checkInitialized()
             Result.success(pushService.getCredential(credentialId))
@@ -200,7 +206,7 @@ class PushClient internal constructor(
      * @param credentialId The ID of the credential to remove.
      * @return A Result containing a Boolean indicating success or an Exception in case of failure.
      */
-    override suspend fun deleteCredential(credentialId: String): Result<Boolean> {
+    suspend fun deleteCredential(credentialId: String): Result<Boolean> {
         return try {
             checkInitialized()
             Result.success(pushService.removeCredential(credentialId))
@@ -222,7 +228,7 @@ class PushClient internal constructor(
      *                    When null, updates the token globally for all credentials.
      * @return A Result containing a Boolean indicating success or an Exception in case of failure.
      */
-    override suspend fun setDeviceToken(deviceToken: String, credentialId: String?): Result<Boolean> {
+    suspend fun setDeviceToken(deviceToken: String, credentialId: String? = null): Result<Boolean> {
         return try {
             checkInitialized()
             val success = pushService.setDeviceToken(deviceToken, credentialId)
@@ -265,7 +271,7 @@ class PushClient internal constructor(
      * @param messageData The message data as a Map of Any to String, as typically received from Firebase.
      * @return A Result containing the PushNotification object (or null if message is invalid) or an Exception in case of failure.
      */
-    override suspend fun processNotification(messageData: Map<String, Any>): Result<PushNotification?> {
+    suspend fun processNotification(messageData: Map<String, Any>): Result<PushNotification?> {
         return try {
             checkInitialized()
             val notification = pushService.processNotification(messageData)
@@ -290,7 +296,7 @@ class PushClient internal constructor(
      * @param message The message data as a String.
      * @return A Result containing the PushNotification object (or null if message is invalid) or an Exception in case of failure.
      */
-    override suspend fun processNotification(message: String): Result<PushNotification?> {
+    suspend fun processNotification(message: String): Result<PushNotification?> {
         return try {
             checkInitialized()
             val notification = pushService.processNotification(message)
@@ -315,7 +321,7 @@ class PushClient internal constructor(
      * @param remoteMessage The Firebase RemoteMessage object.
      * @return A Result containing the PushNotification object (or null if message is invalid) or an Exception in case of failure.
      */
-    override suspend fun processNotification(remoteMessage: RemoteMessage): Result<PushNotification?> {
+    suspend fun processNotification(remoteMessage: RemoteMessage): Result<PushNotification?> {
         return processNotification(remoteMessage.data)
     }
 
@@ -326,7 +332,7 @@ class PushClient internal constructor(
      * @param credentialId Optional ID of a specific credential to clean up notifications for.
      * @return A Result containing the number of notifications removed during cleanup or an Exception in case of failure.
      */
-    override suspend fun cleanupNotifications(credentialId: String?): Result<Int> {
+    suspend fun cleanupNotifications(credentialId: String? = null): Result<Int> {
         return try {
             checkInitialized()
             val count = cleanupManager.runCleanup(credentialId)
@@ -374,7 +380,7 @@ class PushClient internal constructor(
      * @param notificationId The ID of the notification to approve.
      * @return A Result containing a Boolean indicating success or an Exception in case of failure.
      */
-    override suspend fun approveNotification(notificationId: String): Result<Boolean> {
+    suspend fun approveNotification(notificationId: String): Result<Boolean> {
         return try {
             checkInitialized()
             Result.success(pushService.approveNotification(notificationId, emptyMap()))
@@ -394,7 +400,7 @@ class PushClient internal constructor(
      * @param challengeResponse The challenge response provided by the user.
      * @return A Result containing a Boolean indicating success or an Exception in case of failure.
      */
-    override suspend fun approveChallengeNotification(notificationId: String, challengeResponse: String): Result<Boolean> {
+    suspend fun approveChallengeNotification(notificationId: String, challengeResponse: String): Result<Boolean> {
         return try {
             checkInitialized()
             val params = mapOf("challengeResponse" to challengeResponse)
@@ -418,7 +424,7 @@ class PushClient internal constructor(
      * @param authenticationMethod The authentication method used as String (e.g., "face", "fingerprint").
      * @return A Result containing a Boolean indicating success or an Exception in case of failure.
      */
-    override suspend fun approveBiometricNotification(notificationId: String, authenticationMethod: String): Result<Boolean> {
+    suspend fun approveBiometricNotification(notificationId: String, authenticationMethod: String): Result<Boolean> {
         return try {
             checkInitialized()
             val params = mapOf("authenticationMethod" to authenticationMethod)
@@ -437,7 +443,7 @@ class PushClient internal constructor(
      * @param notificationId The ID of the notification to deny.
      * @return A Result containing a Boolean indicating success or an Exception in case of failure.
      */
-    override suspend fun denyNotification(notificationId: String): Result<Boolean> {
+    suspend fun denyNotification(notificationId: String): Result<Boolean> {
         return try {
             checkInitialized()
             Result.success(pushService.denyNotification(notificationId, emptyMap()))
@@ -454,7 +460,7 @@ class PushClient internal constructor(
      *
      * @return A Result containing a list of all pending PushNotifications or an Exception in case of failure.
      */
-    override suspend fun getPendingNotifications(): Result<List<PushNotification>> {
+    suspend fun getPendingNotifications(): Result<List<PushNotification>> {
         return try {
             checkInitialized()
             Result.success(pushService.getPendingNotifications())
@@ -471,7 +477,7 @@ class PushClient internal constructor(
      *
      * @return A Result containing a list of all PushNotifications or an Exception in case of failure.
      */
-    override suspend fun getAllNotifications(): Result<List<PushNotification>> {
+    suspend fun getAllNotifications(): Result<List<PushNotification>> {
         return try {
             checkInitialized()
             Result.success(pushService.getAllNotifications())
@@ -488,7 +494,7 @@ class PushClient internal constructor(
      * @param notificationId The ID of the notification to get.
      * @return A Result containing the PushNotification (or null if not found) or an Exception in case of failure.
      */
-    override suspend fun getNotification(notificationId: String): Result<PushNotification?> {
+    suspend fun getNotification(notificationId: String): Result<PushNotification?> {
         return try {
             checkInitialized()
             Result.success(pushService.getNotification(notificationId))

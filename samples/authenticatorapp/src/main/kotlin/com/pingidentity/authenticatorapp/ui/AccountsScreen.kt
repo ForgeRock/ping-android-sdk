@@ -56,6 +56,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -75,7 +76,11 @@ import com.pingidentity.authenticatorapp.ui.components.ErrorAlertDialog
 import com.pingidentity.authenticatorapp.ui.components.LoadingIndicator
 import com.pingidentity.mfa.oath.OathType
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import java.net.URLEncoder
+
+private const val TOTP_REFRESH_INTERVAL_MS = 30_000L
 
 /**
  * Screen for displaying a list of accounts and push notifications.
@@ -102,28 +107,86 @@ fun AccountsScreen(
     val copyOtpEnabled by viewModel.copyOtp.collectAsState()
     val tapToRevealEnabled by viewModel.tapToReveal.collectAsState()
     
-    
-    
-    // Auto-refresh TOTP codes
+    // State for triggering progress bar updates
+    var currentTimeMillis by remember { mutableLongStateOf(System.currentTimeMillis()) }
+
+    // Initial generation of codes (HOTP always, TOTP when missing)
     LaunchedEffect(uiState.oathCredentials) {
-        var loop = 1
-        while (true) {
-            // Only refresh codes for TOTP credentials
-            uiState.oathCredentials.forEach { credential ->
-                if (credential.oathType == OathType.TOTP) {
-                    viewModel.generateCode(credential.id)
-                } else if (credential.oathType == OathType.HOTP && loop == 1) {
+        uiState.oathCredentials.forEach { credential ->
+            when (credential.oathType) {
+                OathType.HOTP -> {
+                    // Always generate HOTP codes when credentials change
                     viewModel.generateCode(credential.id)
                 }
+                OathType.TOTP -> {
+                    // Generate TOTP codes if not locked and no code exists yet
+                    if (!credential.isLocked && uiState.generatedCodes[credential.id] == null) {
+                        viewModel.generateCode(credential.id)
+                    }
+                }
             }
-            // Increment loop counter
-            loop++
-
-            // Wait for 1 second before refreshing again
-            delay(1000)
         }
     }
-    
+
+    // Auto-refresh TOTP codes with intelligent delay
+    LaunchedEffect(uiState.oathCredentials) {
+        while (isActive) {
+            // Get the current list of TOTP credentials
+            val totpCredentials = uiState.oathCredentials.filter { it.oathType == OathType.TOTP }
+
+            // If no TOTP credentials, just delay for a default longer period and check again.
+            if (totpCredentials.isEmpty()) {
+                delay(TOTP_REFRESH_INTERVAL_MS)
+                continue
+            }
+
+            val currentTimeSeconds = System.currentTimeMillis() / 1000L
+
+            // Calculate the minimum time remaining before any TOTP code expires.
+            // This is period - (currentTimeSeconds % period) for each credential.
+            val minRemainingTimeMillis = totpCredentials.mapNotNull { credential ->
+                val periodSeconds = credential.period.toLong()
+                // Ensure period is valid for TOTP (e.g., greater than 0)
+                if (periodSeconds <= 0) {
+                    return@mapNotNull null
+                }
+
+                // Calculate time elapsed in the current code's validity window
+                val timeIntoCurrentPeriodSlot = currentTimeSeconds % periodSeconds
+                // Calculate time remaining until this specific code expires
+                val remainingTimeInSlotSeconds = periodSeconds - timeIntoCurrentPeriodSlot
+
+                remainingTimeInSlotSeconds * 1000L // Convert to milliseconds
+            }.minOrNull() // Find the smallest remaining time among all credentials
+
+            // Determine the actual delay duration.
+            // Use a fallback if calculation yields null (e.g., no valid periods found),
+            // and ensure a minimum delay to prevent extremely rapid loops.
+            val delayDuration = maxOf(1000L, minRemainingTimeMillis ?: TOTP_REFRESH_INTERVAL_MS)
+
+            delay(delayDuration) // Wait until the soonest OTP is expected to change
+
+            // After the delay, at least one code has likely expired or is just about to.
+            // It's time to regenerate/refresh codes for all active TOTP credentials.
+            // Re-filter the credentials from uiState in case the list changed during the delay.
+            // (Though if uiState.oathCredentials itself changes, LaunchedEffect will restart).
+            val credentialsToRefresh = uiState.oathCredentials.filter { it.oathType == OathType.TOTP }
+            credentialsToRefresh.forEach { credential ->
+                // Check isActive again in case the coroutine was cancelled during the delay or processing
+                if (!isActive) return@forEach
+                viewModel.generateCode(credential.id)
+            }
+        }
+    }
+
+    // Update progress bars every second for smooth countdown without regenerating codes
+    LaunchedEffect(Unit) {
+        while (isActive) {
+            delay(1000)
+            currentTimeMillis = System.currentTimeMillis() // Trigger recomposition
+        }
+    }
+
     // Show fab menu state
     var showFabMenu by remember { mutableStateOf(false) }
     
@@ -414,8 +477,8 @@ fun AccountsScreen(
                             onItemClick = { 
                                 // Pass the account group issuer and account name for navigation
                                 // This allows the detail screen to display all credentials for this account
-                                val encodedIssuer = java.net.URLEncoder.encode(accountGroup.issuer, "UTF-8")
-                                val encodedAccountName = java.net.URLEncoder.encode(accountGroup.accountName, "UTF-8")
+                                val encodedIssuer = URLEncoder.encode(accountGroup.issuer, "UTF-8")
+                                val encodedAccountName = URLEncoder.encode(accountGroup.accountName, "UTF-8")
                                 onAccountClick("$encodedIssuer/$encodedAccountName")
                             },
                             onCopyToClipboard = { text, label ->
@@ -423,6 +486,7 @@ fun AccountsScreen(
                             },
                             copyOtpEnabled = copyOtpEnabled,
                             tapToRevealEnabled = tapToRevealEnabled,
+                            currentTimeMillis = currentTimeMillis,
                             modifier = Modifier.animateItem(
                                 fadeInSpec = null, fadeOutSpec = null, placementSpec = spring(
                                     stiffness = Spring.StiffnessMediumLow,
