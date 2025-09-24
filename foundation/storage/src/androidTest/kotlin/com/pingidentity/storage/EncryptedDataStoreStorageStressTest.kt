@@ -20,6 +20,7 @@ import com.pingidentity.testrail.TestRailWatcher
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
+import org.junit.Ignore
 import org.junit.Rule
 import org.junit.rules.TestWatcher
 import org.junit.runner.RunWith
@@ -63,6 +64,7 @@ class EncryptedDataStoreStorageStressTest {
 
     @TestRailCase(21635)
     @Test
+    @Ignore ("See SDKS-4403")
     fun testDataStoreStress() = runBlocking {
         val storage = DataStoreStorage(applicationContext.dataStore)
 

@@ -14,6 +14,7 @@ import com.pingidentity.utils.Result
 import com.pingidentity.davinci.collector.FlowCollector
 import com.pingidentity.davinci.collector.LabelCollector
 import com.pingidentity.davinci.collector.PasswordCollector
+import com.pingidentity.davinci.collector.PhoneNumberCollector
 import com.pingidentity.davinci.collector.SingleSelectCollector
 import com.pingidentity.davinci.collector.SubmitCollector
 import com.pingidentity.davinci.collector.TextCollector
@@ -22,7 +23,6 @@ import com.pingidentity.davinci.module.description
 import com.pingidentity.davinci.module.name
 import com.pingidentity.davinci.plugin.collectors
 import com.pingidentity.logger.Logger
-import com.pingidentity.logger.Logger.Companion.logger
 import com.pingidentity.logger.STANDARD
 import com.pingidentity.oidc.module.user
 import com.pingidentity.orchestrate.ContinueNode
@@ -30,7 +30,9 @@ import com.pingidentity.orchestrate.ErrorNode
 import com.pingidentity.orchestrate.SuccessNode
 import com.pingidentity.testrail.TestRailCase
 import com.pingidentity.testrail.TestRailWatcher
+import junit.framework.TestCase.assertFalse
 import kotlinx.coroutines.test.runTest
+import org.junit.Ignore
 import org.junit.Rule
 import org.junit.rules.TestWatcher
 import kotlin.test.AfterTest
@@ -160,6 +162,7 @@ class FormMFADevicesTest {
 
     @TestRailCase(29493)
     @Test
+    @Ignore("Flaky test - some times it takes a lot of time for registered devices to appear in PingOne")
     fun verifyDeviceAuthenticationForm() = runTest(timeout = 60.seconds) {
         // Register an email MFA device
         registerEmailMFA(email1)
@@ -404,11 +407,11 @@ class FormMFADevicesTest {
         assertTrue(node.collectors.size == 4)
         assertTrue(node.collectors[0] is LabelCollector)
         assertTrue(node.collectors[1] is SingleSelectCollector)
-        assertTrue(node.collectors[2] is TextCollector)
+        assertTrue(node.collectors[2] is PhoneNumberCollector)
         assertTrue(node.collectors[3] is SubmitCollector)
 
-        // We have a label collector with the text "Enter Phone Number"
-        assertEquals("Enter Phone Number", (node.collectors[0] as LabelCollector).content)
+        // We have a label collector with the text "Phone Number Collector"
+        assertEquals("Phone Number Collector", (node.collectors[0] as LabelCollector).content)
 
         // Followed by a Dropdown collector with country codes
         val dropdown = node.collectors[1] as SingleSelectCollector
@@ -417,22 +420,27 @@ class FormMFADevicesTest {
         assertEquals("Country Code", dropdown.label)
         assertEquals(true, dropdown.required)
         assertEquals(4, dropdown.options.size)
-        assertEquals("India (91)", dropdown.options[0].label)
-        assertEquals("United States (1)", dropdown.options[1].label)
-        assertEquals("United Kingdom (44)", dropdown.options[2].label)
-        assertEquals("Bulgaria (359)", dropdown.options[3].label)
-        assertEquals("91", dropdown.options[0].value)
-        assertEquals("1", dropdown.options[1].value)
-        assertEquals("44", dropdown.options[2].value)
-        assertEquals("359", dropdown.options[3].value)
+        assertEquals("United States", dropdown.options[0].label)
+        assertEquals("India", dropdown.options[1].label)
+        assertEquals("Brazil", dropdown.options[2].label)
+        assertEquals("Canada", dropdown.options[3].label)
+        assertEquals("US", dropdown.options[0].value)
+        assertEquals("IN", dropdown.options[1].value)
+        assertEquals("BR", dropdown.options[2].value)
+        assertEquals("CA", dropdown.options[3].value)
 
-        // Then a text collector for the phone number
-        val phoneNumberCollector = node.collectors[2] as TextCollector
+        // Then a PhoneNumberCollector
+        val phoneNumberCollector = node.collectors[2] as PhoneNumberCollector
         assertEquals("Enter Phone Number", phoneNumberCollector.label)
+        assertEquals("PHONE_NUMBER", phoneNumberCollector.type)
+        assertEquals("phone-input-field", phoneNumberCollector.key)
+        assertTrue(phoneNumberCollector.required)
+        assertFalse(phoneNumberCollector.validatePhoneNumber)
+        assertEquals("IN", phoneNumberCollector.defaultCountryCode)
 
         // Select a country code and enter a valid phone number:...
-        dropdown.value = "359"  // Select Bulgaria...
-        phoneNumberCollector.value = phone
+        phoneNumberCollector.countryCode = "CA"  // Select Canada...
+        phoneNumberCollector.phoneNumber = "7783177183" // Enter a valid phone number...
 
         // Submit the form
         (node.collectors[3] as? SubmitCollector)?.value = "click"
