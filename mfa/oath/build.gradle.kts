@@ -7,7 +7,7 @@
 
 plugins {
     id("com.pingidentity.convention.android.library")
-    id("com.pingidentity.convention.centralPublish")
+//    id("com.pingidentity.convention.centralPublish") // we are not publishing this module for now
     id("com.pingidentity.convention.jacoco")
     alias(libs.plugins.androidLibrary)
     alias(libs.plugins.kotlinAndroid)
