@@ -13,6 +13,7 @@ import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
 import java.io.File
 import kotlin.test.BeforeTest
+import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -41,6 +42,7 @@ class FileDetectorTest {
         assertEquals(0.0, result)
     }
 
+    @Ignore("Needs to be run on a real device or emulator without busybox installed")
     @Test
     fun `BusyBoxProgramFileDetector detects busybox file presence`(): Unit = runTest {
         val busyBoxDetector = BusyBoxProgramFileDetector()

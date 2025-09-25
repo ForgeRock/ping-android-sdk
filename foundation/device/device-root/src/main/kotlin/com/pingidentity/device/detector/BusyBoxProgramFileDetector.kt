@@ -68,7 +68,6 @@ class BusyBoxProgramFileDetector : FileDetector() {
     companion object {
         /**
          * Detector name key used for identification and logging purposes.
-         * Derived from the class simple name for consistency.
          */
         private const val BUSYBOX_PROGRAM_FILE_DETECTOR_NAME = "busybox"
     }
