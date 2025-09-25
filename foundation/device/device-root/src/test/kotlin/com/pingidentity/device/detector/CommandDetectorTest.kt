@@ -96,6 +96,13 @@ class CommandDetectorTest {
         assertEquals(0.0, result)
     }
 
+    /**
+     * Tests that SuCommandDetector properly detects the presence of su command.
+     *
+     * This test specifically validates the SuCommandDetector implementation which checks
+     * for the 'su' (switch user) command that is commonly used for gaining root access.
+     * When the su command is available and executable, it indicates potential device rooting.
+     */
     @Test
     fun `SuCommandDetector detects su command` () = runTest {
         every { mockRuntime.exec(any<Array<String>>()) } returns mockk()
