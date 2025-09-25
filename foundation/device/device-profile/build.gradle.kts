@@ -33,12 +33,12 @@ dependencies {
 
     // Make it optional for developer
     compileOnly(libs.play.services.location)
-    compileOnly(libs.kotlin.playservices.coroutine)
+    compileOnly(libs.kotlinx.coroutines.play.services)
 
     testImplementation(libs.kotlin.test)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.core.ktx)
     testImplementation(libs.mockk)
     testImplementation(libs.play.services.location)
-    testImplementation(libs.kotlin.playservices.coroutine)
+    testImplementation(libs.kotlinx.coroutines.play.services)
 }

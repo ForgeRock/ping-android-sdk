@@ -88,7 +88,7 @@ dependencies {
 
     // For fetching Device location
     implementation(libs.play.services.location)
-    implementation(libs.kotlin.playservices.coroutine)
+    implementation(libs.kotlinx.coroutines.play.services)
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
