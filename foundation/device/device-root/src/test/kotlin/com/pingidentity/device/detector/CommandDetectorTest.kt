@@ -95,4 +95,14 @@ class CommandDetectorTest {
 
         assertEquals(0.0, result)
     }
+
+    @Test
+    fun `SuCommandDetector detects su command` () = runTest {
+        every { mockRuntime.exec(any<Array<String>>()) } returns mockk()
+
+        val suDetector = SuCommandDetector()
+        val result = suDetector.analyze(context)
+
+        assertEquals(1.0, result)
+    }
 }

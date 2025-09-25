@@ -39,10 +39,10 @@ import android.os.Build
  * @see TamperDetector
  */
 class BuildTagsDetector(
-    private val androidBuildProvider: AndroidBuildProvider = DefaultAndroidBuildProvider()
+    private val androidBuildTagProvider: AndroidBuildTagProvider = DefaultAndroidBuildTagProvider()
 ) : TamperDetector {
     override suspend fun analyze(context: Context): Double {
-        val buildTags = androidBuildProvider.getBuildTags()
+        val buildTags = androidBuildTagProvider.getBuildTags()
         return if (buildTags != null && buildTags.contains(TEST_KEYS)) {
             1.0
         } else {
@@ -60,10 +60,10 @@ class BuildTagsDetector(
  */
 internal const val TEST_KEYS = "test-keys"
 
-interface AndroidBuildProvider {
+interface AndroidBuildTagProvider {
     fun getBuildTags(): String? = null
 }
 
-class DefaultAndroidBuildProvider : AndroidBuildProvider {
+class DefaultAndroidBuildTagProvider : AndroidBuildTagProvider {
     override fun getBuildTags(): String? = Build.TAGS
 }

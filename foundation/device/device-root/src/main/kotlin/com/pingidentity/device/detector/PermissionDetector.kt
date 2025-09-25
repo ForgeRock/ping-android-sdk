@@ -51,7 +51,9 @@ import java.util.Scanner
  * @since 1.0
  * @see TamperDetector
  */
-class PermissionDetector : TamperDetector {
+class PermissionDetector(
+    private val androidBuildSdkProvider: AndroidBuildSdkProvider = DefaultAndroidBuildSdkProvider(),
+) : TamperDetector {
 
     /**
      * Determines if the device has been tampered with by checking filesystem mount permissions.
@@ -72,7 +74,7 @@ class PermissionDetector : TamperDetector {
      *         - `0.0` indicates all critical directories are properly read-only
      */
     override suspend fun analyze(context: Context): Double {
-        val sdkVersion = Build.VERSION.SDK_INT
+        val sdkVersion = androidBuildSdkProvider.getSdkVersion()
         for (line in mountReader()) {
             val args = line.split(" ")
             if (sdkVersion <= Build.VERSION_CODES.M && args.size < 4 ||
@@ -158,4 +160,46 @@ class PermissionDetector : TamperDetector {
             "/etc",
         )
     }
+}
+
+/**
+ * Provider interface for Android Build SDK version information.
+ *
+ * This interface abstracts access to the Android SDK version to enable testing
+ * and provide flexibility in determining the current Android version. Different
+ * implementations can return different SDK versions for testing various Android
+ * version-specific behaviors.
+ *
+ * The SDK version is used by [PermissionDetector] to handle different mount
+ * command output formats between Android versions.
+ *
+ * @since 1.0
+ */
+interface AndroidBuildSdkProvider {
+    /**
+     * Returns the Android SDK version.
+     *
+     * @return The SDK version as an integer. Default implementation returns
+     *         [Build.VERSION_CODES.M] (API level 23) for compatibility.
+     */
+    fun getSdkVersion(): Int = Build.VERSION_CODES.M
+}
+
+/**
+ * Default implementation of [AndroidBuildSdkProvider] that returns the actual device SDK version.
+ *
+ * This implementation provides access to the real Android SDK version of the current device
+ * by returning [Build.VERSION.SDK_INT]. This is the standard implementation used in
+ * production code.
+ *
+ * @since 1.0
+ * @see AndroidBuildSdkProvider
+ */
+class DefaultAndroidBuildSdkProvider : AndroidBuildSdkProvider {
+    /**
+     * Returns the actual Android SDK version of the current device.
+     *
+     * @return The current device's SDK version from [Build.VERSION.SDK_INT]
+     */
+    override fun getSdkVersion(): Int = Build.VERSION.SDK_INT
 }

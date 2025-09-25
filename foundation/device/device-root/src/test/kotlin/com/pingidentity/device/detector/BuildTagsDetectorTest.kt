@@ -17,8 +17,8 @@ import kotlin.test.assertEquals
 
 class BuildTagsDetectorTest {
     private val context: Context = mockk()
-    private val mockAndroidBuildProvider = mockk<AndroidBuildProvider>()
-    private val buildTagsDetector = BuildTagsDetector(mockAndroidBuildProvider)
+    private val mockAndroidBuildTagProvider = mockk<AndroidBuildTagProvider>()
+    private val buildTagsDetector = BuildTagsDetector(mockAndroidBuildTagProvider)
 
     @BeforeTest
     fun setup() {
@@ -28,7 +28,7 @@ class BuildTagsDetectorTest {
 
     @Test
     fun `BuildTags detector checks for test keys in build tags`() = runTest {
-        every { mockAndroidBuildProvider.getBuildTags() } returns TEST_KEYS
+        every { mockAndroidBuildTagProvider.getBuildTags() } returns TEST_KEYS
         val result = buildTagsDetector.analyze(context)
         assertEquals(1.0,result)
     }
