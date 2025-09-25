@@ -9,8 +9,6 @@ package com.pingidentity.storage
 
 import android.app.Application
 import android.content.Context
-import androidx.datastore.core.DataStore
-import androidx.datastore.dataStore
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.SmallTest
@@ -20,7 +18,6 @@ import com.pingidentity.storage.encrypt.SecretKeyEncryptor
 import com.pingidentity.testrail.TestRailCase
 import com.pingidentity.testrail.TestRailWatcher
 import kotlinx.coroutines.test.runTest
-import org.junit.Ignore
 import org.junit.Rule
 import org.junit.rules.TestWatcher
 import org.junit.runner.RunWith
@@ -29,9 +26,7 @@ import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
-import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -44,17 +39,20 @@ class DataStoreStorageWithEncryptorTest {
     @Rule
     val watcher: TestWatcher = TestRailWatcher
 
+    private lateinit var storage: Storage<Data>
+
     private val applicationContext: Context by lazy { ApplicationProvider.getApplicationContext<Application>() }
     private val encryptor = SecretKeyEncryptor {
         logger = Logger.CONSOLE
         keyAlias = DataStoreStorageWithEncryptorTest::class.java.simpleName
     }
-    private val Context.dataStore: DataStore<Data?> by dataStore(
-        this.javaClass.simpleName, EncryptedDataToJsonSerializer(encryptor)
-    )
 
     @BeforeTest
     fun setUp() = runTest {
+        storage = EncryptedDataStoreStorage {
+            fileName = DataStoreStorageWithEncryptorTest::class.java.simpleName
+            keyAlias = DataStoreStorageWithEncryptorTest::class.java.simpleName
+        }
         clear()
     }
 
@@ -65,7 +63,7 @@ class DataStoreStorageWithEncryptorTest {
         }
 
     private suspend fun clear() {
-        applicationContext.dataStore.updateData { null }
+        storage.delete()
         val keyStore = KeyStore.getInstance("AndroidKeyStore")
         keyStore.load(null)
         keyStore.deleteEntry(DataStoreStorageWithEncryptorTest::class.java.simpleName)
@@ -73,10 +71,8 @@ class DataStoreStorageWithEncryptorTest {
 
     @TestRailCase(21628, 21629)
     @Test
-    @Ignore ("See SDKS-4403")
     fun testDataStore() =
         runTest {
-            val storage = DataStoreStorage(applicationContext.dataStore)
             val v = storage.get()
             assertNull(v)
             storage.save(Data(1, "some data"))
