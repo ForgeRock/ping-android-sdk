@@ -18,6 +18,7 @@ import android.telephony.TelephonyManager
 import android.util.DisplayMetrics
 import android.view.Display
 import android.view.WindowManager
+import android.webkit.WebSettings
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
 import com.pingidentity.android.ContextProvider
@@ -84,6 +85,7 @@ class DeviceProfileCallbackTest {
     fun setup() {
         every { mockContext.applicationContext } returns mockContext
         ContextProvider.init(mockContext)
+        mockkStatic(WebSettings::class)
         setupJsonMock()
         setupCameraMocks()
         setupWindowManagerMocks()
@@ -103,6 +105,7 @@ class DeviceProfileCallbackTest {
         unmockkStatic("kotlinx.coroutines.tasks.TasksKt")
         unmockkStatic(LocationServices::class)
         unmockkStatic(KeyStore::class)
+        unmockkStatic(WebSettings::class)
     }
 
     /**
@@ -174,6 +177,7 @@ class DeviceProfileCallbackTest {
             metadataEnabled = true,
             locationEnabled = true,
         )
+        every { WebSettings.getDefaultUserAgent(mockContext) } returns "MockUserAgent/1.0"
         val callback = DeviceProfileCallback()
         callback.init(jsonObject)
         callback.collect {
@@ -189,7 +193,7 @@ class DeviceProfileCallbackTest {
             }
         }
         assertEquals(
-            "{\"identifier\":\"test-device-id\",\"metadata\":{\"dummyCollector\":{\"name\":\"testName\",\"value\":\"testValue\"}}}",
+            "{\"identifier\":\"test-device-id\",\"metadata\":{\"platform\":{\"device\":\"Device\",\"locale\":\"en_CA\",\"timeZone\":\"America/Vancouver\"},\"hardware\":{\"hardware\":\"HARDWARE\",\"manufacturer\":\"MANUFACTURER\",\"storage\":0,\"memory\":0,\"cpu\":16,\"display\":{\"width\":1080,\"height\":1920},\"camera\":{\"noOfCameras\":2}},\"network\":{\"connected\":true},\"telephony\":{\"networkCountryIso\":\"Canada\",\"carrierName\":\"Telus\"},\"bluetooth\":{\"supported\":false},\"browser\":{\"userAgent\":\"MockUserAgent/1.0\"},\"dummyCollector\":{\"name\":\"testName\",\"value\":\"testValue\"}}}",
             callback.payload()["input"]?.jsonArray?.get(0)?.jsonObject?.get("value")?.jsonPrimitive?.content
         )
     }

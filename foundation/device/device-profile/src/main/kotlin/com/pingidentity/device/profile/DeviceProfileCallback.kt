@@ -181,7 +181,7 @@ class DeviceProfileCallback : AbstractCallback(), JourneyAware {
      * @see DeviceProfileConfig
      * @see DeviceProfileCollector
      */
-    suspend fun collect(block: DeviceProfileConfig.() -> Unit = { DefaultDeviceCollector() }): Result<JsonObject> {
+    suspend fun collect(block: DeviceProfileConfig.() -> Unit = { }): Result<JsonObject> {
         val config = DeviceProfileConfig()
         config.metadata = metadata
         config.location = location
@@ -317,7 +317,7 @@ class DeviceProfileConfig {
      * Collectors are executed in the order they appear in this list, and their results
      * are combined into the final device profile.
      */
-    val collectors: MutableList<DeviceCollector<*>> = mutableListOf()
+    val collectors: MutableList<DeviceCollector<*>> = mutableListOf<DeviceCollector<*>>().apply(DefaultDeviceCollector())
 
     /**
      * DSL function for configuring the list of device collectors to be used during profile collection.

@@ -31,14 +31,10 @@ import com.pingidentity.device.profile.DeviceProfileCallback
 import com.pingidentity.device.profile.DeviceProfileConfig
 import com.pingidentity.device.profile.collector.BluetoothCollector
 import com.pingidentity.device.profile.collector.BrowserCollector
-import com.pingidentity.device.profile.collector.DeviceCollector
 import com.pingidentity.device.profile.collector.HardwareCollector
-import com.pingidentity.device.profile.collector.LocationCollector
 import com.pingidentity.device.profile.collector.NetworkCollector
 import com.pingidentity.device.profile.collector.PlatformCollector
 import com.pingidentity.device.profile.collector.TelephonyCollector
-import com.pingidentity.logger.Logger
-import com.pingidentity.logger.WARN
 import kotlinx.coroutines.launch
 
 /**
@@ -123,6 +119,7 @@ fun DeviceProfileCallback(
         scope.launch {
             deviceProfileCallback.collect {
                 collectors {
+                    clear()
                     add(PlatformCollector)
                     add(HardwareCollector())
                     add(NetworkCollector())
