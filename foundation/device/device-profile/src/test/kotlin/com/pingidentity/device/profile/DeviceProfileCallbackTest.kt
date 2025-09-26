@@ -189,11 +189,12 @@ class DeviceProfileCallbackTest {
             logger = Logger.WARN
 
             collectors {
+                clear()
                 add(DummyDeviceCollector())
             }
         }
         assertEquals(
-            "{\"identifier\":\"test-device-id\",\"metadata\":{\"platform\":{\"device\":\"Device\",\"locale\":\"en_CA\",\"timeZone\":\"America/Vancouver\"},\"hardware\":{\"hardware\":\"HARDWARE\",\"manufacturer\":\"MANUFACTURER\",\"storage\":0,\"memory\":0,\"cpu\":16,\"display\":{\"width\":1080,\"height\":1920},\"camera\":{\"noOfCameras\":2}},\"network\":{\"connected\":true},\"telephony\":{\"networkCountryIso\":\"Canada\",\"carrierName\":\"Telus\"},\"bluetooth\":{\"supported\":false},\"browser\":{\"userAgent\":\"MockUserAgent/1.0\"},\"dummyCollector\":{\"name\":\"testName\",\"value\":\"testValue\"}}}",
+            "{\"identifier\":\"test-device-id\",\"metadata\":{\"dummyCollector\":{\"name\":\"testName\",\"value\":\"testValue\"}}}",
             callback.payload()["input"]?.jsonArray?.get(0)?.jsonObject?.get("value")?.jsonPrimitive?.content
         )
     }
