@@ -19,6 +19,7 @@ import android.telephony.TelephonyManager
 import android.util.DisplayMetrics
 import android.view.Display
 import android.view.WindowManager
+import android.webkit.WebSettings
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.tasks.Task
@@ -33,6 +34,7 @@ import io.mockk.mockkConstructor
 import io.mockk.mockkStatic
 import io.mockk.spyk
 import io.mockk.unmockkAll
+import io.mockk.unmockkStatic
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.JsonElement
@@ -77,6 +79,7 @@ class DeviceProfileCollectorTest {
         every { mockContext.applicationContext } returns mockContext
         ContextProvider.init(mockContext)
         coEvery { mockDeviceIdentifier.id.invoke() } returns "test-device-id-12345"
+        mockkStatic(WebSettings::class)
         setupCameraMocks()
         setupWindowManagerMocks()
         setupStorageMocks()
@@ -91,6 +94,7 @@ class DeviceProfileCollectorTest {
      */
     @AfterTest
     fun tearDown() {
+        unmockkStatic(WebSettings::class)
         unmockkAll()
     }
 
@@ -157,6 +161,8 @@ class DeviceProfileCollectorTest {
      */
     @Test
     fun `collect includes metadata when enabled`() = runTest {
+        every { WebSettings.getDefaultUserAgent(mockContext) } returns "MockUserAgent/1.0"
+        every { mockContext.checkSelfPermission(any()) } returns PackageManager.PERMISSION_GRANTED
         val config = DeviceProfileConfig().apply {
             deviceIdentifier = mockDeviceIdentifier
             metadata = true
@@ -205,6 +211,7 @@ class DeviceProfileCollectorTest {
      */
     @Test
     fun `collect includes both metadata and location when both enabled`() = runTest {
+        every { WebSettings.getDefaultUserAgent(mockContext) } returns "MockUserAgent/1.0"
         every { mockContext.checkSelfPermission(any()) } returns PackageManager.PERMISSION_GRANTED
         coEvery { mockLocationTask.await() } returns mockLocation
         val config = DeviceProfileConfig().apply {
