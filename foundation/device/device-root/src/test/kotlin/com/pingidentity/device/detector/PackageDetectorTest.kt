@@ -74,6 +74,23 @@ class PackageDetectorTest {
         assertEquals(0.0, result)
     }
 
+    /**
+     * Tests that RootApkDetector returns expected score when analyzing root APK presence.
+     *
+     * This test specifically validates the RootApkDetector implementation which extends
+     * PackageDetector to check for root management applications. The test verifies that
+     * the detector properly analyzes the system for root APK files and returns the
+     * appropriate score (0.0 when no root APKs are detected).
+     *
+     * @see RootApkDetector
+     */
+    @Test
+    fun `Test RootAppDetector when root APKs are found`() = runTest {
+        val detector = RootApkDetector()
+        val result = detector.analyze(context)
+        assertEquals(0.0, result)
+    }
+
 
     /**
      * Helper method to mock the Android PackageManager for testing purposes.

@@ -113,7 +113,7 @@ class RootApkDetector : TamperDetector {
          * typically remain there even if the applications are later hidden or removed
          * from normal application lists.
          */
-        private val ROOT_APK = listOf<String>(
+        internal val ROOT_APK = listOf<String>(
             "/system/app/Superuser.apk",
             "/system/app/SuperSU.apk",
             "/system/app/magisk.apk",
