@@ -160,6 +160,7 @@ class DeviceProfileCallback : AbstractCallback(), JourneyAware {
      * // Custom collection configuration
      * val result = collect {
      *     collectors {
+     *         clear()
      *         add(PlatformCollector)
      *         add(HardwareCollector())
      *         add(NetworkCollector())
@@ -284,9 +285,9 @@ class DeviceProfileConfig {
      * the collection process. Different log levels can be configured based on deployment
      * environment and debugging requirements.
      *
-     * **Default:** [Logger.WARN] - Captures warnings and errors only
-     * **Debug:** [Logger.DEBUG] - Detailed collection process information
-     * **Production:** [Logger.ERROR] - Critical errors only
+     * **Default:** [Logger.w] - Captures warnings and errors only
+     * **Debug:** [Logger.d] - Detailed collection process information
+     * **Production:** [Logger.e] - Critical errors only
      */
     var logger: Logger = Logger.WARN
 
@@ -308,16 +309,16 @@ class DeviceProfileConfig {
      * Mutable list of device collectors responsible for gathering specific categories of device information.
      *
      * Each collector in this list specializes in gathering particular types of device data:
-     * - [PlatformCollector]: OS and platform information
-     * - [HardwareCollector]: Hardware specifications and capabilities
-     * - [NetworkCollector]: Connectivity and network status
-     * - [LocationCollector]: GPS coordinates and location data
+     * - [com.pingidentity.device.profile.collector.PlatformCollector]: OS and platform information
+     * - [com.pingidentity.device.profile.collector.HardwareCollector]: Hardware specifications and capabilities
+     * - [com.pingidentity.device.profile.collector.NetworkCollector]: Connectivity and network status
+     * - [com.pingidentity.device.profile.collector.LocationCollector]: GPS coordinates and location data
      * - Custom collectors: Application-specific data gathering
      *
      * Collectors are executed in the order they appear in this list, and their results
      * are combined into the final device profile.
      */
-    val collectors: MutableList<DeviceCollector<*>> = mutableListOf<DeviceCollector<*>>().apply(DefaultDeviceCollector())
+    internal val collectors: MutableList<DeviceCollector<*>> = mutableListOf<DeviceCollector<*>>().apply(DefaultDeviceCollector())
 
     /**
      * DSL function for configuring the list of device collectors to be used during profile collection.

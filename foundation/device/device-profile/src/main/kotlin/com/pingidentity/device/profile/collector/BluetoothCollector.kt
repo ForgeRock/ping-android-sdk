@@ -55,7 +55,7 @@ val BluetoothCollector by lazy {
         try {
             val manager = ContextProvider.context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
             BluetoothData(supported = manager.adapter != null)
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             BluetoothData(supported = false)
         }
     }
