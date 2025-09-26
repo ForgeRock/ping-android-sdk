@@ -8,6 +8,7 @@ package com.pingidentity.device.profile
 
 import com.pingidentity.device.id.DefaultDeviceIdentifier
 import com.pingidentity.device.id.DeviceIdentifier
+import com.pingidentity.device.profile.collector.DefaultDeviceCollector
 import com.pingidentity.device.profile.collector.DeviceCollector
 import com.pingidentity.device.profile.collector.DeviceProfileCollector
 import com.pingidentity.journey.plugin.AbstractCallback
@@ -180,7 +181,7 @@ class DeviceProfileCallback : AbstractCallback(), JourneyAware {
      * @see DeviceProfileConfig
      * @see DeviceProfileCollector
      */
-    suspend fun collect(block: DeviceProfileConfig.() -> Unit = {}): Result<JsonObject> {
+    suspend fun collect(block: DeviceProfileConfig.() -> Unit = { DefaultDeviceCollector() }): Result<JsonObject> {
         val config = DeviceProfileConfig()
         config.metadata = metadata
         config.location = location
