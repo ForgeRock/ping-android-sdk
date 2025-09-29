@@ -1,5 +1,5 @@
 /*
- * Copyright (c)  2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
  */
@@ -43,7 +43,7 @@ import kotlin.test.assertTrue
  * This approach ensures consistent test results regardless of the actual device hardware
  * running the tests, allowing validation of both supported and unsupported scenarios.
  *
- * @since 1.0
+
  * @see BluetoothCollector
  * @see BluetoothData
  */

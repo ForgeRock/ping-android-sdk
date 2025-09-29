@@ -1,5 +1,5 @@
 /*
- * Copyright (c)  2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
  */
@@ -38,7 +38,7 @@ import kotlinx.serialization.Serializable
  * val deviceProfile = collectors.collect()
  * ```
  *
- * @since 1.0
+
  * @see DeviceCollector
  * @see BrowserData
  */
@@ -78,7 +78,6 @@ val BrowserCollector by lazy {
  *
  * @property userAgent The default user agent string from the device's WebView implementation
  *
- * @since 1.0
  */
 @SuppressLint("UnsafeOptInUsageError")
 @Serializable

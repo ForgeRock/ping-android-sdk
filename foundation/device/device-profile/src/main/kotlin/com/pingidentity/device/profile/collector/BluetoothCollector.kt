@@ -1,5 +1,5 @@
 /*
- * Copyright (c)  2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
  */
@@ -46,7 +46,6 @@ import kotlinx.serialization.Serializable
  * The collector is implemented as a lazy-initialized singleton for optimal performance
  * and consistent results across the application lifecycle.
  *
- * @since 1.0
  * @see DeviceCollector
  * @see BluetoothData
  */
@@ -80,7 +79,7 @@ val BluetoothCollector by lazy {
  *
  * @property supported Indicates whether the device has Bluetooth hardware capability
  *
- * @since 1.0
+
  */
 @SuppressLint("UnsafeOptInUsageError")
 @Serializable

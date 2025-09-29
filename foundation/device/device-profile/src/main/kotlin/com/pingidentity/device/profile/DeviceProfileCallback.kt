@@ -60,7 +60,6 @@ import kotlinx.serialization.json.jsonPrimitive
  * - `location`: Boolean flag indicating whether location data should be collected
  * - `message`: Optional message containing instructions or context information
  *
- * @since 1.0
  * @see AbstractCallback
  * @see JourneyAware
  * @see DeviceProfileConfig
@@ -178,7 +177,7 @@ class DeviceProfileCallback : AbstractCallback(), JourneyAware {
      * @throws SecurityException if required permissions are not granted for certain collectors
      * @throws IllegalStateException if the callback has not been properly initialized
      *
-     * @since 1.0
+
      * @see DeviceProfileConfig
      * @see DeviceProfileCollector
      */
@@ -242,7 +241,7 @@ class DeviceProfileCallback : AbstractCallback(), JourneyAware {
  * }
  * ```
  *
- * @since 1.0
+
  * @see DeviceProfileCallback.collect
  * @see DeviceProfileCollector
  * @see DeviceCollector
@@ -354,7 +353,7 @@ class DeviceProfileConfig {
      * @param block A configuration block that operates on the collectors list, providing
      *              DSL-style collector configuration capabilities
      *
-     * @since 1.0
+
      * @see DeviceCollector
      * @see collectors
      */

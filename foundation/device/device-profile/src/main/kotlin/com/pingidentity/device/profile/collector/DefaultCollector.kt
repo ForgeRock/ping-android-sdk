@@ -73,7 +73,6 @@ package com.pingidentity.device.profile.collector
  * @return A configuration lambda that accepts a [MutableList] of [DeviceCollector] and populates it
  *         with the complete set of default collectors for comprehensive device profiling
  *
- * @since 1.0
  * @see DeviceCollector
  * @see PlatformCollector
  * @see HardwareCollector

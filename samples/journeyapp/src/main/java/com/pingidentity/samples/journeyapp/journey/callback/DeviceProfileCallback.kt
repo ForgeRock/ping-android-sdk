@@ -101,7 +101,6 @@ import kotlinx.coroutines.launch
  *              This is typically used to proceed to the next step in the authentication journey
  *              or navigate to the subsequent screen in the authentication flow.
  *
- * @since 1.0
  * @see com.pingidentity.device.profile.DeviceProfileCallback
  * @see DeviceProfileConfig
  * @see LaunchedEffect
