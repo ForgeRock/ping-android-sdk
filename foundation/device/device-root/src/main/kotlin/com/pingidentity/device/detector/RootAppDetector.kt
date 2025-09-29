@@ -1,5 +1,5 @@
 /*
- * Copyright (c)  2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
  */
@@ -49,7 +49,6 @@ package com.pingidentity.device.detector
  * }
  * ```
  *
- * @since 1.0
  * @see PackageDetector
  */
 class RootAppDetector : PackageDetector() {

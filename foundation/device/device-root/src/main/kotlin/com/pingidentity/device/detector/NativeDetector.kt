@@ -1,5 +1,5 @@
 /*
- * Copyright (c)  2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
  */
@@ -30,7 +30,6 @@ import android.content.Context
  * val isTampered = detector.isTampered(context)
  * ```
  *
- * @since 1.0
  * @see FileDetector
  */
 class NativeDetector : FileDetector() {

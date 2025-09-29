@@ -1,5 +1,5 @@
 /*
- * Copyright (c)  2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
  */
@@ -23,7 +23,6 @@ import com.pingidentity.logger.Logger
  * - `0.0` indicates no tampering detected
  * - Values between 0.0 and 1.0 can indicate varying levels of suspicion
  *
- * @since 1.0
  */
 interface TamperDetector {
     /**
@@ -64,7 +63,6 @@ interface TamperDetector {
  * @param block A suspending lambda function that returns a confidence score (0.0 to 1.0)
  * @return A [TamperDetector] instance that executes the provided detection logic
  *
- * @since 1.0
  */
 inline fun TamperDetector(
     crossinline block: suspend () -> Double

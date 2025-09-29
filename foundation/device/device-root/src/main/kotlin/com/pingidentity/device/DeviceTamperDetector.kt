@@ -1,5 +1,5 @@
 /*
- * Copyright (c)  2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
  */
@@ -58,7 +58,6 @@ import kotlin.math.max
  * for sophisticated tampering attempts to evade all detection mechanisms simultaneously.
  *
  * @return A configuration block that adds all default tamper detectors to the detector list
- * @since 1.0
  */
 internal fun DefaultTamperDetector(): MutableList<TamperDetector>.() -> Unit = {
     add(BuildTagsDetector())
@@ -92,7 +91,6 @@ internal fun DefaultTamperDetector(): MutableList<TamperDetector>.() -> Unit = {
  * }
  * ```
  *
- * @since 1.0
  */
 @PingDsl
 class DeviceTamperConfig {
@@ -155,7 +153,6 @@ class DeviceTamperConfig {
  *         - Values between 0.0 and 1.0 indicate varying levels of suspicion
  * @throws SecurityException if detection cannot be performed due to security restrictions
  *
- * @since 1.0
  */
 suspend fun analyze(
     block: DeviceTamperConfig.() -> Unit = { }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c)  2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
  */
@@ -48,7 +48,6 @@ import java.util.Scanner
  * }
  * ```
  *
- * @since 1.0
  * @see TamperDetector
  */
 class PermissionDetector(
@@ -173,7 +172,6 @@ class PermissionDetector(
  * The SDK version is used by [PermissionDetector] to handle different mount
  * command output formats between Android versions.
  *
- * @since 1.0
  */
 interface AndroidBuildSdkProvider {
     /**
@@ -192,7 +190,7 @@ interface AndroidBuildSdkProvider {
  * by returning [Build.VERSION.SDK_INT]. This is the standard implementation used in
  * production code.
  *
- * @since 1.0
+
  * @see AndroidBuildSdkProvider
  */
 class DefaultAndroidBuildSdkProvider : AndroidBuildSdkProvider {
