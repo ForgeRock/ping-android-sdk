@@ -1,12 +1,13 @@
+#
+# Copyright (c) 2024 - 2025 Ping Identity Corporation. All rights reserved.
+#
+# This software may be modified and distributed under the terms
+# of the MIT license. See the LICENSE file for details.
+#
+
 name: Run Tests in BrowserStack
 on:
   workflow_call:
-    inputs:
-      browserstack-devices:
-        description: Comma-separated list of BrowserStack devices (e.g. "Google Pixel 6-12.0,Samsung Galaxy S22-12.0")
-        type: string
-        default: "Google Pixel 10 Pro-16.0"
-        # default: "Google Pixel 10 Pro-16.0,OnePlus 13R-15.0,Samsung Galaxy S23 Ultra-13.0"
     outputs:
       browserstack-build-id:
         description: The newly created BrowserStack build ID
@@ -29,43 +30,39 @@ jobs:
       browserstack_build_id: ${{ steps.start_run.outputs.browserstack_build_id }}
 
     steps:
-      # # Get the test artifacts prepared in previous step
-      # - name: Get the app-debug-signed.apk artifact
-      #   uses: actions/download-artifact@v4
-      #   with:
-      #     name: app-debug-signed.apk
+      # Get the test artifacts prepared in previous step
+      - name: Get the app-debug-signed.apk artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: app-debug-signed.apk
 
-      # - name: Get the davinci-debug-androidTest-signed.apk artifact
-      #   uses: actions/download-artifact@v4
-      #   with:
-      #     name: davinci-debug-androidTest-signed.apk
+      - name: Get the davinci-debug-androidTest-signed.apk artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: davinci-debug-androidTest-signed.apk
 
-      # - name: Unzip artifacts (optional)
-      #   run: |
-      #     unzip -o app-debug-signed.apk || echo "Skipping unzip for app-debug"
-      #     unzip -o davinci-debug-androidTest-signed.apk || echo "Skipping unzip for test apk"
+      - name: Unzip artifacts (optional)
+        run: |
+          unzip -o app-debug-signed.apk || echo "Skipping unzip for app-debug"
+          unzip -o davinci-debug-androidTest-signed.apk || echo "Skipping unzip for test apk"
 
-      # # Upload app to BrowserStack
-      # - name: Upload app-debug-signed.apk to BrowserStack
-      #   id: upload_app
-      #   run: |
-      #     APP_UPLOAD_RESPONSE=$(curl -u "${{ secrets.BROWSERSTACK_USERNAME }}:${{ secrets.BROWSERSTACK_ACCESS_KEY }}" \
-      #       -X POST "https://api-cloud.browserstack.com/app-automate/espresso/v2/app" \
-      #       -F "file=@app-debug-signed.apk")
-      #     echo "APP_URL=$(echo $APP_UPLOAD_RESPONSE | jq -r '.app_url')" >> $GITHUB_ENV
+      # Upload app to BrowserStack
+      - name: Upload app-debug-signed.apk to BrowserStack
+        id: upload_app
+        run: |
+          APP_UPLOAD_RESPONSE=$(curl -u "${{ secrets.BROWSERSTACK_USERNAME }}:${{ secrets.BROWSERSTACK_ACCESS_KEY }}" \
+            -X POST "https://api-cloud.browserstack.com/app-automate/espresso/v2/app" \
+            -F "file=@app-debug-signed.apk")
+          echo "APP_URL=$(echo $APP_UPLOAD_RESPONSE | jq -r '.app_url')" >> $GITHUB_ENV
 
-      # # Upload test suite APK to BrowserStack
-      # - name: Upload davinci-debug-androidTest-signed.apk to BrowserStack
-      #   id: upload_test_suite
-      #   run: |
-      #     TEST_UPLOAD_RESPONSE=$(curl -u "${{ secrets.BROWSERSTACK_USERNAME }}:${{ secrets.BROWSERSTACK_ACCESS_KEY }}" \
-      #       -X POST "https://api-cloud.browserstack.com/app-automate/espresso/v2/test-suite" \
-      #       -F "file=@davinci-debug-androidTest-signed.apk")
-      #     echo "TEST_SUITE_URL=$(echo $TEST_UPLOAD_RESPONSE | jq -r '.test_suite_url')" >> $GITHUB_ENV
-
-      # "app": "${{ env.APP_URL }}",
-      #       "testSuite": "${{ env.TEST_SUITE_URL }}",
-
+      # Upload test suite APK to BrowserStack
+      - name: Upload davinci-debug-androidTest-signed.apk to BrowserStack
+        id: upload_test_suite
+        run: |
+          TEST_UPLOAD_RESPONSE=$(curl -u "${{ secrets.BROWSERSTACK_USERNAME }}:${{ secrets.BROWSERSTACK_ACCESS_KEY }}" \
+            -X POST "https://api-cloud.browserstack.com/app-automate/espresso/v2/test-suite" \
+            -F "file=@davinci-debug-androidTest-signed.apk")
+          echo "TEST_SUITE_URL=$(echo $TEST_UPLOAD_RESPONSE | jq -r '.test_suite_url')" >> $GITHUB_ENV
 
       # Prepare BrowserStack run configuration. 
       # To run tests in parallel on multiple devices, use the "shards" option. Example:
@@ -76,15 +73,20 @@ jobs:
       #
       - name: Prepare BrowserStack run configuration
         run: |
-          DEVICES_JSON=$(echo '${{ inputs.browserstack-devices }}' | jq -R 'split(",")')
+          DEVICES_JSON=$(echo '${{ vars.BS_DEVICES }}' | jq -R 'split(",")')
           cat <<EOF > browserstack-run-config.json
           {
-            "app": "bs://e92a2bfc92f2ed8ea43fe93a66f319fc1d52c0ff",
-            "testSuite": "bs://06e81b76a424f787bf95fad362b90bf1163ca08b",
+            "app": "${{ env.APP_URL }}",
+            "testSuite": "${{ env.TEST_SUITE_URL }}",
+            "singleRunnerInvocation": ${{ vars.BS_SINGLE_RUNNER_INVOCATION }},
             "devices": $DEVICES_JSON,
-            "deviceLogs": true,
-            "networkLogs": true,
-            "video": true
+            "deviceLogs": ${{ vars.BS_DEVICE_LOGS }},
+            "networkLogs": ${{ vars.BS_NETWORK_LOGS }},
+            "video": ${{ vars.BS_VIDEO }}, 
+            "shards": {
+              "numberOfShards": ${{ vars.BS_NUMBER_OF_SHARDS }}, 
+              "deviceSelection": "all"
+            }
           }
           EOF
           echo "BrowserStack run configuration:"
@@ -102,16 +104,18 @@ jobs:
           echo "BROWSERSTACK_BUILD_ID=$(echo $RUN_RESPONSE | jq -r '.build_id')" >> $GITHUB_ENV
           echo "browserstack_build_id=$(echo $RUN_RESPONSE | jq -r '.build_id')" >> $GITHUB_OUTPUT
 
-      # Send Slack notification ONLY if any of the steps above fail
+      # Send slack notification ONLY if any of the steps above fail
       - name: Send slack notification
-        uses: slackapi/slack-github-action@v1.25.0
+        uses: 8398a7/action-slack@v3
         with:
-          payload: |
+          status: custom
+          fields: all
+          custom_payload: |
             {
-              "attachments": [{
-                "color": "danger",
-                "title": ":no_entry: Failed to start BrowserStack test run!",
-                "text": "Workflow: ${{ github.workflow }} -> ${{ github.job }}\nPR: ${{ github.event.pull_request.html_url || 'N/A' }}\nCommit: ${{ github.sha }} by ${{ github.actor }}"
+              attachments: [{
+                title: ':no_entry: Failed to start BrowserStack test run!',
+                color: 'danger',
+                text: `\nWorkflow: ${process.env.AS_WORKFLOW} -> ${process.env.AS_JOB}\nPull request: ${process.env.AS_PULL_REQUEST}\nCommit: ${process.env.AS_COMMIT} by ${process.env.AS_AUTHOR}`, 
               }]
             }
         env:
