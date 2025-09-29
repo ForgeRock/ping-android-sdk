@@ -65,6 +65,7 @@ dependencies {
     implementation(project(":journey"))
     implementation(project(":external-idp"))
     implementation(project(":protect"))
+    implementation(project(":foundation:device:device-profile"))
     //implementation("com.pingidentity.sdks:davinci:0.9.0-SNAPSHOT")
     implementation(libs.androidx.datastore.preferences)
 
@@ -84,6 +85,10 @@ dependencies {
 
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.material.icons.extended)
+
+    // For fetching Device location
+    implementation(libs.play.services.location)
+    implementation(libs.kotlinx.coroutines.play.services)
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)

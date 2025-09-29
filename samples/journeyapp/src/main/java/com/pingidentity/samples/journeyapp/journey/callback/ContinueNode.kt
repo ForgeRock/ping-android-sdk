@@ -16,6 +16,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.pingidentity.device.profile.DeviceProfileCallback
 import com.pingidentity.idp.journey.IdpCallback
 import com.pingidentity.idp.journey.SelectIdpCallback
 import com.pingidentity.journey.callback.BooleanAttributeInputCallback
@@ -70,6 +71,10 @@ fun ContinueNode(
                 is StringAttributeInputCallback -> StringAttributeInputCallback(it, onNodeUpdated)
                 is TermsAndConditionsCallback -> {
                     TermsAndConditionsCallback(it, onNodeUpdated)
+                }
+                is DeviceProfileCallback -> {
+                    showNext = false
+                    DeviceProfileCallback(it, onNext)
                 }
 
                 is TextInputCallback -> TextInputCallback(it, onNodeUpdated)
