@@ -38,35 +38,43 @@ object CollectorFactory {
     /**
      * Creates a list of Collector instances from a JsonArray.
      * Each JsonObject in the array should have a "type" field that matches a registered Collector type.
+     *
+     * @param daVinci The DaVinci instance to be injected.
      * @param array The JsonArray to create the Collectors from.
      * @return A list of Collector instances.
      */
-    fun collector(array: JsonArray): List<Collector<*>> {
+    fun collector(
+        daVinci: DaVinci,
+        array: JsonArray,
+    ): List<Collector<*>> {
+
         val list = mutableListOf<Collector<*>>()
         array.forEach { item ->
             val jsonObject = item.jsonObject
             val type = jsonObject["inputType"]?.jsonPrimitive?.content ?: jsonObject["type"]?.jsonPrimitive?.content
             collectors[type]?.let {
-                list.add(it().apply {
-                    init(jsonObject)
-                })
+                val collector = it()
+                //We want to inject davinci before init function, so that it can access attribute from davinci
+                if (collector is DaVinciAware) {
+                    collector.davinci = daVinci
+                }
+                //collector.init may return a different collector, parents collector is responsible
+                //to init the child collector and inject required dependency
+                list.add(collector.init(jsonObject))
             }
         }
         return list
     }
 
+
     /**
      * Injects the DaVinci and ContinueNode instances into the collectors.
-     * @param davinci The DaVinci instance to be injected.
      * @param continueNode The ContinueNode instance to be injected.
      */
-    fun inject(davinci: DaVinci, continueNode: ContinueNode) {
+    fun inject(continueNode: ContinueNode) {
         continueNode.collectors.forEach { collector ->
             if (collector is ContinueNodeAware) {
                 collector.continueNode = continueNode
-            }
-            if (collector is DaVinciAware) {
-                collector.davinci = davinci
             }
         }
     }

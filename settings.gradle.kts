@@ -56,6 +56,9 @@ include(":external-idp")
 //include(":wallet")
 include(":foundation:testrail")
 
+include(":mfa")
+include(":mfa:fido2")
+
 include(":samples:app")
 include(":samples:journeyapp")
 include(":samples:authenticatorapp")

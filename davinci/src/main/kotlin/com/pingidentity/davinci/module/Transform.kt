@@ -7,10 +7,11 @@
 
 package com.pingidentity.davinci.module
 
-import com.pingidentity.exception.ApiException
 import com.pingidentity.davinci.collector.Form
 import com.pingidentity.davinci.plugin.Collector
 import com.pingidentity.davinci.plugin.CollectorFactory
+import com.pingidentity.davinci.plugin.DaVinci
+import com.pingidentity.exception.ApiException
 import com.pingidentity.oidc.exception.AuthorizeException
 import com.pingidentity.orchestrate.ErrorNode
 import com.pingidentity.orchestrate.FailureNode
@@ -19,7 +20,6 @@ import com.pingidentity.orchestrate.Module
 import com.pingidentity.orchestrate.Node
 import com.pingidentity.orchestrate.Session
 import com.pingidentity.orchestrate.SuccessNode
-import com.pingidentity.orchestrate.Workflow
 import io.ktor.http.HttpStatusCode
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
@@ -101,7 +101,7 @@ private fun String.asJson(): JsonObject {
 
 private fun transform(
     context: FlowContext,
-    workflow: Workflow,
+    daVinci: DaVinci,
     json: JsonObject,
 ): Node {
     //If authorizeResponse is present, return success
@@ -117,10 +117,10 @@ private fun transform(
     }
 
     val collectors = mutableListOf<Collector<*>>()
-    if ("form" in json) collectors.addAll(Form.parse(json))
+    if ("form" in json) collectors.addAll(Form.parse(daVinci, json))
 
-    return Connector(context, workflow, json, collectors.toList()).apply {
-        CollectorFactory.inject(workflow, this)
+    return Connector(context, daVinci, json, collectors.toList()).apply {
+        CollectorFactory.inject( this)
     }
 
 }

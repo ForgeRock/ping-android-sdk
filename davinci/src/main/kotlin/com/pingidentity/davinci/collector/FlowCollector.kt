@@ -9,6 +9,8 @@ package com.pingidentity.davinci.collector
 
 import com.pingidentity.davinci.plugin.Submittable
 
+private const val ACTION = "action"
+
 /**
  * Class representing a FLOW_BUTTON, FLOW_LINK Type.
  *
@@ -18,5 +20,5 @@ import com.pingidentity.davinci.plugin.Submittable
  * @constructor Creates a new FlowCollector with the given input.
  */
 class FlowCollector : SingleValueCollector(), Submittable {
-    override fun eventType() = "action"
+    override fun eventType() = ACTION
 }

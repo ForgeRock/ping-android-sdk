@@ -78,7 +78,7 @@ class IdpCollector : Collector<Nothing>, ContinueNodeAware, DaVinciAware, Reques
      *
      * @param input The JSON object containing initialization data.
      */
-    override fun init(input: JsonObject) {
+    override fun init(input: JsonObject) : IdpCollector{
         idpEnabled = input["idpEnabled"]?.jsonPrimitive?.boolean ?: true
         idpId = input["idpId"]?.jsonPrimitive?.content ?: ""
         idpType = input["idpType"]?.jsonPrimitive?.content ?: ""
@@ -89,6 +89,7 @@ class IdpCollector : Collector<Nothing>, ContinueNodeAware, DaVinciAware, Reques
                 ?.jsonObject?.get("href")?.jsonPrimitive?.content
                 ?: ""
         )
+        return this
     }
 
     /**
