@@ -68,6 +68,6 @@ class BusyBoxProgramFileDetector : FileDetector() {
         /**
          * Detector name key used for identification and logging purposes.
          */
-        private const val BUSYBOX_PROGRAM_FILE_DETECTOR_NAME = "busybox"
+        internal const val BUSYBOX_PROGRAM_FILE_DETECTOR_NAME = "busybox"
     }
 }
