@@ -31,6 +31,10 @@ import android.content.pm.PackageManager
  * - `com.zachspong.temprootremovejb` (Root removal tools)
  * - `com.ramdroid.appquarantine` (App quarantine tools)
  *
+ * The scoring system returns a [Double] value:
+ * - `1.0` indicates at least one suspicious package was found (high confidence of tampering)
+ * - `0.0` indicates no suspicious packages were found
+ *
  * Example usage:
  * ```kotlin
  * class RootPackageDetector : PackageDetector() {
@@ -44,6 +48,7 @@ import android.content.pm.PackageManager
  * }
  * ```
  *
+ * @see TamperDetector
  */
 abstract class PackageDetector : TamperDetector {
     /**

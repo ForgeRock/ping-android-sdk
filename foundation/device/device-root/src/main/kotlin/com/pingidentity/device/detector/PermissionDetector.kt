@@ -35,6 +35,10 @@ import java.util.Scanner
  * The detector handles different Android SDK versions as the `mount` command output
  * format varies between Android Marshmallow (API 23) and later versions.
  *
+ * The scoring system returns a [Double] value:
+ * - `1.0` indicates at least one critical path is writable (high confidence of tampering)
+ * - `0.0` indicates all critical directories are properly read-only
+ *
  * Example usage:
  * ```kotlin
  * val detector = PermissionDetector()

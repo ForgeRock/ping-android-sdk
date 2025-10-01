@@ -40,6 +40,15 @@ import android.os.Build
 class BuildTagsDetector(
     private val androidBuildTagProvider: AndroidBuildTagProvider = DefaultAndroidBuildTagProvider()
 ) : TamperDetector {
+    /**
+     * Analyzes the device's build tags to detect tampering.
+     *
+     * Checks if the build tags contain the "test-keys" string, which is a strong indicator
+     * of a non-official or modified Android build.
+     *
+     * @param context The Android context (not used in this implementation)
+     * @return `1.0` if "test-keys" is found, `0.0` otherwise
+     */
     override suspend fun analyze(context: Context): Double {
         val buildTags = androidBuildTagProvider.getBuildTags()
         return if (buildTags != null && buildTags.contains(TEST_KEYS)) {
@@ -59,10 +68,23 @@ class BuildTagsDetector(
  */
 internal const val TEST_KEYS = "test-keys"
 
+/**
+ * Provider interface for accessing Android build tags.
+ *
+ * This abstraction allows for easier testing and mocking of build tag values.
+ */
 interface AndroidBuildTagProvider {
+    /**
+     * Returns the build tags string from the Android system.
+     *
+     * @return The build tags, or null if unavailable.
+     */
     fun getBuildTags(): String? = null
 }
 
+/**
+ * Default implementation of [AndroidBuildTagProvider] that returns the actual build tags.
+ */
 class DefaultAndroidBuildTagProvider : AndroidBuildTagProvider {
     override fun getBuildTags(): String? = Build.TAGS
 }

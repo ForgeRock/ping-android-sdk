@@ -127,7 +127,7 @@ class DeviceTamperConfig {
  *
  * This function provides the main entry point for device tamper detection. It creates
  * a configuration using the provided block, executes all configured detectors, and
- * returns `true` if any detector indicates tampering.
+ * returns a confidence score based on the results.
  *
  * The analysis runs asynchronously and can be called from coroutines. If no configuration
  * is provided, it uses the default detector set.

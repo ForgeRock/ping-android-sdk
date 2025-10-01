@@ -33,6 +33,10 @@ import java.io.File
  * - Is difficult to bypass without modifying the filesystem directly
  * - Provides evidence of past rooting attempts even if tools were removed
  *
+ * The scoring system returns a [Double] value:
+ * - `1.0` indicates at least one root APK file was found (high confidence of tampering)
+ * - `0.0` indicates no root APK files were found
+ *
  * Example usage:
  * ```kotlin
  * val detector = RootApkDetector()

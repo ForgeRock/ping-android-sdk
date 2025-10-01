@@ -29,6 +29,10 @@ package com.pingidentity.device.detector
  * These properties are set during the Android build process and are difficult to modify
  * after compilation, making them reliable indicators of system integrity.
  *
+ * The scoring system returns a [Double] value:
+ * - `1.0` indicates at least one dangerous property was found (high confidence of tampering)
+ * - `0.0` indicates no dangerous properties were found
+ *
  * Example usage:
  * ```kotlin
  * val detector = DangerousPropertyDetector()

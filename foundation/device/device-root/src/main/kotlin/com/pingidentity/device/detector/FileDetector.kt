@@ -30,6 +30,10 @@ import java.io.File
  * - Root management app binaries
  * - Custom recovery tools
  *
+ * The scoring system returns a [Double] value:
+ * - `1.0` indicates at least one suspicious file was found (high confidence of tampering)
+ * - `0.0` indicates no suspicious files were found
+ *
  * Example usage:
  * ```kotlin
  * class RootFileDetector : FileDetector() {
@@ -39,6 +43,7 @@ import java.io.File
  * }
  * ```
  *
+ * @see TamperDetector
  */
 abstract class FileDetector : TamperDetector {
     /**

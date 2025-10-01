@@ -22,7 +22,11 @@ import android.content.Context
  * - Be more difficult for anti-detection tools to hook or bypass
  *
  * The native library "tool-file" must be available and properly linked for this detector to function.
- * If the library fails to load, the detector gracefully degrades and returns false for all checks.
+ * If the library fails to load, the detector gracefully degrades and returns 0.0 for all checks.
+ *
+ * The scoring system returns a [Double] value:
+ * - `1.0` indicates at least one suspicious file was found (high confidence of tampering)
+ * - `0.0` indicates no suspicious files were found or native library unavailable
  *
  * Example usage:
  * ```kotlin
@@ -107,7 +111,7 @@ class NativeDetector : FileDetector() {
          *
          * This flag is set during class initialization and determines whether
          * native detection methods can be used. If false, all detection calls
-         * will return false to avoid crashes.
+         * will return 0.0 to avoid crashes.
          */
         private var libraryLoaded = false
 

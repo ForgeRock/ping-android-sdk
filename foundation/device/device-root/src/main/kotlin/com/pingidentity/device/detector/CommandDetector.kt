@@ -23,6 +23,10 @@ import java.io.InputStreamReader
  * - `magisk` (systemless root solution)
  * - Custom debugging or hacking tools
  *
+ * The scoring system returns a [Double] value:
+ * - `1.0` indicates at least one suspicious command was found (high confidence of tampering)
+ * - `0.0` indicates no suspicious commands were found
+ *
  * Example usage:
  * ```kotlin
  * class RootCommandDetector : CommandDetector() {
@@ -32,6 +36,7 @@ import java.io.InputStreamReader
  * }
  * ```
  *
+ * @see TamperDetector
  */
 abstract class CommandDetector : TamperDetector {
     /**

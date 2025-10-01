@@ -27,6 +27,13 @@ import kotlin.test.assertEquals
  *
  * The tests verify that the detector properly analyzes APK file paths and returns appropriate
  * scores based on the presence or absence of these root management applications.
+ *
+ * Test Scenarios:
+ * - Verifies that the detector checks all known root APK file paths.
+ * - Ensures that the detector returns the expected score (0.0) when no root APKs are detected.
+ * - Uses mocking to simulate file existence without requiring actual root APKs on the filesystem.
+ *
+ * @see RootApkDetector
  */
 class RootApkDetectorTest {
     private val context: Context = mockk()
