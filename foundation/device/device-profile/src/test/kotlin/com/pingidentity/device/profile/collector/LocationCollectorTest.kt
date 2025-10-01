@@ -96,6 +96,16 @@ class LocationCollectorTest {
         }
 
     /**
+     * Verifies that the location collector uses the correct key identifier
+     * and serializer for LocationInfo.
+     */
+    @Test
+    fun `Location collector has correct key and serializer`() {
+        assertEquals("location", locationCollector.key)
+        assertEquals(LocationInfo.serializer(), locationCollector.serializer)
+    }
+
+    /**
      * Verifies that location collection returns null when permissions are granted
      * but the location task fails (e.g., location services disabled, GPS unavailable).
      */

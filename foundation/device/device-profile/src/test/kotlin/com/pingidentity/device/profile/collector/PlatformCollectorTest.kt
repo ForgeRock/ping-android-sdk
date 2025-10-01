@@ -14,13 +14,37 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 
+/**
+ * Test class for [PlatformCollector].
+ *
+ * This class contains unit tests that verify the behavior of the PlatformCollector,
+ * including its key identifier and the platform information collection functionality.
+ * The tests validate that platform data is correctly gathered from the Android system
+ * and default values are properly applied when system values are unavailable.
+ */
 class PlatformCollectorTest {
 
+    /**
+     * Test that verifies the PlatformCollector has the correct key identifier.
+     *
+     * The key is used to identify this collector in the device profile configuration
+     * and should always return "platform".
+     */
     @Test
     fun `platformCollector has correct key`() {
         assertEquals("platform", PlatformCollector.key)
     }
 
+    /**
+     * Test that verifies the PlatformCollector successfully collects platform information.
+     *
+     * This test validates that:
+     * - The collector returns non-null platform information
+     * - The platform field is set to "android" by default
+     * - Device information fields are populated from Android Build properties
+     * - Locale and timezone are correctly retrieved from system defaults
+     * - Optional fields (version, jailBreakScore) are handled appropriately
+     */
     @Test
     fun `platformCollector collects platform information`() = runTest {
         // Invoke the collector
@@ -51,6 +75,18 @@ class PlatformCollectorTest {
         assertEquals(null, platformInfo.jailBreakScore)
     }
 
+    /**
+     * Test that verifies the PlatformCollector handles null Build field values gracefully.
+     *
+     * This test conceptually validates the fallback behavior when Android Build fields
+     * might be null or unavailable. It documents the expected default values:
+     * - Build.DEVICE null → defaults to "Device"
+     * - Build.MODEL null → defaults to empty string for deviceName and model
+     * - Build.BRAND null → defaults to empty string for brand
+     *
+     * Note: This test is limited by the JVM test environment and would benefit
+     * from proper mocking frameworks in a full Android test setup.
+     */
     @Test
     fun `platformCollector returns non-empty default values from Build when Build fields are null`() = runTest {
         // This test is more conceptual for a pure JVM test without mocking Build.
