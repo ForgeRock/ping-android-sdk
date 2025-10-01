@@ -10,7 +10,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class AndroidBuildProviderTest {
-    private val buildProviderTest = object : AndroidBuildProvider {
+    private val buildProviderTest = object : AndroidBuildTagProvider {
         override fun getBuildTags(): String? {
             return KEYS
         }
