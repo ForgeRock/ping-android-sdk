@@ -4,7 +4,7 @@
  * of the MIT license. See the LICENSE file for details.
  */
 
-package com.pingidentity.device.detector
+package com.pingidentity.device.root.detector
 
 import android.content.Context
 import android.content.pm.PackageManager

@@ -10,8 +10,6 @@ import android.content.Context
 import com.pingidentity.android.ContextProvider
 import com.pingidentity.device.DefaultTamperDetector
 import com.pingidentity.device.analyze
-import com.pingidentity.device.detector.LoggerAware
-import com.pingidentity.device.detector.TamperDetector
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest

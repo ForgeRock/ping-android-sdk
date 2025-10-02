@@ -4,7 +4,7 @@
  * of the MIT license. See the LICENSE file for details.
  */
 
-package com.pingidentity.device.detector
+package com.pingidentity.device.root.detector
 
 /**
  * Pre-configured tamper detector that identifies device rooting by checking for the BusyBox program file.

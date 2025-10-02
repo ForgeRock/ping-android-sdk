@@ -6,7 +6,6 @@
 
 package com.pingidentity.device.root.detector
 
-import com.pingidentity.device.detector.RootAppDetector
 import kotlin.test.Test
 import kotlin.test.assertEquals
 

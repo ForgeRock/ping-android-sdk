@@ -4,7 +4,7 @@
  * of the MIT license. See the LICENSE file for details.
  */
 
-package com.pingidentity.device.detector
+package com.pingidentity.device.root.detector
 
 /**
  * Pre-configured tamper detector that identifies device rooting by checking for root program files.
@@ -62,8 +62,12 @@ class RootProgramFileDetector : FileDetector() {
      *
      * @return A list of critical root program filenames to search for
      */
-    override fun getFilenames(): List<String> = listOf(
-        "su",
-        "magisk",
-    )
+    override fun getFilenames(): List<String> = CURRENT_KNOWN_ROOT_PROGRAM_FILES
+
+    companion object {
+        internal val CURRENT_KNOWN_ROOT_PROGRAM_FILES = listOf(
+            "su",
+            "magisk",
+        )
+    }
 }

@@ -4,7 +4,7 @@
  * of the MIT license. See the LICENSE file for details.
  */
 
-package com.pingidentity.device.detector
+package com.pingidentity.device.root.detector
 
 import android.content.Context
 
@@ -50,7 +50,7 @@ import android.content.Context
  * Example usage:
  * ```kotlin
  * val detector = RootRequiredAppDetector()
- * val isTampered = detector.isTampered(context)
+ * val isTampered = detector.analyze(context)
  *
  * // Or in analyze DSL:
  * val isTampered = analyze {
@@ -128,7 +128,7 @@ class RootRequiredAppDetector : PackageDetector() {
          * The presence of any of these applications indicates sophisticated device modification
          * requiring root access and suggests potential security risks.
          */
-        private val CURRENT_KNOWN_APPS_REQUIRE_ROOT = listOf<String>(
+        internal val CURRENT_KNOWN_APPS_REQUIRE_ROOT = listOf<String>(
             "com.koushikdutta.rommanager",
             "com.koushikdutta.rommanager.license",
             "com.dimonvideo.luckypatcher",

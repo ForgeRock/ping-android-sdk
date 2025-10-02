@@ -4,13 +4,14 @@
  * of the MIT license. See the LICENSE file for details.
  */
 
-package com.pingidentity.device
+package com.pingidentity.device.root
 
 import android.content.Context
 import android.content.pm.PackageManager
 import com.pingidentity.android.ContextProvider
-import com.pingidentity.device.detector.BuildTagsDetector
-import com.pingidentity.device.detector.TamperDetector
+import com.pingidentity.device.analyze
+import com.pingidentity.device.root.detector.BuildTagsDetector
+import com.pingidentity.device.root.detector.TamperDetector
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
@@ -34,7 +35,7 @@ import kotlin.test.assertEquals
  *
  * @see analyze
  * @see TamperDetector
- * @see DeviceTamperConfig
+ * @see com.pingidentity.device.DeviceTamperConfig
  */
 class AnalyzeTest {
     /**

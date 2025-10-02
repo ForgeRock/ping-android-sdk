@@ -8,8 +8,6 @@ package com.pingidentity.device.root.detector
 
 import android.content.Context
 import com.pingidentity.android.ContextProvider
-import com.pingidentity.device.detector.FileDetector
-import com.pingidentity.device.detector.NativeDetector
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest

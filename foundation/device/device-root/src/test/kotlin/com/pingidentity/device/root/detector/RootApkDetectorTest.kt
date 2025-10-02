@@ -4,11 +4,11 @@
  * of the MIT license. See the LICENSE file for details.
  */
 
-package com.pingidentity.device.detector
+package com.pingidentity.device.root.detector
 
 import android.content.Context
 import com.pingidentity.android.ContextProvider
-import com.pingidentity.device.detector.RootApkDetector.Companion.ROOT_APK
+import com.pingidentity.device.root.detector.RootApkDetector.Companion.ROOT_APK
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
