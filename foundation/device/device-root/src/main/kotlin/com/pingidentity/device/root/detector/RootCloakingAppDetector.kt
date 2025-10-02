@@ -92,7 +92,7 @@ class RootCloakingAppDetector : PackageDetector() {
          * These applications serve no legitimate purpose on unrooted devices, making their presence
          * a strong indicator of device tampering and attempts to conceal root access.
          */
-        private val CURRENT_ROOT_CLOAKING_APPS = listOf<String>(
+        internal val CURRENT_ROOT_CLOAKING_APPS = listOf<String>(
             "com.devadvance.rootcloak",
             "com.devadvance.rootcloakplus",
             "de.robv.android.xposed.installer",

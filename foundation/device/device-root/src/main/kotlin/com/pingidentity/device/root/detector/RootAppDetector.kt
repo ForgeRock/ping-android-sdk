@@ -90,7 +90,7 @@ class RootAppDetector : PackageDetector() {
          * This list is maintained to include the most commonly encountered root management
          * applications and should be updated as new tools become popular.
          */
-        private val CURRENT_KNOWN_ROOT_APPS = listOf<String>(
+        internal val CURRENT_KNOWN_ROOT_APPS = listOf<String>(
             "com.noshufou.android.su",
             "com.noshufou.android.su.elite",
             "eu.chainfire.supersu",
