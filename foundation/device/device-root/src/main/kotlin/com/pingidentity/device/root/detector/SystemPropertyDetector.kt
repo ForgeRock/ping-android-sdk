@@ -65,7 +65,7 @@ abstract class SystemPropertyDetector : TamperDetector {
      * @param properties A map of property names to their suspicious values
      * @return `true` if any matching property-value pair is found, `false` otherwise
      */
-    private fun exists(properties: Map<String, String>): Boolean {
+    internal fun exists(properties: Map<String, String>): Boolean {
         for (line in propsReader()) {
             for (entry in properties.entries.toSet()) {
                 return (line.contains(entry.key) &&
