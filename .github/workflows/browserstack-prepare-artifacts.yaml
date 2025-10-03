@@ -5,7 +5,7 @@
 # of the MIT license. See the LICENSE file for details.
 #
 
-name: Prepare BitBar Artifacts
+name: Prepare Device Farm Artifacts
 on:
   workflow_call:
     secrets:
@@ -26,7 +26,7 @@ on:
         required: true
 jobs:
   prepare-device-farm-artifacts:
-    runs-on: macos-latest
+    runs-on: ubuntu-latest
 
     steps:
       # Clone the repo
@@ -47,17 +47,21 @@ jobs:
 
       # Build apk files
       - name: Prepare device farm artifacts
-        run: ./gradlew assembleDebugAndroidTest --stacktrace --no-daemon
+        run: |
+          ./gradlew assembleDebug assembleDebugAndroidTest \
+            --stacktrace \
+            --build-cache \
+            --parallel
 
       # List the available build tools versions see https://github.com/r0adkll/sign-android-release/issues/84
       - name: List build tools versions
-        run: ls /Users/runner/Library/Android/sdk/build-tools/
+        run: ls $ANDROID_HOME/build-tools/
 
-      # Sign app-debug-androidTest.apk
-      - name: Sign app-debug-androidTest.apk
+      # Sign app-debug.apk
+      - name: Sign app-debug.apk
         uses: r0adkll/sign-android-release@v1
         with:
-          releaseDirectory: samples/app/build/outputs/apk/androidTest/debug
+          releaseDirectory: samples/app/build/outputs/apk/debug
           signingKeyBase64: ${{ secrets.SIGNING_KEYSTORE }}
           alias: ${{ secrets.SIGNING_ALIAS }}
           keyStorePassword: ${{ secrets.SIGNING_KEYSTORE_PASSWORD }}
@@ -78,12 +82,12 @@ jobs:
           BUILD_TOOLS_VERSION: "35.0.0"
 
       # Publish the signed APKs as build artifacts
-      - name: Publish app-debug-androidTest.apk
+      - name: Publish app-debug.apk
         uses: actions/upload-artifact@v4
         if: success()
         with:
-          name: app-debug-androidTest-signed.apk
-          path: samples/app/build/outputs/apk/androidTest/debug/app-debug-androidTest-signed.apk
+          name: app-debug-signed.apk
+          path: samples/app/build/outputs/apk/debug/app-debug-signed.apk
 
       - name: Publish davinci-debug-androidTest.apk
         uses: actions/upload-artifact@v4
@@ -101,7 +105,7 @@ jobs:
           custom_payload: |
             {
               attachments: [{
-                title: ':no_entry: Failed to prepare BitBar test artifacts',
+                title: ':no_entry: Failed to prepare BrowserStack test artifacts',
                 color: 'danger',
                 text: `\nWorkflow: ${process.env.AS_WORKFLOW} -> ${process.env.AS_JOB}\nPull request: ${process.env.AS_PULL_REQUEST}\nCommit: ${process.env.AS_COMMIT} by ${process.env.AS_AUTHOR}`, 
               }]
