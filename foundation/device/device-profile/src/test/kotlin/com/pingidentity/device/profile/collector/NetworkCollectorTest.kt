@@ -76,6 +76,18 @@ class NetworkCollectorTest {
     }
 
     /**
+     * Verifies that the network collector uses the correct serializer for NetworkInfo.
+     */
+    @Test
+    fun `Network collector has correct serializer`() {
+        val networkCollector = NetworkCollector(mockSdkVersionProvider)
+        assertEquals(
+            com.pingidentity.device.profile.collector.NetworkInfo.serializer(),
+            networkCollector.serializer,
+        )
+    }
+
+    /**
      * Verifies network connectivity detection using legacy NetworkInfo API for older Android versions.
      * Tests the case where the device has an active network connection.
      */
