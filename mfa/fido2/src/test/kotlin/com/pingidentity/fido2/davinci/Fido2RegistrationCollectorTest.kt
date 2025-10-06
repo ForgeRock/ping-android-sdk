@@ -166,5 +166,230 @@ class Fido2RegistrationCollectorTest {
         }
         collector.init(invalidInput)
     }
-}
 
+    @Test
+    fun `transform should handle excludeCredentials with byte array id`() {
+        val credentialIdBytes = byteArrayOf(-127, 88, 77, -67, -80, -80, 119, -108, -58, 18, -55, 81, -108, -121, 18, 5)
+
+        val inputWithExcludeCredentials = buildJsonObject {
+            put("type", JsonPrimitive("FIDO2"))
+            put("key", JsonPrimitive("fido2"))
+            put("label", JsonPrimitive("Continue"))
+            put(Constants.FIELD_PUBLIC_KEY_CREDENTIAL_CREATION_OPTIONS, buildJsonObject {
+                put("rp", buildJsonObject {
+                    put("id", JsonPrimitive("idc.petrov.ca"))
+                    put("name", JsonPrimitive("pingone.ca"))
+                })
+                put("user", buildJsonObject {
+                    put("id", JsonArray(listOf(JsonPrimitive(24), JsonPrimitive(-76), JsonPrimitive(-64))))
+                    put("displayName", JsonPrimitive("test@example.com"))
+                    put("name", JsonPrimitive("test@example.com"))
+                })
+                put("challenge", JsonArray(listOf(JsonPrimitive(-68), JsonPrimitive(87), JsonPrimitive(-120))))
+                put(Constants.FIELD_EXCLUDE_CREDENTIALS, JsonArray(listOf(
+                    buildJsonObject {
+                        put(Constants.FIELD_TYPE, JsonPrimitive("public-key"))
+                        put(Constants.FIELD_ID, JsonArray(credentialIdBytes.map { JsonPrimitive(it.toInt()) }))
+                    }
+                )))
+            })
+            put("action", JsonPrimitive("REGISTER"))
+        }
+
+        collector.init(inputWithExcludeCredentials)
+        val options = collector.publicKeyCredentialCreationOptions
+
+        val excludeCredentials = options[Constants.FIELD_EXCLUDE_CREDENTIALS]?.let { it as? JsonArray }
+        assertNotNull(excludeCredentials)
+        assertEquals(1, excludeCredentials!!.size)
+
+        val credential = excludeCredentials[0].jsonObject
+        assertEquals("public-key", credential[Constants.FIELD_TYPE]?.jsonPrimitive?.content)
+
+        // Verify the ID is now base64 encoded
+        val credentialId = credential[Constants.FIELD_ID]?.jsonPrimitive?.content
+        assertNotNull(credentialId)
+        // The byte array should be converted to base64
+        assertTrue(credentialId!!.isNotEmpty())
+    }
+
+    @Test
+    fun `transform should handle multiple excludeCredentials`() {
+        val credentialId1 = byteArrayOf(-127, 88, 77, -67, -80, -80, 119, -108)
+        val credentialId2 = byteArrayOf(18, -55, 81, -108, -121, 18, 5, 42)
+
+        val inputWithMultipleExcludeCredentials = buildJsonObject {
+            put("type", JsonPrimitive("FIDO2"))
+            put("key", JsonPrimitive("fido2"))
+            put(Constants.FIELD_PUBLIC_KEY_CREDENTIAL_CREATION_OPTIONS, buildJsonObject {
+                put("rp", buildJsonObject {
+                    put("id", JsonPrimitive("idc.petrov.ca"))
+                })
+                put("user", buildJsonObject {
+                    put("id", JsonArray(listOf(JsonPrimitive(24))))
+                    put("name", JsonPrimitive("test"))
+                })
+                put("challenge", JsonArray(listOf(JsonPrimitive(-68))))
+                put(Constants.FIELD_EXCLUDE_CREDENTIALS, JsonArray(listOf(
+                    buildJsonObject {
+                        put(Constants.FIELD_TYPE, JsonPrimitive("public-key"))
+                        put(Constants.FIELD_ID, JsonArray(credentialId1.map { JsonPrimitive(it.toInt()) }))
+                    },
+                    buildJsonObject {
+                        put(Constants.FIELD_TYPE, JsonPrimitive("public-key"))
+                        put(Constants.FIELD_ID, JsonArray(credentialId2.map { JsonPrimitive(it.toInt()) }))
+                    }
+                )))
+            })
+            put("action", JsonPrimitive("REGISTER"))
+        }
+
+        collector.init(inputWithMultipleExcludeCredentials)
+        val options = collector.publicKeyCredentialCreationOptions
+
+        val excludeCredentials = options[Constants.FIELD_EXCLUDE_CREDENTIALS]?.let { it as? JsonArray }
+        assertNotNull(excludeCredentials)
+        assertEquals(2, excludeCredentials!!.size)
+
+        // Verify both credentials are transformed
+        val credential1 = excludeCredentials[0].jsonObject
+        val credential2 = excludeCredentials[1].jsonObject
+
+        assertNotNull(credential1[Constants.FIELD_ID]?.jsonPrimitive?.content)
+        assertNotNull(credential2[Constants.FIELD_ID]?.jsonPrimitive?.content)
+    }
+
+    @Test
+    fun `transform should handle excludeCredentials with already encoded id`() {
+        val base64Id = "gVhNvbC0d5TGEs1RlIcSBQ=="
+
+        val inputWithBase64ExcludeCredentials = buildJsonObject {
+            put("type", JsonPrimitive("FIDO2"))
+            put("key", JsonPrimitive("fido2"))
+            put(Constants.FIELD_PUBLIC_KEY_CREDENTIAL_CREATION_OPTIONS, buildJsonObject {
+                put("rp", buildJsonObject {
+                    put("id", JsonPrimitive("idc.petrov.ca"))
+                })
+                put("user", buildJsonObject {
+                    put("id", JsonArray(listOf(JsonPrimitive(24))))
+                    put("name", JsonPrimitive("test"))
+                })
+                put("challenge", JsonArray(listOf(JsonPrimitive(-68))))
+                put(Constants.FIELD_EXCLUDE_CREDENTIALS, JsonArray(listOf(
+                    buildJsonObject {
+                        put(Constants.FIELD_TYPE, JsonPrimitive("public-key"))
+                        put(Constants.FIELD_ID, JsonPrimitive(base64Id))
+                    }
+                )))
+            })
+            put("action", JsonPrimitive("REGISTER"))
+        }
+
+        collector.init(inputWithBase64ExcludeCredentials)
+        val options = collector.publicKeyCredentialCreationOptions
+
+        val excludeCredentials = options[Constants.FIELD_EXCLUDE_CREDENTIALS]?.let { it as? JsonArray }
+        assertNotNull(excludeCredentials)
+        assertEquals(1, excludeCredentials!!.size)
+
+        val credential = excludeCredentials[0].jsonObject
+        assertEquals(base64Id, credential[Constants.FIELD_ID]?.jsonPrimitive?.content)
+    }
+
+    @Test
+    fun `transform should handle empty excludeCredentials array`() {
+        val inputWithEmptyExcludeCredentials = buildJsonObject {
+            put("type", JsonPrimitive("FIDO2"))
+            put("key", JsonPrimitive("fido2"))
+            put(Constants.FIELD_PUBLIC_KEY_CREDENTIAL_CREATION_OPTIONS, buildJsonObject {
+                put("rp", buildJsonObject {
+                    put("id", JsonPrimitive("idc.petrov.ca"))
+                })
+                put("user", buildJsonObject {
+                    put("id", JsonArray(listOf(JsonPrimitive(24))))
+                    put("name", JsonPrimitive("test"))
+                })
+                put("challenge", JsonArray(listOf(JsonPrimitive(-68))))
+                put(Constants.FIELD_EXCLUDE_CREDENTIALS, JsonArray(emptyList()))
+            })
+            put("action", JsonPrimitive("REGISTER"))
+        }
+
+        collector.init(inputWithEmptyExcludeCredentials)
+        val options = collector.publicKeyCredentialCreationOptions
+
+        val excludeCredentials = options[Constants.FIELD_EXCLUDE_CREDENTIALS]?.let { it as? JsonArray }
+        assertNotNull(excludeCredentials)
+        assertEquals(0, excludeCredentials!!.size)
+    }
+
+    @Test
+    fun `transform should work without excludeCredentials field`() {
+        val inputWithoutExcludeCredentials = buildJsonObject {
+            put("type", JsonPrimitive("FIDO2"))
+            put("key", JsonPrimitive("fido2"))
+            put(Constants.FIELD_PUBLIC_KEY_CREDENTIAL_CREATION_OPTIONS, buildJsonObject {
+                put("rp", buildJsonObject {
+                    put("id", JsonPrimitive("idc.petrov.ca"))
+                })
+                put("user", buildJsonObject {
+                    put("id", JsonArray(listOf(JsonPrimitive(24))))
+                    put("name", JsonPrimitive("test"))
+                })
+                put("challenge", JsonArray(listOf(JsonPrimitive(-68))))
+            })
+            put("action", JsonPrimitive("REGISTER"))
+        }
+
+        collector.init(inputWithoutExcludeCredentials)
+        val options = collector.publicKeyCredentialCreationOptions
+
+        assertNull(options[Constants.FIELD_EXCLUDE_CREDENTIALS])
+    }
+
+    @Test
+    fun `transform should preserve other fields in excludeCredentials`() {
+        val credentialIdBytes = byteArrayOf(1, 2, 3, 4)
+
+        val inputWithExtraFields = buildJsonObject {
+            put("type", JsonPrimitive("FIDO2"))
+            put("key", JsonPrimitive("fido2"))
+            put(Constants.FIELD_PUBLIC_KEY_CREDENTIAL_CREATION_OPTIONS, buildJsonObject {
+                put("rp", buildJsonObject {
+                    put("id", JsonPrimitive("idc.petrov.ca"))
+                })
+                put("user", buildJsonObject {
+                    put("id", JsonArray(listOf(JsonPrimitive(24))))
+                    put("name", JsonPrimitive("test"))
+                })
+                put("challenge", JsonArray(listOf(JsonPrimitive(-68))))
+                put(Constants.FIELD_EXCLUDE_CREDENTIALS, JsonArray(listOf(
+                    buildJsonObject {
+                        put(Constants.FIELD_TYPE, JsonPrimitive("public-key"))
+                        put(Constants.FIELD_ID, JsonArray(credentialIdBytes.map { JsonPrimitive(it.toInt()) }))
+                        put("transports", JsonArray(listOf(JsonPrimitive("usb"), JsonPrimitive("nfc"))))
+                    }
+                )))
+            })
+            put("action", JsonPrimitive("REGISTER"))
+        }
+
+        collector.init(inputWithExtraFields)
+        val options = collector.publicKeyCredentialCreationOptions
+
+        val excludeCredentials = options[Constants.FIELD_EXCLUDE_CREDENTIALS]?.let { it as? JsonArray }
+        assertNotNull(excludeCredentials)
+        assertEquals(1, excludeCredentials!!.size)
+
+        val credential = excludeCredentials[0].jsonObject
+        assertEquals("public-key", credential[Constants.FIELD_TYPE]?.jsonPrimitive?.content)
+        assertNotNull(credential[Constants.FIELD_ID]?.jsonPrimitive?.content)
+
+        // Verify transports field is preserved
+        val transports = credential["transports"]?.let { it as? JsonArray }
+        assertNotNull(transports)
+        assertEquals(2, transports!!.size)
+        assertEquals("usb", transports[0].jsonPrimitive.content)
+        assertEquals("nfc", transports[1].jsonPrimitive.content)
+    }
+}
