@@ -46,23 +46,23 @@ object EncryptedDataStoreStorageFactory {
         synchronized(mutex) {
             dataStoreMap[fileName]?.let { return it as Storage<T> }
 
-            val storage = DataStoreStorage<T>(
-                DataStoreFactory.create(
-                    serializer = EncryptedDataToJsonSerializer(SecretKeyEncryptor(config)),
-                    produceFile = {
-                        File(
-                            ContextProvider.context.filesDir,
-                            "datastore/$fileName"
-                        )
-                    },
-                    corruptionHandler = ReplaceFileCorruptionHandler { null }
-                ), config.cacheStrategy
+            val file = File(
+                ContextProvider.context.filesDir,
+                "datastore/$fileName"
             )
+            
+            val storage: Storage<T> =
+                DataStoreStorage(
+                    DataStoreFactory.create(
+                        serializer = EncryptedDataToJsonSerializer(SecretKeyEncryptor(config)),
+                        produceFile = { file },
+                        corruptionHandler = ReplaceFileCorruptionHandler { null }
+                    ), 
+                    config.cacheStrategy,
+                    if (config.removeFileOnDelete) file else null
+                )
             dataStoreMap[fileName] = storage
             return storage
         }
     }
 }
-
-
-

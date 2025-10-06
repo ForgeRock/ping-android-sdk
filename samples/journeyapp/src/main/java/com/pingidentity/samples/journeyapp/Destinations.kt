@@ -13,4 +13,5 @@ object Destinations {
     const val JOURNEY_ROUTE = "Journey"
     const val TOKEN_ROUTE = "Access Token"
     const val USER_INFO = "User Info"
+    const val KEYSTORE_ROUTE = "KeyStore"
 }

@@ -37,6 +37,7 @@ composeBom = "2025.08.01"
 activity = "1.10.1"
 mockk = "1.14.5"
 testLogger = "4.0.0"
+bcpkix-jdk18on = "1.82"
 androidx-annotation = "1.9.1"
 
 activityKtx = "1.10.1"
@@ -61,8 +62,9 @@ kotlinxCoroutinesPlayServices = "1.10.2"
 googleServicesPlugin = "4.4.3"
 firebaseBom = "32.7.4"
 osmdroidAndroid = "6.1.20"
-biometric = "1.2.0-alpha05"
-nimbus-jose-jwt = "9.37.3"
+biometric = "1.4.0-alpha02"
+nimbus-jose-jwt = "10.5"
+security-crypto = "1.1.0"
 
 play-services-location = "21.3.0"
 
@@ -74,8 +76,12 @@ androidx-datastore-core = { module = "androidx.datastore:datastore-core", versio
 androidx-datastore = { module = "androidx.datastore:datastore", version.ref = "datastore" }
 androidx-credentials = { group = "androidx.credentials", name = "credentials", version.ref = "androidx-credentials" }
 play-services-fido = { module = "com.google.android.gms:play-services-fido", version.ref = "play-services-fido" }
-kotlin-playservices-coroutine = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-play-services", version.ref = "kotlin-playservices-coroutine"}
 androidx-annotation = { module = "androidx.annotation:annotation", version.ref = "androidx-annotation" }
+bcpkix-jdk18on = { module = "org.bouncycastle:bcpkix-jdk18on", version.ref = "bcpkix-jdk18on" }
+
+#For Migration only
+androidx-security-crypto = { module = "androidx.security:security-crypto", version.ref = "security-crypto" }
+
 androidx-material-icons-extended = { module = "androidx.compose.material:material-icons-extended", version.ref = "materialIconsExtended" }
 androidx-navigation-compose = { module = "androidx.navigation:navigation-compose", version.ref = "navVersion" }
 androidx-ui-tooling = { module = "androidx.compose.ui:ui-tooling" }
@@ -114,7 +120,6 @@ androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", versi
 
 androidx-activity = { group = "androidx.activity", name = "activity", version.ref = "activity" }
 mockk = { module = "io.mockk:mockk", version.ref = "mockk" }
-androidx-credentials-play-services-auth = { group = "androidx.credentials", name = "credentials-play-services-auth", version.ref = "androidx-credentials" }
 
 androidx-activity-ktx = { group = "androidx.activity", name = "activity-ktx", version.ref = "activityKtx" }
 androidx-browser = { group = "androidx.browser", name = "browser", version.ref = "browser" }
@@ -142,6 +147,7 @@ firebase-messaging = { group = "com.google.firebase", name = "firebase-messaging
 firebase-bom = { module = "com.google.firebase:firebase-bom", version.ref = "firebaseBom" }
 osmdroid-android = { module = "org.osmdroid:osmdroid-android", version.ref = "osmdroidAndroid" }
 androidx-biometric = { module = "androidx.biometric:biometric", version.ref = "biometric" }
+androidx-biometric-ktx = { module = "androidx.biometric:biometric-ktx", version.ref = "biometric" }
 nimbus-jose-jwt = { module = "com.nimbusds:nimbus-jose-jwt", version.ref = "nimbus-jose-jwt" }
 
 play-services-location = { module = "com.google.android.gms:play-services-location", version.ref = "play-services-location"}
