@@ -9,8 +9,19 @@ package com.pingidentity.device.root
 import android.content.Context
 import android.content.pm.PackageManager
 import com.pingidentity.android.ContextProvider
+import com.pingidentity.device.DefaultTamperDetector
 import com.pingidentity.device.analyze
 import com.pingidentity.device.root.detector.BuildTagsDetector
+import com.pingidentity.device.root.detector.BusyBoxProgramFileDetector
+import com.pingidentity.device.root.detector.DangerousPropertyDetector
+import com.pingidentity.device.root.detector.NativeDetector
+import com.pingidentity.device.root.detector.PermissionDetector
+import com.pingidentity.device.root.detector.RootApkDetector
+import com.pingidentity.device.root.detector.RootAppDetector
+import com.pingidentity.device.root.detector.RootCloakingAppDetector
+import com.pingidentity.device.root.detector.RootProgramFileDetector
+import com.pingidentity.device.root.detector.RootRequiredAppDetector
+import com.pingidentity.device.root.detector.SuCommandDetector
 import com.pingidentity.device.root.detector.TamperDetector
 import io.mockk.every
 import io.mockk.mockk
@@ -115,6 +126,38 @@ class AnalyzeTest {
             }
         }
         assertEquals(0.0, result,"Should not be tampered")
+    }
+
+    /**
+     * Validates that the DefaultTamperDetector includes all expected detectors.
+     *
+     * This test ensures that:
+     * - The DefaultTamperDetector initializes with a comprehensive set of detectors
+     * - Each expected detector type is present in the default configuration
+     * - The order and count of detectors match the predefined list
+     * - Future changes to DefaultTamperDetector are caught if detectors are added or removed
+     */
+    @Test
+    fun `Test DefaultTamperDetector have all available list of detectors`() {
+        val detectors = mutableListOf<TamperDetector>()
+        detectors.apply(DefaultTamperDetector())
+
+        val expectedTypes = listOf(
+            BuildTagsDetector::class,
+            BusyBoxProgramFileDetector::class,
+            DangerousPropertyDetector::class,
+            NativeDetector::class,
+            PermissionDetector::class,
+            RootApkDetector::class,
+            RootAppDetector::class,
+            RootRequiredAppDetector::class,
+            RootCloakingAppDetector::class,
+            RootProgramFileDetector::class,
+            SuCommandDetector::class
+        )
+        val actualTypes = detectors.map { it::class }
+        assertEquals(expectedTypes, actualTypes)
+        assertEquals(expectedTypes.size, detectors.size)
     }
 
     /**
