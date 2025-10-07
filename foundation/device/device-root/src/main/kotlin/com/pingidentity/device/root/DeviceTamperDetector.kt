@@ -158,7 +158,7 @@ suspend fun analyze(
     block: DeviceTamperConfig.() -> Unit = { }
 ): Double {
     val config = DeviceTamperConfig()
-    config.tamperDetectors.forEach { if (it is LoggerAware) it.logger = config.logger }
+    config.tamperDetectors.forEach { it.logger = config.logger }
     config.apply(block)
 
     val detectors = config.tamperDetectors
