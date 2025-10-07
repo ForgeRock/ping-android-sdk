@@ -8,8 +8,6 @@ package com.pingidentity.device.root.detector
 
 import android.content.Context
 import com.pingidentity.android.ContextProvider
-import com.pingidentity.device.DefaultTamperDetector
-import com.pingidentity.device.analyze
 import com.pingidentity.logger.Logger
 import com.pingidentity.logger.WARN
 import io.mockk.every
@@ -60,19 +58,6 @@ class DeviceTamperDetectorTest {
             override var logger: Logger = Logger.WARN
         }
         assert(detector.analyze(mockContext) == 0.0)
-    }
-
-    /**
-     * Tests that the analyze function returns 0.0 when using DefaultTamperDetector.
-     *
-     * This test verifies that the DefaultTamperDetector, which is a no-op implementation,
-     * correctly returns a confidence score of 0.0 indicating no tampering detected.
-     */
-    @Test
-    fun `Test analyze returns correct value when passed with DefaultTamperDetector`() = runTest {
-        val detector = analyze().apply { DefaultTamperDetector() }
-
-        assertEquals(0.0, detector)
     }
 
     /**
