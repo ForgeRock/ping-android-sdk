@@ -6,6 +6,9 @@
 
 package com.pingidentity.device.root.detector
 
+import com.pingidentity.logger.Logger
+import com.pingidentity.logger.WARN
+
 /**
  * Pre-configured tamper detector that identifies device rooting by checking for the BusyBox program file.
  *
@@ -53,7 +56,7 @@ package com.pingidentity.device.root.detector
  *
  * @see FileDetector
  */
-class BusyBoxProgramFileDetector : FileDetector() {
+object BusyBoxProgramFileDetector : FileDetector() {
     /**
      * Provides the list of filenames to check for BusyBox detection.
      *
@@ -64,10 +67,15 @@ class BusyBoxProgramFileDetector : FileDetector() {
      */
     override fun getFilenames(): List<String> = listOf(BUSYBOX_PROGRAM_FILE_DETECTOR_NAME)
 
-    companion object {
-        /**
-         * Detector name key used for identification and logging purposes.
-         */
-        internal const val BUSYBOX_PROGRAM_FILE_DETECTOR_NAME = "busybox"
-    }
+    /**
+     * Logger instance for logging detection events and information.
+     *
+     * Defaults to WARN level logging. Can be customized as needed.
+     */
+    override var logger: Logger = Logger.WARN
+
+    /**
+     * Detector name key used for identification and logging purposes.
+     */
+    internal const val BUSYBOX_PROGRAM_FILE_DETECTOR_NAME = "busybox"
 }

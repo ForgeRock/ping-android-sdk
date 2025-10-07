@@ -8,6 +8,8 @@ package com.pingidentity.device.root.detector
 
 import android.content.Context
 import com.pingidentity.android.ContextProvider
+import com.pingidentity.logger.Logger
+import com.pingidentity.logger.WARN
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
@@ -50,6 +52,8 @@ class CommandDetectorTest {
             override fun getCommands(): Array<String> {
                 return arrayOf("su", "busybox", "magisk")
             }
+
+            override var logger: Logger = Logger.WARN
         }
         val result = testDetector.analyze(context)
 
@@ -70,6 +74,7 @@ class CommandDetectorTest {
             override fun getCommands(): Array<String> {
                 return arrayOf("nonexistentcommand1", "nonexistentcommand2")
             }
+            override var logger: Logger = Logger.WARN
         }
         val result = testDetector.analyze(context)
 
@@ -90,6 +95,7 @@ class CommandDetectorTest {
             override fun getCommands(): Array<String> {
                 return arrayOf("nonexistentcommand1", "nonexistentcommand2")
             }
+            override var logger: Logger = Logger.WARN
         }
         val result = testDetector.analyze(context)
 
@@ -107,7 +113,7 @@ class CommandDetectorTest {
     fun `SuCommandDetector detects su command` () = runTest {
         every { mockRuntime.exec(any<Array<String>>()) } returns mockk()
 
-        val suDetector = SuCommandDetector()
+        val suDetector = SuCommandDetector
         val result = suDetector.analyze(context)
 
         assertEquals(1.0, result)

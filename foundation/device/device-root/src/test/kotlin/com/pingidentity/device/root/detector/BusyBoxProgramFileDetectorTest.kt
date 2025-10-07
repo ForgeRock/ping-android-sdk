@@ -33,7 +33,7 @@ class BusyBoxProgramFileDetectorTest {
      */
     @Test
     fun `BusyBoxProgramReturns expected file names`() {
-        val detector = BusyBoxProgramFileDetector()
+        val detector = BusyBoxProgramFileDetector
         val expectedFileNames = BusyBoxProgramFileDetector.BUSYBOX_PROGRAM_FILE_DETECTOR_NAME
 
         assertEquals(1, detector.getFilenames().size)

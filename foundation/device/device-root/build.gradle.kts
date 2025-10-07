@@ -11,7 +11,6 @@ plugins {
     id("com.pingidentity.convention.jacoco")
     alias(libs.plugins.androidLibrary)
     alias(libs.plugins.kotlinAndroid)
-    alias(libs.plugins.kotlinSerialization)
 }
 
 android {
@@ -19,12 +18,9 @@ android {
 }
 
 dependencies {
-    implementation(project(":foundation:device:device-id"))
-    implementation(project(":foundation:journey-plugin"))
     implementation(project(":foundation:utils"))
     implementation(project(":foundation:android"))
     implementation(project(":foundation:logger"))
-    implementation(libs.kotlinx.serialization.json)
 
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.kotlin.test)

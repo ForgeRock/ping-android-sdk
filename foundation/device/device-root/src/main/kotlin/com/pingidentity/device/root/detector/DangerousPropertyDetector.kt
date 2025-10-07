@@ -6,6 +6,9 @@
 
 package com.pingidentity.device.root.detector
 
+import com.pingidentity.logger.Logger
+import com.pingidentity.logger.WARN
+
 /**
  * Pre-configured tamper detector that checks for dangerous Android system properties.
  *
@@ -48,7 +51,13 @@ package com.pingidentity.device.root.detector
  *
  * @see SystemPropertyDetector
  */
-class DangerousPropertyDetector : SystemPropertyDetector() {
+object DangerousPropertyDetector : SystemPropertyDetector() {
+    /**
+     * Logger instance for logging detector operations and results.
+     *
+     * Defaults to [Logger.Companion.WARN] level to capture warnings and errors.
+     */
+    override var logger: Logger = Logger.WARN
     /**
      * Provides the map of dangerous system properties to check for tampering detection.
      *

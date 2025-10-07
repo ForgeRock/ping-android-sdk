@@ -26,7 +26,7 @@ class SuCommandDetectorTest {
      */
     @Test
     fun `SuCommandDetector returns correct command`() {
-        val detector = SuCommandDetector()
+        val detector = SuCommandDetector
         val command = detector.getCommands()
 
         assert(command.isNotEmpty())

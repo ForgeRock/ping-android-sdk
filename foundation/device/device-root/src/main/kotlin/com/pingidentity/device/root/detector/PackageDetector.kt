@@ -69,7 +69,7 @@ abstract class PackageDetector : TamperDetector {
                 packageManager.getPackageInfo(packageName, 0)
                 return true
             } catch (e: PackageManager.NameNotFoundException) {
-                //Log.e(TAG, "Package $packageName", e)
+                logger.e("Package not found: $packageName", e, )
             }
         }
         return false
@@ -105,11 +105,4 @@ abstract class PackageDetector : TamperDetector {
      * @return A list of suspicious package names to search for
      */
     internal abstract fun getPackages(): List<String>
-
-    companion object {
-        /**
-         * Tag used for logging purposes, derived from the class name.
-         */
-        private val TAG = PackageDetector::class.java.simpleName
-    }
 }

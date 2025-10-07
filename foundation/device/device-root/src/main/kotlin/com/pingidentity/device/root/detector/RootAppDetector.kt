@@ -6,6 +6,9 @@
 
 package com.pingidentity.device.root.detector
 
+import com.pingidentity.logger.Logger
+import com.pingidentity.logger.WARN
+
 /**
  * Pre-configured tamper detector that identifies device rooting by checking for known root management applications.
  *
@@ -51,7 +54,14 @@ package com.pingidentity.device.root.detector
  *
  * @see PackageDetector
  */
-class RootAppDetector : PackageDetector() {
+object RootAppDetector: PackageDetector() {
+    /**
+     * Logger instance for logging detector operations and results.
+     *
+     * Defaults to [Logger.Companion.WARN] level to capture warnings and errors.
+     */
+    override var logger: Logger = Logger.WARN
+
     /**
      * Provides the list of known root management application package names.
      *
@@ -63,46 +73,44 @@ class RootAppDetector : PackageDetector() {
      */
     override fun getPackages(): List<String> = CURRENT_KNOWN_ROOT_APPS
 
-    companion object {
-        /**
-         * Comprehensive list of known root management application package names.
-         *
-         * This list includes popular root management applications across different categories:
-         *
-         * **Classic Superuser Applications:**
-         * - `com.noshufou.android.su` - Original Superuser app
-         * - `com.noshufou.android.su.elite` - Superuser Elite version
-         * - `eu.chainfire.supersu` - SuperSU by Chainfire
-         * - `com.koushikdutta.superuser` - Koush's Superuser (CyanogenMod)
-         * - `com.thirdparty.superuser` - Third-party Superuser implementations
-         * - `com.yellowes.su` - YellowADB Superuser
-         *
-         * **Modern Root Solutions:**
-         * - `com.topjohnwu.magisk` - Magisk systemless root
-         *
-         * **One-Click Rooting Tools:**
-         * - `com.kingroot.kinguser` - KingRoot/KingUser
-         * - `com.kingo.root` - Kingo Root
-         * - `com.smedialink.oneclickroot` - OneClickRoot
-         * - `com.zhiqupk.root.global` - Root Master (global version)
-         * - `com.alephzain.framaroot` - Framaroot exploit tool
-         *
-         * This list is maintained to include the most commonly encountered root management
-         * applications and should be updated as new tools become popular.
-         */
-        internal val CURRENT_KNOWN_ROOT_APPS = listOf<String>(
-            "com.noshufou.android.su",
-            "com.noshufou.android.su.elite",
-            "eu.chainfire.supersu",
-            "com.koushikdutta.superuser",
-            "com.thirdparty.superuser",
-            "com.yellowes.su",
-            "com.topjohnwu.magisk",
-            "com.kingroot.kinguser",
-            "com.kingo.root",
-            "com.smedialink.oneclickroot",
-            "com.zhiqupk.root.global",
-            "com.alephzain.framaroot",
-        )
-    }
+    /**
+     * Comprehensive list of known root management application package names.
+     *
+     * This list includes popular root management applications across different categories:
+     *
+     * **Classic Superuser Applications:**
+     * - `com.noshufou.android.su` - Original Superuser app
+     * - `com.noshufou.android.su.elite` - Superuser Elite version
+     * - `eu.chainfire.supersu` - SuperSU by Chainfire
+     * - `com.koushikdutta.superuser` - Koush's Superuser (CyanogenMod)
+     * - `com.thirdparty.superuser` - Third-party Superuser implementations
+     * - `com.yellowes.su` - YellowADB Superuser
+     *
+     * **Modern Root Solutions:**
+     * - `com.topjohnwu.magisk` - Magisk systemless root
+     *
+     * **One-Click Rooting Tools:**
+     * - `com.kingroot.kinguser` - KingRoot/KingUser
+     * - `com.kingo.root` - Kingo Root
+     * - `com.smedialink.oneclickroot` - OneClickRoot
+     * - `com.zhiqupk.root.global` - Root Master (global version)
+     * - `com.alephzain.framaroot` - Framaroot exploit tool
+     *
+     * This list is maintained to include the most commonly encountered root management
+     * applications and should be updated as new tools become popular.
+     */
+    internal val CURRENT_KNOWN_ROOT_APPS = listOf(
+        "com.noshufou.android.su",
+        "com.noshufou.android.su.elite",
+        "eu.chainfire.supersu",
+        "com.koushikdutta.superuser",
+        "com.thirdparty.superuser",
+        "com.yellowes.su",
+        "com.topjohnwu.magisk",
+        "com.kingroot.kinguser",
+        "com.kingo.root",
+        "com.smedialink.oneclickroot",
+        "com.zhiqupk.root.global",
+        "com.alephzain.framaroot",
+    )
 }

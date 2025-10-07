@@ -30,11 +30,11 @@ class DangerousPropertyDetectorTest {
      */
     @Test
     fun `DangerousPropertyDetector returns correct properties`() {
-        val detector = DangerousPropertyDetector()
+        val detector = DangerousPropertyDetector
         val properties = detector.getProperties()
 
         assertEquals(2, properties.size)
-        assert(properties["ro.debuggable"] == "1")
-        assert(properties["ro.secure"] == "0")
+        assertEquals("1", properties["ro.debuggable"])
+        assertEquals("0", properties["ro.secure"])
     }
 }

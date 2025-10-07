@@ -55,7 +55,8 @@ abstract class CommandDetector : TamperDetector {
             process = Runtime.getRuntime().exec(arrayOf("which", command))
             val bufferedReader = BufferedReader(InputStreamReader(process.inputStream))
             return !bufferedReader.readLine().isNullOrEmpty()
-        } catch (exception: Exception) {
+        } catch (e: Exception) {
+            logger.e("Error checking for command: $command", e)
             return false
         } finally {
             process?.destroy()

@@ -8,6 +8,8 @@ package com.pingidentity.device.root.detector
 
 import android.content.Context
 import com.pingidentity.android.ContextProvider
+import com.pingidentity.logger.Logger
+import com.pingidentity.logger.WARN
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
@@ -159,6 +161,8 @@ class NativeDetectorTest {
         var passedPathArray: Array<Any> = emptyArray()
 
         override fun getFilenames(): List<String> = listOf("su")
+
+        override var logger: Logger = Logger.WARN
 
         /**
          * Simulates the native exists method behavior.

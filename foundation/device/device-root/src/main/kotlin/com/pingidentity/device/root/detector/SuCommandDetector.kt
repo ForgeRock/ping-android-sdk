@@ -6,6 +6,9 @@
 
 package com.pingidentity.device.root.detector
 
+import com.pingidentity.logger.Logger
+import com.pingidentity.logger.WARN
+
 /**
  * Pre-configured tamper detector that identifies device rooting by checking for the `su` command.
  *
@@ -49,7 +52,12 @@ package com.pingidentity.device.root.detector
  *
  * @see CommandDetector
  */
-class SuCommandDetector : CommandDetector() {
+object SuCommandDetector : CommandDetector() {
+    /*
+     * Logger instance for logging detector activities and results.
+     */
+    override var logger: Logger = Logger.WARN
+
     /**
      * Provides the array of commands to check for tampering detection.
      *
@@ -62,7 +70,5 @@ class SuCommandDetector : CommandDetector() {
         return arrayOf(SU_COMMAND)
     }
 
-    companion object {
-        internal const val SU_COMMAND = "su"
-    }
+    internal const val SU_COMMAND = "su"
 }

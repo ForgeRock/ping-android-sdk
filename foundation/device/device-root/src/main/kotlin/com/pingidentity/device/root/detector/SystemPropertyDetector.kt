@@ -86,11 +86,11 @@ abstract class SystemPropertyDetector : TamperDetector {
      */
     private fun propsReader(): List<String> {
         try {
-            val inputStream = Runtime.getRuntime().exec("getprop").inputStream
-            if (inputStream == null) return emptyList()
+            val inputStream = Runtime.getRuntime().exec("getprop").inputStream ?: return emptyList()
             return Scanner(inputStream)
                 .useDelimiter("\\A").next().split("\n")
         } catch (exception: Exception) {
+            logger.e("Error reading system properties", exception)
             return emptyList()
         }
     }

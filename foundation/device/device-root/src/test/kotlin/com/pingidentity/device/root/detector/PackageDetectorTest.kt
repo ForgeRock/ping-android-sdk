@@ -9,6 +9,8 @@ package com.pingidentity.device.root.detector
 import android.content.Context
 import android.content.pm.PackageManager
 import com.pingidentity.android.ContextProvider
+import com.pingidentity.logger.Logger
+import com.pingidentity.logger.WARN
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
@@ -50,6 +52,7 @@ class PackageDetectorTest {
             override fun getPackages(): List<String> {
                 return listOf("com.example.suspicious", "com.example.another")
             }
+            override var logger: Logger = Logger.WARN
         }
 
         val result = testDetector.analyze(context)
@@ -69,6 +72,7 @@ class PackageDetectorTest {
             override fun getPackages(): List<String> {
                 return listOf("com.example.suspicious", "com.example.another")
             }
+            override var logger: Logger = Logger.WARN
         }
         val result = testDetector.analyze(context)
         assertEquals(0.0, result)

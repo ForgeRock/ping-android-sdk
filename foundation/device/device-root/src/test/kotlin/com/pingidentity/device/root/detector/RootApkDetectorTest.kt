@@ -8,7 +8,7 @@ package com.pingidentity.device.root.detector
 
 import android.content.Context
 import com.pingidentity.android.ContextProvider
-import com.pingidentity.device.root.detector.RootApkDetector.Companion.ROOT_APK
+import com.pingidentity.device.root.detector.RootApkDetector.ROOT_APK
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
@@ -68,7 +68,7 @@ class RootApkDetectorTest {
 
         apkFiles.forEach { filePath ->
             every { mockFile.exists() } returns true
-            val detector = RootApkDetector()
+            val detector = RootApkDetector
             val result = detector.analyze(context)
             assertEquals(0.0, result)
         }

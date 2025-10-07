@@ -7,6 +7,8 @@
 package com.pingidentity.device.root.detector
 
 import android.content.Context
+import com.pingidentity.logger.Logger
+import com.pingidentity.logger.WARN
 
 /**
  * Pre-configured tamper detector that identifies device compromise by checking for applications that require root access.
@@ -62,7 +64,12 @@ import android.content.Context
  *
  * @see PackageDetector
  */
-class RootRequiredAppDetector : PackageDetector() {
+object RootRequiredAppDetector : PackageDetector() {
+    /**
+     * Logger instance for logging detection process and results.
+     */
+    override var logger: Logger = Logger.WARN
+
     /**
      * Provides the list of application package names that require root access to function.
      *
@@ -87,75 +94,73 @@ class RootRequiredAppDetector : PackageDetector() {
         return super.analyze(context)
     }
 
-    companion object {
-        /**
-         * Comprehensive list of application package names that require root access to function properly.
-         *
-         * This list includes applications across multiple categories that are designed to work
-         * exclusively on rooted devices:
-         *
-         * **ROM Management:**
-         * - `com.koushikdutta.rommanager` - ROM Manager: Custom ROM installation tool
-         * - `com.koushikdutta.rommanager.license` - ROM Manager License: Premium version
-         *
-         * **App Modification & Patching:**
-         * - `com.dimonvideo.luckypatcher` - Lucky Patcher: App modification and license bypass
-         * - `com.chelpus.lackypatch` - Lucky Patcher variant
-         * - `com.chelpus.luckypatcher` - Lucky Patcher alternative package
-         * - `cc.madkite.freedom` - Freedom: In-app purchase manipulation
-         * - `com.cih.game_cih` - Game CIH: Game modification tool
-         * - `com.xmodgame` - Xmod Games: Game modification platform
-         *
-         * **Security & App Management:**
-         * - `com.ramdroid.appquarantine` - App Quarantine: Application isolation
-         * - `com.ramdroid.appquarantinepro` - App Quarantine Pro: Premium version
-         *
-         * **Alternative Markets & Piracy:**
-         * - `com.blackmartalpha` - BlackMart Alpha: Alternative app store
-         * - `org.blackmart.market` - BlackMart Market: Piracy-focused marketplace
-         * - `com.allinone.free` - All In One Free: Free app repository
-         * - `com.repodroid.app` - RepoTRoid: App repository
-         * - `org.mobilism.android` - Mobilism: App sharing community
-         *
-         * **System Modification Frameworks:**
-         * - `com.solohsu.android.edxp.manager` - EdXposed Manager: Framework manager
-         * - `org.meowcat.edxposed.manager` - MEOWCat EdXposed: Alternative manager
-         *
-         * **Billing & License Bypass Tools:**
-         * - Various billing service modifications and hack tools
-         * - Custom system update spoofing applications
-         *
-         * The presence of any of these applications indicates sophisticated device modification
-         * requiring root access and suggests potential security risks.
-         */
-        internal val CURRENT_KNOWN_APPS_REQUIRE_ROOT = listOf<String>(
-            "com.koushikdutta.rommanager",
-            "com.koushikdutta.rommanager.license",
-            "com.dimonvideo.luckypatcher",
-            "com.chelpus.lackypatch",
-            "com.ramdroid.appquarantine",
-            "com.ramdroid.appquarantinepro",
-            "com.android.vending.billing.InAppBillingService.COIN",
-            "com.android.vending.billing.InAppBillingService.LUCK",
-            "com.chelpus.luckypatcher",
-            "com.blackmartalpha",
-            "org.blackmart.market",
-            "com.allinone.free",
-            "com.repodroid.app",
-            "org.creeplays.hack",
-            "com.baseappfull.fwd",
-            "com.zmapp",
-            "com.dv.marketmod.installer",
-            "org.mobilism.android",
-            "com.android.wp.net.log",
-            "com.android.camera.update",
-            "cc.madkite.freedom",
-            "com.solohsu.android.edxp.manager",
-            "org.meowcat.edxposed.manager",
-            "com.xmodgame",
-            "com.cih.game_cih",
-            "com.charles.lpoqasert",
-            "catch_.me_.if_.you_.can_",
-        )
-    }
+    /**
+     * Comprehensive list of application package names that require root access to function properly.
+     *
+     * This list includes applications across multiple categories that are designed to work
+     * exclusively on rooted devices:
+     *
+     * **ROM Management:**
+     * - `com.koushikdutta.rommanager` - ROM Manager: Custom ROM installation tool
+     * - `com.koushikdutta.rommanager.license` - ROM Manager License: Premium version
+     *
+     * **App Modification & Patching:**
+     * - `com.dimonvideo.luckypatcher` - Lucky Patcher: App modification and license bypass
+     * - `com.chelpus.lackypatch` - Lucky Patcher variant
+     * - `com.chelpus.luckypatcher` - Lucky Patcher alternative package
+     * - `cc.madkite.freedom` - Freedom: In-app purchase manipulation
+     * - `com.cih.game_cih` - Game CIH: Game modification tool
+     * - `com.xmodgame` - Xmod Games: Game modification platform
+     *
+     * **Security & App Management:**
+     * - `com.ramdroid.appquarantine` - App Quarantine: Application isolation
+     * - `com.ramdroid.appquarantinepro` - App Quarantine Pro: Premium version
+     *
+     * **Alternative Markets & Piracy:**
+     * - `com.blackmartalpha` - BlackMart Alpha: Alternative app store
+     * - `org.blackmart.market` - BlackMart Market: Piracy-focused marketplace
+     * - `com.allinone.free` - All In One Free: Free app repository
+     * - `com.repodroid.app` - RepoTRoid: App repository
+     * - `org.mobilism.android` - Mobilism: App sharing community
+     *
+     * **System Modification Frameworks:**
+     * - `com.solohsu.android.edxp.manager` - EdXposed Manager: Framework manager
+     * - `org.meowcat.edxposed.manager` - MEOWCat EdXposed: Alternative manager
+     *
+     * **Billing & License Bypass Tools:**
+     * - Various billing service modifications and hack tools
+     * - Custom system update spoofing applications
+     *
+     * The presence of any of these applications indicates sophisticated device modification
+     * requiring root access and suggests potential security risks.
+     */
+    internal val CURRENT_KNOWN_APPS_REQUIRE_ROOT = listOf(
+        "com.koushikdutta.rommanager",
+        "com.koushikdutta.rommanager.license",
+        "com.dimonvideo.luckypatcher",
+        "com.chelpus.lackypatch",
+        "com.ramdroid.appquarantine",
+        "com.ramdroid.appquarantinepro",
+        "com.android.vending.billing.InAppBillingService.COIN",
+        "com.android.vending.billing.InAppBillingService.LUCK",
+        "com.chelpus.luckypatcher",
+        "com.blackmartalpha",
+        "org.blackmart.market",
+        "com.allinone.free",
+        "com.repodroid.app",
+        "org.creeplays.hack",
+        "com.baseappfull.fwd",
+        "com.zmapp",
+        "com.dv.marketmod.installer",
+        "org.mobilism.android",
+        "com.android.wp.net.log",
+        "com.android.camera.update",
+        "cc.madkite.freedom",
+        "com.solohsu.android.edxp.manager",
+        "org.meowcat.edxposed.manager",
+        "com.xmodgame",
+        "com.cih.game_cih",
+        "com.charles.lpoqasert",
+        "catch_.me_.if_.you_.can_",
+    )
 }

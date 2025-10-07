@@ -8,6 +8,8 @@ package com.pingidentity.device.root.detector
 
 import android.content.Context
 import android.os.Build
+import com.pingidentity.logger.Logger
+import com.pingidentity.logger.WARN
 import java.util.Scanner
 
 /**
@@ -56,6 +58,7 @@ import java.util.Scanner
  */
 class PermissionDetector(
     private val androidBuildSdkProvider: AndroidBuildSdkProvider = DefaultAndroidBuildSdkProvider(),
+    override var logger: Logger = Logger.WARN,
 ) : TamperDetector {
 
     /**
@@ -80,9 +83,8 @@ class PermissionDetector(
         val sdkVersion = androidBuildSdkProvider.getSdkVersion()
         for (line in mountReader()) {
             val args = line.split(" ")
-            if (sdkVersion <= Build.VERSION_CODES.M && args.size < 4 ||
-                sdkVersion > Build.VERSION_CODES.M && args.size < 6) {
-                //Log.e(TAG, "Error formatting mount line: $line")
+            if (args.size < 4 || args.size < 6) {
+                logger.e("Error formatting mount line: $line")
                 continue
             }
             var mountPoint: String
@@ -129,16 +131,12 @@ class PermissionDetector(
             if (inputStream == null) return emptyList()
             return Scanner(inputStream).useDelimiter("\\A").next().split("\n")
         } catch (exception: Exception) {
+            logger.e("Error reading mount points", exception)
             return emptyList()
         }
     }
 
     companion object {
-        /**
-         * Tag used for logging purposes, derived from the class name.
-         */
-        private val TAG = PermissionDetector::class.java.simpleName
-
         /**
          * List of critical system paths that should never be writable on a secure device.
          *

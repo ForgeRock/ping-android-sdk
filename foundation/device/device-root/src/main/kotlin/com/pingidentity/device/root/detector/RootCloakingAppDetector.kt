@@ -6,6 +6,9 @@
 
 package com.pingidentity.device.root.detector
 
+import com.pingidentity.logger.Logger
+import com.pingidentity.logger.WARN
+
 /**
  * Pre-configured tamper detector that identifies device compromise by checking for root cloaking applications.
  *
@@ -55,7 +58,7 @@ package com.pingidentity.device.root.detector
  *
  * @see PackageDetector
  */
-class RootCloakingAppDetector : PackageDetector() {
+object RootCloakingAppDetector : PackageDetector() {
     /**
      * Provides the list of known root cloaking application package names.
      *
@@ -68,40 +71,45 @@ class RootCloakingAppDetector : PackageDetector() {
      */
     override fun getPackages(): List<String> = CURRENT_ROOT_CLOAKING_APPS
 
-    companion object {
-        /**
-         * Comprehensive list of known root cloaking application package names.
-         *
-         * This list includes applications specifically designed to hide root access:
-         *
-         * **Direct Root Cloaking Applications:**
-         * - `com.devadvance.rootcloak` - RootCloak: Popular root hiding tool
-         * - `com.devadvance.rootcloakplus` - RootCloak Plus: Enhanced version with additional features
-         * - `com.amphoras.hidemyroot` - Hide My Root: Root concealment application
-         * - `com.amphoras.hidemyrootadfree` - Hide My Root Ad-Free: Premium version without advertisements
-         * - `com.formyhm.hiderootPremium` - Hide Root Premium: Commercial root hiding solution
-         * - `com.formyhm.hideroot` - Hide Root: Basic root hiding functionality
-         *
-         * **Framework-Based Modification Tools:**
-         * - `de.robv.android.xposed.installer` - Xposed Framework: System-level modification framework
-         * - `com.saurik.substrate` - Substrate: Runtime code manipulation framework
-         *
-         * **Temporary Root Management:**
-         * - `com.zachspong.temprootremovejb` - Temp Root Remove JB: Temporary root access management
-         *
-         * These applications serve no legitimate purpose on unrooted devices, making their presence
-         * a strong indicator of device tampering and attempts to conceal root access.
-         */
-        internal val CURRENT_ROOT_CLOAKING_APPS = listOf<String>(
-            "com.devadvance.rootcloak",
-            "com.devadvance.rootcloakplus",
-            "de.robv.android.xposed.installer",
-            "com.saurik.substrate",
-            "com.zachspong.temprootremovejb",
-            "com.amphoras.hidemyroot",
-            "com.amphoras.hidemyrootadfree",
-            "com.formyhm.hiderootPremium",
-            "com.formyhm.hideroot",
-        )
-    }
+    /**
+     * Logger instance for logging detector operations and results.
+     *
+     * Defaults to [Logger.Companion.WARN] level to capture warnings and errors.
+     */
+    override var logger: Logger = Logger.WARN
+
+    /**
+     * Comprehensive list of known root cloaking application package names.
+     *
+     * This list includes applications specifically designed to hide root access:
+     *
+     * **Direct Root Cloaking Applications:**
+     * - `com.devadvance.rootcloak` - RootCloak: Popular root hiding tool
+     * - `com.devadvance.rootcloakplus` - RootCloak Plus: Enhanced version with additional features
+     * - `com.amphoras.hidemyroot` - Hide My Root: Root concealment application
+     * - `com.amphoras.hidemyrootadfree` - Hide My Root Ad-Free: Premium version without advertisements
+     * - `com.formyhm.hiderootPremium` - Hide Root Premium: Commercial root hiding solution
+     * - `com.formyhm.hideroot` - Hide Root: Basic root hiding functionality
+     *
+     * **Framework-Based Modification Tools:**
+     * - `de.robv.android.xposed.installer` - Xposed Framework: System-level modification framework
+     * - `com.saurik.substrate` - Substrate: Runtime code manipulation framework
+     *
+     * **Temporary Root Management:**
+     * - `com.zachspong.temprootremovejb` - Temp Root Remove JB: Temporary root access management
+     *
+     * These applications serve no legitimate purpose on unrooted devices, making their presence
+     * a strong indicator of device tampering and attempts to conceal root access.
+     */
+    internal val CURRENT_ROOT_CLOAKING_APPS = listOf(
+        "com.devadvance.rootcloak",
+        "com.devadvance.rootcloakplus",
+        "de.robv.android.xposed.installer",
+        "com.saurik.substrate",
+        "com.zachspong.temprootremovejb",
+        "com.amphoras.hidemyroot",
+        "com.amphoras.hidemyrootadfree",
+        "com.formyhm.hiderootPremium",
+        "com.formyhm.hideroot",
+    )
 }

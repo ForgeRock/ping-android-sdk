@@ -6,6 +6,9 @@
 
 package com.pingidentity.device.root.detector
 
+import com.pingidentity.logger.Logger
+import com.pingidentity.logger.WARN
+
 /**
  * Pre-configured tamper detector that identifies device rooting by checking for root program files.
  *
@@ -50,7 +53,9 @@ package com.pingidentity.device.root.detector
  *
  * @see FileDetector
  */
-class RootProgramFileDetector : FileDetector() {
+object RootProgramFileDetector : FileDetector() {
+
+    override var logger: Logger = Logger.WARN
     /**
      * Provides the list of root program filenames to check for tampering detection.
      *
@@ -64,10 +69,8 @@ class RootProgramFileDetector : FileDetector() {
      */
     override fun getFilenames(): List<String> = CURRENT_KNOWN_ROOT_PROGRAM_FILES
 
-    companion object {
-        internal val CURRENT_KNOWN_ROOT_PROGRAM_FILES = listOf(
-            "su",
-            "magisk",
-        )
-    }
+    internal val CURRENT_KNOWN_ROOT_PROGRAM_FILES = listOf(
+        "su",
+        "magisk",
+    )
 }

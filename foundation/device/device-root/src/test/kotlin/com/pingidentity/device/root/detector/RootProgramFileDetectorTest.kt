@@ -28,7 +28,7 @@ class RootProgramFileDetectorTest {
      */
     @Test
     fun `Test RootProgramFileDetector returns correct files`() {
-        val detector = RootProgramFileDetector()
+        val detector = RootProgramFileDetector
         val files = detector.getFilenames()
 
         assert(files.isNotEmpty())

@@ -8,6 +8,8 @@ package com.pingidentity.device.root.detector
 
 import android.content.Context
 import com.pingidentity.android.ContextProvider
+import com.pingidentity.logger.Logger
+import com.pingidentity.logger.WARN
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
@@ -82,7 +84,7 @@ class SystemPropertyDetectorTest {
      */
     @Test
     fun `DangerousPropertyDetector detects dangerous properties`() = runTest {
-        val detector = DangerousPropertyDetector()
+        val detector = DangerousPropertyDetector
         val result = detector.analyze(context)
         // Since we cannot guarantee the properties on the test device, we check for valid output
         // The result should be either 0.0 (no dangerous properties) or 1.0 (dangerous properties found)
@@ -130,6 +132,7 @@ class SystemPropertyDetectorTest {
         val properties = mapOf("ro.debuggable" to "1")
         val detector = object : SystemPropertyDetector() {
             override fun getProperties(): Map<String, String> = properties
+            override var logger: Logger = Logger.WARN
         }
         val result = detector.exists(properties)
         assertTrue(!result)
@@ -148,6 +151,7 @@ class SystemPropertyDetectorTest {
         val properties = mapOf("ro.secure" to "0")
         val detector = object : SystemPropertyDetector() {
             override fun getProperties(): Map<String, String> = properties
+            override var logger: Logger = Logger.WARN
         }
         val result = detector.exists(emptyMap())
         assertFalse(result)
@@ -169,6 +173,7 @@ class SystemPropertyDetectorTest {
                 "ro.build.tags" to "test-keys"
             )
         }
+        override var logger: Logger = Logger.WARN
     }
 
     /**
@@ -178,5 +183,6 @@ class SystemPropertyDetectorTest {
         override fun getProperties(): Map<String, String> {
             return emptyMap()
         }
+        override var logger: Logger = Logger.WARN
     }
 }

@@ -24,7 +24,7 @@ import com.pingidentity.logger.Logger
  * - Values between 0.0 and 1.0 can indicate varying levels of suspicion
  *
  */
-interface TamperDetector {
+interface TamperDetector : LoggerAware {
     /**
      * Determines if the current device has been tampered with or compromised.
      *

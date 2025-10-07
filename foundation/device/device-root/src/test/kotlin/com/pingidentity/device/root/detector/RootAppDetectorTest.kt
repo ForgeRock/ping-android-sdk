@@ -26,7 +26,7 @@ class RootAppDetectorTest {
      */
     @Test
     fun `RootAppDetector returns correct known packages`() {
-        val detector = RootAppDetector()
+        val detector = RootAppDetector
         val packages = detector.getPackages()
 
         // Check that the list is not empty

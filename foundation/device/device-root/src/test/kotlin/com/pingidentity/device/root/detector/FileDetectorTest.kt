@@ -8,6 +8,8 @@ package com.pingidentity.device.root.detector
 
 import android.content.Context
 import com.pingidentity.android.ContextProvider
+import com.pingidentity.logger.Logger
+import com.pingidentity.logger.WARN
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
@@ -58,6 +60,7 @@ class FileDetectorTest {
             override fun getFilenames(): List<String> {
                 return listOf("testfile1", "testfile2")
             }
+            override var logger: Logger = Logger.WARN
         }
 
         val result = testDetector.analyze(context)
@@ -75,7 +78,7 @@ class FileDetectorTest {
      */
     @Test
     fun `BusyBoxProgramFileDetector detects busybox file presence`(): Unit = runTest {
-        val busyBoxDetector = BusyBoxProgramFileDetector()
+        val busyBoxDetector = BusyBoxProgramFileDetector
         val result = busyBoxDetector.analyze(context)
         // Since we cannot guarantee the properties on the test device, we check for valid output
         // The result should be either 0.0 (no BusyBox program found) or 1.0 (BusyBox program found)
@@ -110,7 +113,7 @@ class FileDetectorTest {
      */
     @Test
     fun `RootProgramFileDetector detects root program filenames to check for tampering detection`() = runTest {
-        val rootProgramFileDetector = RootProgramFileDetector()
+        val rootProgramFileDetector = RootProgramFileDetector
         val result = rootProgramFileDetector.analyze(context)
         assertEquals(1.0, result)
     }

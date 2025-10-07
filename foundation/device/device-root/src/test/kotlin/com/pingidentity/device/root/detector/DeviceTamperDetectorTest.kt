@@ -10,6 +10,8 @@ import android.content.Context
 import com.pingidentity.android.ContextProvider
 import com.pingidentity.device.DefaultTamperDetector
 import com.pingidentity.device.analyze
+import com.pingidentity.logger.Logger
+import com.pingidentity.logger.WARN
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
@@ -55,6 +57,7 @@ class DeviceTamperDetectorTest {
             override suspend fun analyze(context: Context): Double {
                 return 0.0
             }
+            override var logger: Logger = Logger.WARN
         }
         assert(detector.analyze(mockContext) == 0.0)
     }
@@ -67,9 +70,7 @@ class DeviceTamperDetectorTest {
      */
     @Test
     fun `Test analyze returns correct value when passed with DefaultTamperDetector`() = runTest {
-        val detector = analyze {
-            DefaultTamperDetector()
-        }
+        val detector = analyze().apply { DefaultTamperDetector() }
 
         assertEquals(0.0, detector)
     }
@@ -79,14 +80,12 @@ class DeviceTamperDetectorTest {
      *
      * This test verifies that a TamperDetector created via the factory function
      * correctly executes the provided lambda and returns the expected confidence score.
-     * It also checks that the created detector implements LoggerAware.
      */
     @Test
     fun `TamperDetector factory creates detector with custom logic`() = runTest {
         val detector = TamperDetector { 0.42 }
         val result = detector.analyze(mockContext)
 
-        assert(detector is LoggerAware)
         assertEquals(0.42, result)
     }
 }

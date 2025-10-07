@@ -27,7 +27,7 @@ class RootCloakingAppDetectorTest {
      */
     @Test
     fun `RootCloakingAppDetector returns correct known packages`() {
-        val detector = RootCloakingAppDetector()
+        val detector = RootCloakingAppDetector
         val packages = detector.getPackages()
 
         // Check that the list is not empty

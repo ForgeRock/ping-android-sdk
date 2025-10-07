@@ -8,6 +8,8 @@ package com.pingidentity.device.root.detector
 
 import android.content.Context
 import android.os.Build
+import com.pingidentity.logger.Logger
+import com.pingidentity.logger.WARN
 
 /**
  * Pre-configured tamper detector that checks Android build tags for signs of tampering.
@@ -38,8 +40,10 @@ import android.os.Build
  * @see TamperDetector
  */
 class BuildTagsDetector(
-    private val androidBuildTagProvider: AndroidBuildTagProvider = DefaultAndroidBuildTagProvider()
+    private val androidBuildTagProvider: AndroidBuildTagProvider = DefaultAndroidBuildTagProvider(),
+    override var logger: Logger = Logger.WARN,
 ) : TamperDetector {
+
     /**
      * Analyzes the device's build tags to detect tampering.
      *
@@ -51,11 +55,7 @@ class BuildTagsDetector(
      */
     override suspend fun analyze(context: Context): Double {
         val buildTags = androidBuildTagProvider.getBuildTags()
-        return if (buildTags != null && buildTags.contains(TEST_KEYS)) {
-            1.0
-        } else {
-            0.0
-        }
+        return if (buildTags?.contains(TEST_KEYS) == true) 1.0 else 0.0
     }
 }
 

@@ -7,6 +7,8 @@
 package com.pingidentity.device.root.detector
 
 import android.content.Context
+import com.pingidentity.logger.Logger
+import com.pingidentity.logger.WARN
 import java.io.File
 
 /**
@@ -52,7 +54,13 @@ import java.io.File
  *
  * @see TamperDetector
  */
-class RootApkDetector : TamperDetector {
+object RootApkDetector : TamperDetector {
+    /**
+     * Logger instance for logging detector operations and results.
+     *
+     * Defaults to [Logger.Companion.WARN] level to capture warnings and errors.
+     */
+    override var logger: Logger = Logger.WARN
     /**
      * Determines if the device has been tampered with by checking for root management APK files.
      *
@@ -91,35 +99,28 @@ class RootApkDetector : TamperDetector {
                 }
             }
         } catch (exception: Exception) {
-            //Log.e(TAG, "Failed to check apks", exception)
+            logger.e("Failed to check apks", exception)
         }
         return false
     }
 
-    companion object {
-        /**
-         * Tag used for logging purposes, derived from the class name.
-         */
-        private val TAG = RootApkDetector::class.java.simpleName
-
-        /**
-         * List of known root management APK file paths to check for tampering detection.
-         *
-         * These paths represent the typical installation locations for popular root
-         * management applications in the Android system partition:
-         *
-         * - `/system/app/Superuser.apk` - Original Superuser root management app
-         * - `/system/app/SuperSU.apk` - Popular SuperSU root access manager
-         * - `/system/app/magisk.apk` - Modern Magisk systemless root solution
-         *
-         * These APK files are installed to the system partition during rooting and
-         * typically remain there even if the applications are later hidden or removed
-         * from normal application lists.
-         */
-        internal val ROOT_APK = listOf<String>(
-            "/system/app/Superuser.apk",
-            "/system/app/SuperSU.apk",
-            "/system/app/magisk.apk",
-        )
-    }
+    /**
+     * List of known root management APK file paths to check for tampering detection.
+     *
+     * These paths represent the typical installation locations for popular root
+     * management applications in the Android system partition:
+     *
+     * - `/system/app/Superuser.apk` - Original Superuser root management app
+     * - `/system/app/SuperSU.apk` - Popular SuperSU root access manager
+     * - `/system/app/magisk.apk` - Modern Magisk systemless root solution
+     *
+     * These APK files are installed to the system partition during rooting and
+     * typically remain there even if the applications are later hidden or removed
+     * from normal application lists.
+     */
+    internal val ROOT_APK = listOf<String>(
+        "/system/app/Superuser.apk",
+        "/system/app/SuperSU.apk",
+        "/system/app/magisk.apk",
+    )
 }

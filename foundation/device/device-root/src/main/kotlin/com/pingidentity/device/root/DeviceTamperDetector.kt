@@ -61,16 +61,16 @@ import kotlin.math.max
  */
 internal fun DefaultTamperDetector(): MutableList<TamperDetector>.() -> Unit = {
     add(BuildTagsDetector())
-    add(BusyBoxProgramFileDetector())
-    add(DangerousPropertyDetector())
+    add(BusyBoxProgramFileDetector)
+    add(DangerousPropertyDetector)
     add(NativeDetector())
     add(PermissionDetector())
-    add(RootApkDetector())
-    add(RootAppDetector())
-    add(RootRequiredAppDetector())
-    add(RootCloakingAppDetector())
-    add(RootProgramFileDetector())
-    add(SuCommandDetector())
+    add(RootApkDetector)
+    add(RootAppDetector)
+    add(RootRequiredAppDetector)
+    add(RootCloakingAppDetector)
+    add(RootProgramFileDetector)
+    add(SuCommandDetector)
 }
 
 /**

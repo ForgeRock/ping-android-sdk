@@ -48,7 +48,7 @@ class RootRequiredAppDetectorTest {
      */
     @Test
     fun `RootRequiredAppDetector returns correct packages`() {
-        val detector = RootRequiredAppDetector()
+        val detector = RootRequiredAppDetector
         val packages = detector.getPackages()
 
         assert(packages.isNotEmpty())
@@ -65,7 +65,7 @@ class RootRequiredAppDetectorTest {
     @Test
     fun `RootRequiredAppDetector analyze returns 0_0 when no root required apps found`() = runTest {
         mockPackageManager()
-        val detector = RootRequiredAppDetector()
+        val detector = RootRequiredAppDetector
         val result = detector.analyze(context)
         assertEquals(0.0, result)
     }

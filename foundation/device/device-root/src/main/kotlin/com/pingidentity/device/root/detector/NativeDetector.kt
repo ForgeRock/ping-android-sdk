@@ -7,6 +7,8 @@
 package com.pingidentity.device.root.detector
 
 import android.content.Context
+import com.pingidentity.logger.Logger
+import com.pingidentity.logger.WARN
 
 /**
  * Native JNI-based detector for identifying device tampering through file system checks.
@@ -36,7 +38,7 @@ import android.content.Context
  *
  * @see FileDetector
  */
-class NativeDetector : FileDetector() {
+class NativeDetector(override var logger: Logger = Logger.WARN) : FileDetector() {
     /**
      * Provides the list of filenames to check for using native detection.
      *
@@ -89,23 +91,17 @@ class NativeDetector : FileDetector() {
 
         val pathsAsAny = Array<Any>(pathList.size) { i -> pathList[i] }
 
-        try {
-            if (exists(pathsAsAny) > 0) {
-                return 1.0
+        return runCatching {
+            if (exists(pathsAsAny) > 0) 1.0 else 0.0
+        }.getOrElse { exception ->
+            if (exception is UnsatisfiedLinkError) {
+                logger.e("Native library not linked, disabling NativeDetector", exception)
             }
-        } catch (e: UnsatisfiedLinkError) {
-            //Log.e(TAG, "Unable to link to tool-file library", e)
-            return 0.0
+            0.0
         }
-        return 0.0
     }
 
     companion object {
-        /**
-         * Tag used for logging purposes, derived from the class name.
-         */
-        private val TAG = NativeDetector::class.java.simpleName
-
         /**
          * Flag indicating whether the native library was successfully loaded.
          *
@@ -126,11 +122,14 @@ class NativeDetector : FileDetector() {
          * where the native library is not available or compatible with the device.
          */
         init {
+            val logger: Logger = Logger.WARN
+
             try {
                 System.loadLibrary("tool-file")
                 libraryLoaded = true
             } catch (e: UnsatisfiedLinkError) {
-                //Log.e(TAG, "Unable to link to tool-file library", e)
+                logger.e("Unable to link to tool-file library", e)
+                libraryLoaded = false
             }
         }
     }
