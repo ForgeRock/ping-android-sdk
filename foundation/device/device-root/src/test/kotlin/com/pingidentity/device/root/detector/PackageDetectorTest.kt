@@ -90,7 +90,7 @@ class PackageDetectorTest {
      */
     @Test
     fun `Test RootAppDetector when root APKs are found`() = runTest {
-        val detector = RootApkDetector()
+        val detector = RootApkDetector
         val result = detector.analyze(context)
         assertEquals(0.0, result)
     }
