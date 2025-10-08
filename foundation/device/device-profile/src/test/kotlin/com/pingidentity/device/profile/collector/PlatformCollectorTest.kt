@@ -32,7 +32,7 @@ class PlatformCollectorTest {
      */
     @Test
     fun `platformCollector has correct key`() {
-        assertEquals("platform", PlatformCollector.key)
+        assertEquals("platform", PlatformCollector().key)
     }
 
     /**
@@ -48,13 +48,16 @@ class PlatformCollectorTest {
     @Test
     fun `platformCollector collects platform information`() = runTest {
         // Invoke the collector
-        val platformInfo = PlatformCollector.collect()
+        val platformInfo = PlatformCollector().collect()
 
         // Assert that the collected info is not null
         assertNotNull(platformInfo)
 
         // Assert that the platform is "android" (as per the default in PlatformInfo)
         assertEquals("android", platformInfo.platform)
+
+        //Assert that jailBreakScore is 0 in a standard JVM test environment
+        assertEquals(0, platformInfo.jailBreakScore)
 
         // Assert that the other fields are populated (their exact values
         // will depend on the JVM environment where the test is run,
@@ -72,7 +75,6 @@ class PlatformCollectorTest {
 
         // Fields that are nullable and currently unused can be checked for null
         assertEquals(null, platformInfo.version)
-        assertEquals(null, platformInfo.jailBreakScore)
     }
 
     /**
@@ -99,7 +101,7 @@ class PlatformCollectorTest {
         // So, this test mainly verifies the logic *within* PlatformCollector
         // assuming Build fields could be null.
 
-        val platformInfo = PlatformCollector.collect()
+        val platformInfo = PlatformCollector().collect()
 
         // If Build.DEVICE were null, the collector logic defaults to "Device"
         // If Build.MODEL were null, it defaults to ""
@@ -111,23 +113,23 @@ class PlatformCollectorTest {
         // This is more of a documentation of intent for this limited test setup.
 
         if (Build.DEVICE == null) {
-            assertEquals("Device", platformInfo?.device)
+            assertEquals("Device", platformInfo.device)
         } else {
-            assertEquals(Build.DEVICE, platformInfo?.device)
+            assertEquals(Build.DEVICE, platformInfo.device)
         }
 
         if (Build.MODEL == null) {
-            assertEquals("", platformInfo?.deviceName)
-            assertEquals("", platformInfo?.model)
+            assertEquals("", platformInfo.deviceName)
+            assertEquals("", platformInfo.model)
         } else {
-            assertEquals(Build.MODEL, platformInfo?.deviceName)
-            assertEquals(Build.MODEL, platformInfo?.model)
+            assertEquals(Build.MODEL, platformInfo.deviceName)
+            assertEquals(Build.MODEL, platformInfo.model)
         }
 
         if (Build.BRAND == null) {
-            assertEquals("", platformInfo?.brand)
+            assertEquals("", platformInfo.brand)
         } else {
-            assertEquals(Build.BRAND, platformInfo?.brand)
+            assertEquals(Build.BRAND, platformInfo.brand)
         }
     }
 }

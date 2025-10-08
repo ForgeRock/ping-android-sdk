@@ -1,33 +1,29 @@
 #include <jni.h>
-#include <android/log.h>
+#include <cstdio>
 
-#include <string.h>
-#include <stdio.h>
-
-int exists(const char *fname) {
-    FILE *file;
-    if ((file = fopen(fname, "r"))) {
+static inline int exists(const char *fname) {
+    if (FILE *file = fopen(fname, "r")) {
         fclose(file);
         return 1;
     }
     return 0;
 }
-extern "C"
-JNIEXPORT jint JNICALL
-Java_com_pingidentity_device_root_detector_NativeDetector_exists(JNIEnv *env, jobject instance, jobjectArray pathArray) {
 
-    int found = 0;
+extern "C" JNIEXPORT jint JNICALL
+Java_com_pingidentity_device_root_detector_NativeDetector_exists(JNIEnv *env, jobject, jobjectArray pathArray) {
+    const int stringCount = env->GetArrayLength(pathArray);
 
-    int stringCount = (env)->GetArrayLength(pathArray);
+    for (int i = 0; i < stringCount; ++i) {
+        jstring string = static_cast<jstring>(env->GetObjectArrayElement(pathArray, i));
+        const char *pathString = env->GetStringUTFChars(string, nullptr);
 
-    for (int i = 0; i < stringCount; i++) {
-        jstring string = (jstring) (env)->GetObjectArrayElement(pathArray, i);
-        const char *pathString = (env)->GetStringUTFChars(string, 0);
+        if (exists(pathString)) {
+            env->ReleaseStringUTFChars(string, pathString);
+            return 1;
+        }
 
-        found += exists(pathString);
-
-        (env)->ReleaseStringUTFChars(string, pathString);
+        env->ReleaseStringUTFChars(string, pathString);
     }
 
-    return found > 0;
+    return 0;
 }

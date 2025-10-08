@@ -140,7 +140,7 @@ class DeviceProfileCallbackTest {
                 })
             }
             collectors {
-                add(PlatformCollector)
+                add(PlatformCollector())
                 add(HardwareCollector())
             }
         }
