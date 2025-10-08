@@ -15,6 +15,22 @@ plugins {
 
 android {
     namespace = "com.pingidentity.device.root"
+
+    /**
+     * Comment this to debug instrument Test,
+     * There is an issue for AS to run NDK with instrument Test
+     */
+    externalNativeBuild {
+        ndkBuild {
+            path("src/main/java/jni/Android.mk")
+        }
+    }
+
+    packaging {
+        jniLibs {
+            pickFirsts.add("**/*.so")
+        }
+    }
 }
 
 dependencies {

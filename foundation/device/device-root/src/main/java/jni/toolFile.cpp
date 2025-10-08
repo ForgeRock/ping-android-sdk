@@ -12,9 +12,8 @@ int exists(const char *fname) {
     }
     return 0;
 }
-
 extern "C"
-JNIEXPORT jint  extern "C" jint
+JNIEXPORT jint JNICALL
 Java_com_pingidentity_device_root_detector_NativeDetector_exists(JNIEnv *env, jobject instance, jobjectArray pathArray) {
 
     int found = 0;

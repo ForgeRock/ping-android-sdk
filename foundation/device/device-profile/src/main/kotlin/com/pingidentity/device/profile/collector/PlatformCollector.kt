@@ -9,6 +9,8 @@ package com.pingidentity.device.profile.collector
 
 import android.annotation.SuppressLint
 import android.os.Build
+import com.pingidentity.device.DefaultTamperDetector
+import com.pingidentity.device.analyze
 import kotlinx.serialization.Serializable
 import java.util.Locale
 import java.util.TimeZone
@@ -36,7 +38,8 @@ val PlatformCollector by lazy {
             model = Build.MODEL ?: "",
             brand = Build.BRAND ?: "",
             locale = Locale.getDefault().toString(), // e.g., "en_US"
-            timeZone = TimeZone.getDefault().id      // e.g., "America/Vancouver"
+            timeZone = TimeZone.getDefault().id,      // e.g., "America/Vancouver"
+            jailBreakScore = analyze { detector { DefaultTamperDetector() } }.toInt(),
         )
     }
 }

@@ -59,7 +59,7 @@ import kotlin.math.max
  *
  * @return A configuration block that adds all default tamper detectors to the detector list
  */
-internal fun DefaultTamperDetector(): MutableList<TamperDetector>.() -> Unit = {
+fun DefaultTamperDetector(): MutableList<TamperDetector>.() -> Unit = {
     add(BuildTagsDetector())
     add(BusyBoxProgramFileDetector)
     add(DangerousPropertyDetector)
