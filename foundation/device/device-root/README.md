@@ -54,7 +54,7 @@ Configure specific detectors using the DSL:
 val tamperScore = analyze {
     detector {
         // Add specific detectors
-        add(RootAppDetector())
+        add(RootAppDetector)
         add(BuildTagsDetector())
         add(PermissionDetector())
         
@@ -98,18 +98,18 @@ Choose only specific detection categories:
 // Only check for root applications
 val appBasedScore = analyze {
     detector {
-        add(RootAppDetector())
-        add(RootRequiredAppDetector())
-        add(RootCloakingAppDetector())
+        add(RootAppDetector)
+        add(RootRequiredAppDetector)
+        add(RootCloakingAppDetector)
     }
 }
 
 // Only check file system indicators
 val fileBasedScore = analyze {
     detector {
-        add(RootProgramFileDetector())
-        add(BusyBoxProgramFileDetector())
-        add(RootApkDetector())
+        add(RootProgramFileDetector)
+        add(BusyBoxProgramFileDetector)
+        add(RootApkDetector)
     }
 }
 ```
@@ -205,10 +205,10 @@ try {
     // Handle score
 } catch (e: SecurityException) {
     // Handle security-related errors
-    logger.warn("Security check failed", e)
+    logger.w("Security check failed", e)
 } catch (e: Exception) {
     // Handle other errors gracefully
-    logger.error("Tamper detection failed", e)
+    logger.e("Tamper detection failed", e)
 }
 ```
 
