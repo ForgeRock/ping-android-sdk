@@ -87,6 +87,7 @@ class DeviceProfileCollectorTest {
         setupConnectivityConnectivityMocks()
         setupTelephonyCollectorMocks()
         setupLocationCollectionMocks()
+        setupPackageManagerMocks()
     }
 
     /**
@@ -447,6 +448,29 @@ class DeviceProfileCollectorTest {
 
         every { mockLocation.latitude } returns MOCK_LATITUDE
         every { mockLocation.longitude } returns MOCK_LONGITUDE
+    }
+
+    /**
+     * Sets up comprehensive PackageManager mocking for detector testing.
+     *
+     * This helper method configures mocks for:
+     * - Android PackageManager service
+     * - Context package manager access
+     * - Application context package manager
+     * - ContextProvider package manager access
+     * - Package information queries for installed applications
+     *
+     * The mocking ensures that package-based detectors can function properly
+     * in the test environment without requiring actual installed applications.
+     */
+    private fun setupPackageManagerMocks() {
+        val packageManager = mockk<PackageManager>()
+        every { mockContext.packageManager } returns packageManager
+        every { mockContext.applicationContext.packageManager } returns packageManager
+        every { ContextProvider.context.packageManager } returns packageManager
+        every {
+            packageManager.getPackageInfo(any<String>(), any<Int>())
+        } throws PackageManager.NameNotFoundException()
     }
 
     companion object {

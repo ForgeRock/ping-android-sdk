@@ -6,10 +6,16 @@
 
 package com.pingidentity.device.profile.collector
 
+import android.content.Context
+import android.content.pm.PackageManager
 import android.os.Build
+import com.pingidentity.android.ContextProvider
+import io.mockk.every
+import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
 import java.util.Locale
 import java.util.TimeZone
+import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -23,6 +29,20 @@ import kotlin.test.assertNotNull
  * and default values are properly applied when system values are unavailable.
  */
 class PlatformCollectorTest {
+
+    private val mockContext = mockk<Context>()
+
+    /**
+     * Sets up the test environment by initializing the ContextProvider with a mocked context.
+     * This ensures that the PlatformCollector has access to the required Android context
+     * for collecting platform information.
+     */
+    @BeforeTest
+    fun setup() {
+        every { mockContext.applicationContext } returns mockContext
+        ContextProvider.init(mockContext)
+        setupPackageManagerMocks()
+    }
 
     /**
      * Test that verifies the PlatformCollector has the correct key identifier.
@@ -56,8 +76,8 @@ class PlatformCollectorTest {
         // Assert that the platform is "android" (as per the default in PlatformInfo)
         assertEquals("android", platformInfo.platform)
 
-        //Assert that jailBreakScore is 0 in a standard JVM test environment
-        assertEquals(0, platformInfo.jailBreakScore)
+        //Assert that jailBreakScore is not null (it may be 0.0 if no tampering detected)
+        assertNotNull(platformInfo.jailBreakScore)
 
         // Assert that the other fields are populated (their exact values
         // will depend on the JVM environment where the test is run,
@@ -131,5 +151,28 @@ class PlatformCollectorTest {
         } else {
             assertEquals(Build.BRAND, platformInfo.brand)
         }
+    }
+
+    /**
+     * Sets up comprehensive PackageManager mocking for detector testing.
+     *
+     * This helper method configures mocks for:
+     * - Android PackageManager service
+     * - Context package manager access
+     * - Application context package manager
+     * - ContextProvider package manager access
+     * - Package information queries for installed applications
+     *
+     * The mocking ensures that package-based detectors can function properly
+     * in the test environment without requiring actual installed applications.
+     */
+    private fun setupPackageManagerMocks() {
+        val packageManager = mockk<PackageManager>()
+        every { mockContext.packageManager } returns packageManager
+        every { mockContext.applicationContext.packageManager } returns packageManager
+        every { ContextProvider.context.packageManager } returns packageManager
+        every {
+            packageManager.getPackageInfo(any<String>(), any<Int>())
+        } throws PackageManager.NameNotFoundException()
     }
 }

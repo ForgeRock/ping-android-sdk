@@ -45,7 +45,7 @@ class PlatformCollector(
             brand = Build.BRAND ?: "",
             locale = Locale.getDefault().toString(), // e.g., "en_US"
             timeZone = TimeZone.getDefault().id,      // e.g., "America/Vancouver"
-            jailBreakScore = analyze { detector { tamperDetector } }.toInt(),
+            jailBreakScore = analyze { detector(tamperDetector) },
         )
     }
 
@@ -91,5 +91,5 @@ data class PlatformInfo(
     var brand: String = "",
     var locale: String = "",
     var timeZone: String = "",
-    var jailBreakScore: Int? = null,
+    var jailBreakScore: Double? = null,
 )
