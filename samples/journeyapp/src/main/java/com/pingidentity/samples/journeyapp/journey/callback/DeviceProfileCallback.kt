@@ -119,7 +119,7 @@ fun DeviceProfileCallback(
             deviceProfileCallback.collect {
                 collectors {
                     clear()
-                    add(PlatformCollector)
+                    add(PlatformCollector())
                     add(HardwareCollector())
                     add(NetworkCollector())
                     add(TelephonyCollector)

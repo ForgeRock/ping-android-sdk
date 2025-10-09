@@ -9,6 +9,10 @@ package com.pingidentity.device.profile.collector
 
 import android.annotation.SuppressLint
 import android.os.Build
+import com.pingidentity.device.DefaultTamperDetector
+import com.pingidentity.device.analyze
+import com.pingidentity.device.root.detector.TamperDetector
+import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
 import java.util.Locale
 import java.util.TimeZone
@@ -28,17 +32,24 @@ import java.util.TimeZone
  *
  * @see PlatformInfo for the data structure containing all collected platform details
  */
-val PlatformCollector by lazy {
-    DeviceCollector<PlatformInfo>(key = "platform") {
-        PlatformInfo(
+class PlatformCollector(
+    private val tamperDetector: MutableList<TamperDetector>.() -> Unit = DefaultTamperDetector(),
+) : DeviceCollector<PlatformInfo> {
+    override val key = "platform"
+
+    override suspend fun collect(): PlatformInfo {
+        return PlatformInfo(
             device = Build.DEVICE ?: "Device",
             deviceName = Build.MODEL ?: "",
             model = Build.MODEL ?: "",
             brand = Build.BRAND ?: "",
             locale = Locale.getDefault().toString(), // e.g., "en_US"
-            timeZone = TimeZone.getDefault().id      // e.g., "America/Vancouver"
+            timeZone = TimeZone.getDefault().id,      // e.g., "America/Vancouver"
+            jailBreakScore = analyze { detector(tamperDetector) },
         )
     }
+
+    override val serializer: KSerializer<PlatformInfo> = PlatformInfo.serializer()
 }
 
 /**
@@ -80,5 +91,5 @@ data class PlatformInfo(
     var brand: String = "",
     var locale: String = "",
     var timeZone: String = "",
-    var jailBreakScore: Int? = null,
+    var jailBreakScore: Double? = null,
 )

@@ -83,7 +83,7 @@ package com.pingidentity.device.profile.collector
  * @see BrowserCollector
  */
 fun DefaultDeviceCollector(): MutableList<DeviceCollector<*>>.() -> Unit = {
-    add(PlatformCollector)
+    add(PlatformCollector())
     add(HardwareCollector())
     add(NetworkCollector())
     add(TelephonyCollector)
