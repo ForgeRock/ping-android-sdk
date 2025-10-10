@@ -65,6 +65,7 @@ biometric = "1.2.0-alpha05"
 nimbus-jose-jwt = "9.37.3"
 
 play-services-location = "21.3.0"
+google-android-recaptcha = "18.8.0"
 
 [libraries]
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activityCompose" }
@@ -145,6 +146,7 @@ androidx-biometric = { module = "androidx.biometric:biometric", version.ref = "b
 nimbus-jose-jwt = { module = "com.nimbusds:nimbus-jose-jwt", version.ref = "nimbus-jose-jwt" }
 
 play-services-location = { module = "com.google.android.gms:play-services-location", version.ref = "play-services-location"}
+google-android-recaptcha = { module = "com.google.android.recaptcha:recaptcha", version.ref = "google-android-recaptcha" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }

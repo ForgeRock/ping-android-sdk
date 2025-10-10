@@ -54,6 +54,8 @@ include(":mfa:push")
 include(":protect")
 include(":external-idp")
 //include(":verify")
+include(":recaptcha")
+include(":recaptcha:recaptcha-enterprise")
 //include(":wallet")
 include(":foundation:testrail")
 
