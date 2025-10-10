@@ -19,6 +19,7 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.encodeToJsonElement
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import org.json.JSONObject
 
 /**
  * Configuration class for ReCaptcha Enterprise verification settings.
@@ -124,7 +125,7 @@ class ReCaptchaEnterpriseCallback : AbstractCallback(), JourneyAware {
         config.reCaptchaSiteKey = reCaptchaSiteKey
         config.apply(block)
 
-        var tokenResultJson = JsonObject(emptyMap())
+        var tokenResultJson: JsonObject
         val provider = config.recaptchaClientProvider ?: throw IllegalStateException("RecaptchaClientProvider is not set")
         return runCatching {
             val client = provider.fetchClient(
@@ -138,8 +139,8 @@ class ReCaptchaEnterpriseCallback : AbstractCallback(), JourneyAware {
                 config.timeoutInMills,
             ) ?: throw IllegalStateException("Invalid captcha token")
 
-            tokenResultJson = Json.encodeToJsonElement(tokenResult).jsonObject
-            super.input(tokenResultJson)
+
+            tokenResultJson = super.input(tokenResult)
             tokenResultJson
         }
     }

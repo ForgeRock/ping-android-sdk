@@ -38,9 +38,7 @@ interface RecaptchaClientProvider {
      * @return The RecaptchaClient instance ready for action execution
      * @throws Exception if client creation fails due to network issues, invalid site key, or configuration errors
      */
-    suspend fun fetchClient(application: Application, siteKey: String): RecaptchaClient {
-        return Recaptcha.fetchClient(application, siteKey)
-    }
+    suspend fun fetchClient(application: Application, siteKey: String): RecaptchaClient
 
     /**
      * Executes the specified ReCaptcha action using the provided client.
@@ -55,7 +53,5 @@ interface RecaptchaClientProvider {
      * @return The verification token string if successful, null if execution fails or times out
      * @throws Exception if action execution encounters critical errors
      */
-    suspend fun execute(client: RecaptchaClient, action: RecaptchaAction, timeoutInMillis: Long): String? {
-        return client.execute(action, timeoutInMillis).getOrNull()
-    }
+    suspend fun execute(client: RecaptchaClient, action: RecaptchaAction, timeoutInMillis: Long): String?
 }

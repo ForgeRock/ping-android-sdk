@@ -69,7 +69,7 @@ lateinit var redirectUri: Uri //For Social Login redirect parameter using Auth T
 class EnvViewModel : ViewModel() {
 
     private val servers = listOf(forgeblock, localhost)
-    val oidcConfigs = listOf(forgeblock.oidcConfig(), localhost.oidcConfig() )
+    val oidcConfigs = listOf(forgeblock.oidcConfig(), localhost.oidcConfig())
 
     var current by mutableStateOf(forgeblock.oidcConfig())
         private set

@@ -18,11 +18,8 @@ import com.google.android.recaptcha.RecaptchaClient
  * ReCaptcha Enterprise verification. It provides standard implementations for fetching
  * clients and executing ReCaptcha actions with the configured parameters.
  *
- * @param config The ReCaptcha Enterprise configuration containing default settings
  */
-class DefaultRecaptchaClientProvider(
-    private val config: ReCaptchaEnterpriseConfig,
-) : RecaptchaClientProvider {
+class DefaultRecaptchaClientProvider : RecaptchaClientProvider {
 
     /**
      * Fetches a RecaptchaClient instance for the specified site key.
