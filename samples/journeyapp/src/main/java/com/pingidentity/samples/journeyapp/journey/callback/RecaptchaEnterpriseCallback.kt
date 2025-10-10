@@ -30,6 +30,29 @@ import com.pingidentity.recaptcha.enterprise.DefaultRecaptchaClientProvider
 import com.pingidentity.recaptcha.enterprise.ReCaptchaEnterpriseCallback
 import kotlinx.coroutines.launch
 
+/**
+ * Composable function for handling ReCaptcha Enterprise verification in the Journey UI.
+ *
+ * This Composable automatically initiates ReCaptcha Enterprise verification when displayed
+ * and shows a loading indicator during the verification process. The verification uses
+ * the default ReCaptcha client provider and handles both success and failure scenarios.
+ *
+ * The UI behavior:
+ * - Displays a loading spinner with progress text during verification
+ * - Automatically proceeds to the next step on successful verification
+ * - For demo purposes, also proceeds on failure (in production, you may want to handle errors differently)
+ *
+ * @param reCaptchaEnterpriseCallback The ReCaptcha Enterprise callback instance from the Journey
+ * @param onNext Callback function to invoke when verification completes (success or failure)
+ *
+ * Example usage:
+ * ```kotlin
+ * ReCaptchaEnterpriseCallback(
+ *     reCaptchaEnterpriseCallback = callback,
+ *     onNext = { viewModel.proceedToNextStep() }
+ * )
+ * ```
+ */
 @Composable
 fun ReCaptchaEnterpriseCallback(
     reCaptchaEnterpriseCallback: ReCaptchaEnterpriseCallback,

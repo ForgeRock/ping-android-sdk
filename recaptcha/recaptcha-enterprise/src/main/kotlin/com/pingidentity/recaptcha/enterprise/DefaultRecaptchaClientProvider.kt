@@ -18,6 +18,16 @@ import com.google.android.recaptcha.RecaptchaClient
  * ReCaptcha Enterprise verification. It provides standard implementations for fetching
  * clients and executing ReCaptcha actions with the configured parameters.
  *
+ * This implementation directly uses Google's ReCaptcha Enterprise API without any
+ * additional customizations or modifications. It's suitable for most standard use cases
+ * where default ReCaptcha behavior is desired.
+ *
+ * Example usage:
+ * ```kotlin
+ * val provider = DefaultRecaptchaClientProvider()
+ * val client = provider.fetchClient(application, "your-site-key")
+ * val token = provider.execute(client, RecaptchaAction.LOGIN, 10000L)
+ * ```
  */
 class DefaultRecaptchaClientProvider : RecaptchaClientProvider {
 
