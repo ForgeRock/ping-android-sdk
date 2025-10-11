@@ -33,4 +33,5 @@ dependencies {
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.core.ktx)
     testImplementation(libs.mockk)
+    testImplementation(libs.google.android.recaptcha)
 }

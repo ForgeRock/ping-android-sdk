@@ -107,6 +107,16 @@ class ReCaptchaEnterpriseCallback : AbstractCallback(), JourneyAware {
     }
 
     /**
+     * Internal method for testing purposes to initialize properties.
+     *
+     * @param name The property name
+     * @param value The property value as JsonElement
+     */
+    internal fun initForTest(name: String, value: JsonElement) {
+        init(name, value)
+    }
+
+    /**
      * Performs ReCaptcha Enterprise verification with the specified configuration.
      *
      * This method orchestrates the entire verification process:
