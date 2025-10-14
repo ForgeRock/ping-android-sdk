@@ -48,23 +48,13 @@ Add the module to your project dependencies (see the main SDK documentation for 
 
 Configure the callback using the provided DSL:
 
-```kotlin
-callback.verify {
-    reCaptchaSiteKey = "YOUR_SITE_KEY"
-    recaptchaAction = RecaptchaAction.LOGIN
-    timeoutInMills = 10000L
-    setProvider(DefaultRecaptchaClientProvider(this))
-}
-```
-
 ---
 
 ## Usage Example
 
 ```kotlin
 val result = callback.verify {
-    reCaptchaSiteKey = "YOUR_SITE_KEY"
-    // Optionally customize action, timeout, or provider
+    setProvider(DefaultRecaptchaClientProvider(this))
 }
 result.onSuccess { json ->
     // Handle successful verification
