@@ -7,19 +7,13 @@
 package com.pingidentity.recaptcha.enterprise
 
 import android.app.Application
+import com.google.android.recaptcha.Recaptcha
 import com.google.android.recaptcha.RecaptchaAction
 import com.pingidentity.android.ContextProvider
 import com.pingidentity.journey.plugin.AbstractCallback
-import com.pingidentity.journey.plugin.Journey
-import com.pingidentity.journey.plugin.JourneyAware
 import com.pingidentity.utils.PingDsl
-import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.encodeToJsonElement
-import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
-import org.json.JSONObject
 
 /**
  * Configuration class for ReCaptcha Enterprise verification settings.
@@ -33,32 +27,17 @@ import org.json.JSONObject
  * callback.verify {
  *     recaptchaAction = RecaptchaAction.LOGIN
  *     timeoutInMills = 15000L
- *     setProvider(DefaultRecaptchaClientProvider(this))
  * }
  * ```
  */
 @PingDsl
 class ReCaptchaEnterpriseConfig {
-    /** The ReCaptcha Enterprise site key */
-    var reCaptchaSiteKey: String = ""
 
     /** The type of action being performed (LOGIN, SIGNUP, etc.) */
     var recaptchaAction: RecaptchaAction = RecaptchaAction.LOGIN
 
     /** Timeout for ReCaptcha verification in milliseconds */
     var timeoutInMills: Long = 10000L
-
-    /** Custom provider for ReCaptcha client operations */
-    var recaptchaClientProvider: RecaptchaClientProvider? = null
-
-    /**
-     * Sets the RecaptchaClientProvider for custom ReCaptcha handling.
-     *
-     * @param provider The custom RecaptchaClientProvider implementation
-     */
-    fun setProvider(provider: RecaptchaClientProvider) {
-        recaptchaClientProvider = provider
-    }
 }
 
 /**
@@ -80,19 +59,16 @@ class ReCaptchaEnterpriseConfig {
  * val result = callback.verify {
  *     recaptchaAction = RecaptchaAction.LOGIN
  *     timeoutInMills = 15000L
- *     setProvider(myCustomProvider)
  * }
  * ```
  */
-class ReCaptchaEnterpriseCallback : AbstractCallback(), JourneyAware {
+class ReCaptchaEnterpriseCallback : AbstractCallback() {
     /**
      * The ReCaptcha site key received from the server configuration.
      * This key is automatically populated during callback initialization.
      */
     var reCaptchaSiteKey: String = ""
         private set
-
-    override lateinit var journey: Journey
 
     /**
      * Initializes callback properties from server configuration.
@@ -130,28 +106,19 @@ class ReCaptchaEnterpriseCallback : AbstractCallback(), JourneyAware {
      * @throws IllegalStateException if RecaptchaClientProvider is not configured
      * @throws IllegalStateException if token verification fails
      */
-    suspend fun verify(block: ReCaptchaEnterpriseConfig.() -> Unit = {}): Result<JsonObject> {
+    suspend fun verify(block: ReCaptchaEnterpriseConfig.() -> Unit = {}): Result<String> {
         val config = ReCaptchaEnterpriseConfig()
-        config.reCaptchaSiteKey = reCaptchaSiteKey
         config.apply(block)
-
-        var tokenResultJson: JsonObject
-        val provider = config.recaptchaClientProvider ?: throw IllegalStateException("RecaptchaClientProvider is not set")
         return runCatching {
-            val client = provider.fetchClient(
-                ContextProvider.context as Application,
-                reCaptchaSiteKey
-            )
-
-            val tokenResult = provider.execute(
-                client,
-                config.recaptchaAction,
-                config.timeoutInMills,
-            ) ?: throw IllegalStateException("Invalid captcha token")
-
-
-            tokenResultJson = super.input(tokenResult)
-            tokenResultJson
+            val client =
+                Recaptcha.fetchClient(
+                    ContextProvider.context as Application,
+                    reCaptchaSiteKey,
+                )
+            val result = client.execute(config.recaptchaAction, config.timeoutInMills)
+            val value = result.getOrThrow()
+            super.input(value)
+            value
         }
     }
 }

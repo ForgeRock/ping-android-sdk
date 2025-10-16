@@ -4,7 +4,7 @@
 
 > **Seamless integration of Google ReCaptcha Enterprise into Ping Identity's Journey workflows for Android.**
 
-The ReCaptcha Enterprise module provides a flexible, extensible, and developer-friendly way to add Google ReCaptcha Enterprise verification to your authentication flows using the Journey plugin architecture.
+The ReCaptcha Enterprise module provides a flexible and developer-friendly way to add Google ReCaptcha Enterprise verification to your authentication flows using the Journey plugin architecture.
 
 ---
 
@@ -13,7 +13,6 @@ The ReCaptcha Enterprise module provides a flexible, extensible, and developer-f
 - **🔌 Plugin Architecture**: Integrates seamlessly with the Journey framework for authentication orchestration
 - **🛡️ Enterprise Security**: Adds advanced bot and abuse protection using Google ReCaptcha Enterprise
 - **⚡ Asynchronous API**: Coroutine-based suspend functions for smooth, non-blocking UI operations
-- **🧩 Extensible Provider**: Strategy pattern allows custom ReCaptcha client providers for testing and customization
 - **📝 Type-Safe DSL**: Fluent, compile-time safe configuration using Kotlin DSL
 - **📦 Modern Serialization**: Uses Kotlin serialization for efficient JSON handling
 - **🎯 Action-Based**: Support for different ReCaptcha actions (LOGIN, SIGNUP, custom actions)
@@ -29,7 +28,6 @@ The ReCaptcha Enterprise module provides a flexible, extensible, and developer-f
 - [Configuration](#configuration)
 - [Usage Examples](#usage-examples)
 - [API Reference](#api-reference)
-- [Extensibility](#extensibility)
 - [Testing](#testing)
 - [Architecture](#architecture)
 - [Troubleshooting](#troubleshooting)
@@ -79,9 +77,9 @@ val callback = journey.next() as ReCaptchaEnterpriseCallback
 // Simple verification with defaults
 val result = callback.verify()
 
-result.onSuccess { json ->
+result.onSuccess { token ->
     // Proceed with authentication
-    println("ReCaptcha verification successful: $json")
+    println("ReCaptcha verification successful: $token")
 }.onFailure { error ->
     // Handle verification failure
     println("ReCaptcha verification failed: ${error.message}")
@@ -103,9 +101,6 @@ callback.verify {
     
     // Set timeout in milliseconds
     timeoutInMills = 10000L
-    
-    // Use default provider
-    setProvider(DefaultRecaptchaClientProvider())
 }
 ```
 
@@ -120,9 +115,6 @@ callback.verify {
     
     // Longer timeout for slower networks
     timeoutInMills = 15000L
-    
-    // Custom provider implementation
-    setProvider(MyCustomRecaptchaProvider())
 }
 ```
 
@@ -133,7 +125,6 @@ callback.verify {
 | `reCaptchaSiteKey` | `String` | From server | ReCaptcha Enterprise site key |
 | `recaptchaAction` | `RecaptchaAction` | `RecaptchaAction.LOGIN` | Type of action being verified |
 | `timeoutInMills` | `Long` | `10000L` | Timeout in milliseconds |
-| `recaptchaClientProvider` | `RecaptchaClientProvider?` | `null` | Custom provider implementation |
 
 ---
 
@@ -149,9 +140,7 @@ fun ReCaptchaScreen(callback: ReCaptchaEnterpriseCallback, onNext: () -> Unit) {
     
     LaunchedEffect(key1 = true) {
         scope.launch {
-            callback.verify {
-                setProvider(DefaultRecaptchaClientProvider())
-            }.onSuccess { result ->
+            callback.verify().onSuccess { result ->
                 println("Verification successful: $result")
                 isLoading = false
                 onNext()
@@ -181,19 +170,16 @@ callback.verify {
         else -> RecaptchaAction.LOGIN
     }
     timeoutInMills = 12000L
-    setProvider(DefaultRecaptchaClientProvider())
 }
 ```
 
 ### Error Handling
 
 ```kotlin
-callback.verify {
-    setProvider(DefaultRecaptchaClientProvider())
-}.fold(
-    onSuccess = { json ->
+callback.verify().fold(
+    onSuccess = { token ->
         // Success: proceed with authentication
-        handleSuccess(json)
+        handleSuccess(token)
     },
     onFailure = { error ->
         when (error) {
@@ -225,11 +211,10 @@ The main callback class for handling ReCaptcha Enterprise verification.
 #### Properties
 
 - `reCaptchaSiteKey: String` - The site key (read-only, set by server)
-- `journey: Journey` - The associated Journey instance
 
 #### Methods
 
-##### `suspend fun verify(block: ReCaptchaEnterpriseConfig.() -> Unit = {}): Result<JsonObject>`
+##### `suspend fun verify(block: ReCaptchaEnterpriseConfig.() -> Unit = {}): Result<String>`
 
 Performs ReCaptcha Enterprise verification with optional configuration.
 
@@ -237,10 +222,10 @@ Performs ReCaptcha Enterprise verification with optional configuration.
 - `block` - Configuration DSL block (optional)
 
 **Returns:**
-- `Result<JsonObject>` - Success with verification token or failure with exception
+- `Result<String>` - Success with verification token or failure with exception
 
 **Throws:**
-- `IllegalStateException` - If RecaptchaClientProvider is not configured or token is invalid
+- `IllegalStateException` - If token verification fails
 - `Exception` - For network or ReCaptcha service errors
 
 ### ReCaptchaEnterpriseConfig
@@ -249,75 +234,8 @@ DSL configuration class for ReCaptcha settings.
 
 #### Properties
 
-- `reCaptchaSiteKey: String` - ReCaptcha site key
 - `recaptchaAction: RecaptchaAction` - Action type (LOGIN, SIGNUP, custom)
 - `timeoutInMills: Long` - Timeout in milliseconds
-- `recaptchaClientProvider: RecaptchaClientProvider?` - Provider implementation
-
-#### Methods
-
-##### `fun setProvider(provider: RecaptchaClientProvider)`
-
-Sets a custom RecaptchaClientProvider implementation.
-
-### RecaptchaClientProvider Interface
-
-Interface for custom ReCaptcha client provider implementations.
-
-#### Methods
-
-##### `suspend fun fetchClient(application: Application, siteKey: String): RecaptchaClient`
-
-Fetches a RecaptchaClient for the specified site key.
-
-##### `suspend fun execute(client: RecaptchaClient, action: RecaptchaAction, timeoutInMillis: Long): String?`
-
-Executes a ReCaptcha action and returns the verification token.
-
-### DefaultRecaptchaClientProvider
-
-Default implementation using Google's ReCaptcha Enterprise SDK.
-
----
-
-## Extensibility
-
-### Custom Provider Implementation
-
-You can provide your own implementation of `RecaptchaClientProvider` for testing, custom logic, or enhanced functionality:
-
-```kotlin
-class CustomRecaptchaProvider : RecaptchaClientProvider {
-    override suspend fun fetchClient(application: Application, siteKey: String): RecaptchaClient {
-        // Custom client creation logic
-        return Recaptcha.fetchClient(application, siteKey)
-    }
-    
-    override suspend fun execute(client: RecaptchaClient, action: RecaptchaAction, timeoutInMillis: Long): String? {
-        // Custom execution logic (e.g., retry, logging, analytics)
-        return client.execute(action, timeoutInMillis).getOrNull()
-    }
-}
-
-// Usage
-callback.verify {
-    setProvider(CustomRecaptchaProvider())
-}
-```
-
-### Mock Provider for Testing
-
-```kotlin
-class MockRecaptchaProvider(private val shouldSucceed: Boolean = true) : RecaptchaClientProvider {
-    override suspend fun fetchClient(application: Application, siteKey: String): RecaptchaClient {
-        return mockk<RecaptchaClient>()
-    }
-    
-    override suspend fun execute(client: RecaptchaClient, action: RecaptchaAction, timeoutInMillis: Long): String? {
-        return if (shouldSucceed) "mock-token-123" else null
-    }
-}
-```
 
 ---
 
@@ -325,7 +243,7 @@ class MockRecaptchaProvider(private val shouldSucceed: Boolean = true) : Recaptc
 
 ### Unit Testing
 
-The module provides comprehensive test coverage. See `DefaultRecaptchaClientProviderTest` for examples of:
+The module provides comprehensive test coverage. See `ReCaptchaEnterpriseCallbackTest` for examples of:
 
 - Testing successful client fetching and token generation
 - Testing error scenarios and exception handling
@@ -334,7 +252,7 @@ The module provides comprehensive test coverage. See `DefaultRecaptchaClientProv
 
 ### Integration Testing
 
-For integration tests, use the mock provider approach:
+For integration tests, you can use mocking libraries like MockK to test the callback's interaction with the ReCaptcha SDK.
 
 ```kotlin
 @Test
@@ -342,11 +260,14 @@ fun `test recaptcha verification flow`() = runTest {
     val callback = ReCaptchaEnterpriseCallback()
     callback.initForTest("recaptchaSiteKey", JsonPrimitive("test-site-key"))
     
-    val result = callback.verify {
-        setProvider(MockRecaptchaProvider(shouldSucceed = true))
-    }
+    // Mocking the Recaptcha client for testing is recommended
+    // val result = callback.verify { ... }
     
-    assertTrue(result.isSuccess)
+    // For a real test, you would need a proper setup with a mock server
+    // or a valid site key in a test environment.
+    
+    // Example assertion (will fail without proper mocking/setup)
+    // assertTrue(result.isSuccess)
 }
 ```
 
@@ -357,7 +278,6 @@ fun `test recaptcha verification flow`() = runTest {
 The module follows several design patterns:
 
 - **Plugin/Callback Pattern**: Integrates with the Journey plugin system
-- **Strategy Pattern**: Customizable RecaptchaClientProvider for different implementations
 - **Builder Pattern**: DSL configuration for type-safe setup
 - **Result Pattern**: Proper error handling with Kotlin's Result type
 
@@ -365,9 +285,7 @@ The module follows several design patterns:
 
 ```
 ReCaptchaEnterpriseCallback
-    ├── ReCaptchaEnterpriseConfig (DSL)
-    └── RecaptchaClientProvider (Strategy)
-        └── DefaultRecaptchaClientProvider (Default Implementation)
+    └── ReCaptchaEnterpriseConfig (DSL)
 ```
 
 For detailed architecture diagrams, see the [CONCEPT.md](CONCEPT.md) file.
@@ -378,17 +296,7 @@ For detailed architecture diagrams, see the [CONCEPT.md](CONCEPT.md) file.
 
 ### Common Issues
 
-#### 1. "RecaptchaClientProvider is not set" Error
-
-**Cause:** No provider configured in the verify block.
-**Solution:**
-```kotlin
-callback.verify {
-    setProvider(DefaultRecaptchaClientProvider()) // Add this line
-}
-```
-
-#### 2. "Invalid captcha token" Error
+#### 1. "Invalid captcha token" Error
 
 **Cause:** ReCaptcha verification failed or timed out.
 **Solutions:**
@@ -397,17 +305,16 @@ callback.verify {
 - Verify site key configuration
 - Check Google Cloud Console ReCaptcha settings
 
-#### 3. Network/Timeout Issues
+#### 2. Network/Timeout Issues
 
 **Solutions:**
 ```kotlin
 callback.verify {
     timeoutInMills = 20000L // Increase timeout
-    setProvider(DefaultRecaptchaClientProvider())
 }
 ```
 
-#### 4. Site Key Issues
+#### 3. Site Key Issues
 
 **Cause:** Invalid or misconfigured site key.
 **Solutions:**
@@ -421,7 +328,6 @@ callback.verify {
 2. Test with different timeout values
 3. Verify network connectivity
 4. Check Google Cloud Console for ReCaptcha configuration
-5. Use mock providers for testing
 
 ---
 

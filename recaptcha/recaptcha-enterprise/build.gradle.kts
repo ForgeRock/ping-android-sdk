@@ -25,13 +25,10 @@ dependencies {
     implementation(libs.androidx.annotation)
     implementation(libs.androidx.appcompat)
     implementation(libs.androidx.startup.runtime)
-
-    // Make it optional for developer
-    compileOnly(libs.google.android.recaptcha)
+    implementation(libs.google.android.recaptcha)
 
     testImplementation(libs.kotlin.test)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.core.ktx)
     testImplementation(libs.mockk)
-    testImplementation(libs.google.android.recaptcha)
 }

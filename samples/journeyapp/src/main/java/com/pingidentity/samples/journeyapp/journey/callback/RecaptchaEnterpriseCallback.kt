@@ -26,7 +26,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.pingidentity.recaptcha.enterprise.DefaultRecaptchaClientProvider
 import com.pingidentity.recaptcha.enterprise.ReCaptchaEnterpriseCallback
 import kotlinx.coroutines.launch
 
@@ -64,7 +63,6 @@ fun ReCaptchaEnterpriseCallback(
     LaunchedEffect(key1 = true) {
         scope.launch {
             reCaptchaEnterpriseCallback.verify {
-                setProvider(DefaultRecaptchaClientProvider())
                 // Optionally customize the configuration here
             }.onSuccess { result ->
                 println("ReCaptcha Token Result: $result")
