@@ -383,7 +383,7 @@ fun createCollectors(context: Context): List<DeviceCollector<*>> {
         
         // Add based on device capabilities
         if (packageManager.hasSystemFeature(FEATURE_TELEPHONY)) {
-            add(TelephonyCollector())
+            add(TelephonyCollector)
         }
     }
 }
@@ -475,8 +475,8 @@ When using `DeviceProfileCallback`, the output is structured specifically for AI
 val result = deviceProfileCallback.collect {
     collectors {
         clear() // Clear default collectors
-        add(PlatformCollector)
-        add(HardwareCollector)
+        add(PlatformCollector())
+        add(HardwareCollector())
         add(LocationCollector()) // May return null if permission denied
     }
 }
