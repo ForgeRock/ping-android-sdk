@@ -268,6 +268,31 @@ class DeviceProfileCallbackTest {
     }
 
     /**
+     * Tests the behavior when a collector throws an exception during collection.
+     *
+     * Validates that the overall collection process continues
+     * and returns success even if one collector fails.
+     */
+    @Test
+    fun `test a faulty device collector`() = runTest {
+        setupJsonMock(metadataEnabled = true)
+        val deviceProfileCallback = DeviceProfileCallback()
+        deviceProfileCallback.init(jsonObject)
+        val faultyCollector = DeviceCollector<JsonObject>("faulty") {
+            throw Exception("Simulated collector failure")
+        }
+
+        val result = deviceProfileCallback.collect {
+            collectors {
+                clear()
+                add(faultyCollector)
+            }
+        }
+
+        assertTrue(result.isFailure)
+    }
+
+    /**
      * Creates a mock JSON configuration object for callback initialization.
      *
      * @param metadataEnabled Whether metadata collection should be enabled
