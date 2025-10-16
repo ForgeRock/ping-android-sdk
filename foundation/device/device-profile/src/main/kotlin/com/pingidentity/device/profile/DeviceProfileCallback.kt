@@ -160,9 +160,13 @@ class DeviceProfileCallback : AbstractCallback(), JourneyAware {
      * val result = collect {
      *     collectors {
      *         clear()
-     *         add(PlatformCollector)
+     *         add(PlatformCollector())
      *         add(HardwareCollector())
      *         add(NetworkCollector())
+     *         add(TelephonyCollector)
+     *         add(LocationCollector())
+     *         add(BluetoothCollector)
+     *         add(BrowserCollector)
      *     }
      *     logger = Logger.DEBUG
      *     deviceIdentifier = CustomDeviceIdentifier()

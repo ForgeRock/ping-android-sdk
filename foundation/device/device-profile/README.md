@@ -278,7 +278,8 @@ The module comes with several built-in collectors that you can use:
 import com.pingidentity.device.profile.collector.*
 
 val collectors = mutableListOf<DeviceCollector<*>>().apply {
-    add(PlatformCollector)
+    clear()
+    add(PlatformCollector())
     add(HardwareCollector())
     add(NetworkCollector())
     add(TelephonyCollector)
@@ -296,10 +297,22 @@ You can create your own collectors to gather specific device information:
 1. **Simple collector** using the factory function:
 
 ```kotlin
-val BatteryCollector = DeviceCollector<Map<String, Any>>("battery") {
+val BatteryCollector = DeviceCollector<Map<String, String>>("battery") {
     mapOf(
-        "level" to getBatteryPercentage(),
-        "isCharging" to isDeviceCharging()
+        "level" to "100",
+        "isCharging" to "true",
+    )
+}
+
+// or using a data class for structured data
+@Serializable // Ensure the data class is serializable
+data class BatteryData(val level: Int, val isCharging: Boolean, val capacity: Int)
+
+val BatteryCollector = DeviceCollector<BatteryData>("battery") {
+    BatteryData(
+        level = 100,
+        isCharging = true,
+        capacity = 4000,
     )
 }
 ```
@@ -357,7 +370,7 @@ class HardwareCollectorTest {
 fun createCollectors(context: Context): List<DeviceCollector<*>> {
     return mutableListOf<DeviceCollector<*>>().apply {
         // Always include basic collectors
-        add(PlatformCollector)
+        add(PlatformCollector())
         add(HardwareCollector())
         
         // Conditionally add collectors based on permissions
@@ -370,7 +383,7 @@ fun createCollectors(context: Context): List<DeviceCollector<*>> {
         
         // Add based on device capabilities
         if (packageManager.hasSystemFeature(FEATURE_TELEPHONY)) {
-            add(TelephonyCollector)
+            add(TelephonyCollector())
         }
     }
 }
@@ -408,24 +421,18 @@ You can customize which collectors are used:
 val profile = deviceProfileCallback.collect {
    // Set a custom device identifier if needed for AIC Journey tracking
    deviceIdentifier = object : DeviceIdentifier {
-      override val id = "your-custom-device-id"
+       override val id: suspend () -> String = { "your-custom-device-id" }
    }
 
    // Add collectors in a metadata block
    collectors {
+      // Clear default collectors if needed
+      clear()
       // Add specific collectors relevant to your AIC risk assessment needs
-      add(PlatformCollector)
+      add(PlatformCollector())
       add(HardwareCollector())
       add(NetworkCollector())
       add(LocationCollector()) // Will automatically handle permissions
-   }
-
-   // Add more collectors in another metadata block if needed
-   collectors {
-      // Add custom collectors for enhanced AIC risk signals
-      add(DeviceCollector("battery") {
-         mapOf("level" to 95, "isCharging" to true)
-      })
    }
 }
 
@@ -467,6 +474,7 @@ When using `DeviceProfileCallback`, the output is structured specifically for AI
 ```kotlin
 val result = deviceProfileCallback.collect {
     collectors {
+        clear() // Clear default collectors
         add(PlatformCollector)
         add(HardwareCollector)
         add(LocationCollector()) // May return null if permission denied
