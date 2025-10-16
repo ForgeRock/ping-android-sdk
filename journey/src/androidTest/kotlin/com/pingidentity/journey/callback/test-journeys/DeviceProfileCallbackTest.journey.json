@@ -1,0 +1,168 @@
+{
+  "circlesOfTrust": {},
+  "emailTemplates": {},
+  "innerNodes": {
+    "371f498d-37bb-466f-9a14-34ac974952a1": {
+      "_id": "371f498d-37bb-466f-9a14-34ac974952a1",
+      "_outcomes": [
+        {
+          "displayName": "Outcome",
+          "id": "outcome"
+        }
+      ],
+      "_type": {
+        "_id": "UsernameCollectorNode",
+        "collection": true,
+        "name": "Username Collector"
+      }
+    },
+    "b472f7da-c72f-44c0-8d9b-49bae4703282": {
+      "_id": "b472f7da-c72f-44c0-8d9b-49bae4703282",
+      "_outcomes": [
+        {
+          "displayName": "Outcome",
+          "id": "outcome"
+        }
+      ],
+      "_type": {
+        "_id": "PasswordCollectorNode",
+        "collection": true,
+        "name": "Password Collector"
+      }
+    }
+  },
+  "meta": {
+    "exportDate": "2023-12-27T23:35:27.455Z",
+    "exportTool": "frodo",
+    "exportToolVersion": "v2.0.0-32 [v18.5.0]",
+    "exportedBy": "stoyan.petrov@forgerock.com",
+    "origin": "https://openam-sdks.forgeblocks.com/am",
+    "originAmVersion": "7.5.0"
+  },
+  "nodes": {
+    "2acc6e7b-117d-42d8-9d7e-b4a03ec8f2fc": {
+      "_id": "2acc6e7b-117d-42d8-9d7e-b4a03ec8f2fc",
+      "_outcomes": [
+        {
+          "displayName": "Outcome",
+          "id": "outcome"
+        }
+      ],
+      "_type": {
+        "_id": "PageNode",
+        "collection": true,
+        "name": "Page Node"
+      },
+      "nodes": [
+        {
+          "_id": "371f498d-37bb-466f-9a14-34ac974952a1",
+          "displayName": "Username Collector",
+          "nodeType": "UsernameCollectorNode"
+        },
+        {
+          "_id": "b472f7da-c72f-44c0-8d9b-49bae4703282",
+          "displayName": "Password Collector",
+          "nodeType": "PasswordCollectorNode"
+        }
+      ],
+      "pageDescription": {},
+      "pageHeader": {}
+    },
+    "521f7abb-12d7-4372-8da8-e60b19754537": {
+      "_id": "521f7abb-12d7-4372-8da8-e60b19754537",
+      "_outcomes": [
+        {
+          "displayName": "True",
+          "id": "true"
+        },
+        {
+          "displayName": "False",
+          "id": "false"
+        }
+      ],
+      "_type": {
+        "_id": "DataStoreDecisionNode",
+        "collection": true,
+        "name": "Data Store Decision"
+      }
+    },
+    "e01622c0-4908-4a2b-90ac-7d7ff216ec1b": {
+      "_id": "e01622c0-4908-4a2b-90ac-7d7ff216ec1b",
+      "_outcomes": [
+        {
+          "displayName": "Outcome",
+          "id": "outcome"
+        }
+      ],
+      "_type": {
+        "_id": "DeviceProfileCollectorNode",
+        "collection": true,
+        "name": "Device Profile Collector"
+      },
+      "deviceLocation": true,
+      "deviceMetadata": true,
+      "maximumSize": "3",
+      "message": {
+        "en": "Collecting profile ..."
+      }
+    }
+  },
+  "saml2Entities": {},
+  "scripts": {},
+  "socialIdentityProviders": {},
+  "themes": [],
+  "tree": {
+    "_id": "DeviceProfileCallbackTest",
+    "enabled": true,
+    "entryNodeId": "2acc6e7b-117d-42d8-9d7e-b4a03ec8f2fc",
+    "identityResource": "managed/alpha_user",
+    "innerTreeOnly": false,
+    "nodes": {
+      "2acc6e7b-117d-42d8-9d7e-b4a03ec8f2fc": {
+        "connections": {
+          "outcome": "521f7abb-12d7-4372-8da8-e60b19754537"
+        },
+        "displayName": "Page Node",
+        "nodeType": "PageNode",
+        "x": 156,
+        "y": 23
+      },
+      "521f7abb-12d7-4372-8da8-e60b19754537": {
+        "connections": {
+          "false": "e301438c-0bd0-429c-ab0c-66126501069a",
+          "true": "e01622c0-4908-4a2b-90ac-7d7ff216ec1b"
+        },
+        "displayName": "Data Store Decision",
+        "nodeType": "DataStoreDecisionNode",
+        "x": 357,
+        "y": 25
+      },
+      "e01622c0-4908-4a2b-90ac-7d7ff216ec1b": {
+        "connections": {
+          "outcome": "70e691a5-1e33-4ac3-a356-e7b6d60d92e0"
+        },
+        "displayName": "Device Profile Collector",
+        "nodeType": "DeviceProfileCollectorNode",
+        "x": 548,
+        "y": 49
+      }
+    },
+    "staticNodes": {
+      "70e691a5-1e33-4ac3-a356-e7b6d60d92e0": {
+        "x": 880,
+        "y": 0
+      },
+      "e301438c-0bd0-429c-ab0c-66126501069a": {
+        "x": 812,
+        "y": 381
+      },
+      "startNode": {
+        "x": 50,
+        "y": 25
+      }
+    },
+    "uiConfig": {
+      "categories": "[]"
+    }
+  }
+}

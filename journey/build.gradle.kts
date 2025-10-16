@@ -61,4 +61,6 @@ dependencies {
     androidTestImplementation(libs.androidx.test.runner)
     androidTestImplementation(project(":foundation:testrail"))
     androidTestImplementation(project(":protect"))
+    androidTestImplementation(project(":foundation:device:device-profile"))
+    androidTestImplementation(project(":foundation:device:device-id"))
 }
