@@ -160,9 +160,13 @@ class DeviceProfileCallback : AbstractCallback(), JourneyAware {
      * val result = collect {
      *     collectors {
      *         clear()
-     *         add(PlatformCollector)
+     *         add(PlatformCollector())
      *         add(HardwareCollector())
      *         add(NetworkCollector())
+     *         add(TelephonyCollector)
+     *         add(LocationCollector())
+     *         add(BluetoothCollector)
+     *         add(BrowserCollector)
      *     }
      *     logger = Logger.DEBUG
      *     deviceIdentifier = CustomDeviceIdentifier()
@@ -193,10 +197,14 @@ class DeviceProfileCallback : AbstractCallback(), JourneyAware {
             ignoreUnknownKeys = true
             explicitNulls = false
         }
-        val profile = json.encodeToJsonElement(result.collect()).jsonObject
-
-        input(profile.toString())
-        return Result.success(profile)
+        try {
+            val profile = json.encodeToJsonElement(result.collect()).jsonObject
+            input(profile.toString())
+            return Result.success(profile)
+        } catch (e: Exception) {
+            config.logger.e("Device profile collection failed", e)
+            return Result.failure(e)
+        }
     }
 }
 

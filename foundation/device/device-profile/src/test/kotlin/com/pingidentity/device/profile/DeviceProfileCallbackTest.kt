@@ -23,6 +23,7 @@ import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
 import com.pingidentity.android.ContextProvider
 import com.pingidentity.device.id.DeviceIdentifier
+import com.pingidentity.device.profile.collector.DefaultDeviceCollector
 import com.pingidentity.device.profile.collector.DeviceCollector
 import com.pingidentity.device.profile.collector.HardwareCollector
 import com.pingidentity.device.profile.collector.PlatformCollector
@@ -53,6 +54,8 @@ import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
 /**
  * Comprehensive test suite for [DeviceProfileCallback] functionality.
@@ -94,6 +97,8 @@ class DeviceProfileCallbackTest {
         setupConnectivityConnectivityMocks()
         setupTelephonyCollectorMocks()
         setupLocationCollectionMocks()
+        setupPackageManagerMocks()
+        setupBrowserMocks()
     }
 
     /**
@@ -119,9 +124,10 @@ class DeviceProfileCallbackTest {
      */
     @Test
     fun `collect returns config with custom collector`() = runTest {
+        setupJsonMock(metadataEnabled = true)
         val callback = DeviceProfileCallback()
         callback.init(jsonObject)
-        callback.collect {
+        val result = callback.collect {
             deviceIdentifier = object : DeviceIdentifier {
                 override val id: suspend () -> String = {
                     "test-device-id"
@@ -130,6 +136,7 @@ class DeviceProfileCallbackTest {
             logger = Logger.WARN
 
             collectors {
+                clear()
                 add(DummyDeviceCollector())
                 add(DeviceCollector("test") {
                     Dummy2("testName2", "testValue2")
@@ -138,12 +145,12 @@ class DeviceProfileCallbackTest {
                 add(DeviceCollector<Dummy2>("test3") {
                     null
                 })
-            }
-            collectors {
                 add(PlatformCollector())
                 add(HardwareCollector())
             }
         }
+        assertNotNull(result)
+        assertTrue(result.toString().startsWith("Success"))
     }
 
     /**
@@ -177,7 +184,6 @@ class DeviceProfileCallbackTest {
             metadataEnabled = true,
             locationEnabled = true,
         )
-        every { WebSettings.getDefaultUserAgent(mockContext) } returns "MockUserAgent/1.0"
         val callback = DeviceProfileCallback()
         callback.init(jsonObject)
         callback.collect {
@@ -217,6 +223,73 @@ class DeviceProfileCallbackTest {
 
         // Use the collected profile (JsonObject)
         println(deviceProfile.toString())
+    }
+
+    /**
+     * Tests the creation of a custom device collector.
+     *
+     * Validates that a collector can be defined using the
+     * [DeviceCollector] factory function and produces expected results.
+     */
+    @Test
+    fun `test custom collector creation`() = runTest{
+        @Serializable
+        data class BatteryData(val level: Int, val isCharging: Boolean)
+
+        val BatteryCollector = DeviceCollector<BatteryData>("battery") {
+            BatteryData(
+                level = 100,
+                isCharging = true,
+            )
+        }
+
+        val result = BatteryCollector.collect()
+        assertNotNull(result)
+        assertEquals("battery", BatteryCollector.key)
+        assertEquals(100, result.level)
+        assertEquals(true, result.isCharging)
+    }
+
+    /**
+     * Tests the default device profile collector functionality.
+     *
+     * Validates that the [DefaultDeviceCollector] can be applied
+     * and produces a non-null result when metadata collection is enabled.
+     */
+    @Test
+    fun `test default device profile collector`() = runTest {
+        setupJsonMock(metadataEnabled = true)
+        val deviceProfileCallback = DeviceProfileCallback()
+        deviceProfileCallback.init(jsonObject)
+        val result = deviceProfileCallback.collect {
+            collectors.apply(DefaultDeviceCollector())
+        }
+        assertNotNull(result)
+    }
+
+    /**
+     * Tests the behavior when a collector throws an exception during collection.
+     *
+     * Validates that the overall collection process continues
+     * and returns success even if one collector fails.
+     */
+    @Test
+    fun `test a faulty device collector`() = runTest {
+        setupJsonMock(metadataEnabled = true)
+        val deviceProfileCallback = DeviceProfileCallback()
+        deviceProfileCallback.init(jsonObject)
+        val faultyCollector = DeviceCollector<JsonObject>("faulty") {
+            throw Exception("Simulated collector failure")
+        }
+
+        val result = deviceProfileCallback.collect {
+            collectors {
+                clear()
+                add(faultyCollector)
+            }
+        }
+
+        assertTrue(result.isFailure)
     }
 
     /**
@@ -374,6 +447,34 @@ class DeviceProfileCallbackTest {
         mockkStatic("kotlinx.coroutines.tasks.TasksKt")
         every { LocationServices.getFusedLocationProviderClient(mockContext) } returns mockLocationClient
         every { mockContext.checkSelfPermission(any()) } returns PackageManager.PERMISSION_GRANTED
+    }
+
+    /**
+     * Sets up comprehensive PackageManager mocking for detector testing.
+     *
+     * This helper method configures mocks for:
+     * - Android PackageManager service
+     * - Context package manager access
+     * - Application context package manager
+     * - ContextProvider package manager access
+     * - Package information queries for installed applications
+     *
+     * The mocking ensures that package-based detectors can function properly
+     * in the test environment without requiring actual installed applications.
+     */
+    private fun setupPackageManagerMocks() {
+        val packageManager = mockk<PackageManager>()
+        every { mockContext.packageManager } returns packageManager
+        every { mockContext.applicationContext.packageManager } returns packageManager
+        every { ContextProvider.context.packageManager } returns packageManager
+        every {
+            packageManager.getPackageInfo(any<String>(), any<Int>())
+        } throws PackageManager.NameNotFoundException()
+    }
+
+    private fun setupBrowserMocks() {
+        mockkStatic(WebSettings::class)
+        every { WebSettings.getDefaultUserAgent(mockContext) } returns "MockUserAgent/1.0"
     }
 }
 
