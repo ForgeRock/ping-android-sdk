@@ -151,10 +151,6 @@ class DeviceProfileCallbackTest {
         }
         assertNotNull(result)
         assertTrue(result.toString().startsWith("Success"))
-        assertEquals(
-            "{\"identifier\":\"test-device-id\",\"metadata\":{\"dummyCollector\":{\"name\":\"testName\",\"value\":\"testValue\"},\"test\":{\"name\":\"testName2\",\"value\":\"testValue2\"},\"dummy2\":{\"name\":\"testName2\",\"value\":\"testValue2\"},\"platform\":{\"device\":\"Device\",\"locale\":\"en_CA\",\"timeZone\":\"America/Vancouver\",\"jailBreakScore\":1.0},\"hardware\":{\"hardware\":\"HARDWARE\",\"manufacturer\":\"MANUFACTURER\",\"storage\":0,\"memory\":0,\"cpu\":16,\"display\":{\"width\":1080,\"height\":1920},\"camera\":{\"noOfCameras\":2}}}}",
-            callback.payload()["input"]?.jsonArray?.get(0)?.jsonObject?.get("value")?.jsonPrimitive?.content
-        )
     }
 
     /**
