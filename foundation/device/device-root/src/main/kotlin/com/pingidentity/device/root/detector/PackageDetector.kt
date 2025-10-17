@@ -68,8 +68,8 @@ abstract class PackageDetector : TamperDetector {
             try {
                 packageManager.getPackageInfo(packageName, 0)
                 return true
-            } catch (e: PackageManager.NameNotFoundException) {
-                logger.e("Package not found: $packageName", e, )
+            } catch (_: PackageManager.NameNotFoundException) {
+                logger.i("Package not found: $packageName")
             }
         }
         return false
