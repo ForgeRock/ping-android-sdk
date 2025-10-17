@@ -19,7 +19,7 @@ sequenceDiagram
     Google ReCaptcha ->> Callback: RecaptchaClient
     Callback ->> Google ReCaptcha: execute(action, timeout)
     Google ReCaptcha ->> Callback: verification token
-    Callback ->> Journey: input(token)
+    Callback ->> Journey: input(token, customPayload?)
     Journey ->> Developer: Result.success(token)
     Developer ->> Journey: next()
     Journey ->> Server: /authenticate with token
@@ -82,6 +82,16 @@ callback.verify {
     
     // Adjust timeout for different network conditions (in milliseconds)
     timeoutInMills = 15000L
+    
+    // Add custom metadata/payload to be sent with the verification
+    customPayload = buildJsonObject {
+        put("userId", "user123")
+        put("deviceId", "device456")
+        put("sessionId", "session789")
+    }
+    
+    // Configure logging level
+    logger = Logger.DEBUG
 }
 ```
 
@@ -91,6 +101,8 @@ callback.verify {
 |----------|------|---------|-------------|
 | `recaptchaAction` | `RecaptchaAction` | `RecaptchaAction.LOGIN` | The type of user action being verified (LOGIN, SIGNUP, or custom) |
 | `timeoutInMills` | `Long` | `10000L` | Timeout duration in milliseconds for the verification request |
+| `customPayload` | `JsonObject?` | `null` | Optional custom JSON payload to be sent with the verification token |
+| `logger` | `Logger` | `Logger.WARN` | Logger instance for logging verification process (DEBUG, INFO, WARN, ERROR) |
 
 ### Available Actions
 
@@ -105,6 +117,68 @@ recaptchaAction = RecaptchaAction.SIGNUP     // For registration flows
 recaptchaAction = RecaptchaAction.custom("PASSWORD_RESET")
 recaptchaAction = RecaptchaAction.custom("PAYMENT")
 recaptchaAction = RecaptchaAction.custom("ADD_TO_CART")
+```
+
+### Using Custom Payload
+
+You can include additional metadata with your ReCaptcha verification that will be sent to the server along with the token:
+
+```kotlin
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
+
+callback.verify {
+    recaptchaAction = RecaptchaAction.LOGIN
+    
+    // Add custom data for risk analysis or tracking
+    customPayload = buildJsonObject {
+        put("clientVersion", "1.0.5")
+        put("platform", "android")
+        put("riskScore", 0.85)
+        putJsonObject("metadata") {
+            put("country", "US")
+            put("language", "en")
+        }
+    }
+}
+```
+
+This is particularly useful for:
+- **Risk Assessment**: Include additional context for server-side risk analysis
+- **Analytics**: Track verification attempts with custom metadata
+- **Session Management**: Link verification to specific user sessions or devices
+- **Debugging**: Include diagnostic information for troubleshooting
+
+### Logging Configuration
+
+Control the verbosity of ReCaptcha verification logging:
+
+```kotlin
+callback.verify {
+    // Different logging levels
+    logger = Logger.DEBUG  // Detailed logs for development
+    logger = Logger.INFO   // Informational messages
+    logger = Logger.WARN   // Warnings only (default)
+    logger = Logger.ERROR  // Errors only
+    
+    // Or use Logger.NONE to disable logging
+    logger = Logger.NONE
+}
+```
+
+**Logging Output Examples:**
+
+```kotlin
+// DEBUG level - Shows detailed flow
+logger.d("Fetching ReCaptcha client with siteKey: ${reCaptchaSiteKey}")
+logger.d("Executing verification with action: LOGIN, timeout: 10000ms")
+logger.d("Verification successful, token received")
+
+// WARN level - Shows warnings
+logger.w("reCAPTCHA execution failed or returned empty token.", error)
+
+// ERROR level - Shows errors
+logger.e("An unexpected error occurred during reCAPTCHA setup or execution.", exception)
 ```
 
 ### Complete Example with Jetpack Compose
@@ -136,6 +210,14 @@ fun AuthenticationScreen(
                                     callback.verify {
                                         recaptchaAction = RecaptchaAction.LOGIN
                                         timeoutInMills = 15000L
+                                        logger = Logger.DEBUG
+                                        
+                                        // Include device context
+                                        customPayload = buildJsonObject {
+                                            put("deviceModel", Build.MODEL)
+                                            put("osVersion", Build.VERSION.RELEASE)
+                                            put("appVersion", BuildConfig.VERSION_NAME)
+                                        }
                                     }.onSuccess {
                                         // Proceed to next node
                                         node = currentNode.next()
@@ -174,27 +256,29 @@ fun AuthenticationScreen(
 The `verify()` method returns a `Result<String>` type. Handle errors appropriately:
 
 ```kotlin
-callback.verify().fold(
+callback.verify {
+    logger = Logger.DEBUG  // Enable detailed logging for debugging
+}.fold(
     onSuccess = { token ->
         // Verification successful
-        logger.debug("ReCaptcha verification successful")
+        println("ReCaptcha verification successful")
         // Continue with authentication flow
     },
     onFailure = { error ->
-        when (error) {
-            is IllegalStateException -> {
-                // Configuration error or invalid token
-                logger.error("ReCaptcha configuration error: ${error.message}")
-                showUserMessage("Verification setup error. Please try again.")
+        when {
+            error.message?.contains("INVALID_CAPTCHA_TOKEN") == true -> {
+                // Token validation failed
+                println("ReCaptcha token is invalid or empty")
+                showUserMessage("Verification failed. Please try again.")
             }
-            is RuntimeException -> {
-                // Network error or ReCaptcha service issue
-                logger.error("ReCaptcha service error: ${error.message}")
+            error.message?.contains("UNKNOWN_ERROR") == true -> {
+                // Unexpected error during setup or execution
+                println("Unexpected error: ${error.cause?.message}")
                 showUserMessage("Network error. Please check your connection.")
             }
             else -> {
-                // Unknown error
-                logger.error("Unexpected error: ${error.message}")
+                // Other errors
+                println("Verification error: ${error.message}")
                 showUserMessage("Verification failed. Please try again.")
             }
         }
@@ -202,12 +286,20 @@ callback.verify().fold(
 )
 ```
 
+**Error Codes:**
+
+| Error Code | Description | Common Causes |
+|------------|-------------|---------------|
+| `INVALID_CAPTCHA_TOKEN` | Token validation failed or returned empty | Network issues, invalid site key, user blocked by ReCaptcha |
+| `UNKNOWN_ERROR` | Unexpected error during client setup or execution | ReCaptcha service unavailable, timeout, configuration error |
+
 ### Different Action Types Based on Context
 
 ```kotlin
 fun verifyUserAction(
     callback: ReCaptchaEnterpriseCallback,
-    actionType: String
+    actionType: String,
+    userId: String? = null
 ): Result<String> = runBlocking {
     callback.verify {
         recaptchaAction = when (actionType) {
@@ -223,6 +315,18 @@ fun verifyUserAction(
             "checkout" -> 20000L  // Longer timeout for critical actions
             else -> 10000L
         }
+        
+        // Include user context if available
+        userId?.let {
+            customPayload = buildJsonObject {
+                put("userId", it)
+                put("actionType", actionType)
+                put("timestamp", System.currentTimeMillis())
+            }
+        }
+        
+        // Enable detailed logging for sensitive actions
+        logger = if (actionType == "checkout") Logger.DEBUG else Logger.WARN
     }
 }
 ```
@@ -237,6 +341,8 @@ The ReCaptcha Enterprise module follows a clean architecture pattern:
 - **Async Operations**: Uses Kotlin coroutines for non-blocking verification
 - **Type-Safe DSL**: Provides compile-time safe configuration
 - **Automatic Token Management**: Handles token generation and injection into the Journey flow
+- **Custom Payload Support**: Allows sending additional metadata with verification requests
+- **Configurable Logging**: Flexible logging for different environments and debugging needs
 
 For a detailed class diagram and architectural overview, see the [CONCEPT.md](CONCEPT.md) file.
 
@@ -255,11 +361,12 @@ sequenceDiagram
     participant Context as ContextProvider
     participant Google as Google ReCaptcha
     participant Client as RecaptchaClient
+    participant Logger as Logger
 
     %% Journey Flow Initialization
     Dev->>Journey: start(journeyName)
     Journey->>Journey: Process journey flow
-    Journey->>Callback: init(jsonObject)
+    Journey->>Callback: init("recaptchaSiteKey", siteKey)
     Note over Callback: Initialize with server config<br/>(site key, etc.)
     Callback->>Callback: Extract reCaptchaSiteKey
     Journey->>Dev: Return callback node
@@ -270,12 +377,14 @@ sequenceDiagram
     
     %% Configuration Setup
     Callback->>Config: Create ReCaptchaEnterpriseConfig()
+    Callback->>Config: Set defaults (customPayload, logger)
     Callback->>Config: Apply DSL block
-    Note over Config: Configure action, timeout
+    Note over Config: Configure action, timeout,<br/>customPayload, logger
     
     %% Client Creation
     Callback->>Context: Get Application context
     Context->>Callback: Return Application
+    Callback->>Logger: Log fetching client (if DEBUG)
     Callback->>Google: Recaptcha.fetchClient(app, siteKey)
     activate Google
     Google->>Client: Create RecaptchaClient
@@ -283,24 +392,34 @@ sequenceDiagram
     deactivate Google
     
     %% Action Execution
+    Callback->>Logger: Log executing action (if DEBUG)
     Callback->>Client: execute(action, timeoutInMillis)
     activate Client
     Client->>Client: Perform ReCaptcha verification
     Client->>Callback: Result<String> (token or error)
     deactivate Client
     
-    alt Verification successful
+    alt Verification successful (token not empty)
         Callback->>Callback: Extract token from Result
-        Callback->>Callback: super.input(token)
+        Callback->>Logger: Log success (if DEBUG)
+        alt Custom payload provided
+            Callback->>Callback: super.input(token, customPayload)
+        else No custom payload
+            Callback->>Callback: super.input(token)
+        end
         Callback->>Dev: Result.success(token)
-    else Verification failed
-        Callback->>Dev: Result.failure(exception)
+    else Token is null or empty
+        Callback->>Logger: logger.w("Token failed or empty")
+        Callback->>Dev: Result.failure(INVALID_CAPTCHA_TOKEN)
+    else Exception during setup/execution
+        Callback->>Logger: logger.e("Unexpected error")
+        Callback->>Dev: Result.failure(UNKNOWN_ERROR)
     end
     deactivate Callback
     
     %% Continue Journey Flow
     Dev->>Journey: next() with updated callback
-    Journey->>Journey: Process with verification token
+    Journey->>Journey: Process with verification token + payload
     Journey->>Dev: Next node or completion
 ```
 
@@ -349,29 +468,160 @@ callback.verify {
 - The site key matches between client and server
 - The action name matches what's configured on the server
 - The token is being sent to the server correctly
+- Custom payload format matches server expectations
 
-#### 4. "libcore/io/Memory" error in tests
+#### 4. "INVALID_CAPTCHA_TOKEN" error
+
+**Problem**: Verification returns an empty or null token.
+
+**Solution**: 
+- Check network connectivity
+- Verify the site key is correct
+- Ensure Google ReCaptcha Enterprise is properly configured
+- Enable DEBUG logging to see detailed error messages:
+```kotlin
+callback.verify {
+    logger = Logger.DEBUG
+}
+```
+
+#### 5. "UNKNOWN_ERROR" during verification
+
+**Problem**: Unexpected error during client setup or execution.
+
+**Solution**:
+- Check if the Google ReCaptcha service is accessible
+- Verify your app's internet permissions
+- Review logs for detailed error information
+- Try with a longer timeout if on a slow network
+
+#### 6. "libcore/io/Memory" error in tests
 
 **Problem**: `NoClassDefFoundError: libcore/io/Memory` when running unit tests.
 
-**Solution**: This is a known issue when testing Google ReCaptcha in unit tests. Use instrumented tests (androidTest) instead, or mock the ReCaptcha functionality in unit tests.
+**Solution**: This is a known issue when testing Google ReCaptcha in unit tests. Use instrumented tests (androidTest) instead, or mock the ReCaptcha functionality in unit tests:
+
+```kotlin
+// Mock the callback in unit tests
+val mockCallback = mockk<ReCaptchaEnterpriseCallback>()
+coEvery { mockCallback.verify(any()) } returns Result.success("mock_token_12345")
+```
+
+#### 7. Custom payload not reaching server
+
+**Problem**: The custom payload data is not being processed on the server.
+
+**Solution**:
+- Ensure the server-side Journey configuration accepts custom input data
+- Verify the JSON structure matches server expectations
+- Check server logs to see if the payload is being received
+- Use DEBUG logging to confirm the payload is being sent:
+```kotlin
+callback.verify {
+    logger = Logger.DEBUG
+    customPayload = buildJsonObject {
+        put("test", "value")
+    }
+}
+```
 
 ---
 
 ## Testing
 
+### Mocking for Unit Tests
+
 For testing purposes, you can mock the ReCaptcha verification:
 
 ```kotlin
-// In your test
-val mockCallback = mockk<ReCaptchaEnterpriseCallback>()
-coEvery { mockCallback.verify(any()) } returns Result.success("mock_token_12345")
+import io.mockk.coEvery
+import io.mockk.mockk
 
-// Test your flow
-val result = mockCallback.verify()
-assertTrue(result.isSuccess)
-assertEquals("mock_token_12345", result.getOrNull())
+class MyViewModelTest {
+    
+    @Test
+    fun `test successful verification`() = runTest {
+        // Mock the callback
+        val mockCallback = mockk<ReCaptchaEnterpriseCallback>()
+        coEvery { mockCallback.verify(any()) } returns Result.success("mock_token_12345")
+        
+        // Test your flow
+        val result = mockCallback.verify()
+        
+        assertTrue(result.isSuccess)
+        assertEquals("mock_token_12345", result.getOrNull())
+    }
+    
+    @Test
+    fun `test failed verification`() = runTest {
+        val mockCallback = mockk<ReCaptchaEnterpriseCallback>()
+        coEvery { mockCallback.verify(any()) } returns 
+            Result.failure(Exception("INVALID_CAPTCHA_TOKEN"))
+        
+        val result = mockCallback.verify()
+        
+        assertTrue(result.isFailure)
+        assertTrue(result.exceptionOrNull()?.message?.contains("INVALID_CAPTCHA_TOKEN") == true)
+    }
+}
 ```
+
+### Integration Testing
+
+For integration tests, use instrumented tests with a test site key:
+
+```kotlin
+@RunWith(AndroidJUnit4::class)
+class ReCaptchaIntegrationTest {
+    
+    @Test
+    fun testRealVerification() = runTest {
+        val journey = Journey {
+            serverUrl = "https://test-server.example.com"
+        }
+        
+        val node = journey.start("test-flow") as ContinueNode
+        val callback = node.callbacks
+            .filterIsInstance<ReCaptchaEnterpriseCallback>()
+            .first()
+        
+        val result = callback.verify {
+            recaptchaAction = RecaptchaAction.LOGIN
+            timeoutInMills = 15000L
+            logger = Logger.DEBUG
+        }
+        
+        assertTrue(result.isSuccess)
+        assertFalse(result.getOrNull().isNullOrEmpty())
+    }
+}
+```
+
+---
+
+## Best Practices
+
+1. **Use Appropriate Actions**: Choose the correct `RecaptchaAction` for your use case to improve risk analysis accuracy.
+
+2. **Set Reasonable Timeouts**: Balance between user experience and reliability. Use longer timeouts for slow networks or critical operations.
+
+3. **Include Context in Payload**: Add relevant metadata to help with risk assessment and debugging:
+   ```kotlin
+   customPayload = buildJsonObject {
+       put("userId", userId)
+       put("deviceId", deviceId)
+       put("appVersion", BuildConfig.VERSION_NAME)
+   }
+   ```
+
+4. **Configure Logging by Environment**:
+   ```kotlin
+   logger = if (BuildConfig.DEBUG) Logger.DEBUG else Logger.WARN
+   ```
+
+5. **Handle Errors Gracefully**: Provide clear user feedback and fallback mechanisms.
+
+6. **Test Thoroughly**: Use both unit tests (with mocks) and integration tests (with real verification).
 
 ---
 
