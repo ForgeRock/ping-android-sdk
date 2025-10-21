@@ -159,8 +159,10 @@ class HardwareCollectorTest {
         assertNotNull(result.display)
         assertEquals(1080, result.display!!["width"])
         assertEquals(1920, result.display!!["height"])
+        assertNotNull(result.display!!["orientation"])
+        assertEquals(0, result.display!!["orientation"]) // Portrait
         assertNotNull(result.camera)
-        assertEquals(2, result.camera!!["noOfCameras"])
+        assertEquals(2, result.camera!!["numberOfCameras"])
     }
 
     /**
@@ -265,7 +267,7 @@ class HardwareCollectorTest {
         assertEquals("TestManufacturer", result.manufacturer)
         assertNull(result.display) // Should be null due to display access exception
         assertNotNull(result.camera)
-        assertEquals(1, result.camera!!["noOfCameras"])
+        assertEquals(1, result.camera!!["numberOfCameras"])
     }
 
     /**

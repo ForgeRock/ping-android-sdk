@@ -90,4 +90,24 @@ fun DefaultDeviceCollector(): MutableList<DeviceCollector<*>>.() -> Unit = {
     add(LocationCollector())
     add(BluetoothCollector)
     add(BrowserCollector)
+    add(VersionCollector)
+}
+
+/**
+ * A device collector that provides a static version identifier for the device profile.
+ *
+ * This collector returns a simple map containing a single key-value pair representing
+ * the version of the device profile format. The version is hardcoded to "1.0".
+ *
+ * **Collected Information:**
+ * - Version: A string indicating the version of the device profile format ("1.0")
+ *
+ * @see DeviceCollector
+ */
+val VersionCollector by lazy {
+    DeviceCollector<Map<String, String>>(
+        key = "version"
+    ) {
+        mutableMapOf("version" to "1.0")
+    }
 }

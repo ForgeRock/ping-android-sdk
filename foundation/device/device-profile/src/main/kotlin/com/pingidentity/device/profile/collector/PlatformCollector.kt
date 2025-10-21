@@ -9,6 +9,8 @@ package com.pingidentity.device.profile.collector
 
 import android.annotation.SuppressLint
 import android.os.Build
+import android.provider.Settings
+import com.pingidentity.android.ContextProvider
 import com.pingidentity.device.DefaultTamperDetector
 import com.pingidentity.device.analyze
 import com.pingidentity.device.root.detector.TamperDetector
@@ -39,8 +41,10 @@ class PlatformCollector(
 
     override suspend fun collect(): PlatformInfo {
         return PlatformInfo(
+            platform = "android",
+            version = Build.VERSION.SDK_INT,
             device = Build.DEVICE ?: "Device",
-            deviceName = Build.MODEL ?: "",
+            deviceName = getDeviceName(),
             model = Build.MODEL ?: "",
             brand = Build.BRAND ?: "",
             locale = Locale.getDefault().toString(), // e.g., "en_US"
@@ -50,6 +54,16 @@ class PlatformCollector(
     }
 
     override val serializer: KSerializer<PlatformInfo> = PlatformInfo.serializer()
+
+    private fun getDeviceName(): String {
+        return try {
+            Settings.Global.getString(
+                ContextProvider.context.contentResolver,
+                Settings.Global.DEVICE_NAME)
+        } catch (_: Exception) {
+            Build.MODEL ?: ""
+        }
+    }
 }
 
 /**

@@ -6,6 +6,7 @@
 
 package com.pingidentity.device.profile.collector
 
+import android.content.ContentResolver
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
@@ -31,6 +32,8 @@ import kotlin.test.assertNotNull
 class PlatformCollectorTest {
 
     private val mockContext = mockk<Context>()
+    private val mockContentResolver = mockk<ContentResolver>()
+
 
     /**
      * Sets up the test environment by initializing the ContextProvider with a mocked context.
@@ -67,6 +70,8 @@ class PlatformCollectorTest {
      */
     @Test
     fun `platformCollector collects platform information`() = runTest {
+        every { mockContext.contentResolver } returns mockContentResolver
+
         // Invoke the collector
         val platformInfo = PlatformCollector().collect()
 
@@ -86,15 +91,14 @@ class PlatformCollectorTest {
         assertNotNull(platformInfo.deviceName)
         assertNotNull(platformInfo.model)
         assertNotNull(platformInfo.brand)
+        assertNotNull(platformInfo.version)
+        assertNotNull(platformInfo.deviceName)
 
         // For locale and timezone, we can check against the JVM's current default
         // as a basic sanity check, though in a real Android environment,
         // these would come from the device settings.
         assertEquals(Locale.getDefault().toString(), platformInfo.locale)
         assertEquals(TimeZone.getDefault().id, platformInfo.timeZone)
-
-        // Fields that are nullable and currently unused can be checked for null
-        assertEquals(null, platformInfo.version)
     }
 
     /**
@@ -139,10 +143,8 @@ class PlatformCollectorTest {
         }
 
         if (Build.MODEL == null) {
-            assertEquals("", platformInfo.deviceName)
             assertEquals("", platformInfo.model)
         } else {
-            assertEquals(Build.MODEL, platformInfo.deviceName)
             assertEquals(Build.MODEL, platformInfo.model)
         }
 
@@ -150,6 +152,12 @@ class PlatformCollectorTest {
             assertEquals("", platformInfo.brand)
         } else {
             assertEquals(Build.BRAND, platformInfo.brand)
+        }
+
+        if (Build.VERSION.SDK_INT == null) {
+            assertEquals(null, platformInfo.version)
+        } else {
+            assertEquals(Build.VERSION.SDK_INT, platformInfo.version)
         }
     }
 

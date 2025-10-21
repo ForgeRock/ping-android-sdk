@@ -96,6 +96,7 @@ private val DisplayCollector by lazy {
             mutableMapOf(
                 "width" to metrics.widthPixels,
                 "height" to metrics.heightPixels,
+                "orientation" to if (metrics.widthPixels >= metrics.heightPixels) 1 else 0
             )
         } catch (_: CameraAccessException) {
             null
@@ -114,8 +115,7 @@ private val CameraCollector by lazy {
         val manager =
             ContextProvider.context.getSystemService(Context.CAMERA_SERVICE) as CameraManager
         try {
-            manager.cameraIdList.size
-            mutableMapOf("noOfCameras" to manager.cameraIdList.size)
+            mutableMapOf("numberOfCameras" to manager.cameraIdList.size)
         } catch (_: CameraAccessException) {
             null
         }
