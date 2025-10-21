@@ -27,7 +27,6 @@ import com.pingidentity.device.profile.collector.DefaultDeviceCollector
 import com.pingidentity.device.profile.collector.DeviceCollector
 import com.pingidentity.device.profile.collector.HardwareCollector
 import com.pingidentity.device.profile.collector.PlatformCollector
-import com.pingidentity.device.profile.collector.VersionCollector
 import com.pingidentity.device.profile.collector.collect
 import com.pingidentity.logger.Logger
 import com.pingidentity.logger.WARN
@@ -201,7 +200,7 @@ class DeviceProfileCallbackTest {
             }
         }
         assertEquals(
-            "{\"identifier\":\"test-device-id\",\"metadata\":{\"dummyCollector\":{\"name\":\"testName\",\"value\":\"testValue\"}}}",
+            "{\"identifier\":\"test-device-id\",\"metadata\":{\"dummyCollector\":{\"name\":\"testName\",\"value\":\"testValue\"}},\"version\":\"1.0\"}",
             callback.payload()["input"]?.jsonArray?.get(0)?.jsonObject?.get("value")?.jsonPrimitive?.content
         )
     }
@@ -291,19 +290,6 @@ class DeviceProfileCallbackTest {
         }
 
         assertTrue(result.isFailure)
-    }
-
-    @Test
-    fun `Test version collector`() = runTest {
-        val versionCollector = DeviceCollector("version") {
-            VersionCollector.collect()
-        }
-
-        val result = versionCollector.collect()
-        assertNotNull(result)
-        assertEquals("version", versionCollector.key)
-        assertTrue(result.containsKey("version"))
-        assertEquals("1.0", result["version"])
     }
 
     /**

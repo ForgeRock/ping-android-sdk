@@ -58,6 +58,7 @@ class DeviceProfileCollector(
             identifier = config.deviceIdentifier.id.invoke(),
             metadata = if (config.metadata) config.collectors.collect() else null,
             location = if (config.location) LocationCollector().collect() else null,
+            version = "1.0"
         )
     }
 }
@@ -81,4 +82,5 @@ data class DeviceProfileResult(
     val identifier: String,
     val metadata: JsonElement? = null,
     val location: LocationInfo? = null,
+    val version: String,
 )
