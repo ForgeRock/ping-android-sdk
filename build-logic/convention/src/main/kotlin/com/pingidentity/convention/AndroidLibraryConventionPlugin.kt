@@ -26,7 +26,8 @@ class AndroidLibraryConventionPlugin : Plugin<Project> {
                 publishing {
                     singleVariant("release") {
                         withSourcesJar()
-                        withJavadocJar()
+                        //Issue https://github.com/Kotlin/dokka/issues/2956
+                        //withJavadocJar()
                     }
                 }
             }
