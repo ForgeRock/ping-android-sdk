@@ -77,6 +77,13 @@ dependencies {
     implementation(project(":external-idp"))
     implementation(project(":protect"))
     implementation(project(":mfa:fido2"))
+    implementation(project(":mfa:binding"))
+    implementation(project(":mfa:binding-ui"))
+    implementation(project(":mfa:binding-migration"))
+
+    //Application Pin
+    implementation(libs.bcpkix.jdk18on)
+
     //To Support nod-discoverable fido2 credential
     implementation(libs.play.services.fido)
     

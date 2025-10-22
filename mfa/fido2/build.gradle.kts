@@ -26,7 +26,7 @@ dependencies {
     implementation(project(":foundation:davinci-plugin"))
     implementation(project(":foundation:journey-plugin"))
     compileOnly(libs.play.services.fido)
-    implementation(libs.kotlin.playservices.coroutine)
+    implementation(libs.kotlinx.coroutines.play.services)
     //Expose the interface for customization
     api(libs.androidx.credentials)
 

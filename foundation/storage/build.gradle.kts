@@ -48,6 +48,7 @@ dependencies {
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.serialization.json)
 
+    testImplementation(libs.mockk)
     testImplementation(libs.core.ktx)
     testImplementation(libs.kotlin.test)
     testImplementation(libs.kotlinx.coroutines.test)

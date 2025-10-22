@@ -19,6 +19,8 @@ import com.pingidentity.samples.journeyapp.env.Env
 import com.pingidentity.samples.journeyapp.journey.Journey
 import com.pingidentity.samples.journeyapp.journey.JourneyRoute
 import com.pingidentity.samples.journeyapp.journey.JourneyViewModel
+import com.pingidentity.samples.journeyapp.keystore.KeyStore
+import com.pingidentity.samples.journeyapp.keystore.KeyStoreViewModel
 import com.pingidentity.samples.journeyapp.token.Token
 import com.pingidentity.samples.journeyapp.userprofile.UserProfile
 import com.pingidentity.samples.journeyapp.userprofile.UserProfileViewModel
@@ -42,6 +44,10 @@ fun AppNavHost(
         composable(Destinations.USER_INFO) {
             val userProfileViewModel = viewModel<UserProfileViewModel>()
             UserProfile(userProfileViewModel)
+        }
+        composable(Destinations.KEYSTORE_ROUTE) {
+            val keyStoreViewModel = viewModel<KeyStoreViewModel>()
+            KeyStore(keyStoreViewModel)
         }
         composable(Destinations.LAUNCH_ROUTE) {
             val preferenceViewModel = viewModel<PreferenceViewModel>(

@@ -16,9 +16,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.pingidentity.device.binding.journey.DeviceBindingCallback
+import com.pingidentity.device.binding.journey.DeviceSigningVerifierCallback
+import com.pingidentity.device.profile.DeviceProfileCallback
 import com.pingidentity.fido2.journey.Fido2AuthenticationCallback
 import com.pingidentity.fido2.journey.Fido2RegistrationCallback
-import com.pingidentity.device.profile.DeviceProfileCallback
 import com.pingidentity.idp.journey.IdpCallback
 import com.pingidentity.idp.journey.SelectIdpCallback
 import com.pingidentity.journey.callback.BooleanAttributeInputCallback
@@ -111,8 +114,24 @@ fun ContinueNode(
                     Fido2Registration(it, onNext)
                     showNext = false
                 }
+
                 is Fido2AuthenticationCallback -> {
                     Fido2Authentication(it, onNext)
+                    showNext = false
+                }
+
+                is DeviceBindingCallback -> {
+                    // Create / reuse a ViewModel bound to this composition & callback instance
+                    val vm: DeviceBindingCallbackViewModel =
+                        viewModel(factory = DeviceBindingCallbackViewModel.factory(it))
+                    DeviceBindingCallback(vm, onNext)
+                    showNext = false
+                }
+
+                is DeviceSigningVerifierCallback -> {
+                    val vm: DeviceSigningVerifierCallbackViewModel =
+                        viewModel(factory = DeviceSigningVerifierCallbackViewModel.factory(it))
+                    DeviceSigningVerifierCallback(vm, true, onNext)
                     showNext = false
                 }
             }
@@ -127,4 +146,3 @@ fun ContinueNode(
         }
     }
 }
-
