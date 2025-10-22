@@ -9,8 +9,10 @@ package com.pingidentity.recaptcha.enterprise
 import android.app.Application
 import com.google.android.recaptcha.Recaptcha
 import com.google.android.recaptcha.RecaptchaAction
+import com.google.android.recaptcha.RecaptchaClient
 import com.pingidentity.android.ContextProvider
 import io.mockk.*
+import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.JsonPrimitive
 import kotlin.test.*
 
@@ -30,12 +32,16 @@ class ReCaptchaEnterpriseCallbackTest {
         // Mock Android context and ReCaptcha static methods
         every { mockApplication.applicationContext } returns mockApplication
         ContextProvider.init(mockApplication)
-        mockkStatic(Recaptcha::class)
+        mockkObject(Recaptcha::class)
+        mockkStatic(RecaptchaClient::class)
+        mockkObject(RecaptchaClient::class)
     }
 
     @AfterTest
     fun tearDown() {
         unmockkAll()
+        unmockkObject(Recaptcha::class)
+        unmockkObject(RecaptchaClient::class)
     }
 
     /**
@@ -67,5 +73,18 @@ class ReCaptchaEnterpriseCallbackTest {
         val config = ReCaptchaEnterpriseConfig()
         assertEquals(RecaptchaAction.LOGIN, config.recaptchaAction)
         assertEquals(10000L, config.timeoutInMills)
+    }
+
+    @Test
+    fun `Test verify call`() = runTest {
+        val mockRecaptchaClient = mockk<RecaptchaClient>()
+        coEvery { Recaptcha.fetchClient(mockApplication, siteKey) } returns mockRecaptchaClient
+        val callback = ReCaptchaEnterpriseCallback()
+        callback.initForTest("recaptchaSiteKey", JsonPrimitive(siteKey))
+        val result = callback.verify {
+            recaptchaAction = RecaptchaAction.LOGIN
+            timeoutInMills = 15000L
+        }
+        assertTrue(result.isSuccess)
     }
 }
