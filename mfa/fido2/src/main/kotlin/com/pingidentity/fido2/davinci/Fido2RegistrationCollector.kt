@@ -121,6 +121,26 @@ class Fido2RegistrationCollector : AbstractFido2Collector() {
             }
         }
 
+        map[Constants.FIELD_EXCLUDE_CREDENTIALS]?.let { excludeCredentials ->
+            if (excludeCredentials is JsonArray) {
+                val transformedCredentials = excludeCredentials.map { credential ->
+                    if (credential is JsonObject) {
+                        val credentialMap = credential.toMutableMap()
+                        credentialMap[Constants.FIELD_ID]?.let { id ->
+                            if (id is JsonArray) {
+                                val byteArray = id.map { it.jsonPrimitive.int.toByte() }.toByteArray()
+                                credentialMap[Constants.FIELD_ID] = JsonPrimitive(byteArray.toBase64())
+                            }
+                        }
+                        JsonObject(credentialMap)
+                    } else {
+                        credential
+                    }
+                }
+                map[Constants.FIELD_EXCLUDE_CREDENTIALS] = JsonArray(transformedCredentials)
+            }
+        }
+
         logger.d("FIDO2 registration creation options transformed successfully")
         return JsonObject(map)
     }
