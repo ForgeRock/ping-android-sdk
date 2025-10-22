@@ -85,19 +85,22 @@ class PlatformCollector(
  * @sample
  * ```kotlin
  * val platformInfo = PlatformInfo(
+ *     platform = "android",
+ *     version = 31,
  *     device = "pixel6",
  *     deviceName = "Pixel 6",
  *     model = "Pixel 6",
  *     brand = "google",
  *     locale = "en_US",
- *     timeZone = "America/New_York"
+ *     timeZone = "America/New_York",
+ *     jailBreakScore = 0.0
  * )
  * ```
  */
 @SuppressLint("UnsafeOptInUsageError")
 @Serializable
 data class PlatformInfo(
-    var platform: String = "android",
+    val platform: String,
     var version: Int? = null,
     var device: String = "",
     var deviceName: String = "",
