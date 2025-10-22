@@ -35,8 +35,9 @@ class MavenCentralPublishConventionPlugin : Plugin<Project> {
             }
 
             val javadocJar = tasks.register("javadocJar", Jar::class.java) {
+                dependsOn("dokkaGenerate")
                 archiveClassifier.set("javadoc")
-                from(tasks.getByName("dokkaGenerate"))
+                from(project.layout.buildDirectory.dir("dokka/html"))
             }
 
             //The source only includes the README.md, delete this if we want to include the whole source
@@ -53,7 +54,10 @@ class MavenCentralPublishConventionPlugin : Plugin<Project> {
 
                 this.dokkaSourceSets.named("main") {
                     // Only document public and protected members
-                    this.documentedVisibilities(VisibilityModifier.Public, VisibilityModifier.Protected)
+                    this.documentedVisibilities(
+                        VisibilityModifier.Public,
+                        VisibilityModifier.Protected
+                    )
                     this.sourceLink {
                         this.localDirectory.set(project.file("src/main/kotlin"))
                         this.remoteUrl("https://github.com/ForgeRock/ping-android-sdk/tree/master/${project.name}")
