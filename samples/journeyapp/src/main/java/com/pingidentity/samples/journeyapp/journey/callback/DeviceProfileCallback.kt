@@ -116,7 +116,7 @@ fun DeviceProfileCallback(
     // This effect runs ONCE when the composable enters the screen
     LaunchedEffect(key1 = true) {
         scope.launch {
-            deviceProfileCallback.collect {
+            val result = deviceProfileCallback.collect {
                 collectors {
                     clear()
                     add(PlatformCollector())
@@ -127,6 +127,7 @@ fun DeviceProfileCallback(
                     add(BrowserCollector)
                 }
             }
+            println(result.toString())
             isLoading = false
             onNext()
         }

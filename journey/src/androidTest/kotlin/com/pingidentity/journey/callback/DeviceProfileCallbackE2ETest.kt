@@ -46,6 +46,11 @@ class DeviceProfileCallbackE2ETest : BaseJourneyTest() {
         node.handleLoginCallbacks()
         node = node.next() as ContinueNode
 
+        // The first callback in the journey is a ChoiceCallback (choose to collect location or not...)
+        val choiceCallback = node.callbacks.first() as ChoiceCallback
+        choiceCallback.selectedIndex = 0 // Select "Yes" (collect location)
+        node = node.next() as ContinueNode
+
         val deviceProfileCallback = node.callbacks.first() as DeviceProfileCallback
 
         val collectors = mutableListOf<DeviceCollector<*>>().apply(DefaultDeviceCollector())
@@ -63,6 +68,7 @@ class DeviceProfileCallbackE2ETest : BaseJourneyTest() {
         // Assertions based on the example profile
         assertTrue(profile.containsKey("identifier"))
         assertTrue(profile.containsKey("metadata"))
+        assertTrue(profile.containsKey("version"))
 
         val metadata = profile["metadata"]!!.jsonObject
         assertTrue(metadata.containsKey("platform"))
@@ -72,11 +78,34 @@ class DeviceProfileCallbackE2ETest : BaseJourneyTest() {
         assertTrue(metadata.containsKey("bluetooth"))
         assertTrue(metadata.containsKey("browser"))
 
-        val platform = metadata["platform"]!!.jsonObject
-        assertTrue(platform["brand"]!!.jsonPrimitive.content.isNotEmpty())
+        // Verify that version is set to "1.0"
+        assertEquals("1.0", profile["version"]!!.jsonPrimitive.content)
 
+        // Verify some platform fields
+        val platform = metadata["platform"]!!.jsonObject
+        assertEquals("android", platform["platform"]!!.jsonPrimitive.content)
+        assertTrue(platform["version"]!!.jsonPrimitive.content.isNotEmpty())
+        assertTrue(platform["device"]!!.jsonPrimitive.content.isNotEmpty())
+        assertTrue(platform["deviceName"]!!.jsonPrimitive.content.isNotEmpty())
+        assertTrue(platform["model"]!!.jsonPrimitive.content.isNotEmpty())
+        assertTrue(platform["brand"]!!.jsonPrimitive.content.isNotEmpty())
+        assertTrue(platform["locale"]!!.jsonPrimitive.content.isNotEmpty())
+        assertTrue(platform["timeZone"]!!.jsonPrimitive.content.isNotEmpty())
+        assertTrue(platform["jailBreakScore"]!!.jsonPrimitive.content.isNotEmpty())
+
+        // Verify some hardware fields
         val hardware = metadata["hardware"]!!.jsonObject
+        assertTrue(hardware["hardware"]!!.jsonPrimitive.content.isNotEmpty())
         assertTrue(hardware["manufacturer"]!!.jsonPrimitive.content.isNotEmpty())
+        assertTrue(hardware["storage"]!!.jsonPrimitive.content.isNotEmpty())
+        assertTrue(hardware["memory"]!!.jsonPrimitive.content.isNotEmpty())
+        assertTrue(hardware["cpu"]!!.jsonPrimitive.content.isNotEmpty())
+        assertTrue(hardware.containsKey("display"))
+        assertTrue(hardware.containsKey("camera"))
+
+        // Verify some network fields
+        val network = metadata["network"]!!.jsonObject
+        assertTrue(network["connected"]!!.jsonPrimitive.boolean)
 
         val finalNode = node.next()
         assertTrue(finalNode is SuccessNode)
@@ -87,6 +116,11 @@ class DeviceProfileCallbackE2ETest : BaseJourneyTest() {
     fun testDeviceProfileCallbackWithCustomCollectors() = runTest {
         var node = defaultJourney.start(tree) as ContinueNode
         node.handleLoginCallbacks()
+        node = node.next() as ContinueNode
+
+        // The first callback in the journey is a ChoiceCallback (choose to collect location or not...)
+        val choiceCallback = node.callbacks.first() as ChoiceCallback
+        choiceCallback.selectedIndex = 1 // Select "No" (do NOT collect location)
         node = node.next() as ContinueNode
 
         val deviceProfileCallback = node.callbacks.first() as DeviceProfileCallback
@@ -105,6 +139,7 @@ class DeviceProfileCallbackE2ETest : BaseJourneyTest() {
         // Assertions
         assertTrue(profile.containsKey("identifier"))
         assertTrue(profile.containsKey("metadata"))
+        assertTrue(profile.containsKey("version"))
 
         val metadata = profile["metadata"]!!.jsonObject
         assertTrue(metadata.containsKey("platform"))
@@ -130,6 +165,11 @@ class DeviceProfileCallbackE2ETest : BaseJourneyTest() {
     fun testDeviceProfileCallbackWithCustomDeviceIdentifier() = runTest {
         var node = defaultJourney.start(tree) as ContinueNode
         node.handleLoginCallbacks()
+        node = node.next() as ContinueNode
+
+        // The first callback in the journey is a ChoiceCallback (choose to collect location or not...)
+        val choiceCallback = node.callbacks.first() as ChoiceCallback
+        choiceCallback.selectedIndex = 1 // Select "No" (do NOT collect location)
         node = node.next() as ContinueNode
 
         val deviceProfileCallback = node.callbacks.first() as DeviceProfileCallback
@@ -163,6 +203,11 @@ class DeviceProfileCallbackE2ETest : BaseJourneyTest() {
     fun testDeviceProfileCallbackWithSimpleCustomCollector() = runTest {
         var node = defaultJourney.start(tree) as ContinueNode
         node.handleLoginCallbacks()
+        node = node.next() as ContinueNode
+
+        // The first callback in the journey is a ChoiceCallback (choose to collect location or not...)
+        val choiceCallback = node.callbacks.first() as ChoiceCallback
+        choiceCallback.selectedIndex = 1 // Select "No" (do NOT collect location)
         node = node.next() as ContinueNode
 
         val deviceProfileCallback = node.callbacks.first() as DeviceProfileCallback
@@ -208,6 +253,11 @@ class DeviceProfileCallbackE2ETest : BaseJourneyTest() {
         node.handleLoginCallbacks()
         node = node.next() as ContinueNode
 
+        // The first callback in the journey is a ChoiceCallback (choose to collect location or not...)
+        val choiceCallback = node.callbacks.first() as ChoiceCallback
+        choiceCallback.selectedIndex = 1 // Select "No" (do NOT collect location)
+        node = node.next() as ContinueNode
+
         val deviceProfileCallback = node.callbacks.first() as DeviceProfileCallback
 
         val result = deviceProfileCallback.collect {
@@ -238,6 +288,11 @@ class DeviceProfileCallbackE2ETest : BaseJourneyTest() {
     fun testDeviceProfileCallbackWithFaultyCollector() = runTest {
         var node = defaultJourney.start(tree) as ContinueNode
         node.handleLoginCallbacks()
+        node = node.next() as ContinueNode
+
+        // The first callback in the journey is a ChoiceCallback (choose to collect location or not...)
+        val choiceCallback = node.callbacks.first() as ChoiceCallback
+        choiceCallback.selectedIndex = 1 // Select "No" (do NOT collect location)
         node = node.next() as ContinueNode
 
         val deviceProfileCallback = node.callbacks.first() as DeviceProfileCallback

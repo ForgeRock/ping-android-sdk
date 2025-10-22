@@ -290,12 +290,14 @@ class DeviceProfileCollectorTest {
         val result = DeviceProfileResult(
             identifier = "test-id",
             metadata = mockMetadata,
-            location = mockLocation
+            location = mockLocation,
+            version = "1.0"
         )
 
         assertEquals("test-id", result.identifier)
         assertEquals(mockMetadata, result.metadata)
         assertEquals(mockLocation, result.location)
+        assertEquals("1.0", result.version)
     }
 
     /**
@@ -306,11 +308,12 @@ class DeviceProfileCollectorTest {
      */
     @Test
     fun `DeviceProfileResult can be created with optional fields null`() {
-        val result = DeviceProfileResult(identifier = "test-id")
+        val result = DeviceProfileResult(identifier = "test-id", version = "1.0")
 
         assertEquals("test-id", result.identifier)
         assertNull(result.metadata)
         assertNull(result.location)
+        assertEquals("1.0", result.version)
     }
 
     /**

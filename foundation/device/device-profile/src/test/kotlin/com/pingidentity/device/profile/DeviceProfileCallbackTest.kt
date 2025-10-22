@@ -200,7 +200,7 @@ class DeviceProfileCallbackTest {
             }
         }
         assertEquals(
-            "{\"identifier\":\"test-device-id\",\"metadata\":{\"dummyCollector\":{\"name\":\"testName\",\"value\":\"testValue\"}}}",
+            "{\"identifier\":\"test-device-id\",\"metadata\":{\"dummyCollector\":{\"name\":\"testName\",\"value\":\"testValue\"}},\"version\":\"1.0\"}",
             callback.payload()["input"]?.jsonArray?.get(0)?.jsonObject?.get("value")?.jsonPrimitive?.content
         )
     }
