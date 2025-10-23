@@ -80,7 +80,6 @@ class ReCaptchaEnterpriseConfig {
  * ```
  *
  * @property reCaptchaSiteKey The ReCaptcha site key received from the server configuration
- * @property customPayload Optional custom JSON payload to be sent with the verification request
  * @property logger Logger instance for logging verification process
  */
 class ReCaptchaEnterpriseCallback : AbstractCallback() {
@@ -89,9 +88,6 @@ class ReCaptchaEnterpriseCallback : AbstractCallback() {
      * This key is automatically populated during callback initialization.
      */
     var reCaptchaSiteKey: String = ""
-        private set
-
-    var customPayload: JsonObject? = null
         private set
 
     var logger: Logger = Logger.WARN
@@ -165,60 +161,42 @@ class ReCaptchaEnterpriseCallback : AbstractCallback() {
      */
     suspend fun verify(block: ReCaptchaEnterpriseConfig.() -> Unit = {}): Result<String> {
         val config = ReCaptchaEnterpriseConfig()
-        config.customPayload = customPayload
         config.logger = logger
         config.apply(block)
 
-        // Use runCatching to handle exceptions from the entire block gracefully.
-        return runCatching {
-            val client = Recaptcha.fetchClient(
+        return try {
+            Recaptcha.fetchClient(
                 application = ContextProvider.context as Application,
                 siteKey = reCaptchaSiteKey,
-            )
-            // The execute function returns a Result, so we can chain its handling.
-            client.execute(
+            ).execute(
                 recaptchaAction = config.recaptchaAction,
                 timeout = config.timeoutInMills,
-            )
-        }.fold(
-            // onSuccess block: This is executed if the 'runCatching' and 'execute' were successful.
-            onSuccess = { recaptchaResult ->
-                val token = recaptchaResult.getOrNull()
+            ).onSuccess { token ->
+                config.customPayload?.let { payload ->
+                    super.input(token, payload)
+                } ?: super.input(token)
 
-                // 1. Check for a null or empty token, which indicates a failure.
-                if (token.isNullOrEmpty()) {
-                    val error = recaptchaResult.exceptionOrNull()
-                    logger.w(
-                        "reCAPTCHA execution failed or returned empty token.",
-                        error
-                    )
-                    Result.failure(Exception(INVALID_CAPTCHA_TOKEN, error))
-                } else {
-                    // 2. On success, call the super method with or without the payload.
-                    config.customPayload?.let { payload ->
-                        super.input(token, payload)
-                    } ?: super.input(token)
+                // Return the original successful result.
+                Result.success(token)
 
-                    // Return the original successful result.
-                    recaptchaResult
-                }
-            },
-            // onFailure block: This is executed if 'fetchClient' or another part of 'runCatching' throws an exception.
-            onFailure = { exception ->
+            }.onFailure { exception ->
                 logger.e(
-                    "An unexpected error occurred during reCAPTCHA setup or execution.",
+                    "An error occurred during reCAPTCHA setup or execution.",
                     exception
                 )
-                Result.failure(Exception(UNKNOWN_ERROR, exception))
+                return Result.failure(Exception(UNKNOWN_ERROR, exception))
             }
-        )
+        } catch (exception: Exception) {
+            logger.e(
+                "An unexpected error occurred during reCAPTCHA setup or execution.",
+                exception
+            )
+            Result.failure(Exception(UNKNOWN_ERROR, exception))
+        }
     }
 
     companion object {
-        /** Error code indicating the ReCaptcha token is invalid or empty */
-        private const val INVALID_CAPTCHA_TOKEN = "INVALID_CAPTCHA_TOKEN"
-
         /** Error code indicating an unexpected error occurred during verification */
-        private const val UNKNOWN_ERROR = "UNKNOWN_ERROR"
+        internal const val UNKNOWN_ERROR = "UNKNOWN_ERROR"
     }
 }
