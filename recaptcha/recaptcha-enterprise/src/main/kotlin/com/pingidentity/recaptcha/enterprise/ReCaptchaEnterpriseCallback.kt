@@ -285,9 +285,6 @@ class ReCaptchaEnterpriseConfig {
  *
  * @property reCaptchaSiteKey The ReCaptcha Enterprise site key received from the server.
  *           This is automatically populated during callback initialization and cannot be modified.
- * @property logger Logger instance used for tracking the verification process. This provides
- *           the default logger that can be overridden in the [verify] configuration block.
- *           Default: [Logger.Companion.WARN]
  *
  * @see ReCaptchaEnterpriseConfig
  * @see verify
@@ -304,17 +301,6 @@ class ReCaptchaEnterpriseCallback : AbstractCallback() {
      * **Note**: This property is read-only and cannot be modified after initialization.
      */
     var reCaptchaSiteKey: String = ""
-        private set
-
-    /**
-     * Default logger instance for the callback.
-     *
-     * This logger is used as the default for verification operations and can be overridden
-     * on a per-verification basis through the [ReCaptchaEnterpriseConfig.logger] property.
-     *
-     * Default: [Logger.Companion.WARN]
-     */
-    var logger: Logger = Logger.WARN
         private set
 
 
@@ -343,34 +329,6 @@ class ReCaptchaEnterpriseCallback : AbstractCallback() {
         if ("recaptchaSiteKey" == name) {
             this.reCaptchaSiteKey = value.jsonPrimitive.content
         }
-    }
-
-    /**
-     * Internal method for testing purposes to initialize callback properties.
-     *
-     * This method provides a way to initialize the callback during unit testing without going
-     * through the full Journey framework initialization. It simply delegates to the [init] method.
-     *
-     * **Important**: This method is for internal testing use only and should not be used in
-     * production code. It's marked as `internal` to restrict access to the module only.
-     *
-     * ## Testing Example
-     * ```kotlin
-     * @Test
-     * fun testVerification() = runTest {
-     *     val callback = ReCaptchaEnterpriseCallback()
-     *     callback.initForTest("recaptchaSiteKey", JsonPrimitive("test-site-key"))
-     *
-     *     // Now the callback is ready for testing
-     *     assertEquals("test-site-key", callback.reCaptchaSiteKey)
-     * }
-     * ```
-     *
-     * @param name The property name to initialize (e.g., "recaptchaSiteKey")
-     * @param value The property value as a [JsonElement]
-     */
-    internal fun initForTest(name: String, value: JsonElement) {
-        init(name, value)
     }
 
     /**
@@ -499,9 +457,8 @@ class ReCaptchaEnterpriseCallback : AbstractCallback() {
      * @see RecaptchaAction
      * @see UNKNOWN_ERROR
      */
-    suspend fun verify(block: ReCaptchaEnterpriseConfig.() -> Unit = {}): Result<String> {
+    suspend fun verify(block: ReCaptchaEnterpriseConfig.() -> Unit): Result<String> {
         val config = ReCaptchaEnterpriseConfig()
-        config.logger = logger
         config.apply(block)
 
         return try {
@@ -512,26 +469,22 @@ class ReCaptchaEnterpriseCallback : AbstractCallback() {
                 recaptchaAction = config.recaptchaAction,
                 timeout = config.timeoutInMills,
             ).onSuccess { token ->
-                config.customPayload?.let { payload ->
-                    super.input(token, payload)
-                } ?: super.input(token)
-
-                // Return the original successful result.
-                Result.success(token)
-
+                val payload = config.customPayload ?: JsonObject(emptyMap())
+                super.input(token, config.recaptchaAction.action, "", payload.toString())
             }.onFailure { exception ->
-                logger.e(
+                config.logger.e(
                     "An error occurred during reCAPTCHA setup or execution.",
                     exception
                 )
-                return Result.failure(Exception(UNKNOWN_ERROR, exception))
+                super.input("", config.recaptchaAction.action, exception.message ?: UNKNOWN_ERROR, "")
             }
         } catch (exception: Exception) {
-            logger.e(
+            config.logger.e(
                 "An unexpected error occurred during reCAPTCHA setup or execution.",
                 exception
             )
-            Result.failure(Exception(UNKNOWN_ERROR, exception))
+            super.input("", config.recaptchaAction.action, exception.message ?: UNKNOWN_ERROR, "")
+            Result.failure(exception)
         }
     }
 

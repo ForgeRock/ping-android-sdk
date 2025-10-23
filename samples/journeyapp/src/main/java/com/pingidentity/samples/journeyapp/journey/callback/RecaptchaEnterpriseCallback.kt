@@ -28,6 +28,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.pingidentity.recaptcha.enterprise.ReCaptchaEnterpriseCallback
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.add
+import kotlinx.serialization.json.buildJsonArray
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 
 /**
  * Composable function for handling ReCaptcha Enterprise verification in the Journey UI.
@@ -64,6 +68,31 @@ fun ReCaptchaEnterpriseCallback(
         scope.launch {
             reCaptchaEnterpriseCallback.verify {
                 // Optionally customize the configuration here
+                customPayload = buildJsonObject {
+                    put("firewallPolicyEvaluation", false)
+                    put("express", false)
+                    put("transaction_data", buildJsonObject {
+                        put("transaction_id", "custom-payload-1234567890")
+                        put("payment_method", "credit-card")
+                        put("card_bin", "1111")
+                        put("card_last_four", "1234")
+                        put("currency_code", "CAD")
+                        put("value", 12.34)
+                        put("user", buildJsonObject {
+                            put("email", "sdkuser@example.com")
+                        })
+                        put("billing_address", buildJsonObject {
+                            put("recipient", "Sdk User")
+                            put("address", buildJsonArray {
+                                add("3333 Random Road")
+                            })
+                            put("locality", "Courtenay")
+                            put("administrative_area", "BC")
+                            put("region_code", "CA")
+                            put("postal_code", "V2V 2V2")
+                        })
+                    })
+                }
             }.onSuccess { result ->
                 println("ReCaptcha Token Result: $result")
                 isLoading = false
