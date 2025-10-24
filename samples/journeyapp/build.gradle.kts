@@ -82,7 +82,6 @@ dependencies {
     
     implementation(project(":foundation:device:device-profile"))
     implementation(project(":recaptcha:recaptcha-enterprise"))
-    implementation(libs.google.android.recaptcha)
 
     //implementation("com.pingidentity.sdks:davinci:0.9.0-SNAPSHOT")
     implementation(libs.androidx.datastore.preferences)

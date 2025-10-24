@@ -25,7 +25,7 @@ dependencies {
     implementation(libs.androidx.annotation)
     implementation(libs.androidx.appcompat)
     implementation(libs.androidx.startup.runtime)
-    implementation(libs.google.android.recaptcha)
+    api(libs.google.android.recaptcha)
 
     testImplementation(libs.kotlin.test)
     testImplementation(libs.kotlinx.coroutines.test)
