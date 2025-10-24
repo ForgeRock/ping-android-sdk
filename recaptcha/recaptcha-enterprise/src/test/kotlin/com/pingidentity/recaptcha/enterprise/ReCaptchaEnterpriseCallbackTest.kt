@@ -30,6 +30,7 @@ import kotlin.test.*
 class ReCaptchaEnterpriseCallbackTest {
 
     private val mockApplication = mockk<Application>()
+    private val mockRecaptchaClient = mockk<RecaptchaClient>()
     private val siteKey = "test-site-key"
 
     @BeforeTest
@@ -75,8 +76,6 @@ class ReCaptchaEnterpriseCallbackTest {
      */
     @Test
     fun `Test verify result with complete input fields including token, action, clientError, and payload`() = runTest {
-        val mockRecaptchaClient = mockk<RecaptchaClient>()
-
         // Mock a realistic ReCaptcha token
         val expectedToken = "0cAFcWeA53BjeGBfuZXsD008heJeYAYR6d0scOUyGZ2C0BTkJJCn0GoeZPcl_0fngK8A35nexoO-YtTFBNIcNVIMUAaqBjCA28VtQtqjzbvAQ6_As7for3aClmSj7Zw9Wbe9nmAZgDNuAWvHqnUhng4wCChMVF9ESs6FCU9oG2XIP1ZTGO7tS1mOEX7kg5PjgPXi6"
 
@@ -149,7 +148,6 @@ class ReCaptchaEnterpriseCallbackTest {
      */
     @Test
     fun `Test verify result with error wrapped as UNKNOWN_ERROR on failure`() = runTest {
-        val mockRecaptchaClient = mockk<RecaptchaClient>()
         val testException = Exception("Network timeout occurred")
 
         coEvery { Recaptcha.fetchClient(mockApplication, siteKey) } returns mockRecaptchaClient
@@ -176,6 +174,13 @@ class ReCaptchaEnterpriseCallbackTest {
             Recaptcha.fetchClient(mockApplication, siteKey)
             mockRecaptchaClient.execute(RecaptchaAction.SIGNUP, 10000L)
         }
+
+        val payload = callback.payload()
+        val inputArray = payload["input"]?.jsonArray
+        assertNotNull(inputArray)
+        val clientErrorField = inputArray[2].jsonObject
+        assertEquals("IDToken1clientError", clientErrorField["name"]?.jsonPrimitive?.content)
+        assertEquals("Network timeout occurred", clientErrorField["value"]?.jsonPrimitive?.content)
     }
 
     /**
@@ -183,8 +188,6 @@ class ReCaptchaEnterpriseCallbackTest {
      */
     @Test
     fun `Test verify with realistic long token and SIGNUP action`() = runTest {
-        val mockRecaptchaClient = mockk<RecaptchaClient>()
-
         // Use a realistic long ReCaptcha token similar to production (truncated for test)
         val longToken = "0cAFcWeA53BjeGBfuZXsD008heJeYAYR6d0scOUyGZ2C0BTkJJCn0GoeZPcl_0fngK8A35nexoO-YtTFBNIcNVIMUAaqBjCA28VtQtqjzbvAQ6_As7for3aClmSj7Zw9Wbe9nmAZgDNuAWvHqnUhng4wCChMVF9ESs6FCU9oG2XIP1ZTGO7tS1mOEX7kg5PjgPXi6-XXX-efURhwi77MPp9p9g4bj1UpGwSafOvZvT5WpwAXvbag6UsgTwHmkBNDF1HYQzSgMRQfltjemcHKktNgNxWOls4NE3Xd6y8WWol6tsAHI8wG6M91flCsfEw-H7MYAOiDjQsUEmvbTmKxMOhecT5L4mTNSAWUKmAlnyiHxIF_3XJhH8xskJTGaE2lHtE2hydabV6KDxHB3u0kXzpUmPLJNX1Nl24czAYl1Fw4Er0"
 
@@ -217,6 +220,7 @@ class ReCaptchaEnterpriseCallbackTest {
         val actionField = inputArray[1].jsonObject
         assertEquals("IDToken1action", actionField["name"]?.jsonPrimitive?.content)
         assertNotNull(actionField["value"]?.jsonPrimitive?.content)
+        assertEquals(RecaptchaAction.SIGNUP.action, actionField["value"]?.jsonPrimitive?.content)
 
         // Verify clientError field exists
         val clientErrorField = inputArray[2].jsonObject
