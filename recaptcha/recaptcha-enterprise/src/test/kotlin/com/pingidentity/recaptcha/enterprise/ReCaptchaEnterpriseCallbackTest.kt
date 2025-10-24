@@ -232,6 +232,87 @@ class ReCaptchaEnterpriseCallbackTest {
     }
 
     /**
+     * Test that verifies the callback handles exceptions during client setup.
+     */
+    @Test
+    fun `Test verify handles exception during ReCaptcha client fetch`() = runTest {
+        // Mock Recaptcha.fetchClient to throw an exception
+        val testException = IllegalStateException("Failed to initialize ReCaptcha client")
+        coEvery { Recaptcha.fetchClient(any(), any()) } throws testException
+
+        val callback = createCallbackWithFullInputFields()
+
+        // Execute verification
+        val result = callback.verify {
+            recaptchaAction = RecaptchaAction.LOGIN
+            timeoutInMills = 10000L
+        }
+
+        // Verify the result is failure
+        assertTrue(result.isFailure)
+        assertNotNull(result.exceptionOrNull())
+
+        val exception = result.exceptionOrNull()
+        assertEquals(testException, exception)
+        assertEquals("Failed to initialize ReCaptcha client", exception?.message)
+
+        // Verify that the callback input fields are populated correctly
+        val payload = callback.payload()
+        val inputArray = payload["input"]?.jsonArray
+        assertNotNull(inputArray)
+
+        // Token should be empty
+        val tokenField = inputArray[0].jsonObject
+        assertEquals("IDToken1token", tokenField["name"]?.jsonPrimitive?.content)
+        assertEquals("", tokenField["value"]?.jsonPrimitive?.content)
+
+        // Action should be set
+        val actionField = inputArray[1].jsonObject
+        assertEquals("IDToken1action", actionField["name"]?.jsonPrimitive?.content)
+        assertEquals("login", actionField["value"]?.jsonPrimitive?.content)
+
+        // ClientError should contain the exception message
+        val clientErrorField = inputArray[2].jsonObject
+        assertEquals("IDToken1clientError", clientErrorField["name"]?.jsonPrimitive?.content)
+        assertEquals("Failed to initialize ReCaptcha client", clientErrorField["value"]?.jsonPrimitive?.content)
+
+        // Payload should be empty
+        val payloadField = inputArray[3].jsonObject
+        assertEquals("IDToken1payload", payloadField["name"]?.jsonPrimitive?.content)
+        assertEquals("", payloadField["value"]?.jsonPrimitive?.content)
+
+        // Verify fetchClient was called
+        coVerify { Recaptcha.fetchClient(mockApplication, siteKey) }
+    }
+
+    /**
+     * Test that verifies the callback handles exceptions with null message using UNKNOWN_ERROR.
+     */
+    @Test
+    fun `Test verify uses UNKNOWN_ERROR when exception message is null`() = runTest {
+        // Create an exception with null message
+        val testException = RuntimeException(null as String?)
+        coEvery { Recaptcha.fetchClient(any(), any()) } throws testException
+
+        val callback = createCallbackWithFullInputFields()
+
+        val result = callback.verify {
+            recaptchaAction = RecaptchaAction.SIGNUP
+        }
+
+        assertTrue(result.isFailure)
+
+        // Verify the clientError field contains UNKNOWN_ERROR
+        val payload = callback.payload()
+        val inputArray = payload["input"]?.jsonArray
+        assertNotNull(inputArray)
+
+        val clientErrorField = inputArray[2].jsonObject
+        assertEquals("IDToken1clientError", clientErrorField["name"]?.jsonPrimitive?.content)
+        assertEquals("UNKNOWN_ERROR", clientErrorField["value"]?.jsonPrimitive?.content)
+    }
+
+    /**
      * Helper function to create a callback with all four input fields:
      * IDToken1token, IDToken1action, IDToken1clientError, and IDToken1payload.
      */
