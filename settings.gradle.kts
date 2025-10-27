@@ -55,6 +55,7 @@ include(":mfa:push")
 include(":protect")
 include(":external-idp")
 //include(":verify")
+include(":recaptcha-enterprise")
 //include(":wallet")
 include(":foundation:testrail")
 

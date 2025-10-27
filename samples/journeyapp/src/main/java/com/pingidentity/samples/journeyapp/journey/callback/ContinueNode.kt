@@ -44,6 +44,7 @@ import com.pingidentity.journey.plugin.callbacks
 import com.pingidentity.orchestrate.ContinueNode
 import com.pingidentity.protect.journey.PingOneProtectEvaluationCallback
 import com.pingidentity.protect.journey.PingOneProtectInitializeCallback
+import com.pingidentity.recaptcha.enterprise.ReCaptchaEnterpriseCallback
 
 @Composable
 fun ContinueNode(
@@ -80,6 +81,10 @@ fun ContinueNode(
                 is DeviceProfileCallback -> {
                     showNext = false
                     DeviceProfileCallback(it, onNext)
+                }
+                is ReCaptchaEnterpriseCallback -> {
+                    showNext = false
+                    ReCaptchaEnterpriseCallback(it, onNext)
                 }
 
                 is TextInputCallback -> TextInputCallback(it, onNodeUpdated)
