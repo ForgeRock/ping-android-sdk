@@ -24,7 +24,7 @@ import kotlinx.serialization.json.jsonPrimitive
  * @property isRequired Whether the consent mapping is required.
  * @property fields The list of fields associated with the consent mapping.
  * @property message The message to be displayed to the user.
- * @property accept Whether the user accepts the consent mapping.
+ * @property accepted Whether the user accepts the consent mapping.
  */
 
 class ConsentMappingCallback : AbstractCallback() {
@@ -43,7 +43,7 @@ class ConsentMappingCallback : AbstractCallback() {
     var message = ""
         private set
 
-    var accept = false
+    var accepted = false
 
     override fun init(name: String, value: JsonElement) {
         when (name) {
@@ -60,7 +60,7 @@ class ConsentMappingCallback : AbstractCallback() {
     }
 
     override fun payload(): JsonObject {
-        return input(accept)
+        return input(accepted)
     }
 
 }

@@ -60,14 +60,14 @@ class TermsAndConditionsCallbackTest {
         assertEquals("1.0", callback.version)
         assertEquals("This is a demo for Terms & Conditions", callback.terms)
         assertEquals("2019-07-11T22:23:55.737Z", callback.createDate)
-        assertEquals(false, callback.accept)
+        assertEquals(false, callback.accepted)
     }
 
     @Test
     fun payloadReturnsCorrectly() {
         val callback = TermsAndConditionsCallback()
         callback.init(jsonObject)
-        callback.accept = true
+        callback.accepted = true
 
         val payload = callback.payload()
         assertEquals(

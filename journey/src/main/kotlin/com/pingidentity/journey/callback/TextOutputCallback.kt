@@ -17,11 +17,11 @@ import kotlinx.serialization.json.jsonPrimitive
 /**
  * A callback for displaying text output.
  *
- * @property messageType The type of message (e.g., information, warning, error).
+ * @property messageType The type of message TextOutputCallbackMessageType (information, warning, error, script).
  * @property message The message to be displayed.
  */
 open class TextOutputCallback : AbstractCallback() {
-    var messageType = 0
+    var messageType = TextOutputCallbackMessageType.UNKNOWN
         private set
 
     var message: String = ""
@@ -29,34 +29,33 @@ open class TextOutputCallback : AbstractCallback() {
 
     override fun init(name: String, value: JsonElement) {
         when (name) {
-            "messageType" -> this.messageType = value.jsonPrimitive.int
+            "messageType" -> this.messageType = fromType(value.jsonPrimitive.int)
             "message" -> this.message = value.jsonPrimitive.content
         }
     }
 
     override fun payload(): JsonObject {
-        return if (messageType == 4) {
-            buildJsonObject {};
+        return if (messageType == TextOutputCallbackMessageType.SCRIPT ||
+            messageType == TextOutputCallbackMessageType.UNKNOWN) {
+            buildJsonObject {}
         } else {
-            super.payload();
+            super.payload()
         }
     }
 
     companion object {
-        /**
-         * Information message.
-         */
-        const val INFORMATION: Int = 0
-
-        /**
-         * Warning message.
-         */
-        const val WARNING: Int = 1
-
-        /**
-         * Error message.
-         */
-        const val ERROR: Int = 2
+        private fun fromType(type: Int): TextOutputCallbackMessageType =
+            TextOutputCallbackMessageType.entries.find { it.type == type } ?: TextOutputCallbackMessageType.SCRIPT
     }
+}
 
+/**
+ * Enum representing the type of message for TextOutputCallback.
+ */
+enum class TextOutputCallbackMessageType(val type: Int) {
+    INFORMATION(0),
+    WARNING(1),
+    ERROR(2),
+    SCRIPT(4),
+    UNKNOWN(-1)
 }

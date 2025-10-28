@@ -9,9 +9,6 @@ package com.pingidentity.journey.callback
 
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.buildJsonArray
-import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.int
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
@@ -72,10 +69,10 @@ class ConfirmationCallbackTest {
         callback.init(jsonObject)
 
         assertEquals("Please confirm your choice", callback.prompt)
-        assertEquals(0, callback.messageType)
+        assertEquals(ConfirmationCallbackMessageType.INFORMATION, callback.messageType)
         assertEquals(listOf("Yes", "No"), callback.options)
-        assertEquals(-1, callback.optionType)
-        assertEquals(1, callback.defaultOption)
+        assertEquals(ConfirmationCallbackOptionType.UNSPECIFIED_OPTION, callback.optionType)
+        assertEquals(ConfirmationCallbackSelection.NO, callback.defaultOption)
     }
 
     @Test

@@ -30,6 +30,7 @@ import kotlin.IllegalStateException
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
+import kotlin.time.Duration.Companion.seconds
 
 class WorkflowTest {
     @JvmField
@@ -143,7 +144,7 @@ class WorkflowTest {
         runTest {
             val workflow =
                 Workflow {
-                    timeout = 10
+                    timeout = 10.seconds.inWholeMilliseconds
 
                     module(forceAuth)
                     module(noSession)
@@ -171,7 +172,7 @@ class WorkflowTest {
         runTest {
             val workflow =
                 Workflow {
-                    timeout = 10
+                    timeout = 10.seconds.inWholeMilliseconds
 
                     module(forceAuth)
                     module(noSession)
@@ -197,7 +198,7 @@ class WorkflowTest {
         runTest {
             val workflow =
                 Workflow {
-                    timeout = 10
+                    timeout = 10.seconds.inWholeMilliseconds
 
                     module(forceAuth)
                     module(noSession)

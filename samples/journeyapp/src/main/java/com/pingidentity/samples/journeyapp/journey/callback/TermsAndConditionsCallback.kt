@@ -50,7 +50,7 @@ fun TermsAndConditionsCallback(callback: TermsAndConditionsCallback, onNodeUpdat
             checked = input,
             onCheckedChange = {
                 input = it
-                callback.accept = it
+                callback.accepted = it
                 onNodeUpdated()
             }
         )

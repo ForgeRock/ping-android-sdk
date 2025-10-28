@@ -43,7 +43,7 @@ class ConsentMappingCallbackE2ETest : BaseJourneyTest() {
         assertEquals("Test", consentMappingCallback.message)
         assertEquals("managedUser_managedUser", consentMappingCallback.name)
 
-        consentMappingCallback.accept = true
+        consentMappingCallback.accepted = true
         val result = node.next()
         assertTrue(result is SuccessNode)
         result as SuccessNode

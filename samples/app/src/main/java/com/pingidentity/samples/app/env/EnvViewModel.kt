@@ -31,10 +31,11 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlin.time.Duration.Companion.seconds
 
 val test by lazy {
     DaVinci {
-        timeout = 30
+        timeout = 30.seconds.inWholeMilliseconds
         logger = Logger.STANDARD
         module(Oidc) {
             clientId = "dummy"

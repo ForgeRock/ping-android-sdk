@@ -24,9 +24,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.pingidentity.journey.callback.TextOutputCallback
-import com.pingidentity.journey.callback.TextOutputCallback.Companion.ERROR
-import com.pingidentity.journey.callback.TextOutputCallback.Companion.INFORMATION
-import com.pingidentity.journey.callback.TextOutputCallback.Companion.WARNING
+import com.pingidentity.journey.callback.TextOutputCallbackMessageType
 
 @Composable
 fun TextOutputCallback(callback: TextOutputCallback) {
@@ -35,9 +33,9 @@ fun TextOutputCallback(callback: TextOutputCallback) {
         .padding(16.dp)
         .fillMaxWidth()) {
         when (callback.messageType) {
-            INFORMATION -> Icon(Icons.Filled.Info, null)
-            WARNING -> Icon(Icons.Filled.Warning, null)
-            ERROR -> Icon(Icons.Filled.Error, null)
+            TextOutputCallbackMessageType.INFORMATION -> Icon(Icons.Filled.Info, null)
+            TextOutputCallbackMessageType.WARNING -> Icon(Icons.Filled.Warning, null)
+            TextOutputCallbackMessageType.ERROR -> Icon(Icons.Filled.Error, null)
             else -> Icon(Icons.Filled.Settings, null)
         }
         Spacer(Modifier.width(8.dp))

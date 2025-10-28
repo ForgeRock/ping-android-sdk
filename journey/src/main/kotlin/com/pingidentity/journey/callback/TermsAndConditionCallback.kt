@@ -17,7 +17,7 @@ import kotlinx.serialization.json.jsonPrimitive
  * @property version The version of the terms and conditions.
  * @property terms The terms and conditions text.
  * @property createDate The date the terms and conditions were created.
- * @property accept Whether the user accepts the terms and conditions.
+ * @property accepted Whether the user accepts the terms and conditions.
  */
 class TermsAndConditionsCallback : AbstractCallback() {
     var version: String = ""
@@ -29,7 +29,7 @@ class TermsAndConditionsCallback : AbstractCallback() {
     var createDate: String = ""
         private set
 
-    var accept = false
+    var accepted = false
 
     override fun init(name: String, value: JsonElement) {
         when (name) {
@@ -40,6 +40,6 @@ class TermsAndConditionsCallback : AbstractCallback() {
         }
     }
 
-    override fun payload() = input(accept)
+    override fun payload() = input(accepted)
 
 }

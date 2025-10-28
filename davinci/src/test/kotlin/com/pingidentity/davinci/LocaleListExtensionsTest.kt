@@ -8,6 +8,7 @@
 package com.pingidentity.davinci
 
 import android.os.LocaleList
+import com.pingidentity.utils.toAcceptLanguage
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import java.util.Locale
