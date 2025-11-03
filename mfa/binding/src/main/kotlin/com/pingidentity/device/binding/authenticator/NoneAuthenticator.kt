@@ -26,7 +26,7 @@ import java.security.interfaces.RSAPublicKey
  * The authenticator manages cryptographic keys through the Android KeyStore but does
  * not require biometric authentication, PIN, or any other user verification to access them.
  */
-open class None : CryptoKeyAware, DeviceAuthenticator {
+open class NoneAuthenticator : CryptoKeyAware, DeviceAuthenticator {
 
     /**
      * The cryptographic key instance used for key generation and management.

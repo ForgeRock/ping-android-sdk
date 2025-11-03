@@ -34,10 +34,10 @@ import kotlin.test.Test
 import kotlin.test.assertFailsWith
 
 @RunWith(RobolectricTestRunner::class)
-class NoneTest {
+class NoneAuthenticatorTest {
 
     private val context: Context by lazy { ApplicationProvider.getApplicationContext<Application>() }
-    private lateinit var authenticator: None
+    private lateinit var authenticator: NoneAuthenticator
     private lateinit var mockCryptoKey: CryptoKey
 
     @BeforeTest
@@ -45,7 +45,7 @@ class NoneTest {
         ContextProvider.init(context)
 
         mockCryptoKey = spyk(CryptoKey("test-alias"))
-        authenticator = None()
+        authenticator = NoneAuthenticator()
         authenticator.cryptoKey = mockCryptoKey
     }
 

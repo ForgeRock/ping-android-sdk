@@ -20,7 +20,7 @@ import com.pingidentity.device.binding.authenticator.BiometricAuthenticatorConfi
 import com.pingidentity.device.binding.authenticator.BiometricDeviceCredentialAuthenticator
 import com.pingidentity.device.binding.authenticator.BiometricOnlyAuthenticator
 import com.pingidentity.device.binding.authenticator.DeviceBindingAuthenticationType
-import com.pingidentity.device.binding.authenticator.None
+import com.pingidentity.device.binding.authenticator.NoneAuthenticator
 import com.pingidentity.logger.Logger
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
@@ -144,7 +144,7 @@ class DeviceBindingConfigTest {
 
         val authenticator = config.authenticator(DeviceBindingAuthenticationType.NONE, prompt)
 
-        assertTrue(authenticator is None)
+        assertTrue(authenticator is NoneAuthenticator)
     }
 
     @Test
