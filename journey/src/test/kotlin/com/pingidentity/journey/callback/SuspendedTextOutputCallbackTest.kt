@@ -9,9 +9,6 @@ package com.pingidentity.journey.callback
 
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.buildJsonArray
-import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.int
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
@@ -54,7 +51,7 @@ class SuspendedTextOutputCallbackTest {
             "An email has been sent to the address you entered. Click the link in that email to proceed.",
             callback.message
         )
-        assertEquals(0, callback.messageType)
+        assertEquals(TextOutputCallbackMessageType.INFORMATION, callback.messageType)
     }
 
     @Test

@@ -15,7 +15,7 @@ import com.pingidentity.android.ContextProvider
 import com.pingidentity.device.binding.UserKey
 import com.pingidentity.device.binding.authenticator.DeviceAuthenticator
 import com.pingidentity.device.binding.authenticator.DeviceBindingAuthenticationType
-import com.pingidentity.device.binding.authenticator.None
+import com.pingidentity.device.binding.authenticator.NoneAuthenticator
 import com.pingidentity.device.binding.authenticator.UserKeySigningParameters
 import com.pingidentity.device.binding.authenticator.exception.DeviceNotRegisteredException
 import com.pingidentity.device.binding.authenticator.exception.InvalidClaimException
@@ -291,7 +291,7 @@ class DeviceSigningVerifierCallbackTest {
         callback.init(setValue(input, "timeout", JsonPrimitive(1))) // 1 second timeout
         setupUserKeyStorage(listOf(testUserKey))
 
-        val slowAuthenticator = object : None() {
+        val slowAuthenticator = object : NoneAuthenticator() {
             override suspend fun authenticate(context: Context): Result<Pair<PrivateKey, androidx.biometric.BiometricPrompt.CryptoObject?>> {
                 kotlinx.coroutines.delay(2000) // 2 seconds delay
                 return super.authenticate(context)

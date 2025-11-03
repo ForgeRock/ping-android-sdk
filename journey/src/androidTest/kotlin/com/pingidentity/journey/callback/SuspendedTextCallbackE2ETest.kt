@@ -35,7 +35,7 @@ class SuspendedTextCallbackE2ETest : BaseJourneyTest() {
         val suspendedTextOutputCallback = node.callbacks.first() as SuspendedTextOutputCallback
 
         assertTrue(suspendedTextOutputCallback.message.contains("An email has been sent to the address you entered"))
-        assertEquals(TextOutputCallback.INFORMATION, suspendedTextOutputCallback.messageType)
+        assertEquals(TextOutputCallbackMessageType.INFORMATION, suspendedTextOutputCallback.messageType)
 
         /// And that's it...
     }

@@ -20,7 +20,7 @@ import com.pingidentity.device.binding.authenticator.BiometricAuthenticator
 import com.pingidentity.device.binding.authenticator.DeviceAuthenticator
 import com.pingidentity.device.binding.authenticator.DeviceBindingAuthenticationType
 import com.pingidentity.device.binding.authenticator.KeyPair
-import com.pingidentity.device.binding.authenticator.None
+import com.pingidentity.device.binding.authenticator.NoneAuthenticator
 import com.pingidentity.device.binding.authenticator.SigningParameters
 import com.pingidentity.device.binding.authenticator.exception.DeviceNotSupportedException
 import com.pingidentity.journey.plugin.AbstractCallback
@@ -325,7 +325,7 @@ open class DeviceBindingCallback : AbstractCallback(), JourneyAware {
             is AppPinAuthenticator -> {
                 cryptoKey.delete()
             }
-            is BiometricAuthenticator, is None -> {
+            is BiometricAuthenticator, is NoneAuthenticator -> {
                 AppPinAuthenticator().apply { this.cryptoKey = cryptoKey }.deleteKeys()
             }
         }

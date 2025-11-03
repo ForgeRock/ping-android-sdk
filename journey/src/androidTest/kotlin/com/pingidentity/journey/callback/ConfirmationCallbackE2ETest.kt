@@ -37,14 +37,14 @@ class ConfirmationCallbackE2ETest : BaseJourneyTest() {
         // Handle TextOutputCallback callback
         val textInputCallback = node.callbacks.first() as TextOutputCallback
         assertEquals("Test", textInputCallback.message)
-        assertEquals(0, textInputCallback.messageType)
+        assertEquals(TextOutputCallbackMessageType.INFORMATION, textInputCallback.messageType)
 
         // Handle ConfirmationCallback callback
         val confirmationCallback = node.callbacks.last() as ConfirmationCallback
         assertEquals("", confirmationCallback.prompt)
-        assertEquals(1, confirmationCallback.defaultOption)
-        assertEquals(0, confirmationCallback.messageType)
-        assertEquals(-1, confirmationCallback.optionType)
+        assertEquals(ConfirmationCallbackSelection.NO, confirmationCallback.defaultOption)
+        assertEquals(ConfirmationCallbackMessageType.INFORMATION, confirmationCallback.messageType)
+        assertEquals(ConfirmationCallbackOptionType.UNSPECIFIED_OPTION, confirmationCallback.optionType)
         assertEquals(2, confirmationCallback.options.size)
         assertTrue(confirmationCallback.options.contains("Yes"))
         assertTrue(confirmationCallback.options.contains("No"))

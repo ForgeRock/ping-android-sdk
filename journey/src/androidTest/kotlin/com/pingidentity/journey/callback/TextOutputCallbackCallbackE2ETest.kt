@@ -40,20 +40,20 @@ class TextOutputCallbackCallbackE2ETest : BaseJourneyTest() {
 
         var callback = node.callbacks[0] as TextOutputCallback
         assertEquals("TextOutput Type 0 (INFO)", callback.message)
-        assertEquals(TextOutputCallback.INFORMATION, callback.messageType)
+        assertEquals(TextOutputCallbackMessageType.INFORMATION, callback.messageType)
 
         callback = node.callbacks[1] as TextOutputCallback
         assertEquals("TextOutput Type 1 (WARNING)", callback.message)
-        assertEquals(TextOutputCallback.WARNING, callback.messageType)
+        assertEquals(TextOutputCallbackMessageType.WARNING, callback.messageType)
 
         callback = node.callbacks[2] as TextOutputCallback
         assertEquals("TextOutput Type 2 (ERROR)", callback.message)
-        assertEquals(TextOutputCallback.ERROR, callback.messageType)
+        assertEquals(TextOutputCallbackMessageType.ERROR, callback.messageType)
 
         // ToDo: Align the "Type 4" value later...
         callback = node.callbacks[3] as TextOutputCallback
         assertEquals("TextOutput Type 4 (SCRIPT)", callback.message)
-        assertEquals(4, callback.messageType)
+        assertEquals(TextOutputCallbackMessageType.SCRIPT, callback.messageType)
 
         val result = node.next()
 

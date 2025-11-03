@@ -17,9 +17,6 @@ import kotlinx.serialization.json.jsonPrimitive
  * @property username The username input by the user.
  */
 class ValidatedUsernameCallback : AbstractValidatedCallback() {
-    var prompt: String = ""
-        private set
-
     var username: String = ""
 
     override fun init(name: String, value: JsonElement) {

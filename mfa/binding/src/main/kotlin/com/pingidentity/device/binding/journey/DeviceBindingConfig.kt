@@ -24,7 +24,7 @@ import com.pingidentity.device.binding.authenticator.DeviceBindingAuthentication
 import com.pingidentity.device.binding.authenticator.DeviceBindingAuthenticationType.BIOMETRIC_ALLOW_FALLBACK
 import com.pingidentity.device.binding.authenticator.DeviceBindingAuthenticationType.BIOMETRIC_ONLY
 import com.pingidentity.device.binding.authenticator.DeviceBindingAuthenticationType.NONE
-import com.pingidentity.device.binding.authenticator.None
+import com.pingidentity.device.binding.authenticator.NoneAuthenticator
 import com.pingidentity.device.binding.ui.UserKeyOption
 import com.pingidentity.device.binding.ui.collectUserKey
 import com.pingidentity.device.id.DefaultDeviceIdentifier
@@ -318,7 +318,7 @@ class DeviceBindingConfig {
                 )
 
                 APPLICATION_PIN -> AppPinAuthenticator(createAppPinConfig(prompt))
-                NONE -> None()
+                NONE -> NoneAuthenticator()
             }
         }
     }

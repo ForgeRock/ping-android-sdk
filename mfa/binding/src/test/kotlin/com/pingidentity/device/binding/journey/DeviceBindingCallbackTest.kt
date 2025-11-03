@@ -16,7 +16,7 @@ import com.pingidentity.device.binding.UserKey
 import com.pingidentity.device.binding.authenticator.Attestation
 import com.pingidentity.device.binding.authenticator.DeviceBindingAuthenticationType
 import com.pingidentity.device.binding.authenticator.KeyPair
-import com.pingidentity.device.binding.authenticator.None
+import com.pingidentity.device.binding.authenticator.NoneAuthenticator
 import com.pingidentity.device.binding.authenticator.SigningParameters
 import com.pingidentity.device.binding.authenticator.UserKeySigningParameters
 import com.pingidentity.device.binding.authenticator.exception.DeviceNotSupportedException
@@ -63,7 +63,7 @@ class DeviceBindingCallbackTest {
     private lateinit var mockJourneyConfig: WorkflowConfig
     private lateinit var mockLogger: Logger
     private lateinit var deviceBindingConfig: DeviceBindingConfig
-    private lateinit var mockAuthenticator: None
+    private lateinit var mockAuthenticator: NoneAuthenticator
     private lateinit var userKeyStorage: Storage<List<UserKey>>
     private lateinit var input: JsonObject
     private lateinit var mockDeviceIdentifier: DeviceIdentifier

@@ -69,7 +69,7 @@ fun ConsentMappingCallback(callback: ConsentMappingCallback, onNodeUpdated: () -
             checked = input,
             onCheckedChange = {
                 input = it
-                callback.accept = it
+                callback.accepted = it
                 onNodeUpdated()
             }
         )

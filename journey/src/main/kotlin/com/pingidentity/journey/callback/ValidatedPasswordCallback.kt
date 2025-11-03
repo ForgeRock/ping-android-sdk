@@ -19,9 +19,6 @@ import kotlinx.serialization.json.jsonPrimitive
  * @property password The password input by the user.
  */
 class ValidatedPasswordCallback : AbstractValidatedCallback() {
-    var prompt: String = ""
-        private set
-
     var echoOn = false
         private set
 

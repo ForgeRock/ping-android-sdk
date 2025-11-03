@@ -18,3 +18,8 @@ plugins {
 android {
     namespace = "com.pingidentity.utils"
 }
+
+dependencies {
+    testImplementation(libs.robolectric)
+    testImplementation(libs.kotlin.test)
+}

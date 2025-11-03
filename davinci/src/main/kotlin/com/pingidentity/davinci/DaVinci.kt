@@ -17,6 +17,7 @@ import com.pingidentity.orchestrate.module.Cookie
 import com.pingidentity.orchestrate.module.CustomHeader
 import com.pingidentity.orchestrate.module.CustomParameter
 import com.pingidentity.orchestrate.module.CustomParameterConfig.Companion.START
+import com.pingidentity.utils.toAcceptLanguage
 
 // typealias DaVinciConfig = WorkflowConfig
 private const val X_REQUESTED_WITH = "x-requested-with"
@@ -73,35 +74,4 @@ fun DaVinci(block: DaVinciConfig.() -> Unit = {}): DaVinci {
     config.apply(block)
 
     return DaVinci(config)
-}
-
-/**
- * Function to convert a LocaleList to an Accept-Language header value.
- */
-fun LocaleList.toAcceptLanguage(): String {
-    if (isEmpty) return ""
-
-    val languageTags = mutableListOf<String>()
-    var currentQValue = 0.9
-
-    (0 until size()).forEach { index ->
-        val locale = this[index]
-
-        // Add toLanguageTag version first
-        if (index == 0) {
-            languageTags.add(locale.toLanguageTag())
-            currentQValue = 0.9
-        } else {
-            languageTags.add("${locale.toLanguageTag()};q=%.1f".format(currentQValue))
-            currentQValue -= 0.1
-        }
-
-        // Add language version with next q-value
-        if (locale.toLanguageTag() != locale.language) {
-            languageTags.add("${locale.language};q=%.1f".format(currentQValue))
-            currentQValue -= 0.1
-        }
-    }
-
-    return languageTags.joinToString(", ")
 }

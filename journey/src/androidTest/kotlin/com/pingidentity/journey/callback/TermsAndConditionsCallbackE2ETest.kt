@@ -38,7 +38,7 @@ class TermsAndConditionsCallbackE2ETest : BaseJourneyTest() {
         assertNotNull(callback.terms)
         assertNotNull(callback.version)
         assertNotNull(callback.createDate)
-        callback.accept = true
+        callback.accepted = true
 
         val result = node.next()
         assertTrue(result is SuccessNode)

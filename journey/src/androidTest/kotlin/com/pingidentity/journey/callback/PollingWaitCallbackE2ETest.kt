@@ -44,12 +44,12 @@ class PollingWaitCallbackE2ETest : BaseJourneyTest() {
 
         val confirmationCallback = node.callbacks.last() as ConfirmationCallback
         assertTrue(confirmationCallback.prompt.isEmpty())
-        assertEquals(ConfirmationCallback.INFORMATION, confirmationCallback.messageType)
+        assertEquals(ConfirmationCallbackMessageType.INFORMATION, confirmationCallback.messageType)
         assertTrue(confirmationCallback.options.contains("Exit"))
-        assertEquals(ConfirmationCallback.UNSPECIFIED_OPTION, confirmationCallback.optionType)
-        assertEquals(ConfirmationCallback.YES_NO_OPTION, confirmationCallback.defaultOption)
+        assertEquals(ConfirmationCallbackOptionType.UNSPECIFIED_OPTION, confirmationCallback.optionType)
+        assertEquals(ConfirmationCallbackSelection.NO, confirmationCallback.defaultOption)
         // Set the selected index to YES to simulate user "exiting" the polling wait... (see SDKS-4277)
-        confirmationCallback.selectedIndex = ConfirmationCallback.YES
+        confirmationCallback.selectedIndex = ConfirmationCallbackSelection.YES.selection
 
         val result = node.next()
         assertTrue(result is SuccessNode)   // This should be the final node

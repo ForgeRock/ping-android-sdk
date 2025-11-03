@@ -35,6 +35,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertNotEquals
 import org.junit.Test
+import kotlin.time.Duration.Companion.seconds
 
 @SmallTest
 class JourneyE2ETests : BaseJourneyTest() {
@@ -56,7 +57,7 @@ class JourneyE2ETests : BaseJourneyTest() {
         assertNull(minimalJourney.user())
 
         // Default timeout is 15 seconds
-        assertEquals(15000, minimalJourney.options.timeout)
+        assertEquals(15.seconds.inWholeMilliseconds, minimalJourney.options.timeout)
 
         // Ensure that attempting to access oidcClient before it is initialized throws an exception
         assertThrows(IllegalStateException::class.java) {
@@ -71,7 +72,7 @@ class JourneyE2ETests : BaseJourneyTest() {
     @Test
     fun createJourneyCustomConfig() = runTest {
         val customJourney = Journey {
-            timeout = 60
+            timeout = 60.seconds.inWholeMilliseconds
             serverUrl = SERVER_URL
             realm = REALM
             cookie = COOKIE
@@ -80,7 +81,7 @@ class JourneyE2ETests : BaseJourneyTest() {
         assertEquals(SERVER_URL, customJourney.options.serverUrl)
         assertEquals(REALM, customJourney.options.realm)
         assertEquals(COOKIE, customJourney.options.cookie)
-        assertEquals(60, customJourney.options.timeout)
+        assertEquals(60.seconds.inWholeMilliseconds, customJourney.options.timeout)
         assertNull(customJourney.user())
     }
 
@@ -199,7 +200,7 @@ class JourneyE2ETests : BaseJourneyTest() {
     fun handleFailure() = runTest {
         val myJourney = Journey {
             logger = Logger.STANDARD
-            timeout = 1 // Set a short timeout for testing failure
+            timeout = 1.seconds.inWholeMilliseconds // Set a short timeout for testing failure
             serverUrl = SERVER_URL
             realm = REALM
             cookie = COOKIE

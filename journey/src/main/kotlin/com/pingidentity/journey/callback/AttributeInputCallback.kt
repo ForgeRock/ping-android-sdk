@@ -18,8 +18,6 @@ import kotlinx.serialization.json.jsonPrimitive
  * @property required Whether the attribute is required or not.
  */
 abstract class AttributeInputCallback : AbstractValidatedCallback() {
-    var prompt = ""
-        private set
     var name = ""
         private set
     var required = false
