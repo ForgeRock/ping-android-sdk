@@ -88,6 +88,7 @@ dependencies {
     implementation(libs.play.services.fido)
     
     implementation(project(":foundation:device:device-profile"))
+    implementation(project(":foundation:device:device-client"))
     implementation(project(":recaptcha-enterprise"))
 
     //implementation("com.pingidentity.sdks:davinci:0.9.0-SNAPSHOT")
