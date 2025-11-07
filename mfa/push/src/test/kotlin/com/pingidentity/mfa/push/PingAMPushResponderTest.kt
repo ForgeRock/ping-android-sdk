@@ -24,6 +24,7 @@ import com.pingidentity.mfa.push.PushConstants.KEY_MECHANISM_UID
 import com.pingidentity.mfa.push.PushConstants.KEY_MESSAGE_ID
 import com.pingidentity.mfa.push.PushConstants.KEY_RESPONSE
 import com.pingidentity.mfa.push.PushConstants.KEY_USER_ID
+import com.pingidentity.network.ktor.KtorHttpClient
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
@@ -117,7 +118,7 @@ class PingAMPushResponderTest {
                 headers = headersOf("Content-Type", "application/json")
             )
         }
-        val httpClient = HttpClient(mockEngine)
+        val httpClient = KtorHttpClient(HttpClient(mockEngine))
         val pushResponder = PingAMPushResponder(httpClient, mockLogger)
 
         val jwt = pushResponder.generateJwt(BASE64_SECRET, claims)
@@ -161,7 +162,7 @@ class PingAMPushResponderTest {
                 headers = headersOf("Content-Type", "application/json")
             )
         }
-        val httpClient = HttpClient(mockEngine)
+        val httpClient = KtorHttpClient(HttpClient(mockEngine))
         val pushResponder = PingAMPushResponder(httpClient, mockLogger)
 
         val jwt = pushResponder.generateJwt(BASE64_SECRET, claims)
@@ -192,7 +193,7 @@ class PingAMPushResponderTest {
                 headers = headersOf("Content-Type", "application/json")
             )
         }
-        val httpClient = HttpClient(mockEngine)
+        val httpClient = KtorHttpClient(HttpClient(mockEngine))
         val pushResponder = PingAMPushResponder(httpClient, mockLogger)
 
         val response = pushResponder.generateChallengeResponse(BASE64_SECRET, BASE64_CHALLENGE)
@@ -211,7 +212,7 @@ class PingAMPushResponderTest {
                 headers = headersOf("Content-Type", "application/json")
             )
         }
-        val httpClient = HttpClient(mockEngine)
+        val httpClient = KtorHttpClient(HttpClient(mockEngine))
         val pushResponder = PingAMPushResponder(httpClient, mockLogger)
 
         pushResponder.generateChallengeResponse("", BASE64_CHALLENGE)
@@ -229,7 +230,7 @@ class PingAMPushResponderTest {
                 headers = headersOf("Content-Type", "application/json")
             )
         }
-        val httpClient = HttpClient(mockEngine)
+        val httpClient = KtorHttpClient(HttpClient(mockEngine))
         val pushResponder = PingAMPushResponder(httpClient, mockLogger)
 
         pushResponder.generateChallengeResponse("invalid base64 !@#", BASE64_CHALLENGE)
@@ -281,7 +282,7 @@ class PingAMPushResponderTest {
                 headers = headersOf("Content-Type", "application/json")
             )
         }
-        val httpClient = HttpClient(mockEngine)
+        val httpClient = KtorHttpClient(HttpClient(mockEngine))
         val pushResponder = PingAMPushResponder(httpClient, mockLogger)
 
         // Set up test parameters
@@ -308,7 +309,7 @@ class PingAMPushResponderTest {
         val mockEngine = MockEngine.Companion { request ->
             respondError(HttpStatusCode.Companion.NotFound)
         }
-        val httpClient = HttpClient(mockEngine)
+        val httpClient = KtorHttpClient(HttpClient(mockEngine))
         val pushResponder = PingAMPushResponder(httpClient, mockLogger)
 
         // Set up test parameters
@@ -334,7 +335,7 @@ class PingAMPushResponderTest {
         val mockEngine = MockEngine.Companion { request ->
             throw RuntimeException("Network error")
         }
-        val httpClient = HttpClient(mockEngine)
+        val httpClient = KtorHttpClient(HttpClient(mockEngine))
         val pushResponder = PingAMPushResponder(httpClient, mockLogger)
 
         // Set up test parameters
@@ -396,7 +397,7 @@ class PingAMPushResponderTest {
                 headers = headersOf("Content-Type", "application/json")
             )
         }
-        val httpClient = HttpClient(mockEngine)
+        val httpClient = KtorHttpClient(HttpClient(mockEngine))
         val pushResponder = PingAMPushResponder(httpClient, mockLogger)
 
         // Call the method under test
@@ -415,7 +416,7 @@ class PingAMPushResponderTest {
         val mockEngine = MockEngine.Companion { request ->
             respondError(HttpStatusCode.Companion.NotFound)
         }
-        val httpClient = HttpClient(mockEngine)
+        val httpClient = KtorHttpClient(HttpClient(mockEngine))
         val pushResponder = PingAMPushResponder(httpClient, mockLogger)
 
         // Call the method under test
@@ -434,7 +435,7 @@ class PingAMPushResponderTest {
         val mockEngine = MockEngine.Companion { request ->
             throw RuntimeException("Network error")
         }
-        val httpClient = HttpClient(mockEngine)
+        val httpClient = KtorHttpClient(HttpClient(mockEngine))
         val pushResponder = PingAMPushResponder(httpClient, mockLogger)
 
         // Call the method under test
@@ -486,7 +487,7 @@ class PingAMPushResponderTest {
                 headers = headersOf("Content-Type", "application/json")
             )
         }
-        val httpClient = HttpClient(mockEngine)
+        val httpClient = KtorHttpClient(HttpClient(mockEngine))
         val pushResponder = PingAMPushResponder(httpClient, mockLogger)
 
         // Call the method under test
@@ -538,7 +539,7 @@ class PingAMPushResponderTest {
                 headers = headersOf("Content-Type", "application/json")
             )
         }
-        val httpClient = HttpClient(mockEngine)
+        val httpClient = KtorHttpClient(HttpClient(mockEngine))
         val pushResponder = PingAMPushResponder(httpClient, mockLogger)
 
         // Call the method under test
@@ -583,7 +584,7 @@ class PingAMPushResponderTest {
                 headers = headersOf("Content-Type", "application/json")
             )
         }
-        val httpClient = HttpClient(mockEngine)
+        val httpClient = KtorHttpClient(HttpClient(mockEngine))
         val pushResponder = PingAMPushResponder(httpClient, mockLogger)
 
         // Call the method under test
@@ -601,7 +602,7 @@ class PingAMPushResponderTest {
         val mockEngine = MockEngine.Companion { request ->
             respondError(HttpStatusCode.Companion.NotFound)
         }
-        val httpClient = HttpClient(mockEngine)
+        val httpClient = KtorHttpClient(HttpClient(mockEngine))
         val pushResponder = PingAMPushResponder(httpClient, mockLogger)
 
         // Call the method under test
@@ -619,7 +620,7 @@ class PingAMPushResponderTest {
         val mockEngine = MockEngine.Companion { request ->
             throw RuntimeException("Network error")
         }
-        val httpClient = HttpClient(mockEngine)
+        val httpClient = KtorHttpClient(HttpClient(mockEngine))
         val pushResponder = PingAMPushResponder(httpClient, mockLogger)
 
         // Call the method under test

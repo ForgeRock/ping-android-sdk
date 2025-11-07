@@ -9,6 +9,8 @@ package com.pingidentity.idp.davinci
 
 import com.pingidentity.idp.IdpClient
 import com.pingidentity.idp.IdpResult
+import com.pingidentity.network.ktor.KtorHttpClient
+import com.pingidentity.network.ktor.KtorHttpRequest
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
@@ -28,7 +30,7 @@ class FacebookRequestHandlerTest {
 
     @Test
     fun `authorize with valid URL returns Request`() = runTest {
-        val httpClient = HttpClient(MockEngine) {
+        val httpClient = KtorHttpClient(HttpClient(MockEngine) {
             engine {
                 addHandler { _ ->
                     respond(
@@ -51,12 +53,12 @@ class FacebookRequestHandlerTest {
                     )
                 }
             }
-        }
+        })
         val handler = FacebookRequestHandler(httpClient, mockk())
         val url = "http://valid-url.com"
         coEvery { handler.authorize(any<IdpClient>()) } returns IdpResult("testAccessToken")
 
-        val result = handler.authorize(url)
+        val result = handler.authorize(url) as KtorHttpRequest
 
         assertEquals(result.builder.url.build().toString(), "http://next-url.com")
         assertEquals(result.builder.headers["Accept"], "application/json")

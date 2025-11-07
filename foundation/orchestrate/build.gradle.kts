@@ -24,12 +24,13 @@ dependencies {
     implementation(project(":foundation:logger"))
     implementation(project(":foundation:storage"))
     implementation(project(":foundation:utils"))
+    implementation(project(":foundation:network"))
 
     implementation(libs.androidx.datastore)
     implementation(libs.androidx.datastore.core)
-    implementation(libs.ktor.client.logging)
-    implementation(libs.ktor.client.cio)
     implementation(libs.kotlinx.serialization.json)
+    //For cookie parsing and filtering
+    implementation(libs.ktor.client.core)
 
     testImplementation(project(":foundation:testrail"))
     testImplementation(libs.kotlin.test)

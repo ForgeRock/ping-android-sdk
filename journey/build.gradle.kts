@@ -46,7 +46,6 @@ dependencies {
 
     testImplementation(project(":foundation:testrail"))
     implementation(libs.androidx.datastore)
-    implementation(libs.ktor.client.core)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.androidx.startup.runtime)
 
@@ -68,4 +67,5 @@ dependencies {
     androidTestImplementation(project(":recaptcha-enterprise"))
     androidTestImplementation(project(":mfa:binding"))
     androidTestImplementation(libs.bcpkix.jdk18on)
+    androidTestImplementation(libs.ktor.client.core)
 }

@@ -1,12 +1,14 @@
 /*
- * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2025 - 2025 Ping Identity Corporation. All rights reserved.
+ *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
  */
 
 package com.pingidentity.device.client
 
-import io.ktor.client.HttpClient
+import com.pingidentity.network.HttpClient
+import com.pingidentity.network.ktor.KtorHttpClient
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
 import io.ktor.client.engine.mock.respondError
@@ -23,6 +25,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
+import io.ktor.client.HttpClient as KtorClient
 
 @RunWith(RobolectricTestRunner::class)
 class DeviceClientTest {
@@ -31,12 +34,13 @@ class DeviceClientTest {
         responseStatus: HttpStatusCode = HttpStatusCode.OK,
         responseBody: String = """{"result": []}"""
     ): HttpClient {
-        return HttpClient(MockEngine) {
+        return KtorHttpClient(KtorClient(MockEngine) {
             engine {
                 addHandler { request ->
                     // Check if this is a session info request
                     if (request.url.toString().contains("sessions") &&
-                        request.url.toString().contains("_action=getSessionInfo")) {
+                        request.url.toString().contains("_action=getSessionInfo")
+                    ) {
                         respond(
                             content = """{"username": "test-user-id"}""",
                             status = HttpStatusCode.OK,
@@ -52,7 +56,7 @@ class DeviceClientTest {
                     }
                 }
             }
-        }
+        })
     }
 
     @Test
@@ -542,13 +546,13 @@ class DeviceClientTest {
 
     @Test
     fun `Test DeviceClient handles error response gracefully`() = runTest {
-        val mockClient = HttpClient(MockEngine) {
+        val mockClient = KtorHttpClient(KtorClient(MockEngine) {
             engine {
                 addHandler { request ->
                     respondError(HttpStatusCode.InternalServerError)
                 }
             }
-        }
+        })
 
         val deviceClient = DeviceClient {
             ssoTokenString = "test-token"
@@ -570,6 +574,7 @@ class DeviceClientTest {
     @Test
     fun `Test DeviceClientConfig default values`() {
         val config = DeviceClientConfig()
+        config.initialize()
 
         assertEquals("", config.ssoTokenString)
         assertEquals("root", config.realm)

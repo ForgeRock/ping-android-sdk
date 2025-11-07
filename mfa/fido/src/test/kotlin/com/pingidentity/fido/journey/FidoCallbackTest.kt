@@ -19,9 +19,9 @@ import com.pingidentity.fido.toBase64
 import com.pingidentity.journey.plugin.ValueCallback
 import com.pingidentity.logger.CONSOLE
 import com.pingidentity.logger.Logger
+import com.pingidentity.network.ktor.KtorHttpRequest
 import com.pingidentity.orchestrate.ContinueNode
 import com.pingidentity.orchestrate.FlowContext
-import com.pingidentity.orchestrate.Request
 import com.pingidentity.orchestrate.SharedContext
 import com.pingidentity.orchestrate.Workflow
 import com.pingidentity.orchestrate.WorkflowConfig
@@ -35,6 +35,7 @@ import kotlin.io.encoding.Base64
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import com.pingidentity.network.HttpRequest as Request
 
 class FidoCallbackTest {
 
@@ -63,7 +64,7 @@ class FidoCallbackTest {
             listOf(mockValueCallback)
         ) {
             override fun asRequest(): Request {
-                return Request()
+                return KtorHttpRequest()
             }
         }
 

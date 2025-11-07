@@ -10,10 +10,10 @@ package com.pingidentity.idp.davinci
 import android.net.Uri
 import com.pingidentity.browser.BrowserLauncher
 import com.pingidentity.orchestrate.ContinueNode
-import com.pingidentity.orchestrate.Request
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import java.net.URL
+import com.pingidentity.network.HttpRequest as Request
 
 /**
  * A handler class for managing browser-based Identity Provider (IdP) authorization.
@@ -43,12 +43,12 @@ internal class BrowserRequestHandler(
 
         val result = BrowserLauncher.launch(URL(url), redirectUri)
         return if (result.isSuccess) {
-            Request().apply {
+            continueNode.workflow.config.httpClient.request().apply {
                 val continueToken = result.getOrThrow().toString()
                     .substringAfter("continueToken=").substringBefore("&")
-                url(continueUrl)
+                this.url = continueUrl
                 header("Authorization", "Bearer $continueToken")
-                body()
+                post()
             }
         } else {
             result.exceptionOrNull()?.let {

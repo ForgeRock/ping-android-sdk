@@ -9,14 +9,12 @@ package com.pingidentity.orchestrate
 
 import androidx.annotation.VisibleForTesting
 import com.pingidentity.logger.Logger
-import com.pingidentity.logger.None
+import com.pingidentity.network.HttpClient
+import com.pingidentity.network.ktor.HttpClient
 import com.pingidentity.utils.PingDsl
-import io.ktor.client.HttpClient
-import io.ktor.client.engine.cio.CIO
-import io.ktor.client.plugins.HttpTimeout
-import io.ktor.client.plugins.logging.LogLevel
-import io.ktor.client.plugins.logging.Logging
 import kotlin.time.Duration.Companion.seconds
+import kotlin.time.DurationUnit
+import kotlin.time.toDuration
 
 /**
  * Enum class representing the mode of module override.
@@ -60,6 +58,7 @@ open class WorkflowConfig {
         mode: OverrideMode = OverrideMode.OVERRIDE,
         config: Config.() -> Unit = {},
     ) {
+
         when (mode) {
             OverrideMode.OVERRIDE -> {
                 // For override, we need to replace the module if it is already registered
@@ -118,24 +117,9 @@ open class WorkflowConfig {
      */
     internal fun register(workflow: Workflow) {
         if (!::httpClient.isInitialized) {
-            httpClient = HttpClient(CIO) {
-
-                val log = logger
-                followRedirects = false
-                if (logger !is None) {
-                    install(Logging) {
-                        logger =
-                            object : io.ktor.client.plugins.logging.Logger {
-                                override fun log(message: String) {
-                                    log.d(message)
-                                }
-                            }
-                        level = LogLevel.ALL
-                    }
-                }
-                install(HttpTimeout) {
-                    requestTimeoutMillis = timeout
-                }
+            httpClient = HttpClient {
+                timeout = workflow.config.timeout.toDuration(DurationUnit.MILLISECONDS)
+                logger = workflow.config.logger
             }
         }
         modules.sortBy { it.priority }

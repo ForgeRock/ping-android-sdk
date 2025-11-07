@@ -107,7 +107,7 @@ class PushClient internal constructor(
             pushStorage = storage as PushStorage
             
             // Initialize the HttpClient first
-            super.initHttp(config.timeoutMs)
+            super.initHttp(config.timeout)
             
             // Create the Push service with policy evaluator
             pushService = PushService(

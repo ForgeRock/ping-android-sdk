@@ -14,6 +14,7 @@ import com.pingidentity.android.ContextProvider
 import com.pingidentity.exception.ApiException
 import com.pingidentity.logger.CONSOLE
 import com.pingidentity.logger.Logger
+import com.pingidentity.network.ktor.KtorHttpClient
 import com.pingidentity.storage.EncryptedDataStoreStorageConfig
 import com.pingidentity.storage.MemoryStorage
 import com.pingidentity.storage.StorageDelegate
@@ -76,7 +77,7 @@ class OidcClientConfigTest {
                         headers = headersOf(HttpHeaders.ContentType, "application/json"),
                     )
                 }
-            val httpClient = HttpClient(mockEngine)
+            val httpClient = KtorHttpClient(HttpClient(mockEngine))
             val oidcClientConfig =
                 OidcClientConfig().apply {
                     this.httpClient = httpClient
@@ -118,7 +119,7 @@ class OidcClientConfigTest {
                         status = HttpStatusCode.InternalServerError,
                     )
                 }
-            val httpClient = HttpClient(mockEngine)
+            val httpClient = KtorHttpClient(HttpClient(mockEngine))
             val oidcClientConfig =
                 OidcClientConfig().apply {
                     this.httpClient = httpClient

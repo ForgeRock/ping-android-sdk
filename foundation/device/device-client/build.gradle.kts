@@ -1,5 +1,6 @@
 /*
- * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2025 - 2025 Ping Identity Corporation. All rights reserved.
+ *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
  */
@@ -21,22 +22,14 @@ android {
 
 dependencies {
     implementation(project(":foundation:utils"))
-    implementation(project(":foundation:android"))
     implementation(project(":foundation:logger"))
-    implementation(project(":journey"))
+    implementation(project(":foundation:network"))
 
     // Kotlin Coroutines
     implementation(libs.kotlinx.coroutines.core)
-    //implementation(libs.kotlinx.coroutines.android)
 
     // Kotlin Serialization
     implementation(libs.kotlinx.serialization.json)
-
-    // HTTP Client
-    implementation(libs.ktor.client.core)
-    implementation(libs.ktor.client.okhttp)
-    implementation(libs.ktor.client.logging)
-    implementation(libs.ktor.client.cio)
 
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.kotlin.test)

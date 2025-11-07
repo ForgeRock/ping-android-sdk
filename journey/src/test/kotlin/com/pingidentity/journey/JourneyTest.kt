@@ -21,6 +21,7 @@ import com.pingidentity.journey.plugin.callbacks
 import com.pingidentity.logger.CONSOLE
 import com.pingidentity.logger.Logger
 import com.pingidentity.logger.STANDARD
+import com.pingidentity.network.ktor.KtorHttpClient
 import com.pingidentity.oidc.Token
 import com.pingidentity.orchestrate.ContinueNode
 import com.pingidentity.orchestrate.ErrorNode
@@ -174,9 +175,9 @@ class JourneyTest {
             Journey {
                 serverUrl = "http://localhost/am"
                 logger = Logger.CONSOLE
-                httpClient = HttpClient(mockEngine) {
+                httpClient = KtorHttpClient(HttpClient(mockEngine) {
                     followRedirects = false
-                }
+                })
                 module(Session) {
                     storage = { sessionStorage }
                 }
@@ -196,9 +197,9 @@ class JourneyTest {
             Journey {
                 serverUrl = "http://localhost/am"
                 logger = Logger.CONSOLE
-                httpClient = HttpClient(mockEngine) {
+                httpClient = KtorHttpClient(HttpClient(mockEngine) {
                     followRedirects = false
-                }
+                })
                 module(Session) {
                     storage = { sessionStorage }
                 }
@@ -237,9 +238,9 @@ class JourneyTest {
             Journey {
                 serverUrl = "http://localhost/am"
                 logger = Logger.CONSOLE
-                httpClient = HttpClient(mockEngine) {
+                httpClient = KtorHttpClient(HttpClient(mockEngine) {
                     followRedirects = false
-                }
+                })
                 // Oidc as module
                 module(Oidc) {
                     clientId = "test"
@@ -338,9 +339,9 @@ class JourneyTest {
             val journey =
                 Journey {
                     serverUrl = "http://localhost/am"
-                    httpClient = HttpClient(mockEngine) {
+                    httpClient = KtorHttpClient(HttpClient(mockEngine) {
                         followRedirects = false
-                    }
+                    })
                     // Oidc as module
                     module(Oidc) {
                         clientId = "test"
@@ -400,9 +401,9 @@ class JourneyTest {
             val journey =
                 Journey {
                     serverUrl = "http://localhost/am"
-                    httpClient = HttpClient(mockEngine) {
+                    httpClient = KtorHttpClient(HttpClient(mockEngine) {
                         followRedirects = false
-                    }
+                    })
                     // Oidc as module
                     module(Oidc) {
                         clientId = "test"
@@ -443,9 +444,9 @@ class JourneyTest {
             val journey =
                 Journey {
                     serverUrl = "http://localhost/am"
-                    httpClient = HttpClient(mockEngine) {
+                    httpClient = KtorHttpClient(HttpClient(mockEngine) {
                         followRedirects = false
-                    }
+                    })
                     module(Session) {
                         storage = { sessionStorage }
                     }
@@ -479,9 +480,9 @@ class JourneyTest {
             Journey {
                 serverUrl = "http://localhost/am"
                 logger = Logger.CONSOLE
-                httpClient = HttpClient(mockEngine) {
+                httpClient = KtorHttpClient(HttpClient(mockEngine) {
                     followRedirects = false
-                }
+                })
                 module(Session) {
                     storage = { sessionStorage }
                 }
@@ -501,9 +502,9 @@ class JourneyTest {
             Journey {
                 serverUrl = "http://localhost/am"
                 logger = Logger.CONSOLE
-                httpClient = HttpClient(mockEngine) {
+                httpClient = KtorHttpClient(HttpClient(mockEngine) {
                     followRedirects = false
-                }
+                })
                 module(Session) {
                     storage = { sessionStorage }
                 }
@@ -529,9 +530,9 @@ class JourneyTest {
             Journey {
                 serverUrl = "http://localhost/am"
                 logger = Logger.CONSOLE
-                httpClient = HttpClient(mockEngine) {
+                httpClient = KtorHttpClient(HttpClient(mockEngine) {
                     followRedirects = false
-                }
+                })
                 module(Session) {
                     storage = { sessionStorage }
                 }
@@ -554,9 +555,9 @@ class JourneyTest {
         val journey = Journey {
             serverUrl = "http://localhost/am"
             logger = Logger.CONSOLE
-            httpClient = HttpClient(mockEngine) {
+            httpClient = KtorHttpClient(HttpClient(mockEngine) {
                 followRedirects = false
-            }
+            })
             module(Session) {
                 storage = { MemoryStorage() }
             }
@@ -581,9 +582,9 @@ class JourneyTest {
         val journey = Journey {
             serverUrl = "http://localhost/am"
             logger = Logger.CONSOLE
-            httpClient = HttpClient(mockEngine) {
+            httpClient = KtorHttpClient(HttpClient(mockEngine) {
                 followRedirects = false
-            }
+            })
             module(Session) {
                 storage = { MemoryStorage() }
             }
@@ -608,9 +609,9 @@ class JourneyTest {
         val journey = Journey {
             serverUrl = "http://localhost/am"
             logger = Logger.CONSOLE
-            httpClient = HttpClient(mockEngine) {
+            httpClient = KtorHttpClient(HttpClient(mockEngine) {
                 followRedirects = false
-            }
+            })
             module(Session) {
                 storage = { MemoryStorage() }
             }
@@ -635,9 +636,9 @@ class JourneyTest {
         val journey = Journey {
             serverUrl = "http://localhost/am"
             logger = Logger.CONSOLE
-            httpClient = HttpClient(mockEngine) {
+            httpClient = KtorHttpClient(HttpClient(mockEngine) {
                 followRedirects = false
-            }
+            })
             module(Session) {
                 storage = { MemoryStorage() }
             }
@@ -659,9 +660,9 @@ class JourneyTest {
         val journey = Journey {
             serverUrl = "http://localhost/am"
             logger = Logger.CONSOLE
-            httpClient = HttpClient(mockEngine) {
+            httpClient = KtorHttpClient(HttpClient(mockEngine) {
                 followRedirects = false
-            }
+            })
             module(Session) {
                 storage = { MemoryStorage() }
             }
@@ -683,9 +684,9 @@ class JourneyTest {
         val journey = Journey {
             serverUrl = "http://localhost/am"
             logger = Logger.CONSOLE
-            httpClient = HttpClient(mockEngine) {
+            httpClient = KtorHttpClient(HttpClient(mockEngine) {
                 followRedirects = false
-            }
+            })
             module(Session) {
                 storage = { MemoryStorage() }
             }
@@ -708,9 +709,9 @@ class JourneyTest {
         val journey = Journey {
             serverUrl = "http://localhost/am"
             logger = Logger.CONSOLE
-            httpClient = HttpClient(mockEngine) {
+            httpClient = KtorHttpClient(HttpClient(mockEngine) {
                 followRedirects = false
-            }
+            })
             module(Session) {
                 storage = { MemoryStorage() }
             }
@@ -729,9 +730,9 @@ class JourneyTest {
         val journey = Journey {
             serverUrl = "http://localhost/am"
             logger = Logger.CONSOLE
-            httpClient = HttpClient(mockEngine) {
+            httpClient = KtorHttpClient(HttpClient(mockEngine) {
                 followRedirects = false
-            }
+            })
             module(Session) {
                 storage = { MemoryStorage() }
             }
@@ -838,9 +839,9 @@ class JourneyTest {
         val journey = Journey {
             serverUrl = "http://localhost/am"
             logger = Logger.CONSOLE
-            httpClient = HttpClient(customMockEngine) {
+            httpClient = KtorHttpClient(HttpClient(customMockEngine) {
                 followRedirects = false
-            }
+            })
             module(Session) {
                 storage = { MemoryStorage() }
             }

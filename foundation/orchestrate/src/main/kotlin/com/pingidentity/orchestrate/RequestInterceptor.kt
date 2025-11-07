@@ -7,6 +7,8 @@
 
 package com.pingidentity.orchestrate
 
+import com.pingidentity.network.HttpRequest as Request
+
 /**
  * An interface that should be implemented by classes that need to be transformed itself to a Request.
  */

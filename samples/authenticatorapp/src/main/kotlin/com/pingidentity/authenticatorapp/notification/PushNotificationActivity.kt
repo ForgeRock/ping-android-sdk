@@ -7,7 +7,6 @@
 
 package com.pingidentity.authenticatorapp.notification
 
-import android.app.Application
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
