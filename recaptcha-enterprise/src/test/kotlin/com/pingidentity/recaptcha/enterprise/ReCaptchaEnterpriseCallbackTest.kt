@@ -253,7 +253,7 @@ class ReCaptchaEnterpriseCallbackTest {
         assertNotNull(result.exceptionOrNull())
 
         val exception = result.exceptionOrNull()
-        assertEquals(testException, exception)
+        assertTrue(exception is IllegalStateException)
         assertEquals("Failed to initialize ReCaptcha client", exception?.message)
 
         // Verify that the callback input fields are populated correctly
@@ -310,6 +310,121 @@ class ReCaptchaEnterpriseCallbackTest {
         val clientErrorField = inputArray[2].jsonObject
         assertEquals("IDToken1clientError", clientErrorField["name"]?.jsonPrimitive?.content)
         assertEquals("UNKNOWN_ERROR", clientErrorField["value"]?.jsonPrimitive?.content)
+    }
+
+    /**
+     * Test that customError default behavior returns exception message.
+     */
+    @Test
+    fun `Test customError default returns exception message when available`() {
+        val config = ReCaptchaEnterpriseConfig()
+        val testException = IllegalStateException("Network connection failed")
+
+        val errorMessage = config.customError(testException)
+
+        assertEquals("Network connection failed", errorMessage)
+    }
+
+    /**
+     * Test that customError default behavior returns UNKNOWN_ERROR when message is null.
+     */
+    @Test
+    fun `Test customError default returns UNKNOWN_ERROR when exception message is null`() {
+        val config = ReCaptchaEnterpriseConfig()
+        val testException = RuntimeException(null as String?)
+
+        val errorMessage = config.customError(testException)
+
+        assertEquals("UNKNOWN_ERROR", errorMessage)
+    }
+
+    /**
+     * Test that customError can be overridden with a custom lambda.
+     */
+    @Test
+    fun `Test customError can be customized with lambda`() {
+        val config = ReCaptchaEnterpriseConfig()
+        config.customError = { throwable ->
+            "Custom error: ${throwable.javaClass.simpleName}"
+        }
+
+        val testException = IllegalArgumentException("Invalid parameter")
+        val errorMessage = config.customError(testException)
+
+        assertEquals("Custom error: IllegalArgumentException", errorMessage)
+    }
+
+    /**
+     * Test that custom error handler is used during verification failure.
+     */
+    @Test
+    fun `Test verify uses custom error handler when verification fails`() = runTest {
+        val testException = SecurityException("Access denied")
+        coEvery { Recaptcha.fetchClient(any(), any()) } throws testException
+
+        val callback = createCallbackWithFullInputFields()
+
+        // Set custom error handler
+        val result = callback.verify {
+            recaptchaAction = RecaptchaAction.LOGIN
+            customError = { exception ->
+                "CUSTOM_ERROR_PREFIX: ${exception.message?.uppercase()}"
+            }
+        }
+
+        assertTrue(result.isFailure)
+
+        // Verify the clientError field contains the custom error message
+        val payload = callback.payload()
+        val inputArray = payload["input"]?.jsonArray
+        assertNotNull(inputArray)
+
+        val clientErrorField = inputArray[2].jsonObject
+        assertEquals("IDToken1clientError", clientErrorField["name"]?.jsonPrimitive?.content)
+        assertEquals("CUSTOM_ERROR_PREFIX: ACCESS DENIED", clientErrorField["value"]?.jsonPrimitive?.content)
+    }
+
+    /**
+     * Test that custom error handler handles null messages gracefully.
+     */
+    @Test
+    fun `Test customError with custom handler can handle null exception message`() {
+        val config = ReCaptchaEnterpriseConfig()
+        config.customError = { throwable ->
+            throwable.message?.let { "Error: $it" } ?: "Unknown error occurred"
+        }
+
+        val testException = NullPointerException(null as String?)
+        val errorMessage = config.customError(testException)
+
+        assertEquals("Unknown error occurred", errorMessage)
+    }
+
+    /**
+     * Test that custom error handler can include exception type in error message.
+     */
+    @Test
+    fun `Test customError with exception type included in message`() = runTest {
+        val testException = IllegalStateException("Invalid state")
+        coEvery { Recaptcha.fetchClient(any(), any()) } throws testException
+
+        val callback = createCallbackWithFullInputFields()
+
+        val result = callback.verify {
+            customError = { exception ->
+                "[${exception.javaClass.simpleName}] ${exception.message ?: "No message"}"
+            }
+        }
+
+        assertTrue(result.isFailure)
+
+        val payload = callback.payload()
+        val inputArray = payload["input"]?.jsonArray
+        assertNotNull(inputArray)
+
+        val clientErrorField = inputArray[2].jsonObject
+        assertEquals("IDToken1clientError", clientErrorField["name"]?.jsonPrimitive?.content)
+        assertEquals("[IllegalStateException] Invalid state", clientErrorField["value"]?.jsonPrimitive?.content)
     }
 
     /**
