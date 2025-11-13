@@ -76,7 +76,7 @@ dependencies {
     implementation(project(":journey"))
     implementation(project(":external-idp"))
     implementation(project(":protect"))
-    implementation(project(":mfa:fido2"))
+    implementation(project(":mfa:fido"))
     implementation(project(":mfa:binding"))
     implementation(project(":mfa:binding-ui"))
     implementation(project(":mfa:binding-migration"))

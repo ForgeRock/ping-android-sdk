@@ -36,8 +36,8 @@ import com.pingidentity.davinci.module.description
 import com.pingidentity.davinci.module.name
 import com.pingidentity.davinci.plugin.Submittable
 import com.pingidentity.davinci.plugin.collectors
-import com.pingidentity.fido2.davinci.Fido2AuthenticationCollector
-import com.pingidentity.fido2.davinci.Fido2RegistrationCollector
+import com.pingidentity.fido.davinci.FidoAuthenticationCollector
+import com.pingidentity.fido.davinci.FidoRegistrationCollector
 import com.pingidentity.idp.davinci.IdpCollector
 import com.pingidentity.orchestrate.ContinueNode
 import com.pingidentity.protect.davinci.ProtectCollector
@@ -115,8 +115,8 @@ fun ContinueNode(
                 is IdpCollector -> SocialLoginButton(it, onStart, onNext)
                 is DeviceRegistrationCollector -> DeviceRegistration(it, onNext)
                 is DeviceAuthenticationCollector -> DeviceAuthentication(it, onNext)
-                is Fido2RegistrationCollector -> Fido2Registration(it, onStart, onNext)
-                is Fido2AuthenticationCollector -> Fido2Authentication(it, onStart, onNext)
+                is FidoRegistrationCollector -> FidoRegistration(it, onStart, onNext)
+                is FidoAuthenticationCollector -> FidoAuthentication(it, onStart, onNext)
                 is PhoneNumberCollector -> PhoneNumber(it, onNodeUpdated)
                 is ProtectCollector -> Protect(it, onNodeUpdated)
 

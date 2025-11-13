@@ -7,8 +7,8 @@
 
 package com.pingidentity.journey.callback
 
-import com.pingidentity.fido2.journey.Fido2AuthenticationCallback
-import com.pingidentity.fido2.journey.Fido2RegistrationCallback
+import com.pingidentity.fido.journey.FidoAuthenticationCallback
+import com.pingidentity.fido.journey.FidoRegistrationCallback
 import com.pingidentity.journey.plugin.Journey
 import com.pingidentity.logger.CONSOLE
 import com.pingidentity.logger.Logger
@@ -97,7 +97,7 @@ class MetadataCallbackTest {
 
     @Test
     fun `test init with fido registration`() {
-        com.pingidentity.fido2.journey.CallbackInitializer().create(mockk())
+        com.pingidentity.fido.journey.CallbackInitializer().create(mockk())
         jsonObject = Json.parseToJsonElement(
             """
             {
@@ -117,12 +117,12 @@ class MetadataCallbackTest {
         val callback = MetadataCallback()
         callback.journey = journey
         val actualCallback = callback.init(jsonObject)
-        assertTrue(actualCallback is Fido2RegistrationCallback)
+        assertTrue(actualCallback is FidoRegistrationCallback)
     }
 
     @Test
     fun `test init with fido authentication`() {
-        com.pingidentity.fido2.journey.CallbackInitializer().create(mockk())
+        com.pingidentity.fido.journey.CallbackInitializer().create(mockk())
         jsonObject = Json.parseToJsonElement(
             """
             {
@@ -142,12 +142,12 @@ class MetadataCallbackTest {
         val callback = MetadataCallback()
         callback.journey = journey
         val actualCallback = callback.init(jsonObject)
-        assertTrue(actualCallback is Fido2AuthenticationCallback)
+        assertTrue(actualCallback is FidoAuthenticationCallback)
     }
 
     @Test
     fun `test init with fido registration fallback`() {
-        com.pingidentity.fido2.journey.CallbackInitializer().create(mockk())
+        com.pingidentity.fido.journey.CallbackInitializer().create(mockk())
         jsonObject = Json.parseToJsonElement(
             """
             {
@@ -167,12 +167,12 @@ class MetadataCallbackTest {
         val callback = MetadataCallback()
         callback.journey = journey
         val actualCallback = callback.init(jsonObject)
-        assertTrue(actualCallback is Fido2RegistrationCallback)
+        assertTrue(actualCallback is FidoRegistrationCallback)
     }
 
     @Test
     fun `test init with fido authentication fallback`() {
-        com.pingidentity.fido2.journey.CallbackInitializer().create(mockk())
+        com.pingidentity.fido.journey.CallbackInitializer().create(mockk())
         jsonObject = Json.parseToJsonElement(
             """
             {
@@ -192,7 +192,7 @@ class MetadataCallbackTest {
         val callback = MetadataCallback()
         callback.journey = journey
         val actualCallback = callback.init(jsonObject)
-        assertTrue(actualCallback is Fido2AuthenticationCallback)
+        assertTrue(actualCallback is FidoAuthenticationCallback)
     }
 
     @Test

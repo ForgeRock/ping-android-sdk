@@ -21,8 +21,8 @@ import kotlinx.serialization.json.jsonPrimitive
 
 private const val PING_ONE_PROTECT_INITIALIZE_CALLBACK = "PingOneProtectInitializeCallback"
 private const val PING_ONE_PROTECT_EVALUATION_CALLBACK = "PingOneProtectEvaluationCallback"
-private const val FIDO_2_REGISTRATION_CALLBACK = "Fido2RegistrationCallback"
-private const val FIDO_2_AUTHENTICATION_CALLBACK = "Fido2AuthenticationCallback"
+private const val FIDO_REGISTRATION_CALLBACK = "FidoRegistrationCallback"
+private const val FIDO_AUTHENTICATION_CALLBACK = "FidoAuthenticationCallback"
 
 private const val ACTION = "_action"
 private const val TYPE = "_type"
@@ -82,17 +82,17 @@ class MetadataCallback : AbstractCallback(), JourneyAware {
                 }
             }
 
-            isFidoRegistration() -> return callbacks()[FIDO_2_REGISTRATION_CALLBACK]?.let {
+            isFidoRegistration() -> return callbacks()[FIDO_REGISTRATION_CALLBACK]?.let {
                 inject(journey, jsonObject, it)
             } ?: run {
-                logger.w("Callback not found for $FIDO_2_REGISTRATION_CALLBACK")
+                logger.w("Callback not found for $FIDO_REGISTRATION_CALLBACK")
                 this
             }
 
-            isFidoAuthentication() -> return callbacks()[FIDO_2_AUTHENTICATION_CALLBACK]?.let {
+            isFidoAuthentication() -> return callbacks()[FIDO_AUTHENTICATION_CALLBACK]?.let {
                 inject(journey, jsonObject, it)
             } ?: run {
-                logger.w("Callback not found for $FIDO_2_AUTHENTICATION_CALLBACK")
+                logger.w("Callback not found for $FIDO_AUTHENTICATION_CALLBACK")
                 this
             }
 

@@ -54,7 +54,7 @@ dependencies {
     testImplementation(libs.robolectric)
     testImplementation(libs.ktor.client.mock)
     testImplementation(project(":protect"))
-    testImplementation(project(":mfa:fido2"))
+    testImplementation(project(":mfa:fido"))
 
     androidTestImplementation(libs.kotlinx.coroutines.test)
     androidTestImplementation(libs.androidx.junit)
