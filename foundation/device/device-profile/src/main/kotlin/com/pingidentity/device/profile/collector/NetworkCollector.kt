@@ -12,7 +12,6 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
-import android.os.Build
 import androidx.annotation.RequiresPermission
 import com.pingidentity.android.ContextProvider
 import kotlinx.serialization.KSerializer
@@ -30,13 +29,10 @@ import kotlinx.serialization.Serializable
  *
  * **API Compatibility:**
  * - Android 10+ (API 29+): Uses [NetworkCapabilities] for modern network state checking
- * - Android 9 and below: Uses deprecated [NetworkInfo] for backward compatibility
  *
  * @see NetworkInfo for the data structure containing connectivity status
  */
-class NetworkCollector(
-    private val sdkVersionProvider: SdkVersionProvider = DefaultSdkVersionProvider()
-) : DeviceCollector<NetworkInfo> {
+class NetworkCollector : DeviceCollector<NetworkInfo> {
     override val key: String
         get() = "network"
 
@@ -72,39 +68,11 @@ class NetworkCollector(
     private fun isConnected(): Boolean {
         val connectivityManager = ContextProvider.context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
         // For Android 10 (API 29) and above
-        if (sdkVersionProvider.getSdkInt() >= Build.VERSION_CODES.Q) {
-            val capabilities =
-                connectivityManager.getNetworkCapabilities(connectivityManager.activeNetwork)
-            return capabilities != null &&
-                    capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-        }
-        // For older versions
-        else {
-            // activeNetworkInfo is deprecated in API 29
-            @Suppress("Deprecation")
-            val networkInfo = connectivityManager.activeNetworkInfo
-            return networkInfo != null && networkInfo.isConnected
-        }
+        val capabilities =
+            connectivityManager.getNetworkCapabilities(connectivityManager.activeNetwork)
+        return capabilities != null &&
+                capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
     }
-}
-
-/**
- * Interface for providing SDK version information.
- * This abstraction allows for easier testing by mocking the SDK version.
- */
-interface SdkVersionProvider {
-    /**
-     * Returns the current Android SDK version.
-     * @return The SDK version as an integer
-     */
-    fun getSdkInt(): Int
-}
-
-/**
- * Default implementation of [SdkVersionProvider] that returns the actual SDK version.
- */
-class DefaultSdkVersionProvider : SdkVersionProvider {
-    override fun getSdkInt(): Int = Build.VERSION.SDK_INT
 }
 
 /**

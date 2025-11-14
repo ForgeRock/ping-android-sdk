@@ -10,7 +10,6 @@ import android.content.Context
 import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
-import android.net.NetworkInfo
 import com.pingidentity.android.ContextProvider
 import io.mockk.every
 import io.mockk.mockk
@@ -39,10 +38,8 @@ import kotlin.test.assertTrue
 class NetworkCollectorTest {
     private val mockContext = mockk<Context>()
     private val mockConnectivityManager = mockk<ConnectivityManager>()
-    private val mockNetworkInfo = mockk<NetworkInfo>()
     private val mockNetwork = mockk<Network>()
     private val mockNetworkCapabilities = mockk<NetworkCapabilities>()
-    private val mockSdkVersionProvider = mockk<SdkVersionProvider>()
 
     /**
      * Sets up mock objects and stubs for each test case.
@@ -71,7 +68,7 @@ class NetworkCollectorTest {
      */
     @Test
     fun `Network collector has correct key`() {
-        val networkCollector = NetworkCollector(mockSdkVersionProvider)
+        val networkCollector = NetworkCollector()
         assertEquals("network", networkCollector.key)
     }
 
@@ -80,46 +77,11 @@ class NetworkCollectorTest {
      */
     @Test
     fun `Network collector has correct serializer`() {
-        val networkCollector = NetworkCollector(mockSdkVersionProvider)
+        val networkCollector = NetworkCollector()
         assertEquals(
-            com.pingidentity.device.profile.collector.NetworkInfo.serializer(),
+            NetworkInfo.serializer(),
             networkCollector.serializer,
         )
-    }
-
-    /**
-     * Verifies network connectivity detection using legacy NetworkInfo API for older Android versions.
-     * Tests the case where the device has an active network connection.
-     */
-    @Test
-    fun `Network is connected when activeNetworkInfo returns true for API below 29`() = runTest {
-        // Mock SDK version to be below API 29
-        every { mockSdkVersionProvider.getSdkInt() } returns 28
-
-        every { mockConnectivityManager.activeNetworkInfo } returns mockNetworkInfo
-        every { mockNetworkInfo.isConnected } returns true
-
-        val networkCollector = NetworkCollector(mockSdkVersionProvider)
-        val result = networkCollector.collect()
-
-        assertTrue(result.connected)
-    }
-
-    /**
-     * Verifies network connectivity detection using legacy NetworkInfo API for older Android versions.
-     * Tests the case where the device has no active network connection.
-     */
-    @Test
-    fun `Network is not connected when activeNetworkInfo returns false for API below 29`() = runTest {
-        // Mock SDK version to be below API 29
-        every { mockSdkVersionProvider.getSdkInt() } returns 28
-
-        every { mockConnectivityManager.activeNetworkInfo } returns mockNetworkInfo
-        every { mockNetworkInfo.isConnected } returns false
-
-        val networkCollector = NetworkCollector(mockSdkVersionProvider)
-        val result = networkCollector.collect()
-        assertFalse(result.connected)
     }
 
     /**
@@ -127,15 +89,12 @@ class NetworkCollectorTest {
      * Tests the case where the device has internet capability.
      */
     @Test
-    fun `Network is connected when NetworkCapabilities has internet capability for API 29+`() = runTest {
-        // Mock SDK version to be API 29 or above
-        every { mockSdkVersionProvider.getSdkInt() } returns 29
-
+    fun `Network is connected when NetworkCapabilities has internet capability`() = runTest {
         every { mockConnectivityManager.activeNetwork } returns mockNetwork
         every { mockConnectivityManager.getNetworkCapabilities(mockNetwork) } returns mockNetworkCapabilities
         every { mockNetworkCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) } returns true
 
-        val networkCollector = NetworkCollector(mockSdkVersionProvider)
+        val networkCollector = NetworkCollector()
         val result = networkCollector.collect()
 
         assertTrue(result.connected)
@@ -146,15 +105,12 @@ class NetworkCollectorTest {
      * Tests the case where the device lacks internet capability.
      */
     @Test
-    fun `Network is not connected when NetworkCapabilities lacks internet capability for API 29+`() = runTest {
-        // Mock SDK version to be API 29 or above
-        every { mockSdkVersionProvider.getSdkInt() } returns 29
-
+    fun `Network is not connected when NetworkCapabilities lacks internet capability`() = runTest {
         every { mockConnectivityManager.activeNetwork } returns mockNetwork
         every { mockConnectivityManager.getNetworkCapabilities(mockNetwork) } returns mockNetworkCapabilities
         every { mockNetworkCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) } returns false
 
-        val networkCollector = NetworkCollector(mockSdkVersionProvider)
+        val networkCollector = NetworkCollector()
         val result = networkCollector.collect()
 
         assertFalse(result.connected)
@@ -165,14 +121,12 @@ class NetworkCollectorTest {
      * Tests the edge case where ConnectivityManager.activeNetwork returns null.
      */
     @Test
-    fun `Network is not connected when activeNetwork is null for API 29+`() = runTest {
-        // Mock SDK version to be API 29 or above
-        every { mockSdkVersionProvider.getSdkInt() } returns 29
+    fun `Network is not connected when activeNetwork is null`() = runTest {
         every { mockConnectivityManager.activeNetwork } returns null
         every { mockConnectivityManager.getNetworkCapabilities(null) } returns mockNetworkCapabilities
         every { mockNetworkCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) } returns false
 
-        val networkCollector = NetworkCollector(mockSdkVersionProvider)
+        val networkCollector = NetworkCollector()
         val result = networkCollector.collect()
 
         assertFalse(result.connected)
@@ -183,31 +137,11 @@ class NetworkCollectorTest {
      * Tests the edge case where getNetworkCapabilities returns null.
      */
     @Test
-    fun `Network is not connected when NetworkCapabilities is null for API 29+`() = runTest {
-        // Mock SDK version to be API 29 or above
-        every { mockSdkVersionProvider.getSdkInt() } returns 29
-
+    fun `Network is not connected when NetworkCapabilities is null`() = runTest {
         every { mockConnectivityManager.activeNetwork } returns mockNetwork
         every { mockConnectivityManager.getNetworkCapabilities(mockNetwork) } returns null
 
-        val networkCollector = NetworkCollector(mockSdkVersionProvider)
-        val result = networkCollector.collect()
-
-        assertFalse(result.connected)
-    }
-
-    /**
-     * Verifies network connectivity detection when activeNetworkInfo is null for legacy API.
-     * Tests the edge case where activeNetworkInfo returns null on older Android versions.
-     */
-    @Test
-    fun `Network is not connected when activeNetworkInfo is null for API below 29`() = runTest {
-        // Mock SDK version to be below API 29
-        every { mockSdkVersionProvider.getSdkInt() } returns 28
-
-        every { mockConnectivityManager.activeNetworkInfo } returns null
-
-        val networkCollector = NetworkCollector(mockSdkVersionProvider)
+        val networkCollector = NetworkCollector()
         val result = networkCollector.collect()
 
         assertFalse(result.connected)

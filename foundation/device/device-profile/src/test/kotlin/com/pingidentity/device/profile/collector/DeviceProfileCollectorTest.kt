@@ -13,6 +13,7 @@ import android.hardware.camera2.CameraManager
 import android.location.Location
 import android.net.ConnectivityManager
 import android.net.Network
+import android.net.NetworkCapabilities
 import android.os.Environment
 import android.os.StatFs
 import android.telephony.TelephonyManager
@@ -410,14 +411,13 @@ class DeviceProfileCollectorTest {
     private fun setupConnectivityConnectivityMocks() {
         val mockConnectivityManager = mockk<ConnectivityManager>()
         val mockNetwork = mockk<Network>()
-        val mockNetworkInfo = mockk<android.net.NetworkInfo>()
+        val mockNetworkCapabilities = mockk<NetworkCapabilities>()
         every {
             mockContext.getSystemService(Context.CONNECTIVITY_SERVICE)
         } returns mockConnectivityManager
         every { mockConnectivityManager.activeNetwork } returns mockNetwork
-        @Suppress("DEPRECATION")
-        every { mockConnectivityManager.activeNetworkInfo } returns mockNetworkInfo
-        every { mockNetworkInfo.isConnected } returns true
+        every { mockConnectivityManager.getNetworkCapabilities(mockNetwork) } returns mockNetworkCapabilities
+        every { mockNetworkCapabilities.hasCapability(any()) } returns true
     }
 
     /**
