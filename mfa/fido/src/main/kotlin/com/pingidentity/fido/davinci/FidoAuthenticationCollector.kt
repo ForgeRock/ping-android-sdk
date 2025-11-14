@@ -14,6 +14,7 @@ import com.pingidentity.fido.Constants.FIELD_CHALLENGE
 import com.pingidentity.fido.FidoAuthenticateCustomizer
 import com.pingidentity.fido.FidoClient
 import com.pingidentity.fido.toBase64
+import com.pingidentity.orchestrate.Closeable
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -36,13 +37,12 @@ import kotlinx.serialization.json.jsonPrimitive
  * @property publicKeyCredentialRequestOptions The transformed authentication request options
  * @property assertionValue The authentication response after successful authentication
  */
-class FidoAuthenticationCollector : AbstractFidoCollector() {
+class FidoAuthenticationCollector : AbstractFidoCollector(), Closeable {
 
     lateinit var publicKeyCredentialRequestOptions: JsonObject
         private set
 
-    lateinit var assertionValue: JsonObject
-        private set
+    private var assertionValue: JsonObject? = null
 
     /**
      * Initializes the collector with authentication request options.
@@ -72,12 +72,12 @@ class FidoAuthenticationCollector : AbstractFidoCollector() {
      *         or null if authentication hasn't been performed yet
      */
     override fun payload(): JsonObject? {
-        return if (::assertionValue.isInitialized) {
+        // Return a wrapped attestation value if available, otherwise null.
+        return assertionValue?.let {
             logger.d("Returning assertion payload for FIDO2 authentication")
-            buildJsonObject { put(Constants.FIELD_ASSERTION_VALUE, assertionValue) }
-        } else {
-            logger.d("No assertion value available, returning null payload")
-            null
+            buildJsonObject {
+                put(Constants.FIELD_ASSERTION_VALUE, it)
+            }
         }
     }
 
@@ -148,6 +148,10 @@ class FidoAuthenticationCollector : AbstractFidoCollector() {
 
         logger.d("FIDO2 authentication request options transformed successfully")
         return JsonObject(map)
+    }
+
+    override fun close() {
+        assertionValue = null
     }
 
 }

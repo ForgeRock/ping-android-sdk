@@ -14,6 +14,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
@@ -56,7 +57,7 @@ fun KbaCreateCallback(callback: KbaCreateCallback,  onNodeUpdated: () -> Unit) {
 
             // text field
             TextField(
-                modifier = Modifier.menuAnchor(),
+                modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable, true),
                 value = if (isCustomQuestion) "Provide your own" else selectedItem,
                 onValueChange = {},
                 readOnly = true,

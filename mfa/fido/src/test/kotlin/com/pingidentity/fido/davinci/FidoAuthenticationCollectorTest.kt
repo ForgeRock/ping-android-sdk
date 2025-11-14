@@ -129,5 +129,48 @@ class FidoAuthenticationCollectorTest {
         assertTrue(result.isFailure)
         assertEquals(exception, result.exceptionOrNull())
     }
+
+    @Test
+    fun `close should clear assertionValue`() = runTest {
+        collector.init(getInput())
+        val assertion = buildJsonObject { put("test", JsonPrimitive("value")) }
+
+        coEvery { mockFidoClient.authenticate(any(), any()) } returns Result.success(assertion)
+
+        // Authenticate and verify payload is not null
+        collector.authenticate()
+        assertNotNull(collector.payload())
+
+        // Close the collector
+        collector.close()
+
+        // Verify payload is now null
+        assertNull(collector.payload())
+    }
+
+    @Test
+    fun `close should allow reuse after clearing`() = runTest {
+        collector.init(getInput())
+        val assertion1 = buildJsonObject { put("test", JsonPrimitive("value1")) }
+        val assertion2 = buildJsonObject { put("test", JsonPrimitive("value2")) }
+
+        // First authentication
+        coEvery { mockFidoClient.authenticate(any(), any()) } returns Result.success(assertion1)
+        collector.authenticate()
+        val payload1 = collector.payload()
+        assertNotNull(payload1)
+        assertEquals(assertion1, payload1?.get(Constants.FIELD_ASSERTION_VALUE)?.jsonObject)
+
+        // Close and re-authenticate
+        collector.close()
+        assertNull(collector.payload())
+
+        // Second authentication
+        coEvery { mockFidoClient.authenticate(any(), any()) } returns Result.success(assertion2)
+        collector.authenticate()
+        val payload2 = collector.payload()
+        assertNotNull(payload2)
+        assertEquals(assertion2, payload2?.get(Constants.FIELD_ASSERTION_VALUE)?.jsonObject)
+    }
 }
 

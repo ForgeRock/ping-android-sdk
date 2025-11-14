@@ -8,6 +8,7 @@
 package com.pingidentity.davinci.collector
 
 import com.pingidentity.davinci.plugin.Submittable
+import com.pingidentity.orchestrate.Closeable
 
 private const val SUBMIT = "submit"
 
@@ -19,6 +20,10 @@ private const val SUBMIT = "submit"
  *
  * @constructor Creates a new SubmitCollector.
  */
-class SubmitCollector : SingleValueCollector(), Submittable {
+class SubmitCollector : SingleValueCollector(), Submittable, Closeable {
     override fun eventType(): String = SUBMIT
+
+    override fun close() {
+        value = ""
+    }
 }

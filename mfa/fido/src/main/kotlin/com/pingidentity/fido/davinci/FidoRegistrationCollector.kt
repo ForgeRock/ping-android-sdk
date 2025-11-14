@@ -12,6 +12,7 @@ import com.pingidentity.fido.Constants
 import com.pingidentity.fido.FidoClient
 import com.pingidentity.fido.FidoRegistrationCustomizer
 import com.pingidentity.fido.toBase64
+import com.pingidentity.orchestrate.Closeable
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -26,13 +27,12 @@ import kotlinx.serialization.json.jsonPrimitive
  * @property publicKeyCredentialCreationOptions The public key credential creation options.
  * @property attestationValue The attestation value after registration.
  */
-class FidoRegistrationCollector : AbstractFidoCollector() {
+class FidoRegistrationCollector : AbstractFidoCollector(), Closeable {
 
     lateinit var publicKeyCredentialCreationOptions: JsonObject
         private set
 
-    lateinit var attestationValue: JsonObject
-        private set
+    private var attestationValue: JsonObject? = null
 
     override fun init(input: JsonObject): Collector<JsonObject> {
         return super.init(input)
@@ -50,13 +50,11 @@ class FidoRegistrationCollector : AbstractFidoCollector() {
     }
 
     override fun payload(): JsonObject? {
-        return if (!this::attestationValue.isInitialized) {
-            logger.d("No attestation value available, returning null payload")
-            null
-        } else {
+        // Return a wrapped attestation value if available, otherwise null.
+        return attestationValue?.let {
             logger.d("Returning attestation payload for FIDO2 registration")
             buildJsonObject {
-                put(Constants.FIELD_ATTESTATION_VALUE, attestationValue)
+                put(Constants.FIELD_ATTESTATION_VALUE, it)
             }
         }
     }
@@ -143,5 +141,9 @@ class FidoRegistrationCollector : AbstractFidoCollector() {
 
         logger.d("FIDO2 registration creation options transformed successfully")
         return JsonObject(map)
+    }
+
+    override fun close() {
+        attestationValue = null
     }
 }
