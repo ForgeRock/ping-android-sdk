@@ -9,10 +9,8 @@ package com.pingidentity.journey.callback.device.binding
 import com.pingidentity.device.binding.authenticator.Attestation
 import com.pingidentity.device.binding.authenticator.DeviceBindingAuthenticationType
 import com.pingidentity.device.binding.journey.DeviceBindingCallback
-import com.pingidentity.device.binding.journey.DeviceSigningVerifierCallback
 import com.pingidentity.journey.BaseJourneyTest
 import com.pingidentity.journey.callback.ChoiceCallback
-import com.pingidentity.journey.callback.NameCallback
 import com.pingidentity.journey.callback.TextOutputCallback
 import com.pingidentity.journey.module.session
 import com.pingidentity.journey.plugin.callbacks
@@ -269,23 +267,17 @@ class DeviceBindingCallbackTest : BaseJourneyTest() {
     @Test
     fun testDeviceBindingUnknownUser() = runTest {
         var node = defaultJourney.start(tree) as ContinueNode
-        node.handleLoginCallbacks()
+        node.handleLoginCallbacks(username = "UNKNOWN_USER")
         node = node.next() as ContinueNode
 
         val choiceCallback = node.callbacks.first() as ChoiceCallback
         choiceCallback.selectedIndex = choiceCallback.choices.indexOf("default")
-        node = node.next() as ContinueNode
+        val errorNode = node.next() as ErrorNode
+        assertNotNull(errorNode)
 
-        val deviceBindingCallback = node.callbacks.first() as DeviceBindingCallback
-        assertNotNull(deviceBindingCallback)
-        deviceBindingCallback.bind {  }.onSuccess {  }.onFailure {
-            assertTrue("Device binding failed with error: $it", false)
-        }
-
-        if (node.callbacks.find { it is DeviceSigningVerifierCallback } != null)  {
-            assertTrue("Test failed: Received unexpected DeviceSigningVerifierCallback! (see SDKS-2169)", false)
-            return@runTest
-        }
-        val nameCallback = node.callbacks.first() as NameCallback
+        assertEquals(401, errorNode.input["code"]?.jsonPrimitive?.int)
+        assertEquals("Unauthorized", errorNode.input["reason"]?.jsonPrimitive?.content)
+        assertEquals("Login failure", errorNode.input["message"]?.jsonPrimitive?.content)
+        assertEquals("Login failure", errorNode.message)
     }
 }
