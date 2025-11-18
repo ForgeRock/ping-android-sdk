@@ -9,6 +9,7 @@ package com.pingidentity.journey.callback.recaptchaEnterprise
 import com.google.android.recaptcha.RecaptchaAction
 import com.google.android.recaptcha.RecaptchaException
 import com.pingidentity.journey.BaseJourneyTest
+import com.pingidentity.journey.IntegrationTestConfig
 import com.pingidentity.journey.Journey
 import com.pingidentity.journey.callback.ChoiceCallback
 import com.pingidentity.journey.callback.TextOutputCallback
@@ -74,7 +75,7 @@ class RecaptchaEnterpriseCallbackTest : BaseJourneyTest() {
         val recaptchaEnterpriseSuccess = node.callbacks.first() as ReCaptchaEnterpriseCallback
         assertTrue(recaptchaEnterpriseSuccess.reCaptchaSiteKey.isNotEmpty())
         assertEquals(
-            RECAPTCHA_SITE_KEY,
+            IntegrationTestConfig.recaptchaSiteKey,
             recaptchaEnterpriseSuccess.reCaptchaSiteKey
         )
         var tokenFromCallbackResult = ""
@@ -126,7 +127,7 @@ class RecaptchaEnterpriseCallbackTest : BaseJourneyTest() {
 
         assertTrue(name.toString().replace("\"", "").startsWith("projects/"))
         assertTrue(token.isNotEmpty())
-        assertEquals(RECAPTCHA_SITE_KEY, siteKey.replace("\"", ""))
+        assertEquals(IntegrationTestConfig.recaptchaSiteKey, siteKey.replace("\"", ""))
         assertEquals("ktor-client", userAgent.replace("\"", ""))
         assertTrue(userIpAddress.isNotEmpty())
         assertTrue(score.toFloat() in 0.0f..1.0f)
@@ -154,7 +155,7 @@ class RecaptchaEnterpriseCallbackTest : BaseJourneyTest() {
         val recaptchaEnterpriseSuccess = node.callbacks.first() as ReCaptchaEnterpriseCallback
         assertTrue(recaptchaEnterpriseSuccess.reCaptchaSiteKey.isNotEmpty())
         assertEquals(
-            RECAPTCHA_SITE_KEY,
+            IntegrationTestConfig.recaptchaSiteKey,
             recaptchaEnterpriseSuccess.reCaptchaSiteKey
         )
         var tokenFromCallbackResult = ""
@@ -219,7 +220,7 @@ class RecaptchaEnterpriseCallbackTest : BaseJourneyTest() {
         val recaptchaEnterpriseSuccess = node.callbacks.first() as ReCaptchaEnterpriseCallback
         assertTrue(recaptchaEnterpriseSuccess.reCaptchaSiteKey.isNotEmpty())
         assertEquals(
-            RECAPTCHA_SITE_KEY,
+            IntegrationTestConfig.recaptchaSiteKey,
             recaptchaEnterpriseSuccess.reCaptchaSiteKey
         )
         var tokenFromCallbackResult = ""
@@ -534,12 +535,5 @@ class RecaptchaEnterpriseCallbackTest : BaseJourneyTest() {
         val textOutputCallback = node.callbacks.first() as TextOutputCallback
         val message = textOutputCallback.message
         assertEquals("CLIENT_ERROR:Site key invalid", message)
-    }
-
-    companion object {
-        /**
-         * ReCaptcha Enterprise site key for test environment.
-         */
-        private const val RECAPTCHA_SITE_KEY = "6LfAykUqAAAAAE6aZOg9pNiS3XduyGZ5y-8U-z8B"
     }
 }
