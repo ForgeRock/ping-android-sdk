@@ -40,16 +40,16 @@ object IntegrationTestConfig {
             val inputStream = ContextProvider.context.assets.open(CONFIG_FILE_NAME)
             properties.load(inputStream)
 
-            serverUrl = properties.getProperty("serverUrl", "https://openam-sdks.forgeblocks.com/am")
-            realm = properties.getProperty("realm", "alpha")
-            clientId = properties.getProperty("clientId", "AndroidTest")
+            serverUrl = properties.getProperty("serverUrl", "")
+            realm = properties.getProperty("realm", "")
+            clientId = properties.getProperty("clientId", "")
             scope = properties.getProperty("scope", "")
-            username = properties.getProperty("username", "sdkuser")
-            password = properties.getProperty("password", "password")
+            username = properties.getProperty("username", "")
+            password = properties.getProperty("password", "")
             email = properties.getProperty("email", "")
-            redirectUri = properties.getProperty("redirectUri", "org.forgerock.demo:/oauth2redirect")
+            redirectUri = properties.getProperty("redirectUri", "")
             recaptchaSiteKey = properties.getProperty("recaptchaSiteKey", "")
-            cookieName = properties.getProperty("cookieName", "5421aeddf91aa20")
+            cookieName = properties.getProperty("cookieName", "")
 
             inputStream.close()
         } catch (e: IOException) {
