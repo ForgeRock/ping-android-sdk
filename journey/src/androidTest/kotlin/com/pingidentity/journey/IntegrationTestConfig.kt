@@ -33,6 +33,8 @@ object IntegrationTestConfig {
         private set
     var cookieName: String = ""
         private set
+    var discoveryEndPoint: String = ""
+        private set
 
 
     init {
@@ -50,6 +52,7 @@ object IntegrationTestConfig {
             redirectUri = properties.getProperty("redirectUri", "")
             recaptchaSiteKey = properties.getProperty("recaptchaSiteKey", "")
             cookieName = properties.getProperty("cookieName", "")
+            discoveryEndPoint = properties.getProperty("discoveryEndPoint", "")
 
             inputStream.close()
         } catch (e: IOException) {

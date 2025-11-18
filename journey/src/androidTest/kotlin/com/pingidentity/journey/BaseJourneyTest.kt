@@ -9,6 +9,7 @@ package com.pingidentity.journey
 
 import com.pingidentity.journey.IntegrationTestConfig.clientId
 import com.pingidentity.journey.IntegrationTestConfig.cookieName
+import com.pingidentity.journey.IntegrationTestConfig.discoveryEndPoint
 import com.pingidentity.journey.IntegrationTestConfig.realm
 import com.pingidentity.journey.IntegrationTestConfig.serverUrl
 import com.pingidentity.journey.IntegrationTestConfig.username
@@ -35,8 +36,6 @@ open class BaseJourneyTest {
 
     // Common test properties
     protected val logger: Logger = Logger.STANDARD
-
-    // ToDo: Move these to a config file or environment variables
     protected val SERVER_URL: String = serverUrl
     protected val REALM: String = realm
     protected val COOKIE: String = cookieName
@@ -44,7 +43,7 @@ open class BaseJourneyTest {
     protected val PASSWORD: String = password
     protected val CLIENT_ID: String = clientId
     protected val REDIRECT_URI: String = redirectUri
-    protected val DISCOVERY_ENDPOINT: String = "https://openam-sdks.forgeblocks.com/am/oauth2/alpha/.well-known/openid-configuration"
+    protected val DISCOVERY_ENDPOINT: String = discoveryEndPoint
     protected var tree: String = "Login"
 
     @Before
