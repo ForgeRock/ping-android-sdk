@@ -9,9 +9,9 @@ name: Run Tests in BrowserStack
 on:
   workflow_call:
     outputs:
-      browserstack-build-id:
+      browserstack-journey-build-id:
         description: The newly created BrowserStack build ID
-        value: ${{ jobs.browserstack-run.outputs.browserstack_build_id }}
+        value: ${{ jobs.browserstack-run.outputs.browserstack_journey_build_id }}
     secrets:
       BROWSERSTACK_USERNAME:
         description: BrowserStack Username
