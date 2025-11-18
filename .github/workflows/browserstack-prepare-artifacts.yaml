@@ -24,6 +24,9 @@ on:
       SLACK_WEBHOOK:
         description: Slack Notifier Incoming Webhook
         required: true
+      E2E_CONFIG:
+        description: 'Variables for the e2e tests'
+        required: true
 jobs:
   prepare-device-farm-artifacts:
     runs-on: ubuntu-latest
@@ -36,6 +39,11 @@ jobs:
           ref: ${{ github.event.pull_request.head.ref }}
           repository: ${{github.event.pull_request.head.repo.full_name}}
           fetch-depth: 0
+
+      # Set up the variables for the tests from the secrets
+      - name: Setup config file for e2e tests
+        run: |
+          echo "${{ secrets.E2E_CONFIG }}" > journey/src/main/assets/test_config.properties
 
       # Setup JDK and cache and restore dependencies.
       - name: Set up JDK 17

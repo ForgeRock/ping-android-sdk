@@ -7,6 +7,14 @@
 
 package com.pingidentity.journey
 
+import com.pingidentity.journey.IntegrationTestConfig.clientId
+import com.pingidentity.journey.IntegrationTestConfig.cookieName
+import com.pingidentity.journey.IntegrationTestConfig.discoveryEndPoint
+import com.pingidentity.journey.IntegrationTestConfig.realm
+import com.pingidentity.journey.IntegrationTestConfig.serverUrl
+import com.pingidentity.journey.IntegrationTestConfig.username
+import com.pingidentity.journey.IntegrationTestConfig.password
+import com.pingidentity.journey.IntegrationTestConfig.redirectUri
 import com.pingidentity.journey.callback.NameCallback
 import com.pingidentity.journey.callback.PasswordCallback
 import com.pingidentity.journey.module.Oidc
@@ -28,16 +36,14 @@ open class BaseJourneyTest {
 
     // Common test properties
     protected val logger: Logger = Logger.STANDARD
-
-    // ToDo: Move these to a config file or environment variables
-    protected val SERVER_URL: String = "https://openam-sdks.forgeblocks.com/am"
-    protected val REALM: String = "alpha"
-    protected val COOKIE: String = "5421aeddf91aa20"
-    protected val USERNAME: String = "sdkuser"
-    protected val PASSWORD: String = "password"
-    protected val CLIENT_ID: String = "AndroidTest"
-    protected val REDIRECT_URI: String = "org.forgerock.demo:/oauth2redirect"
-    protected val DISCOVERY_ENDPOINT: String = "https://openam-sdks.forgeblocks.com/am/oauth2/alpha/.well-known/openid-configuration"
+    protected val SERVER_URL: String = serverUrl
+    protected val REALM: String = realm
+    protected val COOKIE: String = cookieName
+    protected val USERNAME: String = username
+    protected val PASSWORD: String = password
+    protected val CLIENT_ID: String = clientId
+    protected val REDIRECT_URI: String = redirectUri
+    protected val DISCOVERY_ENDPOINT: String = discoveryEndPoint
     protected var tree: String = "Login"
 
     @Before
