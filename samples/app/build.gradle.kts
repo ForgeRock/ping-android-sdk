@@ -92,7 +92,7 @@ dependencies {
     // FIDO2
     //To Support nod-discoverable fido2 credential
     implementation(libs.play.services.fido)
-    implementation(project(":mfa:fido2"))
+    implementation(project(":mfa:fido"))
 
     //Protect
     implementation(project(":protect"))
