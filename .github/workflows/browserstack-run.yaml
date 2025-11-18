@@ -26,6 +26,10 @@ on:
 jobs:
   browserstack-run:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        test-suite: [ davinci, journey ]
+      fail-fast: false
     outputs:
       browserstack_build_id: ${{ steps.start_run.outputs.browserstack_build_id }}
 
@@ -36,21 +40,15 @@ jobs:
         with:
           name: app-debug-signed.apk
 
-      - name: Get the davinci-debug-androidTest-signed.apk artifact
+      - name: Get the ${{ matrix.test-suite }}-debug-androidTest-signed.apk artifact
         uses: actions/download-artifact@v4
         with:
-          name: davinci-debug-androidTest-signed.apk
-
-      - name: Get the journey-debug-androidTest-signed.apk artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: journey-debug-androidTest-signed.apk
+          name: ${{ matrix.test-suite }}-debug-androidTest-signed.apk
 
       - name: Unzip artifacts (optional)
         run: |
           unzip -o app-debug-signed.apk || echo "Skipping unzip for app-debug"
-          unzip -o davinci-debug-androidTest-signed.apk || echo "Skipping unzip for test apk"
-          unzip -o journey-debug-androidTest-signed.apk || echo "Skipping unzip for test apk"
+          unzip -o ${{ matrix.test-suite }}-debug-androidTest-signed.apk || echo "Skipping unzip for test apk"
 
       # Upload app to BrowserStack
       - name: Upload app-debug-signed.apk to BrowserStack
@@ -62,21 +60,12 @@ jobs:
           echo "APP_URL=$(echo $APP_UPLOAD_RESPONSE | jq -r '.app_url')" >> $GITHUB_ENV
 
       # Upload test suite APK to BrowserStack
-      - name: Upload davinci-debug-androidTest-signed.apk to BrowserStack
-        id: upload_davinci_test_suite
+      - name: Upload ${{ matrix.test-suite }}-debug-androidTest-signed.apk to BrowserStack
+        id: upload_test_suite
         run: |
           TEST_UPLOAD_RESPONSE=$(curl -u "${{ secrets.BROWSERSTACK_USERNAME }}:${{ secrets.BROWSERSTACK_ACCESS_KEY }}" \
             -X POST "https://api-cloud.browserstack.com/app-automate/espresso/v2/test-suite" \
-            -F "file=@davinci-debug-androidTest-signed.apk")
-          echo "TEST_SUITE_URL=$(echo $TEST_UPLOAD_RESPONSE | jq -r '.test_suite_url')" >> $GITHUB_ENV
-
-      # Upload test suite APK to BrowserStack
-      - name: Upload journey-debug-androidTest-signed.apk to BrowserStack
-        id: upload_journey_test_suite
-        run: |
-          TEST_UPLOAD_RESPONSE=$(curl -u "${{ secrets.BROWSERSTACK_USERNAME }}:${{ secrets.BROWSERSTACK_ACCESS_KEY }}" \
-            -X POST "https://api-cloud.browserstack.com/app-automate/espresso/v2/test-suite" \
-            -F "file=@journey-debug-androidTest-signed.apk")
+            -F "file=@${{ matrix.test-suite }}-debug-androidTest-signed.apk")
           echo "TEST_SUITE_URL=$(echo $TEST_UPLOAD_RESPONSE | jq -r '.test_suite_url')" >> $GITHUB_ENV
 
       # Prepare BrowserStack run configuration. 
@@ -101,10 +90,11 @@ jobs:
             "shards": {
               "numberOfShards": ${{ vars.BS_NUMBER_OF_SHARDS }}, 
               "deviceSelection": "all"
-            }
+            },
+            "project": "${{ matrix.test-suite }}-tests"
           }
           EOF
-          echo "BrowserStack run configuration:"
+          echo "BrowserStack run configuration for ${{ matrix.test-suite }}:"
           cat browserstack-run-config.json
 
       # Start the BrowserStack run
@@ -128,7 +118,7 @@ jobs:
           custom_payload: |
             {
               attachments: [{
-                title: ':no_entry: Failed to start BrowserStack test run!',
+                title: ':no_entry: Failed to start BrowserStack test run for ${{ matrix.test-suite }}!',
                 color: 'danger',
                 text: `\nWorkflow: ${process.env.AS_WORKFLOW} -> ${process.env.AS_JOB}\nPull request: ${process.env.AS_PULL_REQUEST}\nCommit: ${process.env.AS_COMMIT} by ${process.env.AS_AUTHOR}`, 
               }]
