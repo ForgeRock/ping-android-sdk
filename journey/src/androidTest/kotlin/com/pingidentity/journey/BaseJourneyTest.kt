@@ -37,13 +37,13 @@ open class BaseJourneyTest {
     protected val logger: Logger = Logger.STANDARD
 
     // ToDo: Move these to a config file or environment variables
-    protected val SERVER_URL: String = serverUrl //"https://openam-sdks.forgeblocks.com/am"
-    protected val REALM: String = realm //"alpha"
-    protected val COOKIE: String = cookieName //"5421aeddf91aa20"
-    protected val USERNAME: String = username //"sdkuser"
-    protected val PASSWORD: String = password //"password"
-    protected val CLIENT_ID: String = clientId //"AndroidTest"
-    protected val REDIRECT_URI: String = redirectUri //"org.forgerock.demo:/oauth2redirect"
+    protected val SERVER_URL: String = serverUrl
+    protected val REALM: String = realm
+    protected val COOKIE: String = cookieName
+    protected val USERNAME: String = username
+    protected val PASSWORD: String = password
+    protected val CLIENT_ID: String = clientId
+    protected val REDIRECT_URI: String = redirectUri
     protected val DISCOVERY_ENDPOINT: String = "https://openam-sdks.forgeblocks.com/am/oauth2/alpha/.well-known/openid-configuration"
     protected var tree: String = "Login"
 
