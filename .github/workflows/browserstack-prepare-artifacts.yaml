@@ -89,6 +89,18 @@ jobs:
         env:
           BUILD_TOOLS_VERSION: "35.0.0"
 
+      # Sign journey-debug-androidTest.apk
+      - name: Sign journey-debug-androidTest.apk
+        uses: r0adkll/sign-android-release@v1
+        with:
+          releaseDirectory: journey/build/outputs/apk/androidTest/debug
+          signingKeyBase64: ${{ secrets.SIGNING_KEYSTORE }}
+          alias: ${{ secrets.SIGNING_ALIAS }}
+          keyStorePassword: ${{ secrets.SIGNING_KEYSTORE_PASSWORD }}
+          keyPassword: ${{ secrets.SIGNING_KEY_PASSWORD }}
+        env:
+          BUILD_TOOLS_VERSION: "35.0.0"
+
       # Publish the signed APKs as build artifacts
       - name: Publish app-debug.apk
         uses: actions/upload-artifact@v4
@@ -103,6 +115,13 @@ jobs:
         with:
           name: davinci-debug-androidTest-signed.apk
           path: davinci/build/outputs/apk/androidTest/debug/davinci-debug-androidTest-signed.apk
+
+      - name: Publish journey-debug-androidTest.apk
+        uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: journey-debug-androidTest-signed.apk
+          path: journey/build/outputs/apk/androidTest/debug/journey-debug-androidTest-signed.apk
 
       # Send slack notification ONLY if any of the steps above fail
       - name: Send slack notification
