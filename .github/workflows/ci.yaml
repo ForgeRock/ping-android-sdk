@@ -110,7 +110,7 @@ jobs:
       BROWSERSTACK_ACCESS_KEY: ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
       SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
     with:
-      browserstack-journey-build-id: ${{ needs.browserstack-journey-run.outputs.browserstack_journey_build_id }}
+      browserstack-journey-build-id: ${{ needs.browserstack-journey-run.outputs.browserstack-journey-build-id }}
 
   # Run Mend SCA Scan
   mend-sca-scan:
