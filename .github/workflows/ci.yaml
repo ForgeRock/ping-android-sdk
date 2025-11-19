@@ -103,7 +103,7 @@ jobs:
   # Wait for BrowserStack journey test run to finish and publish results
   browserstack-journey-results:
     name: BrowserStack journey test results
-    uses: ./.github/workflows/browserstack-results.yaml
+    uses: ./.github/workflows/browserstack-journey-results.yaml
     needs: browserstack-journey-run
     secrets:
       BROWSERSTACK_USERNAME: ${{ secrets.BROWSERSTACK_USERNAME }}
