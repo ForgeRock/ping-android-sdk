@@ -13,15 +13,18 @@ import io.ktor.client.request.headers
 import io.ktor.client.request.request
 import io.ktor.client.statement.HttpResponse
 import io.ktor.client.statement.bodyAsText
+import io.ktor.http.HttpMethod.Companion.Delete
 import io.ktor.http.HttpMethod.Companion.Get
-import io.ktor.http.cio.Response
+import io.ktor.http.HttpMethod.Companion.Put
+import io.ktor.client.request.setBody
+import io.ktor.client.request.url
+import io.ktor.http.ContentType
+import io.ktor.http.contentType
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
-import org.slf4j.MDC.put
 import kotlin.collections.emptyList
 import kotlin.collections.map
 
@@ -43,8 +46,9 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
             override suspend fun get(): List<OathDevice> {
                 return withContext(Dispatchers.IO) {
                     // Use journey and httpClient to fetch Oath devices
+                    val urlString = composeUrl(config, "devices/2fa/oath")
                     val response = httpClient.request {
-                        url.apply { composeUrl(config, "devices/2fa/oath") }
+                        url(urlString)
                         headers {
                             append("Authorization", "Bearer $ssoTokenString")
                             append("Content-Type", "application/json")
@@ -56,11 +60,31 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
             }
 
             override suspend fun delete(device: OathDevice) {
-                // Implementation to delete an Oath device
+                withContext(Dispatchers.IO) {
+                    httpClient.request {
+                        url.apply { composeUrlForDevice(config, device) }
+                        headers {
+                            append("Authorization", "Bearer $ssoTokenString")
+                            append("Content-Type", "application/json")
+                        }
+                        method = Delete
+                    }
+                }
             }
 
             override suspend fun update(device: OathDevice) {
-                // Implementation to update an Oath device
+                withContext(Dispatchers.IO) {
+                    httpClient.request {
+                        url.apply { composeUrlForDevice(config, device) }
+                        headers {
+                            append("Authorization", "Bearer $ssoTokenString")
+                            append("Content-Type", "application/json")
+                        }
+                        method = Put
+                        contentType(ContentType.Application.Json)
+                        setBody(Json.encodeToString(device))
+                    }
+                }
             }
         }
     }
@@ -83,11 +107,31 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
             }
 
             override suspend fun delete(device: PushDevice) {
-                // Implementation to delete a Push device
+                withContext(Dispatchers.IO) {
+                    httpClient.request {
+                        url.apply { composeUrlForDevice(config, device) }
+                        headers {
+                            append("Authorization", "Bearer $ssoTokenString")
+                            append("Content-Type", "application/json")
+                        }
+                        method = Delete
+                    }
+                }
             }
 
             override suspend fun update(device: PushDevice) {
-                // Implementation to update a Push device
+                withContext(Dispatchers.IO) {
+                    httpClient.request {
+                        url.apply { composeUrlForDevice(config, device) }
+                        headers {
+                            append("Authorization", "Bearer $ssoTokenString")
+                            append("Content-Type", "application/json")
+                        }
+                        method = Put
+                        contentType(ContentType.Application.Json)
+                        setBody(Json.encodeToString(device))
+                    }
+                }
             }
         }
     }
@@ -110,11 +154,31 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
             }
 
             override suspend fun delete(device: BoundDevice) {
-                // Implementation to delete a Bound device
+                withContext(Dispatchers.IO) {
+                    httpClient.request {
+                        url.apply { composeUrlForDevice(config, device) }
+                        headers {
+                            append("Authorization", "Bearer $ssoTokenString")
+                            append("Content-Type", "application/json")
+                        }
+                        method = Delete
+                    }
+                }
             }
 
             override suspend fun update(device: BoundDevice) {
-                // Implementation to update a Bound device
+                withContext(Dispatchers.IO) {
+                    httpClient.request {
+                        url.apply { composeUrlForDevice(config, device) }
+                        headers {
+                            append("Authorization", "Bearer $ssoTokenString")
+                            append("Content-Type", "application/json")
+                        }
+                        method = Put
+                        contentType(ContentType.Application.Json)
+                        setBody(Json.encodeToString(device))
+                    }
+                }
             }
         }
     }
@@ -127,11 +191,31 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
             }
 
             override suspend fun delete(device: WebAuthnDevice) {
-                // Implementation to delete a WebAuthn device
+                withContext(Dispatchers.IO) {
+                    httpClient.request {
+                        url.apply { composeUrlForDevice(config, device) }
+                        headers {
+                            append("Authorization", "Bearer $ssoTokenString")
+                            append("Content-Type", "application/json")
+                        }
+                        method = Delete
+                    }
+                }
             }
 
             override suspend fun update(device: WebAuthnDevice) {
-                // Implementation to update a WebAuthn device
+                withContext(Dispatchers.IO) {
+                    httpClient.request {
+                        url.apply { composeUrlForDevice(config, device) }
+                        headers {
+                            append("Authorization", "Bearer $ssoTokenString")
+                            append("Content-Type", "application/json")
+                        }
+                        method = Put
+                        contentType(ContentType.Application.Json)
+                        setBody(Json.encodeToString(device))
+                    }
+                }
             }
         }
     }
@@ -144,11 +228,31 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
             }
 
             override suspend fun delete(device: ProfileDevice) {
-                // Implementation to delete a Profile device
+                withContext(Dispatchers.IO) {
+                    httpClient.request {
+                        url.apply { composeUrlForDevice(config, device) }
+                        headers {
+                            append("Authorization", "Bearer $ssoTokenString")
+                            append("Content-Type", "application/json")
+                        }
+                        method = Delete
+                    }
+                }
             }
 
             override suspend fun update(device: ProfileDevice) {
-                // Implementation to update a Profile device
+                withContext(Dispatchers.IO) {
+                    httpClient.request {
+                        url.apply { composeUrlForDevice(config, device) }
+                        headers {
+                            append("Authorization", "Bearer $ssoTokenString")
+                            append("Content-Type", "application/json")
+                        }
+                        method = Put
+                        contentType(ContentType.Application.Json)
+                        setBody(Json.encodeToString(device))
+                    }
+                }
             }
         }
     }
@@ -166,8 +270,8 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
     private fun composeUrl(
         config: DeviceClientConfig,
         path: String,
-    ): Uri {
-        val uri = Uri.Builder()
+    ): String {
+        return Uri.Builder()
             .encodedPath(config.serverUrl)
             .appendPath("json")
             .appendPath("realms")
@@ -176,6 +280,22 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
             .appendPath(config.ssoTokenString ?: "")
             .appendEncodedPath(path)
             .appendQueryParameter("_queryFilter", "true")
+            .build().toString()
+    }
+
+    private fun composeUrlForDevice(
+        config: DeviceClientConfig,
+        device: Device,
+    ): Uri {
+        val uri = Uri.Builder()
+            .encodedPath(config.serverUrl)
+            .appendPath("json")
+            .appendPath("realms")
+            .appendPath(config.realm)
+            .appendPath("users")
+            .appendPath(config.ssoTokenString ?: "")
+            .appendEncodedPath(device.urlSuffix)
+            .appendEncodedPath(device.id)
         return uri.build()
     }
 }

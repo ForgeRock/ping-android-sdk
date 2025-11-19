@@ -1,0 +1,664 @@
+[![Ping Identity](https://www.pingidentity.com/content/dam/picr/nav/Ping-Logo-2.svg)](https://github.com/ForgeRock/ping-android-sdk)
+
+# Device Client Module
+
+## Overview
+
+The **Device Client** module provides a comprehensive and unified API for managing Multi-Factor Authentication (MFA) devices and user profile devices registered with Ping Identity services. This library simplifies the process of retrieving, updating, and deleting various types of authentication devices, enabling developers to build secure and user-friendly device management experiences within their Android applications.
+
+By leveraging the Device Client module, you can:
+- **Retrieve** a list of all registered devices for a user
+- **Update** device properties such as device names
+- **Delete** devices that are no longer in use
+- Support multiple device types including OATH/TOTP, Push, Device Binding, WebAuthn, and Profile devices
+
+```mermaid
+sequenceDiagram
+    participant App
+    participant DeviceClient
+    participant PingServer
+    
+    App->>DeviceClient: Create DeviceClient { config }
+    App->>DeviceClient: oathDeviceClient.get()
+    DeviceClient->>PingServer: GET /devices/2fa/oath
+    PingServer-->>DeviceClient: List of OATH devices
+    DeviceClient-->>App: List<OathDevice>
+    
+    App->>DeviceClient: pushDeviceClient.get()
+    DeviceClient->>PingServer: GET /devices/2fa/push
+    PingServer-->>DeviceClient: List of Push devices
+    DeviceClient-->>App: List<PushDevice>
+```
+
+## Installation
+
+### Add Dependency to Your Project
+
+To integrate the Device Client module into your Android project, add the following dependency to your `build.gradle.kts` (or `build.gradle`) file:
+
+```kotlin
+dependencies {
+    implementation("com.pingidentity.sdks:device-client:<version>")
+}
+```
+
+Replace `<version>` with the latest available version from Maven Central.
+
+## Getting Started
+
+### Basic Usage
+
+Create a `DeviceClient` instance by providing the necessary configuration:
+
+```kotlin
+import com.pingidentity.device.client.DeviceClient
+import io.ktor.client.HttpClient
+
+val deviceClient = DeviceClient {
+    ssoTokenString = "your_sso_token_here"
+    serverUrl = "https://openam.example.com/am"
+    realm = "alpha"
+    httpClient = HttpClient() // Optional: Use custom HttpClient
+}
+```
+
+### Configuration Parameters
+
+| Parameter      | Type       | Description                                                      | Required |
+|----------------|------------|------------------------------------------------------------------|----------|
+| ssoTokenString | String     | The SSO token obtained from authentication (Journey or DaVinci) | Yes      |
+| serverUrl      | String     | The base URL of your Ping Identity server                       | Yes      |
+| realm          | String     | The authentication realm (e.g., "alpha", "root")                | Yes      |
+| httpClient     | HttpClient | Custom Ktor HttpClient instance for advanced configurations     | No       |
+
+## Supported Device Types
+
+The Device Client module supports the following device types:
+
+| Device Type        | Description                                            | Use Case                        |
+|--------------------|--------------------------------------------------------|---------------------------------|
+| **OathDevice**     | Time-based (TOTP) or HMAC-based (HOTP) OTP devices    | Authenticator apps (Google Authenticator, etc.) |
+| **PushDevice**     | Push notification-based authentication devices         | Mobile push notifications       |
+| **BoundDevice**    | Cryptographically bound devices                        | Device binding authentication   |
+| **WebAuthnDevice** | FIDO2/WebAuthn devices (biometric, security keys)     | Passwordless authentication     |
+| **ProfileDevice**  | User profile devices tracking metadata                 | Device profiling and analytics  |
+
+## Usage Examples
+
+### Retrieving Devices
+
+#### Get All OATH Devices
+
+```kotlin
+import kotlinx.coroutines.runBlocking
+
+runBlocking {
+    val oathDevices: List<OathDevice> = deviceClient.oathDeviceClient.get()
+    
+    oathDevices.forEach { device ->
+        println("Device ID: ${device.id}")
+        println("Device Name: ${device.deviceName}")
+        println("UUID: ${device.uuid}")
+        println("Created: ${device.createdDate}")
+        println("Last Access: ${device.lastAccessDate}")
+        println("---")
+    }
+}
+```
+
+#### Get All Push Devices
+
+```kotlin
+import kotlinx.coroutines.runBlocking
+
+runBlocking {
+    val pushDevices: List<PushDevice> = deviceClient.pushDeviceClient.get()
+    
+    pushDevices.forEach { device ->
+        println("Device ID: ${device.id}")
+        println("Device Name: ${device.deviceName}")
+        println("UUID: ${device.uuid}")
+        println("---")
+    }
+}
+```
+
+#### Get All Bound Devices
+
+```kotlin
+import kotlinx.coroutines.runBlocking
+
+runBlocking {
+    val boundDevices: List<BoundDevice> = deviceClient.boundDevice.get()
+    
+    boundDevices.forEach { device ->
+        println("Device ID: ${device.id}")
+        println("Device Name: ${device.deviceName}")
+        println("Device ID: ${device.deviceId}")
+        println("UUID: ${device.uuid}")
+        println("---")
+    }
+}
+```
+
+#### Get All WebAuthn Devices
+
+```kotlin
+import kotlinx.coroutines.runBlocking
+
+runBlocking {
+    val webAuthnDevices: List<WebAuthnDevice> = deviceClient.webAuthnDevice.get()
+    
+    webAuthnDevices.forEach { device ->
+        println("Device ID: ${device.id}")
+        println("Device Name: ${device.deviceName}")
+        println("Credential ID: ${device.credentialId}")
+        println("---")
+    }
+}
+```
+
+#### Get All Profile Devices
+
+```kotlin
+import kotlinx.coroutines.runBlocking
+
+runBlocking {
+    val profileDevices: List<ProfileDevice> = deviceClient.profileDevice.get()
+    
+    profileDevices.forEach { device ->
+        println("Device ID: ${device.id}")
+        println("Device Name: ${device.deviceName}")
+        println("Metadata: ${device.metadata}")
+        println("---")
+    }
+}
+```
+
+### Updating Devices
+
+Update device properties such as the device name:
+
+```kotlin
+import kotlinx.coroutines.runBlocking
+
+runBlocking {
+    val devices = deviceClient.oathDeviceClient.get()
+    
+    if (devices.isNotEmpty()) {
+        val device = devices.first()
+        
+        // Update the device name
+        val updatedDevice = device.copy(deviceName = "My New Authenticator")
+        deviceClient.oathDeviceClient.update(updatedDevice)
+        
+        println("Device updated successfully!")
+    }
+}
+```
+
+### Deleting Devices
+
+Remove a device from the user's registered devices:
+
+```kotlin
+import kotlinx.coroutines.runBlocking
+
+runBlocking {
+    val devices = deviceClient.pushDeviceClient.get()
+    
+    if (devices.isNotEmpty()) {
+        val deviceToDelete = devices.first()
+        
+        deviceClient.pushDeviceClient.delete(deviceToDelete)
+        
+        println("Device deleted successfully!")
+    }
+}
+```
+
+## Integration with Journey and DaVinci
+
+The Device Client module is designed to work seamlessly with the Journey and DaVinci modules.
+
+### Integration with Journey
+
+After successful authentication using Journey, retrieve the SSO token and use it to initialize the Device Client:
+
+```kotlin
+import com.pingidentity.journey.Journey
+import com.pingidentity.device.client.DeviceClient
+
+val journey = Journey {
+    serverUrl = "https://openam.example.com/am"
+    realm = "alpha"
+}
+
+// Authenticate the user
+var node = journey.start("login")
+// ... Complete the authentication flow
+
+if (node is SuccessNode) {
+    val session = node.session
+    val ssoToken = session.value // Extract the SSO token
+    
+    // Create DeviceClient with the SSO token
+    val deviceClient = DeviceClient {
+        ssoTokenString = ssoToken
+        serverUrl = "https://openam.example.com/am"
+        realm = "alpha"
+    }
+    
+    // Retrieve devices
+    val devices = deviceClient.oathDeviceClient.get()
+    // Display devices to the user
+}
+```
+
+### Integration with DaVinci
+
+Similarly, after authenticating with DaVinci, use the user's session to create the Device Client:
+
+```kotlin
+import com.pingidentity.davinci.DaVinci
+import com.pingidentity.davinci.module.Oidc
+import com.pingidentity.device.client.DeviceClient
+
+val daVinci = DaVinci {
+    module(Oidc) {
+        clientId = "your_client_id"
+        discoveryEndpoint = "https://auth.pingone.com/.../.well-known/openid-configuration"
+        redirectUri = "com.example.app://callback"
+        scopes = mutableSetOf("openid", "profile", "email")
+    }
+}
+
+var node = daVinci.start()
+// ... Complete the authentication flow
+
+if (node is SuccessNode) {
+    val user = daVinci.user()
+    val accessToken = user?.accessToken()
+    
+    // Create DeviceClient with the access token
+    val deviceClient = DeviceClient {
+        ssoTokenString = accessToken?.value
+        serverUrl = "https://openam.example.com/am"
+        realm = "alpha"
+    }
+    
+    // Retrieve devices
+    val devices = deviceClient.boundDevice.get()
+    // Display devices to the user
+}
+```
+
+## Integration with Jetpack Compose
+
+For applications using Jetpack Compose, integrate the Device Client using a ViewModel for state management:
+
+### ViewModel
+
+```kotlin
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.pingidentity.device.client.DeviceClient
+import com.pingidentity.device.client.OathDevice
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
+
+class DeviceViewModel(private val deviceClient: DeviceClient) : ViewModel() {
+    
+    private val _devices = MutableStateFlow<List<OathDevice>>(emptyList())
+    val devices: StateFlow<List<OathDevice>> = _devices
+    
+    private val _isLoading = MutableStateFlow(false)
+    val isLoading: StateFlow<Boolean> = _isLoading
+    
+    private val _error = MutableStateFlow<String?>(null)
+    val error: StateFlow<String?> = _error
+    
+    fun loadDevices() {
+        viewModelScope.launch {
+            _isLoading.value = true
+            _error.value = null
+            
+            try {
+                val deviceList = deviceClient.oathDeviceClient.get()
+                _devices.value = deviceList
+            } catch (e: Exception) {
+                _error.value = "Failed to load devices: ${e.message}"
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+    
+    fun deleteDevice(device: OathDevice) {
+        viewModelScope.launch {
+            try {
+                deviceClient.oathDeviceClient.delete(device)
+                loadDevices() // Refresh the list
+            } catch (e: Exception) {
+                _error.value = "Failed to delete device: ${e.message}"
+            }
+        }
+    }
+    
+    fun updateDeviceName(device: OathDevice, newName: String) {
+        viewModelScope.launch {
+            try {
+                val updatedDevice = device.copy(deviceName = newName)
+                deviceClient.oathDeviceClient.update(updatedDevice)
+                loadDevices() // Refresh the list
+            } catch (e: Exception) {
+                _error.value = "Failed to update device: ${e.message}"
+            }
+        }
+    }
+}
+```
+
+### Composable View
+
+```kotlin
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
+
+@Composable
+fun DeviceManagementScreen(viewModel: DeviceViewModel = viewModel()) {
+    val devices by viewModel.devices.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
+    val error by viewModel.error.collectAsState()
+    
+    LaunchedEffect(Unit) {
+        viewModel.loadDevices()
+    }
+    
+    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+        Text("Registered Devices", style = MaterialTheme.typography.headlineMedium)
+        
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        if (isLoading) {
+            CircularProgressIndicator()
+        } else if (error != null) {
+            Text("Error: $error", color = MaterialTheme.colorScheme.error)
+        } else {
+            LazyColumn {
+                items(devices) { device ->
+                    DeviceCard(
+                        device = device,
+                        onDelete = { viewModel.deleteDevice(device) },
+                        onRename = { newName -> viewModel.updateDeviceName(device, newName) }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun DeviceCard(
+    device: OathDevice,
+    onDelete: () -> Unit,
+    onRename: (String) -> Unit
+) {
+    Card(modifier = Modifier.fillMaxWidth().padding(8.dp)) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text("Name: ${device.deviceName}", style = MaterialTheme.typography.titleMedium)
+            Text("UUID: ${device.uuid}")
+            Text("Created: ${device.createdDate}")
+            
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                TextButton(onClick = { /* Show rename dialog */ }) {
+                    Text("Rename")
+                }
+                TextButton(onClick = onDelete) {
+                    Text("Delete")
+                }
+            }
+        }
+    }
+}
+```
+
+## Advanced Configuration
+
+### Custom HttpClient
+
+For advanced use cases, you can provide a custom Ktor `HttpClient` with specific configurations:
+
+```kotlin
+import io.ktor.client.HttpClient
+import io.ktor.client.engine.cio.CIO
+import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.client.plugins.logging.LogLevel
+import io.ktor.client.plugins.logging.Logging
+import io.ktor.serialization.kotlinx.json.json
+import kotlinx.serialization.json.Json
+
+val customHttpClient = HttpClient(CIO) {
+    install(ContentNegotiation) {
+        json(Json {
+            prettyPrint = true
+            isLenient = true
+            ignoreUnknownKeys = true
+        })
+    }
+    install(Logging) {
+        level = LogLevel.ALL
+    }
+}
+
+val deviceClient = DeviceClient {
+    ssoTokenString = "your_sso_token"
+    serverUrl = "https://openam.example.com/am"
+    realm = "alpha"
+    httpClient = customHttpClient
+}
+```
+
+## Error Handling
+
+Always wrap device operations in try-catch blocks to handle potential network or parsing errors:
+
+```kotlin
+import kotlinx.coroutines.runBlocking
+
+runBlocking {
+    try {
+        val devices = deviceClient.oathDeviceClient.get()
+        // Process devices
+    } catch (e: Exception) {
+        when (e) {
+            is kotlinx.serialization.SerializationException -> {
+                println("Failed to parse device data: ${e.message}")
+            }
+            is io.ktor.client.network.sockets.SocketTimeoutException -> {
+                println("Network timeout: ${e.message}")
+            }
+            else -> {
+                println("Unexpected error: ${e.message}")
+            }
+        }
+    }
+}
+```
+
+## Device Data Model
+
+### OathDevice
+
+```kotlin
+data class OathDevice(
+    val id: String,              // Unique device identifier
+    val deviceName: String,      // User-friendly device name
+    val uuid: String,            // Device UUID
+    val createdDate: Long,       // Timestamp (milliseconds)
+    val lastAccessDate: Long     // Timestamp (milliseconds)
+)
+```
+
+### PushDevice
+
+```kotlin
+data class PushDevice(
+    val id: String,              // Unique device identifier
+    val deviceName: String,      // User-friendly device name
+    val uuid: String,            // Device UUID
+    val createdDate: Long,       // Timestamp (milliseconds)
+    val lastAccessDate: Long     // Timestamp (milliseconds)
+)
+```
+
+### BoundDevice
+
+```kotlin
+data class BoundDevice(
+    val id: String,              // Unique device identifier
+    val deviceName: String,      // User-friendly device name
+    val deviceId: String,        // Physical device ID
+    val uuid: String,            // Device UUID
+    val createdDate: Long,       // Timestamp (milliseconds)
+    val lastAccessDate: Long     // Timestamp (milliseconds)
+)
+```
+
+### WebAuthnDevice
+
+```kotlin
+data class WebAuthnDevice(
+    val id: String,              // Unique device identifier
+    val deviceName: String,      // User-friendly device name
+    val uuid: String,            // Device UUID
+    val credentialId: String,    // WebAuthn credential ID
+    val createdDate: Long,       // Timestamp (milliseconds)
+    val lastAccessDate: Long     // Timestamp (milliseconds)
+)
+```
+
+### ProfileDevice
+
+```kotlin
+data class ProfileDevice(
+    val id: String,              // Unique device identifier
+    val deviceName: String,      // User-friendly device name
+    val metadata: String,        // Device metadata (JSON string)
+    val lastAccessDate: Long     // Timestamp (milliseconds)
+)
+```
+
+## API Reference
+
+### DeviceClient
+
+#### Constructor
+
+```kotlin
+DeviceClient(block: DeviceClientConfig.() -> Unit)
+```
+
+#### Properties
+
+| Property          | Type                                  | Description                           |
+|-------------------|---------------------------------------|---------------------------------------|
+| oathDeviceClient  | DeviceImplementation<OathDevice>      | Client for managing OATH devices      |
+| pushDeviceClient  | DeviceImplementation<PushDevice>      | Client for managing Push devices      |
+| boundDevice       | DeviceImplementation<BoundDevice>     | Client for managing Bound devices     |
+| webAuthnDevice    | DeviceImplementation<WebAuthnDevice>  | Client for managing WebAuthn devices  |
+| profileDevice     | DeviceImplementation<ProfileDevice>   | Client for managing Profile devices   |
+
+### DeviceImplementation<T>
+
+#### Methods
+
+```kotlin
+suspend fun get(): List<T>
+```
+Retrieves all devices of type T for the authenticated user.
+
+**Returns:** List of devices
+
+**Throws:** 
+- `IOException` on network errors
+- `SerializationException` on parsing errors
+
+---
+
+```kotlin
+suspend fun delete(device: T)
+```
+Deletes the specified device.
+
+**Parameters:**
+- `device`: The device to delete
+
+**Throws:** Network or server errors
+
+---
+
+```kotlin
+suspend fun update(device: T)
+```
+Updates the specified device's properties.
+
+**Parameters:**
+- `device`: The device with updated properties
+
+**Throws:** Network or server errors
+
+## Best Practices
+
+1. **Token Management**: Always ensure the SSO token is valid before making device requests
+2. **Error Handling**: Implement comprehensive error handling for network operations
+3. **Coroutine Scope**: Use appropriate coroutine scopes (e.g., `viewModelScope`) for lifecycle-aware operations
+4. **UI Updates**: Update UI on the main thread after receiving device data
+5. **Security**: Never log sensitive device information in production builds
+6. **Caching**: Consider implementing local caching for device lists to reduce network calls
+
+## Troubleshooting
+
+### Common Issues
+
+**Issue**: "401 Unauthorized" error when retrieving devices
+- **Solution**: Ensure the SSO token is valid and not expired. Re-authenticate the user if necessary.
+
+**Issue**: "Empty device list returned"
+- **Solution**: Verify that the user has registered devices of the requested type. Check server configuration.
+
+**Issue**: "Network timeout"
+- **Solution**: Check network connectivity. Consider increasing the timeout in the custom HttpClient configuration.
+
+**Issue**: "JSON parsing error"
+- **Solution**: Ensure the server response format matches the expected data model. Check API version compatibility.
+
+## Dependencies
+
+The Device Client module depends on the following libraries:
+
+- **Ktor Client**: For HTTP networking
+- **Kotlin Serialization**: For JSON parsing
+- **Kotlinx Coroutines**: For asynchronous operations
+
+## Related Modules
+
+- [Journey](https://github.com/ForgeRock/ping-android-sdk/tree/develop/journey): Authentication flow management
+- [DaVinci](https://github.com/ForgeRock/ping-android-sdk/tree/develop/davinci): DaVinci authentication
+- [MFA](https://github.com/ForgeRock/ping-android-sdk/tree/develop/mfa): Multi-factor authentication modules
+- [Device ID](https://github.com/ForgeRock/ping-android-sdk/tree/develop/foundation/device/device-id): Device identification
+- [Device Profile](https://github.com/ForgeRock/ping-android-sdk/tree/develop/foundation/device/device-profile): Device profiling
+
+## License
+
+This software may be modified and distributed under the terms of the MIT license. See the LICENSE file for details.
+
+Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+
