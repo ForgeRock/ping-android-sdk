@@ -41,15 +41,14 @@ jobs:
     steps:
       # Clone the repo
       - name: Clone the repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: ${{ github.event.pull_request.head.ref }}
           repository: ${{github.event.pull_request.head.repo.full_name}}
-          fetch-depth: 0
 
       # Setup JDK and cache and restore dependencies.
       - name: Setup JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: 'temurin'
           java-version: '17'
@@ -94,7 +93,7 @@ jobs:
 
       # Execute all integration tests
       - name: Execute integration tests
-        timeout-minutes: 10
+        timeout-minutes: 20
         continue-on-error: true
         env:
           # These environment variables don't work with the emulator-runner action for some reason

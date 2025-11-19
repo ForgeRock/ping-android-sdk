@@ -5,12 +5,12 @@
 # of the MIT license. See the LICENSE file for details.
 #
 
-name: BrowserStack Test Results
+name: BrowserStack DaVinci Tests Results
 
 on:
   workflow_call:
     inputs:
-      browserstack-build-id:
+      browserstack-davinci-build-id:
         description: BrowserStack Build ID
         type: string
         required: true
@@ -26,17 +26,17 @@ on:
         required: true
 
 jobs:
-  browserstack-results:
+  browserstack-davinci-results:
     runs-on: ubuntu-latest
     steps:
       - name: "Workflow inputs:"
-        run: echo "Build ID - ${{ inputs.browserstack-build-id }}"
+        run: echo "Build ID - ${{ inputs.browserstack-davinci-build-id }}"
 
       - name: Wait for BrowserStack build to finish
         id: wait_browserstack
         timeout-minutes: 60
         run: |
-          BROWSERSTACK_BUILD_ID="${{ inputs.browserstack-build-id }}"
+          BROWSERSTACK_BUILD_ID="${{ inputs.browserstack-davinci-build-id }}"
           echo "Waiting for BrowserStack build: $BROWSERSTACK_BUILD_ID"
 
           RUNNING_STATES=("queued" "running")
@@ -101,7 +101,7 @@ jobs:
 
       - name: Publish BrowserStack Results Summary
         run: |
-          echo "## 🌐 BrowserStack Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "## 🌐 BrowserStack DaVinci Test Results" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Build ID:** ${{ env.BROWSERSTACK_BUILD_ID }}" >> $GITHUB_STEP_SUMMARY
           echo "**Build URL:** [View on BrowserStack](${{ env.BROWSERSTACK_BUILD_URL }})" >> $GITHUB_STEP_SUMMARY

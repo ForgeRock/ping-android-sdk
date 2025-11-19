@@ -5,13 +5,13 @@
 # of the MIT license. See the LICENSE file for details.
 #
 
-name: Run Tests in BrowserStack
+name: Run DaVinci Tests in BrowserStack
 on:
   workflow_call:
     outputs:
-      browserstack-build-id:
+      browserstack-davinci-build-id:
         description: The newly created BrowserStack build ID
-        value: ${{ jobs.browserstack-run.outputs.browserstack_build_id }}
+        value: ${{ jobs.browserstack-davinci-run.outputs.browserstack_davinci_build_id }}
     secrets:
       BROWSERSTACK_USERNAME:
         description: BrowserStack Username
@@ -24,10 +24,10 @@ on:
         required: true
 
 jobs:
-  browserstack-run:
+  browserstack-davinci-run:
     runs-on: ubuntu-latest
     outputs:
-      browserstack_build_id: ${{ steps.start_run.outputs.browserstack_build_id }}
+      browserstack_davinci_build_id: ${{ steps.start_run.outputs.browserstack_davinci_build_id }}
 
     steps:
       # Get the test artifacts prepared in previous step
@@ -94,7 +94,7 @@ jobs:
           cat browserstack-run-config.json
 
       # Start the BrowserStack run
-      - name: Start a BrowserStack test run
+      - name: Start DaVinci BrowserStack test run
         id: start_run
         run: |
           RUN_RESPONSE=$(curl -u "${{ secrets.BROWSERSTACK_USERNAME }}:${{ secrets.BROWSERSTACK_ACCESS_KEY }}" \
@@ -102,8 +102,8 @@ jobs:
             -H "Content-Type: application/json" \
             -d @browserstack-run-config.json)
           echo "RUN_RESPONSE: $RUN_RESPONSE"
-          echo "BROWSERSTACK_BUILD_ID=$(echo $RUN_RESPONSE | jq -r '.build_id')" >> $GITHUB_ENV
-          echo "browserstack_build_id=$(echo $RUN_RESPONSE | jq -r '.build_id')" >> $GITHUB_OUTPUT
+          echo "BROWSERSTACK_DAVINCI_BUILD_ID=$(echo $RUN_RESPONSE | jq -r '.build_id')" >> $GITHUB_ENV
+          echo "browserstack_davinci_build_id=$(echo $RUN_RESPONSE | jq -r '.build_id')" >> $GITHUB_OUTPUT
 
       # Send slack notification ONLY if any of the steps above fail
       - name: Send slack notification
