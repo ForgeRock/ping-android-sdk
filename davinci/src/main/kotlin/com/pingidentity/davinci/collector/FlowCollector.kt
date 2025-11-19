@@ -8,6 +8,7 @@
 package com.pingidentity.davinci.collector
 
 import com.pingidentity.davinci.plugin.Submittable
+import com.pingidentity.orchestrate.Closeable
 
 private const val ACTION = "action"
 
@@ -19,6 +20,10 @@ private const val ACTION = "action"
  *
  * @constructor Creates a new FlowCollector with the given input.
  */
-class FlowCollector : SingleValueCollector(), Submittable {
+class FlowCollector : SingleValueCollector(), Submittable, Closeable {
     override fun eventType() = ACTION
+
+    override fun close() {
+        value = ""
+    }
 }

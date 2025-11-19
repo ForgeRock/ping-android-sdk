@@ -297,6 +297,49 @@ class FidoRegistrationCollectorTest {
     }
 
     @Test
+    fun `close should clear attestationValue`() = runTest {
+        collector.init(getRegistrationInput())
+        val attestation = buildJsonObject { put("test", JsonPrimitive("value")) }
+
+        coEvery { mockFidoClient.register(any(), any()) } returns Result.success(attestation)
+
+        // Register and verify payload is not null
+        collector.register()
+        assertNotNull(collector.payload())
+
+        // Close the collector
+        collector.close()
+
+        // Verify payload is now null
+        assertNull(collector.payload())
+    }
+
+    @Test
+    fun `close should allow reuse after clearing`() = runTest {
+        collector.init(getRegistrationInput())
+        val attestation1 = buildJsonObject { put("test", JsonPrimitive("value1")) }
+        val attestation2 = buildJsonObject { put("test", JsonPrimitive("value2")) }
+
+        // First registration
+        coEvery { mockFidoClient.register(any(), any()) } returns Result.success(attestation1)
+        collector.register()
+        val payload1 = collector.payload()
+        assertNotNull(payload1)
+        assertEquals(attestation1, payload1?.get(Constants.FIELD_ATTESTATION_VALUE)?.jsonObject)
+
+        // Close and re-register
+        collector.close()
+        assertNull(collector.payload())
+
+        // Second registration
+        coEvery { mockFidoClient.register(any(), any()) } returns Result.success(attestation2)
+        collector.register()
+        val payload2 = collector.payload()
+        assertNotNull(payload2)
+        assertEquals(attestation2, payload2?.get(Constants.FIELD_ATTESTATION_VALUE)?.jsonObject)
+    }
+
+    @Test
     fun `transform should handle empty excludeCredentials array`() {
         val inputWithEmptyExcludeCredentials = buildJsonObject {
             put("type", JsonPrimitive("FIDO2"))

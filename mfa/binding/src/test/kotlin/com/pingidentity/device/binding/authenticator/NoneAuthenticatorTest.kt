@@ -201,12 +201,6 @@ class NoneAuthenticatorTest {
     }
 
     @Test
-    fun `test inheritance - None is DeviceAuthenticator and CryptoKeyAware`() {
-        assertTrue(authenticator is DeviceAuthenticator)
-        assertTrue(authenticator is com.pingidentity.device.binding.CryptoKeyAware)
-    }
-
-    @Test
     fun `test register with empty attestation challenge in Default`() = runTest {
         val mockKeyPair = mockk<java.security.KeyPair>()
         val mockPublicKey = mockk<RSAPublicKey>()

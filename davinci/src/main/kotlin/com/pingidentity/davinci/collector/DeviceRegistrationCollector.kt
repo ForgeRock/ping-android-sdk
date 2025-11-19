@@ -8,6 +8,7 @@
 package com.pingidentity.davinci.collector
 
 import com.pingidentity.davinci.plugin.Submittable
+import com.pingidentity.orchestrate.Closeable
 import kotlinx.serialization.json.JsonObject
 
 private const val SUBMIT = "submit"
@@ -15,7 +16,7 @@ private const val SUBMIT = "submit"
 /**
  * A collector for device registration.
  */
-class DeviceRegistrationCollector : FieldCollector<String>(), Submittable {
+class DeviceRegistrationCollector : FieldCollector<String>(), Submittable, Closeable {
 
     override fun eventType(): String = SUBMIT
 
@@ -35,6 +36,10 @@ class DeviceRegistrationCollector : FieldCollector<String>(), Submittable {
         value?.let {
             return it.type
         } ?: return null
+    }
+
+    override fun close() {
+        value = null
     }
 
 }
