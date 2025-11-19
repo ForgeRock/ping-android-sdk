@@ -57,9 +57,9 @@ jobs:
 
             if printf '%s\n' "${TERMINAL_STATES[@]}" | grep -qx "$STATUS"; then
               echo "BrowserStack build reached terminal state: $STATUS"
-              echo "$RESPONSE" > browserstack-build-result.json
-              echo "BROWSERSTACK_BUILD_RESULT=$RESPONSE" >> $GITHUB_ENV
-              echo "BROWSERSTACK_BUILD_STATUS=$STATUS" >> $GITHUB_ENV
+              echo "$RESPONSE" > browserstack-journey-build-result.json
+              echo "BROWSERSTACK_JOURNEY_BUILD_RESULT=$RESPONSE" >> $GITHUB_ENV
+              echo "BROWSERSTACK_JOURNEY_BUILD_STATUS=$STATUS" >> $GITHUB_ENV
               exit 0
             fi
 
@@ -70,14 +70,14 @@ jobs:
       - name: Upload raw BrowserStack build JSON
         uses: actions/upload-artifact@v4
         with:
-          name: browserstack-build-result
-          path: browserstack-build-result.json
+          name: browserstack-journey-build-result
+          path: browserstack-journey-build-result.json
           retention-days: 7
 
       - name: Parse build outcome json
         id: parse_build
         run: |
-          RESULT='${{ env.BROWSERSTACK_BUILD_RESULT }}'
+          RESULT='${{ env.BROWSERSTACK_JOURNEY_BUILD_RESULT }}'
           echo "$RESULT" | jq '.'
 
           BUILD_ID=$(echo "$RESULT" | jq -r '.id')
@@ -119,7 +119,7 @@ jobs:
           echo "| Device | OS  | Status | Passed | Failed | Skipped | Duration (s) | Session Link |" >> $GITHUB_STEP_SUMMARY
           echo "|--------|-----|--------|--------|--------|---------|--------------|--------------|" >> $GITHUB_STEP_SUMMARY
 
-          echo '${{ env.BROWSERSTACK_BUILD_RESULT }}' | jq -c '.devices[]' | while read device; do
+          echo '${{ env.BROWSERSTACK_JOURNEY_BUILD_RESULT }}' | jq -c '.devices[]' | while read device; do
             DEVICE_NAME=$(echo "$device" | jq -r '.device')
             DEVICE_OS=$(echo "$device" | jq -r '.os_version')
             echo "$device" | jq -c '.sessions[]' | while read session; do
