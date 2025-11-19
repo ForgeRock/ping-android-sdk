@@ -36,15 +36,15 @@ jobs:
         id: wait_browserstack
         timeout-minutes: 60
         run: |
-          BROWSERSTACK_BUILD_ID="${{ inputs.browserstack-journey-build-id }}"
-          echo "Waiting for BrowserStack build: $BROWSERSTACK_BUILD_ID"
+          BROWSERSTACK_JOURNEY_BUILD_ID="${{ inputs.browserstack-journey-build-id }}"
+          echo "Waiting for BrowserStack build: $BROWSERSTACK_JOURNEY_BUILD_ID"
 
           RUNNING_STATES=("queued" "running")
           TERMINAL_STATES=("passed" "failed" "error" "timed out" "skipped")
 
           while true; do
             RESPONSE=$(curl -s -u "${{ secrets.BROWSERSTACK_USERNAME }}:${{ secrets.BROWSERSTACK_ACCESS_KEY }}" \
-              "https://api-cloud.browserstack.com/app-automate/espresso/v2/builds/${BROWSERSTACK_BUILD_ID}")
+              "https://api-cloud.browserstack.com/app-automate/espresso/v2/builds/${BROWSERSTACK_JOURNEY_BUILD_ID}")
 
             STATUS=$(echo "$RESPONSE" | jq -r '.status')
             echo "Current build status: $STATUS"
@@ -90,7 +90,7 @@ jobs:
           TOTAL_FAILED=$(echo "$RESULT" | jq '[.devices[].sessions[].testcases.status.failed] | add // 0')
           TOTAL_SKIPPED=$(echo "$RESULT" | jq '[.devices[].sessions[].testcases.status.skipped] | add // 0')
 
-          echo "BROWSERSTACK_BUILD_ID=$BUILD_ID" >> $GITHUB_ENV
+          echo "BROWSERSTACK_JOURNEY_BUILD_ID=$BUILD_ID" >> $GITHUB_ENV
           echo "BROWSERSTACK_BUILD_URL=https://app-automate.browserstack.com/dashboard/v2/builds/$BUILD_ID" >> $GITHUB_ENV
           echo "BROWSERSTACK_BUILD_STATUS=$BUILD_STATUS" >> $GITHUB_ENV
           echo "BROWSERSTACK_BUILD_DURATION=$BUILD_DURATION" >> $GITHUB_ENV
@@ -103,7 +103,7 @@ jobs:
         run: |
           echo "## 🌐 BrowserStack Test Results" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Build ID:** ${{ env.BROWSERSTACK_BUILD_ID }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Build ID:** ${{ env.BROWSERSTACK_JOURNEY_BUILD_ID }}" >> $GITHUB_STEP_SUMMARY
           echo "**Build URL:** [View on BrowserStack](${{ env.BROWSERSTACK_BUILD_URL }})" >> $GITHUB_STEP_SUMMARY
           echo "**Status:** ${{ env.BROWSERSTACK_BUILD_STATUS }}" >> $GITHUB_STEP_SUMMARY
           echo "**Duration:** ${{ env.BROWSERSTACK_BUILD_DURATION }} seconds" >> $GITHUB_STEP_SUMMARY
@@ -125,7 +125,7 @@ jobs:
             echo "$device" | jq -c '.sessions[]' | while read session; do
               SESSION_STATUS=$(echo "$session" | jq -r '.status')
               SESSION_DURATION=$(echo "$session" | jq -r '.duration')
-              SESSION_URL="https://app-automate.browserstack.com/builds/${{ env.BROWSERSTACK_BUILD_ID }}/sessions/$(echo "$session" | jq -r '.id')"
+              SESSION_URL="https://app-automate.browserstack.com/builds/${{ env.BROWSERSTACK_JOURNEY_BUILD_ID }}/sessions/$(echo "$session" | jq -r '.id')"
               PASSED=$(echo "$session" | jq -r '.testcases.status.passed')
               FAILED=$(echo "$session" | jq -r '.testcases.status.failed')
               SKIPPED=$(echo "$session" | jq -r '.testcases.status.skipped')
@@ -154,7 +154,7 @@ jobs:
             {
               "attachments": [
                 {
-                  "title": "BrowserStack Build: ${{ env.BROWSERSTACK_BUILD_ID }}",
+                  "title": "BrowserStack Build: ${{ env.BROWSERSTACK_JOURNEY_BUILD_ID }}",
                   "title_link": "${{ env.BROWSERSTACK_BUILD_URL }}",
                   "color": "${{ job.status == 'success' && 'good' || job.status == 'failure' && 'danger' || 'warning' }}",
                   "text": "Test summary: ${{ job.status }}\nPassed: ${{ env.BROWSERSTACK_BUILD_PASSED }}, Failed: ${{ env.BROWSERSTACK_BUILD_FAILED }}, Skipped: ${{ env.BROWSERSTACK_BUILD_SKIPPED }}\nDevices: ${{ env.BROWSERSTACK_BUILD_DEVICE_COUNT }}\nDuration: ${{ env.BROWSERSTACK_BUILD_DURATION }}s\nWorkflow: ${{ github.workflow }} -> ${{ github.job }}\nPull request: ${{ github.event.pull_request.html_url || 'N/A' }}\nCommit: ${{ github.sha }} by ${{ github.actor }}\nMessage: ${{ github.event.head_commit.message || 'N/A' }}"

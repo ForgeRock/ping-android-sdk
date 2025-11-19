@@ -27,7 +27,7 @@ jobs:
   browserstack-run:
     runs-on: ubuntu-latest
     outputs:
-      browserstack_build_id: ${{ steps.start_run.outputs.browserstack_build_id }}
+      browserstack_journey_build_id: ${{ steps.start_run.outputs.browserstack_journey_build_id }}
 
     steps:
       # Get the test artifacts prepared in previous step
@@ -102,8 +102,8 @@ jobs:
             -H "Content-Type: application/json" \
             -d @browserstack-run-config.json)
           echo "RUN_RESPONSE: $RUN_RESPONSE"
-          echo "BROWSERSTACK_BUILD_ID=$(echo $RUN_RESPONSE | jq -r '.build_id')" >> $GITHUB_ENV
-          echo "browserstack_build_id=$(echo $RUN_RESPONSE | jq -r '.build_id')" >> $GITHUB_OUTPUT
+          echo "BROWSERSTACK_JOURNEY_BUILD_ID=$(echo $RUN_RESPONSE | jq -r '.build_id')" >> $GITHUB_ENV
+          echo "browserstack_journey_build_id=$(echo $RUN_RESPONSE | jq -r '.build_id')" >> $GITHUB_OUTPUT
 
       # Send slack notification ONLY if any of the steps above fail
       - name: Send slack notification
