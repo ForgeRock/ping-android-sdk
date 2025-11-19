@@ -84,7 +84,7 @@ class RecaptchaEnterpriseCallbackTest : BaseJourneyTest() {
             assertTrue(token.isNotEmpty())
             tokenFromCallbackResult = token
         }.onFailure {
-            assertTrue(false) // Should not reach here
+            assertTrue("Failure in verifying ${it.message}",false) // Should not reach here
         }
 
         val inputPayload = recaptchaEnterpriseSuccess.payload()["input"]
@@ -166,7 +166,7 @@ class RecaptchaEnterpriseCallbackTest : BaseJourneyTest() {
             assertTrue(token.isNotEmpty())
             tokenFromCallbackResult = token
         }.onFailure {
-            assertTrue(false) // Should not reach here
+            assertTrue("Failure in verifying ${it.message}", false) // Should not reach here
         }
         val inputPayload = recaptchaEnterpriseSuccess.payload()["input"]
         assertNotNull(inputPayload)
@@ -254,7 +254,7 @@ class RecaptchaEnterpriseCallbackTest : BaseJourneyTest() {
             assertTrue(token.isNotEmpty())
             tokenFromCallbackResult = token
         }.onFailure {
-            assertTrue(false) // Should not reach here
+            assertTrue("Failure in verifying ${it.message}", false) // Should not reach here
         }
 
         val inputPayload = recaptchaEnterpriseSuccess.payload()["input"]
@@ -328,7 +328,7 @@ class RecaptchaEnterpriseCallbackTest : BaseJourneyTest() {
         }.onSuccess { token ->
             assertTrue(token.isNotEmpty())
         }.onFailure {
-            assertTrue(false) // Should not reach here
+            assertTrue("Failure in verifying ${it.message}", false) // Should not reach here
         }
 
         val inputPayload = recaptchaEnterpriseFailure.payload()["input"]
@@ -375,7 +375,7 @@ class RecaptchaEnterpriseCallbackTest : BaseJourneyTest() {
         }.onSuccess { token ->
             assertTrue(token.isNotEmpty())
         }.onFailure {
-            assertTrue(false) // Should not reach here
+            assertTrue("Failure in verifying ${it.message}", false) // Should not reach here
         }
 
         val inputPayload = recaptchaEnterpriseFailure.payload()["input"]
@@ -416,7 +416,7 @@ class RecaptchaEnterpriseCallbackTest : BaseJourneyTest() {
         }.onSuccess { token ->
             assertTrue(token.isNotEmpty())
         }.onFailure {
-            assertTrue(false) // Should not reach here
+            assertTrue("Failure in verifying ${it.message}", false) // Should not reach here
         }
 
         val inputPayload = recaptchaEnterpriseFailure.payload()["input"]
@@ -447,7 +447,7 @@ class RecaptchaEnterpriseCallbackTest : BaseJourneyTest() {
         val recaptchaEnterpriseFailure = node.callbacks.first() as ReCaptchaEnterpriseCallback
         assertTrue(recaptchaEnterpriseFailure.reCaptchaSiteKey.isNotEmpty())
         assertEquals(
-            "6LfAykUqAAAAAE6aZOg9pNiS3XduyGZ5y-8U-z8B",
+            IntegrationTestConfig.recaptchaSiteKey,
             recaptchaEnterpriseFailure.reCaptchaSiteKey
         )
 
@@ -456,7 +456,7 @@ class RecaptchaEnterpriseCallbackTest : BaseJourneyTest() {
         }.onSuccess { token ->
             assertTrue(token.isNotEmpty())
         }.onFailure {
-            assertTrue(false) // Should not reach here
+            assertTrue("Failure in verifying ${it.message}", false) // Should not reach here
         }
 
         val inputPayload = recaptchaEnterpriseFailure.payload()["input"]
