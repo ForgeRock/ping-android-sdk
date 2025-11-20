@@ -59,14 +59,14 @@ class UserProfileViewModel : ViewModel() {
             val deviceClient = DeviceClient {
                 ssoTokenString = user.session().value
                 serverUrl = "https://openam-sdks.forgeblocks.com/am"
-                realm = user.session().realm.replace("/", "")
+                realm = user.session().realm
                 cookieName = "5421aeddf91aa20"
                 userId = userInfo.value["sub"]?.jsonPrimitive?.content ?: ""
             }
             try {
                 when (deviceType) {
                     DeviceType.OATH -> {
-                        val devices = deviceClient.oathDeviceClient.get()
+                        val devices = deviceClient.oathDeviceClient.getDevices()
                         val deviceNames = devices.map { it.deviceName }
                         state.update { s ->
                             s.copy(deviceList = deviceNames)
@@ -74,21 +74,21 @@ class UserProfileViewModel : ViewModel() {
                     }
 
                     DeviceType.PUSH -> {
-                        val devices = deviceClient.pushDeviceClient.get()
+                        val devices = deviceClient.pushDeviceClient.getDevices()
                         val deviceNames = devices.map { it.deviceName }
                         state.update { s ->
                             s.copy(deviceList = deviceNames)
                         }
                     }
                     DeviceType.BOUND -> {
-                        val devices = deviceClient.boundDevice.get()
+                        val devices = deviceClient.boundDevice.getDevices()
                         val deviceNames = devices.map { it.deviceName }
                         state.update { s ->
                             s.copy(deviceList = deviceNames)
                         }
                     }
                     DeviceType.WEBAUTHN -> {
-                        val devices = deviceClient.webAuthnDevice.get()
+                        val devices = deviceClient.webAuthnDevice.getDevices()
                         val deviceNames = devices.map { it.deviceName }
                         state.update { s ->
                             s.copy(deviceList = deviceNames)

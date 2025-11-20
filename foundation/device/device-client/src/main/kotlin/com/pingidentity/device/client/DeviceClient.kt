@@ -45,17 +45,16 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
     private val httpClient: HttpClient = config.httpClient
     private val ssoTokenString = config.ssoTokenString
 
-    val oathDeviceClient: DeviceImplementation<OathDevice> by lazy {
-        object : DeviceImplementation<OathDevice> {
-            override suspend fun get(): List<OathDevice> {
+    val oathDeviceClient: ImmutableDevice<OathDevice> by lazy {
+        object : ImmutableDevice<OathDevice> {
+            override suspend fun getDevices(): List<OathDevice> {
                 return withContext(Dispatchers.IO) {
-                    // Use journey and httpClient to fetch Oath devices
                     val response = execute(config, "devices/2fa/oath")
                     getDevices<OathDevice>(response)
                 }
             }
 
-            override suspend fun delete(device: OathDevice) {
+            override suspend fun deleteDevice(device: OathDevice) {
                 withContext(Dispatchers.IO) {
                     httpClient.request {
                         url.apply { composeUrlForDevice(config, device) }
@@ -67,27 +66,12 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
                     }
                 }
             }
-
-            override suspend fun update(device: OathDevice) {
-                withContext(Dispatchers.IO) {
-                    httpClient.request {
-                        url.apply { composeUrlForDevice(config, device) }
-                        headers {
-                            append("Authorization", "Bearer $ssoTokenString")
-                            append("Content-Type", "application/json")
-                        }
-                        method = Put
-                        contentType(ContentType.Application.Json)
-                        setBody(Json.encodeToString(device))
-                    }
-                }
-            }
         }
     }
 
-    val pushDeviceClient: DeviceImplementation<PushDevice> by lazy {
-        object : DeviceImplementation<PushDevice> {
-            override suspend fun get(): List<PushDevice> {
+    val pushDeviceClient: ImmutableDevice<PushDevice> by lazy {
+        object : ImmutableDevice<PushDevice> {
+            override suspend fun getDevices(): List<PushDevice> {
                 return withContext(Dispatchers.IO) {
                     // Use journey and httpClient to fetch Push devices
                     val response = execute(config, "devices/2fa/push")
@@ -95,7 +79,7 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
                 }
             }
 
-            override suspend fun delete(device: PushDevice) {
+            override suspend fun deleteDevice(device: PushDevice) {
                 withContext(Dispatchers.IO) {
                     httpClient.request {
                         url.apply { composeUrlForDevice(config, device) }
@@ -107,27 +91,12 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
                     }
                 }
             }
-
-            override suspend fun update(device: PushDevice) {
-                withContext(Dispatchers.IO) {
-                    httpClient.request {
-                        url.apply { composeUrlForDevice(config, device) }
-                        headers {
-                            append("Authorization", "Bearer $ssoTokenString")
-                            append("Content-Type", "application/json")
-                        }
-                        method = Put
-                        contentType(ContentType.Application.Json)
-                        setBody(Json.encodeToString(device))
-                    }
-                }
-            }
         }
     }
 
-    val boundDevice: DeviceImplementation<BoundDevice> by lazy {
-        object : DeviceImplementation<BoundDevice> {
-            override suspend fun get(): List<BoundDevice> {
+    val boundDevice: MutableDevice<BoundDevice> by lazy {
+        object : MutableDevice<BoundDevice> {
+            override suspend fun getDevices(): List<BoundDevice> {
                 return withContext(Dispatchers.IO) {
                     // Use journey and httpClient to fetch Push devices
                     val response = execute(config, "devices/2fa/binding")
@@ -135,7 +104,7 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
                 }
             }
 
-            override suspend fun delete(device: BoundDevice) {
+            override suspend fun deleteDevice(device: BoundDevice) {
                 withContext(Dispatchers.IO) {
                     httpClient.request {
                         url.apply { composeUrlForDevice(config, device) }
@@ -148,7 +117,7 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
                 }
             }
 
-            override suspend fun update(device: BoundDevice) {
+            override suspend fun updateDevice(device: BoundDevice) {
                 withContext(Dispatchers.IO) {
                     httpClient.request {
                         url.apply { composeUrlForDevice(config, device) }
@@ -165,14 +134,14 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
         }
     }
 
-    val webAuthnDevice: DeviceImplementation<WebAuthnDevice> by lazy {
-        object : DeviceImplementation<WebAuthnDevice> {
-            override suspend fun get(): List<WebAuthnDevice> {
+    val webAuthnDevice: MutableDevice<WebAuthnDevice> by lazy {
+        object : MutableDevice<WebAuthnDevice> {
+            override suspend fun getDevices(): List<WebAuthnDevice> {
                 val response = execute(config, "devices/2fa/webauthn")
                 return getDevices<WebAuthnDevice>(response)
             }
 
-            override suspend fun delete(device: WebAuthnDevice) {
+            override suspend fun deleteDevice(device: WebAuthnDevice) {
                 withContext(Dispatchers.IO) {
                     httpClient.request {
                         url.apply { composeUrlForDevice(config, device) }
@@ -185,7 +154,7 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
                 }
             }
 
-            override suspend fun update(device: WebAuthnDevice) {
+            override suspend fun updateDevice(device: WebAuthnDevice) {
                 withContext(Dispatchers.IO) {
                     httpClient.request {
                         url.apply { composeUrlForDevice(config, device) }
@@ -202,15 +171,15 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
         }
     }
 
-    val profileDevice: DeviceImplementation<ProfileDevice> by lazy {
-        object : DeviceImplementation<ProfileDevice> {
-            override suspend fun get(): List<ProfileDevice> {
+    val profileDevice: MutableDevice<ProfileDevice> by lazy {
+        object : MutableDevice<ProfileDevice> {
+            override suspend fun getDevices(): List<ProfileDevice> {
                 // Implementation to fetch Profile devices
                 val response = execute(config, "devices/profile")
                 return getDevices<ProfileDevice>(response)
             }
 
-            override suspend fun delete(device: ProfileDevice) {
+            override suspend fun deleteDevice(device: ProfileDevice) {
                 withContext(Dispatchers.IO) {
                     httpClient.request {
                         url.apply { composeUrlForDevice(config, device) }
@@ -223,7 +192,7 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
                 }
             }
 
-            override suspend fun update(device: ProfileDevice) {
+            override suspend fun updateDevice(device: ProfileDevice) {
                 withContext(Dispatchers.IO) {
                     httpClient.request {
                         url.apply { composeUrlForDevice(config, device) }
@@ -259,7 +228,7 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
             .encodedPath(config.serverUrl)
             .appendPath("json")
             .appendPath("realms")
-            .appendPath(config.realm)
+            .appendEncodedPath(config.realm)
             .appendPath("users")
             .appendPath(config.userId) // Placeholder user ID
             .appendEncodedPath(path)
@@ -275,7 +244,7 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
             .encodedPath(config.serverUrl)
             .appendPath("json")
             .appendPath("realms")
-            .appendPath(config.realm)
+            .appendEncodedPath(config.realm)
             .appendPath("users")
             .appendEncodedPath(device.urlSuffix)
             .appendEncodedPath(device.id)

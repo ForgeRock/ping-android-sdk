@@ -12,17 +12,42 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonIgnoreUnknownKeys
 import kotlinx.serialization.json.JsonObject
 
-interface DeviceImplementation<T> {
-    suspend fun get(): List<T>
-    suspend fun delete(device: T)
-    suspend fun update(device: T)
-}
-
+/**
+ * Abstract class representing a device.
+ */
 @Serializable
 sealed class Device {
     abstract val id: String
     abstract val deviceName: String
     abstract val urlSuffix: String
+}
+
+/**
+ * Interface defining immutable device operations.
+ */
+interface ImmutableDevice<T> {
+    /**
+     * Retrieves a list of devices.
+     * @return A list of devices of type [T].
+     */
+    suspend fun getDevices(): List<T>
+
+    /**
+     * Deletes the specified device.
+     * @param device The device to delete.
+     */
+    suspend fun deleteDevice(device: T)
+}
+
+/**
+ * Interface defining mutable device operations.
+ */
+interface MutableDevice<T> : ImmutableDevice<T> {
+    /**
+     * Updates the specified device.
+     * @param device The device to update.
+     */
+    suspend fun updateDevice(device: T)
 }
 
 /**
