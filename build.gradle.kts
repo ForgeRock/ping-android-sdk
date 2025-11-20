@@ -57,11 +57,11 @@ allprojects {
 
             // Force secure version of protobuf to address security vulnerabilities
             // Used transitively by various Google dependencies
-            // Updated to 3.25.5 (latest stable as of Nov 2025)
-            force("com.google.protobuf:protobuf-java:4.27.5")
-            force("com.google.protobuf:protobuf-kotlin:4.27.5")
-            force("com.google.protobuf:protobuf-javalite:4.27.5")
-            force("com.google.protobuf:protobuf-kotlin-lite:4.27.5")
+            // Using 3.25.5 to avoid CVE-2024-7254 which affects 4.x series
+            force("com.google.protobuf:protobuf-java:3.25.5")
+            force("com.google.protobuf:protobuf-kotlin:3.25.5")
+            force("com.google.protobuf:protobuf-javalite:3.25.5")
+            force("com.google.protobuf:protobuf-kotlin-lite:3.25.5")
         }
     }
 }
