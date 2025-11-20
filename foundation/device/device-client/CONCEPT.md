@@ -15,37 +15,61 @@ The Device Client module provides a unified API for managing various types of Mu
 
 ### Device Management Interface
 
-The Device Client follows a generic interface pattern where all device types implement the `DeviceImplementation<T>` interface. This ensures a consistent API surface across different device types while maintaining type safety.
+The Device Client follows a generic interface pattern with two distinct interfaces based on device mutability:
+
+#### ImmutableDevice Interface
+
+For devices that support read and delete operations only (OATH and Push devices):
 
 ```kotlin
-interface DeviceImplementation<T> {
-    suspend fun get(): List<T>
-    suspend fun delete(device: T)
-    suspend fun update(device: T)
+interface ImmutableDevice<T> {
+    suspend fun getDevices(): List<T>
+    suspend fun deleteDevice(device: T)
 }
 ```
+
+#### MutableDevice Interface
+
+For devices that support full CRUD operations (Bound, WebAuthn, and Profile devices):
+
+```kotlin
+interface MutableDevice<T> : ImmutableDevice<T> {
+    suspend fun updateDevice(device: T)
+}
+```
+
+This segregation ensures that:
+- OATH and Push devices cannot be accidentally updated via the API
+- Type safety is enforced at compile time
+- Clear API contracts for different device capabilities
 
 ### Supported Device Types
 
 The module supports the following device types, all extending from the sealed `Device` class:
 
-| Device Type    | Description                                                                 | URL Suffix            |
-|----------------|-----------------------------------------------------------------------------|-----------------------|
-| OathDevice     | Time-based One-Time Password (TOTP) or HMAC-based OTP devices              | devices/2fa/oath      |
-| PushDevice     | Push notification-based authentication devices                              | devices/2fa/push      |
-| BoundDevice    | Cryptographically bound devices for device binding authentication           | devices/2fa/binding   |
-| WebAuthnDevice | FIDO2/WebAuthn biometric or security key devices                           | devices/2fa/webauthn  |
-| ProfileDevice  | User profile devices tracking device metadata and usage                     | devices/profile       |
+| Device Type    | Interface Type | Description                                                                 | URL Suffix            |
+|----------------|----------------|-----------------------------------------------------------------------------|-----------------------|
+| OathDevice     | ImmutableDevice| Time-based One-Time Password (TOTP) or HMAC-based OTP devices              | devices/2fa/oath      |
+| PushDevice     | ImmutableDevice| Push notification-based authentication devices                              | devices/2fa/push      |
+| BoundDevice    | MutableDevice  | Cryptographically bound devices for device binding authentication           | devices/2fa/binding   |
+| WebAuthnDevice | MutableDevice  | FIDO2/WebAuthn biometric or security key devices                           | devices/2fa/webauthn  |
+| ProfileDevice  | MutableDevice  | User profile devices tracking device metadata, location, and usage          | devices/profile       |
 
 ### Class Hierarchy
 
 ```mermaid
 classDiagram
-    class DeviceImplementation~T~ {
+    class ImmutableDevice~T~ {
         <<interface>>
-        +get() List~T~
-        +delete(device: T)
-        +update(device: T)
+        +getDevices() List~T~
+        +deleteDevice(device: T)
+    }
+    
+    class MutableDevice~T~ {
+        <<interface>>
+        +getDevices() List~T~
+        +deleteDevice(device: T)
+        +updateDevice(device: T)
     }
     
     class Device {
@@ -82,15 +106,24 @@ classDiagram
     }
     
     class ProfileDevice {
-        +String metadata
-        +Long lastAccessDate
+        +String identifier
+        +JsonObject metadata
+        +Location? location
+        +Long lastSelectedDate
     }
     
+    class Location {
+        +Double latitude
+        +Double longitude
+    }
+    
+    ImmutableDevice <|-- MutableDevice
     Device <|-- OathDevice
     Device <|-- PushDevice
     Device <|-- BoundDevice
     Device <|-- WebAuthnDevice
     Device <|-- ProfileDevice
+    ProfileDevice --> Location
 ```
 
 ## DeviceClient Configuration
@@ -102,6 +135,8 @@ class DeviceClientConfig {
     var ssoTokenString: String? = null
     var serverUrl: String = ""
     var realm: String = ""
+    var cookieName: String = ""
+    var userId: String = ""
     var httpClient: HttpClient = HttpClient()
 }
 ```
@@ -111,6 +146,8 @@ class DeviceClientConfig {
 - **ssoTokenString**: The Single Sign-On token used for authentication with the server
 - **serverUrl**: The base URL of the Ping Identity server
 - **realm**: The authentication realm
+- **cookieName**: The name of the cookie used for session management (e.g., "iPlanetDirectoryPro")
+- **userId**: The user identifier for device operations
 - **httpClient**: The Ktor HTTP client used for network requests (can be customized)
 
 ## Device Retrieval Flow
@@ -121,20 +158,21 @@ The following sequence diagram illustrates how device data is retrieved from the
 sequenceDiagram
     participant App
     participant DeviceClient
-    participant DeviceImplementation
+    participant ImmutableDevice
     participant HttpClient
     participant PingServer
     
     App->>DeviceClient: Create DeviceClient { config }
-    App->>DeviceClient: oathDeviceClient.get()
-    DeviceClient->>DeviceImplementation: get()
-    DeviceImplementation->>HttpClient: request(url, headers)
-    HttpClient->>PingServer: GET /users/{uid}/devices/2fa/oath
+    App->>DeviceClient: oathDeviceClient.getDevices()
+    DeviceClient->>ImmutableDevice: getDevices()
+    ImmutableDevice->>ImmutableDevice: composeUrl(path)
+    ImmutableDevice->>HttpClient: execute(config, path)
+    HttpClient->>PingServer: GET /users/{userId}/devices/2fa/oath
     PingServer-->>HttpClient: HTTP Response (JSON)
-    HttpClient-->>DeviceImplementation: HttpResponse
-    DeviceImplementation->>DeviceImplementation: getDevices<OathDevice>(response)
-    DeviceImplementation->>DeviceImplementation: Parse JSON and deserialize
-    DeviceImplementation-->>DeviceClient: List<OathDevice>
+    HttpClient-->>ImmutableDevice: HttpResponse
+    ImmutableDevice->>ImmutableDevice: getDevices<OathDevice>(response)
+    ImmutableDevice->>ImmutableDevice: Parse JSON and deserialize
+    ImmutableDevice-->>DeviceClient: List<OathDevice>
     DeviceClient-->>App: List<OathDevice>
 ```
 
@@ -143,12 +181,12 @@ sequenceDiagram
 The module composes URLs dynamically based on the configuration and device type:
 
 ```
-{serverUrl}/json/realms/{realm}/users/{ssoTokenString}/{urlSuffix}?_queryFilter=true
+{serverUrl}/json/realms/{realm}/users/{userId}/{urlSuffix}?_queryFilter=true
 ```
 
 Example:
 ```
-https://openam.example.com/json/realms/alpha/users/abc123/devices/2fa/oath?_queryFilter=true
+https://openam.example.com/am/json/realms/alpha/users/demo/devices/2fa/oath?_queryFilter=true
 ```
 
 ### Response Parsing
@@ -198,12 +236,12 @@ This pattern:
 All device types follow the same pattern for deletion:
 
 ```kotlin
-override suspend fun delete(device: OathDevice) {
+override suspend fun deleteDevice(device: OathDevice) {
     withContext(Dispatchers.IO) {
         httpClient.request {
             url.apply { composeUrlForDevice(config, device) }
             headers {
-                append("Authorization", "Bearer $ssoTokenString")
+                append(config.cookieName, config.ssoTokenString ?: "")
                 append("Content-Type", "application/json")
             }
             method = Delete
@@ -223,9 +261,8 @@ private fun composeUrlForDevice(
         .encodedPath(config.serverUrl)
         .appendPath("json")
         .appendPath("realms")
-        .appendPath(config.realm)
+        .appendEncodedPath(config.realm)
         .appendPath("users")
-        .appendPath(config.ssoTokenString ?: "")
         .appendEncodedPath(device.urlSuffix)
         .appendEncodedPath(device.id)
     return uri.build()
@@ -234,15 +271,15 @@ private fun composeUrlForDevice(
 
 ### Update Implementation
 
-All device types follow the same pattern for updates:
+Mutable device types (BoundDevice, WebAuthnDevice, ProfileDevice) support updates:
 
 ```kotlin
-override suspend fun update(device: OathDevice) {
+override suspend fun updateDevice(device: BoundDevice) {
     withContext(Dispatchers.IO) {
         httpClient.request {
             url.apply { composeUrlForDevice(config, device) }
             headers {
-                append("Authorization", "Bearer $ssoTokenString")
+                append(config.cookieName, config.ssoTokenString ?: "")
                 append("Content-Type", "application/json")
             }
             method = Put
@@ -259,21 +296,52 @@ The update operation:
 - Sends the serialized device data in the request body
 - Uses the same URL pattern as delete with the device ID
 
+### Execute Helper Method
+
+A centralized execute method handles common HTTP operations:
+
+```kotlin
+private suspend fun execute(
+    config: DeviceClientConfig,
+    path: String,
+    requestType: RequestType = RequestType.LIST,
+): HttpResponse {
+    val urlString = composeUrl(config, path)
+    val request = httpClient.prepareRequest {
+        url(urlString)
+        header(config.cookieName, config.ssoTokenString ?: "")
+        header("Content-Type", "application/json")
+        header("Accept-API-Version", "resource=1.0")
+        header("x-requested-platform", "Android")
+        method = when (requestType) {
+            RequestType.LIST -> Get
+            RequestType.DELETE -> Delete
+            RequestType.UPDATE -> Put
+        }
+    }
+    return request.execute()
+}
+```
+
 ## Authentication Strategy
 
-The Device Client uses Bearer token authentication with the SSO token:
+The Device Client uses cookie-based authentication with the SSO token:
 
 ```kotlin
 headers {
-    append("Authorization", "Bearer $ssoTokenString")
+    append(config.cookieName, config.ssoTokenString ?: "")
     append("Content-Type", "application/json")
+    append("Accept-API-Version", "resource=1.0")
+    append("x-requested-platform", "Android")
 }
 ```
 
 This approach:
-- Maintains stateless authentication across requests
+- Maintains session-based authentication across requests
 - Leverages existing session tokens from Journey or DaVinci flows
 - Provides secure access to user-specific device data
+- Includes API versioning for backward compatibility
+- Identifies the platform for server-side analytics
 
 ## Device Update Flow
 

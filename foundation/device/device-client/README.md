@@ -58,6 +58,8 @@ val deviceClient = DeviceClient {
     ssoTokenString = "your_sso_token_here"
     serverUrl = "https://openam.example.com/am"
     realm = "alpha"
+    cookieName = "iPlanetDirectoryPro"
+    userId = "demo"
     httpClient = HttpClient() // Optional: Use custom HttpClient
 }
 ```
@@ -69,19 +71,26 @@ val deviceClient = DeviceClient {
 | ssoTokenString | String     | The SSO token obtained from authentication (Journey or DaVinci) | Yes      |
 | serverUrl      | String     | The base URL of your Ping Identity server                       | Yes      |
 | realm          | String     | The authentication realm (e.g., "alpha", "root")                | Yes      |
+| cookieName     | String     | The session cookie name (e.g., "iPlanetDirectoryPro")           | Yes      |
+| userId         | String     | The user identifier for device operations                       | Yes      |
 | httpClient     | HttpClient | Custom Ktor HttpClient instance for advanced configurations     | No       |
 
 ## Supported Device Types
 
 The Device Client module supports the following device types:
 
-| Device Type        | Description                                            | Use Case                        |
-|--------------------|--------------------------------------------------------|---------------------------------|
-| **OathDevice**     | Time-based (TOTP) or HMAC-based (HOTP) OTP devices    | Authenticator apps (Google Authenticator, etc.) |
-| **PushDevice**     | Push notification-based authentication devices         | Mobile push notifications       |
-| **BoundDevice**    | Cryptographically bound devices                        | Device binding authentication   |
-| **WebAuthnDevice** | FIDO2/WebAuthn devices (biometric, security keys)     | Passwordless authentication     |
-| **ProfileDevice**  | User profile devices tracking metadata                 | Device profiling and analytics  |
+| Device Type        | Interface Type  | Description                                            | Use Case                        |
+|--------------------|-----------------|--------------------------------------------------------|---------------------------------|
+| **OathDevice**     | ImmutableDevice | Time-based (TOTP) or HMAC-based (HOTP) OTP devices    | Authenticator apps (Google Authenticator, etc.) |
+| **PushDevice**     | ImmutableDevice | Push notification-based authentication devices         | Mobile push notifications       |
+| **BoundDevice**    | MutableDevice   | Cryptographically bound devices                        | Device binding authentication   |
+| **WebAuthnDevice** | MutableDevice   | FIDO2/WebAuthn devices (biometric, security keys)     | Passwordless authentication     |
+| **ProfileDevice**  | MutableDevice   | User profile devices tracking metadata and location    | Device profiling and analytics  |
+
+### Device Capabilities
+
+- **ImmutableDevice**: Supports `getDevices()` and `deleteDevice()` operations
+- **MutableDevice**: Supports `getDevices()`, `deleteDevice()`, and `updateDevice()` operations
 
 ## Usage Examples
 
@@ -93,7 +102,7 @@ The Device Client module supports the following device types:
 import kotlinx.coroutines.runBlocking
 
 runBlocking {
-    val oathDevices: List<OathDevice> = deviceClient.oathDeviceClient.get()
+    val oathDevices: List<OathDevice> = deviceClient.oathDeviceClient.getDevices()
     
     oathDevices.forEach { device ->
         println("Device ID: ${device.id}")
@@ -112,7 +121,7 @@ runBlocking {
 import kotlinx.coroutines.runBlocking
 
 runBlocking {
-    val pushDevices: List<PushDevice> = deviceClient.pushDeviceClient.get()
+    val pushDevices: List<PushDevice> = deviceClient.pushDeviceClient.getDevices()
     
     pushDevices.forEach { device ->
         println("Device ID: ${device.id}")
@@ -129,7 +138,7 @@ runBlocking {
 import kotlinx.coroutines.runBlocking
 
 runBlocking {
-    val boundDevices: List<BoundDevice> = deviceClient.boundDevice.get()
+    val boundDevices: List<BoundDevice> = deviceClient.boundDevice.getDevices()
     
     boundDevices.forEach { device ->
         println("Device ID: ${device.id}")
@@ -147,7 +156,7 @@ runBlocking {
 import kotlinx.coroutines.runBlocking
 
 runBlocking {
-    val webAuthnDevices: List<WebAuthnDevice> = deviceClient.webAuthnDevice.get()
+    val webAuthnDevices: List<WebAuthnDevice> = deviceClient.webAuthnDevice.getDevices()
     
     webAuthnDevices.forEach { device ->
         println("Device ID: ${device.id}")
@@ -164,12 +173,17 @@ runBlocking {
 import kotlinx.coroutines.runBlocking
 
 runBlocking {
-    val profileDevices: List<ProfileDevice> = deviceClient.profileDevice.get()
+    val profileDevices: List<ProfileDevice> = deviceClient.profileDevice.getDevices()
     
     profileDevices.forEach { device ->
         println("Device ID: ${device.id}")
-        println("Device Name: ${device.deviceName}")
+        println("Device Name (Alias): ${device.deviceName}")
+        println("Identifier: ${device.identifier}")
         println("Metadata: ${device.metadata}")
+        device.location?.let { location ->
+            println("Location: ${location.latitude}, ${location.longitude}")
+        }
+        println("Last Selected: ${device.lastSelectedDate}")
         println("---")
     }
 }
@@ -177,25 +191,27 @@ runBlocking {
 
 ### Updating Devices
 
-Update device properties such as the device name:
+Update device properties such as the device name (only available for MutableDevice types):
 
 ```kotlin
 import kotlinx.coroutines.runBlocking
 
 runBlocking {
-    val devices = deviceClient.oathDeviceClient.get()
+    val devices = deviceClient.boundDevice.getDevices()
     
     if (devices.isNotEmpty()) {
         val device = devices.first()
         
         // Update the device name
-        val updatedDevice = device.copy(deviceName = "My New Authenticator")
-        deviceClient.oathDeviceClient.update(updatedDevice)
+        val updatedDevice = device.copy(deviceName = "My Updated Device")
+        deviceClient.boundDevice.updateDevice(updatedDevice)
         
         println("Device updated successfully!")
     }
 }
 ```
+
+**Note:** Only `MutableDevice` implementations (BoundDevice, WebAuthnDevice, ProfileDevice) support the `updateDevice()` method. ImmutableDevice types (OathDevice, PushDevice) do not support updates.
 
 ### Deleting Devices
 
@@ -205,17 +221,19 @@ Remove a device from the user's registered devices:
 import kotlinx.coroutines.runBlocking
 
 runBlocking {
-    val devices = deviceClient.pushDeviceClient.get()
+    val devices = deviceClient.pushDeviceClient.getDevices()
     
     if (devices.isNotEmpty()) {
         val deviceToDelete = devices.first()
         
-        deviceClient.pushDeviceClient.delete(deviceToDelete)
+        deviceClient.pushDeviceClient.deleteDevice(deviceToDelete)
         
         println("Device deleted successfully!")
     }
 }
 ```
+
+**Note:** Both `ImmutableDevice` and `MutableDevice` implementations support the `deleteDevice()` method.
 
 ## Integration with Journey and DaVinci
 
@@ -247,10 +265,12 @@ if (node is SuccessNode) {
         ssoTokenString = ssoToken
         serverUrl = "https://openam.example.com/am"
         realm = "alpha"
+        cookieName = "iPlanetDirectoryPro"
+        userId = "demo" // Or extract from session
     }
     
     // Retrieve devices
-    val devices = deviceClient.oathDeviceClient.get()
+    val devices = deviceClient.oathDeviceClient.getDevices()
     // Display devices to the user
 }
 ```
@@ -285,10 +305,12 @@ if (node is SuccessNode) {
         ssoTokenString = accessToken?.value
         serverUrl = "https://openam.example.com/am"
         realm = "alpha"
+        cookieName = "iPlanetDirectoryPro"
+        userId = "demo" // Or extract from user info
     }
     
     // Retrieve devices
-    val devices = deviceClient.boundDevice.get()
+    val devices = deviceClient.boundDevice.getDevices()
     // Display devices to the user
 }
 ```
@@ -325,7 +347,7 @@ class DeviceViewModel(private val deviceClient: DeviceClient) : ViewModel() {
             _error.value = null
             
             try {
-                val deviceList = deviceClient.oathDeviceClient.get()
+                val deviceList = deviceClient.oathDeviceClient.getDevices()
                 _devices.value = deviceList
             } catch (e: Exception) {
                 _error.value = "Failed to load devices: ${e.message}"
@@ -338,22 +360,10 @@ class DeviceViewModel(private val deviceClient: DeviceClient) : ViewModel() {
     fun deleteDevice(device: OathDevice) {
         viewModelScope.launch {
             try {
-                deviceClient.oathDeviceClient.delete(device)
+                deviceClient.oathDeviceClient.deleteDevice(device)
                 loadDevices() // Refresh the list
             } catch (e: Exception) {
                 _error.value = "Failed to delete device: ${e.message}"
-            }
-        }
-    }
-    
-    fun updateDeviceName(device: OathDevice, newName: String) {
-        viewModelScope.launch {
-            try {
-                val updatedDevice = device.copy(deviceName = newName)
-                deviceClient.oathDeviceClient.update(updatedDevice)
-                loadDevices() // Refresh the list
-            } catch (e: Exception) {
-                _error.value = "Failed to update device: ${e.message}"
             }
         }
     }
@@ -475,7 +485,7 @@ import kotlinx.coroutines.runBlocking
 
 runBlocking {
     try {
-        val devices = deviceClient.oathDeviceClient.get()
+        val devices = deviceClient.oathDeviceClient.getDevices()
         // Process devices
     } catch (e: Exception) {
         when (e) {
@@ -549,10 +559,17 @@ data class WebAuthnDevice(
 
 ```kotlin
 data class ProfileDevice(
-    val id: String,              // Unique device identifier
-    val deviceName: String,      // User-friendly device name
-    val metadata: String,        // Device metadata (JSON string)
-    val lastAccessDate: Long     // Timestamp (milliseconds)
+    val id: String,                    // Unique device identifier
+    val deviceName: String,            // User-friendly device name (alias)
+    val identifier: String,            // Device identifier
+    val metadata: JsonObject,          // Device metadata as JSON object
+    val location: Location? = null,    // Optional location data
+    val lastSelectedDate: Long         // Timestamp (milliseconds)
+)
+
+data class Location(
+    val latitude: Double,              // Latitude coordinate
+    val longitude: Double              // Longitude coordinate
 )
 ```
 
@@ -568,20 +585,20 @@ DeviceClient(block: DeviceClientConfig.() -> Unit)
 
 #### Properties
 
-| Property          | Type                                  | Description                           |
-|-------------------|---------------------------------------|---------------------------------------|
-| oathDeviceClient  | DeviceImplementation<OathDevice>      | Client for managing OATH devices      |
-| pushDeviceClient  | DeviceImplementation<PushDevice>      | Client for managing Push devices      |
-| boundDevice       | DeviceImplementation<BoundDevice>     | Client for managing Bound devices     |
-| webAuthnDevice    | DeviceImplementation<WebAuthnDevice>  | Client for managing WebAuthn devices  |
-| profileDevice     | DeviceImplementation<ProfileDevice>   | Client for managing Profile devices   |
+| Property          | Type                              | Description                           |
+|-------------------|-----------------------------------|---------------------------------------|
+| oathDeviceClient  | ImmutableDevice<OathDevice>       | Client for managing OATH devices      |
+| pushDeviceClient  | ImmutableDevice<PushDevice>       | Client for managing Push devices      |
+| boundDevice       | MutableDevice<BoundDevice>        | Client for managing Bound devices     |
+| webAuthnDevice    | MutableDevice<WebAuthnDevice>     | Client for managing WebAuthn devices  |
+| profileDevice     | MutableDevice<ProfileDevice>      | Client for managing Profile devices   |
 
-### DeviceImplementation<T>
+### ImmutableDevice<T>
 
 #### Methods
 
 ```kotlin
-suspend fun get(): List<T>
+suspend fun getDevices(): List<T>
 ```
 Retrieves all devices of type T for the authenticated user.
 
@@ -594,7 +611,7 @@ Retrieves all devices of type T for the authenticated user.
 ---
 
 ```kotlin
-suspend fun delete(device: T)
+suspend fun deleteDevice(device: T)
 ```
 Deletes the specified device.
 
@@ -603,10 +620,14 @@ Deletes the specified device.
 
 **Throws:** Network or server errors
 
----
+### MutableDevice<T>
+
+Extends `ImmutableDevice<T>` with additional methods:
+
+#### Methods
 
 ```kotlin
-suspend fun update(device: T)
+suspend fun updateDevice(device: T)
 ```
 Updates the specified device's properties.
 
@@ -647,6 +668,23 @@ The Device Client module depends on the following libraries:
 - **Ktor Client**: For HTTP networking
 - **Kotlin Serialization**: For JSON parsing
 - **Kotlinx Coroutines**: For asynchronous operations
+
+### Required Gradle Configuration
+
+To use the Device Client module, you must add the Kotlin Serialization plugin to your `build.gradle.kts`:
+
+```kotlin
+plugins {
+    kotlin("plugin.serialization") version "1.9.0" // or your Kotlin version
+}
+
+dependencies {
+    implementation("com.pingidentity.sdks:device-client:<version>")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0")
+}
+```
+
+All device classes are marked with `@Serializable` and use `@JsonIgnoreUnknownKeys` to handle additional fields from the server gracefully.
 
 ## Related Modules
 
