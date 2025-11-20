@@ -7,6 +7,7 @@
 package com.pingidentity.device.client
 
 import android.annotation.SuppressLint
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonIgnoreUnknownKeys
@@ -59,9 +60,9 @@ interface MutableDevice<T> : ImmutableDevice<T> {
  * @property createdDate The creation date of the device.
  * @property lastAccessDate The last access date of the device.
  */
-@SuppressLint("UnsafeOptInUsageError")
 @Serializable
 @JsonIgnoreUnknownKeys
+@OptIn(ExperimentalSerializationApi::class)
 data class BoundDevice(
     @SerialName("_id")
     override val id: String,
@@ -82,9 +83,9 @@ data class BoundDevice(
  * @property createdDate The creation date of the device.
  * @property lastAccessDate The last access date of the device.
  */
-@SuppressLint("UnsafeOptInUsageError")
 @Serializable
 @JsonIgnoreUnknownKeys
+@OptIn(ExperimentalSerializationApi::class)
 data class OathDevice(
     @SerialName("_id")
     override val id: String,
@@ -104,9 +105,9 @@ data class OathDevice(
  * @property createdDate The creation date of the device.
  * @property lastAccessDate The last access date of the device.
  */
-@SuppressLint("UnsafeOptInUsageError")
 @Serializable
 @JsonIgnoreUnknownKeys
+@OptIn(ExperimentalSerializationApi::class)
 data class PushDevice(
     @SerialName("_id")
     override val id: String,
@@ -127,9 +128,9 @@ data class PushDevice(
  * @property createdDate The creation date of the device.
  * @property lastAccessDate The last access date of the device.
  */
-@SuppressLint("UnsafeOptInUsageError")
 @Serializable
 @JsonIgnoreUnknownKeys
+@OptIn(ExperimentalSerializationApi::class)
 data class WebAuthnDevice(
     @SerialName("_id")
     override val id: String,
@@ -151,9 +152,9 @@ data class WebAuthnDevice(
  * @property location The location of the device.
  * @property lastSelectedDate The last selected date of the device.
  */
-@SuppressLint("UnsafeOptInUsageError")
 @Serializable
 @JsonIgnoreUnknownKeys
+@OptIn(ExperimentalSerializationApi::class)
 data class ProfileDevice(
     @SerialName("_id")
     override val id: String,
