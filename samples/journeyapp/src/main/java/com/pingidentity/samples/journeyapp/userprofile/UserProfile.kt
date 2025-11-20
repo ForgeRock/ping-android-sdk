@@ -118,7 +118,8 @@ fun UserProfile(userProfileViewModel: UserProfileViewModel) {
                             DeviceType.OATH to "OATH (TOTP/HOTP)",
                             DeviceType.PUSH to "Push Notifications",
                             DeviceType.BOUND to "Bound Devices",
-                            DeviceType.WEBAUTHN to "WebAuthn/FIDO2"
+                            DeviceType.WEBAUTHN to "WebAuthn/FIDO2",
+                            DeviceType.PROFILE to "Profile Devices"
                         )
 
                         deviceTypes.forEach { (deviceType, label) ->

@@ -7,7 +7,6 @@
 
 package com.pingidentity.samples.journeyapp.userprofile
 
-import com.pingidentity.device.client.Device
 import com.pingidentity.oidc.OidcError
 import kotlinx.serialization.json.JsonObject
 
@@ -15,7 +14,8 @@ enum class DeviceType {
     OATH,
     PUSH,
     BOUND,
-    WEBAUTHN
+    WEBAUTHN,
+    PROFILE
 }
 
 data class UserProfileState(

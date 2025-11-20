@@ -228,7 +228,7 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
             .encodedPath(config.serverUrl)
             .appendPath("json")
             .appendPath("realms")
-            .appendEncodedPath(config.realm)
+            .appendPath("alpha")
             .appendPath("users")
             .appendPath(config.userId) // Placeholder user ID
             .appendEncodedPath(path)

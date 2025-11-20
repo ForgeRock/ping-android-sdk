@@ -94,6 +94,13 @@ class UserProfileViewModel : ViewModel() {
                             s.copy(deviceList = deviceNames)
                         }
                     }
+                    DeviceType.PROFILE -> {
+                        val devices = deviceClient.profileDevice.getDevices()
+                        val deviceNames = devices.map { it.deviceName }
+                        state.update { s ->
+                            s.copy(deviceList = deviceNames)
+                        }
+                    }
                 }
             } catch (exception: Exception) {
                 yield()
