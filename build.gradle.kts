@@ -57,11 +57,11 @@ allprojects {
 
             // Force secure version of protobuf to address security vulnerabilities
             // Used transitively by various Google dependencies
-            // Updated to 4.28.3 which includes fixes for CVE-2024-7254 and other CVEs
-            force("com.google.protobuf:protobuf-java:4.28.2")
-            force("com.google.protobuf:protobuf-kotlin:4.28.2")
-            force("com.google.protobuf:protobuf-javalite:4.28.2")
-            force("com.google.protobuf:protobuf-kotlin-lite:4.28.2")
+            // Updated to 4.29.2 (latest stable) which fixes CVE-2024-7254 and all known CVEs
+            force("com.google.protobuf:protobuf-java:4.29.2")
+            force("com.google.protobuf:protobuf-kotlin:4.29.2")
+            force("com.google.protobuf:protobuf-javalite:4.29.2")
+            force("com.google.protobuf:protobuf-kotlin-lite:4.29.2")
         }
     }
 }
