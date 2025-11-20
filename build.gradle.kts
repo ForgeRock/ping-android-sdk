@@ -46,6 +46,14 @@ allprojects {
             force("com.fasterxml.jackson.module:jackson-module-kotlin:2.15.0")
             force("com.fasterxml.jackson.dataformat:jackson-dataformat-xml:2.15.0")
             force("com.fasterxml.jackson.core:jackson-databind:2.15.0")
+
+            // Force secure version of netty-codec to address security vulnerabilities
+            // Used transitively by ktor-client-cio
+            // Updated to 4.1.125.Final per Mend SCA recommendation (Nov 2025)
+            force("io.netty:netty-codec:4.1.125.Final")
+            force("io.netty:netty-codec-http:4.1.125.Final")
+            force("io.netty:netty-codec-http2:4.1.125.Final")
+            force("io.netty:netty-all:4.1.125.Final")
         }
     }
 }
