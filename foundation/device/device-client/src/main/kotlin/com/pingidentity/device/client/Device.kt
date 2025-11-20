@@ -9,6 +9,7 @@ package com.pingidentity.device.client
 import android.annotation.SuppressLint
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonIgnoreUnknownKeys
 import kotlinx.serialization.json.JsonObject
 
 interface DeviceImplementation<T> {
@@ -35,6 +36,7 @@ sealed class Device {
  */
 @SuppressLint("UnsafeOptInUsageError")
 @Serializable
+@JsonIgnoreUnknownKeys
 data class BoundDevice(
     @SerialName("_id")
     override val id: String,
@@ -57,6 +59,7 @@ data class BoundDevice(
  */
 @SuppressLint("UnsafeOptInUsageError")
 @Serializable
+@JsonIgnoreUnknownKeys
 data class OathDevice(
     @SerialName("_id")
     override val id: String,
@@ -78,6 +81,7 @@ data class OathDevice(
  */
 @SuppressLint("UnsafeOptInUsageError")
 @Serializable
+@JsonIgnoreUnknownKeys
 data class PushDevice(
     @SerialName("_id")
     override val id: String,
@@ -100,6 +104,7 @@ data class PushDevice(
  */
 @SuppressLint("UnsafeOptInUsageError")
 @Serializable
+@JsonIgnoreUnknownKeys
 data class WebAuthnDevice(
     @SerialName("_id")
     override val id: String,
@@ -123,6 +128,7 @@ data class WebAuthnDevice(
  */
 @SuppressLint("UnsafeOptInUsageError")
 @Serializable
+@JsonIgnoreUnknownKeys
 data class ProfileDevice(
     @SerialName("_id")
     override val id: String,

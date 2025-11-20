@@ -9,7 +9,9 @@ package com.pingidentity.device.client
 import android.net.Uri
 import com.pingidentity.utils.PingDsl
 import io.ktor.client.HttpClient
+import io.ktor.client.request.header
 import io.ktor.client.request.headers
+import io.ktor.client.request.prepareRequest
 import io.ktor.client.request.request
 import io.ktor.client.statement.HttpResponse
 import io.ktor.client.statement.bodyAsText
@@ -33,6 +35,8 @@ class DeviceClientConfig {
     var ssoTokenString: String? = null
     var serverUrl: String = ""
     var realm: String = ""
+    var cookieName: String = ""
+    var userId: String = ""
     var httpClient: HttpClient = HttpClient()
 }
 
@@ -46,15 +50,7 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
             override suspend fun get(): List<OathDevice> {
                 return withContext(Dispatchers.IO) {
                     // Use journey and httpClient to fetch Oath devices
-                    val urlString = composeUrl(config, "devices/2fa/oath")
-                    val response = httpClient.request {
-                        url(urlString)
-                        headers {
-                            append("Authorization", "Bearer $ssoTokenString")
-                            append("Content-Type", "application/json")
-                        }
-                        method = Get
-                    }
+                    val response = execute(config, "devices/2fa/oath")
                     getDevices<OathDevice>(response)
                 }
             }
@@ -94,14 +90,7 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
             override suspend fun get(): List<PushDevice> {
                 return withContext(Dispatchers.IO) {
                     // Use journey and httpClient to fetch Push devices
-                    val response = httpClient.request {
-                        url.apply { composeUrl(config, "devices/2fa/push") }
-                        headers {
-                            append("Authorization", "Bearer $ssoTokenString")
-                            append("Content-Type", "application/json")
-                        }
-                        method = Get
-                    }
+                    val response = execute(config, "devices/2fa/push")
                     getDevices<PushDevice>(response)
                 }
             }
@@ -141,14 +130,7 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
             override suspend fun get(): List<BoundDevice> {
                 return withContext(Dispatchers.IO) {
                     // Use journey and httpClient to fetch Push devices
-                    val response = httpClient.request {
-                        url.apply { composeUrl(config, "devices/2fa/binding") }
-                        headers {
-                            append("Authorization", "Bearer $ssoTokenString")
-                            append("Content-Type", "application/json")
-                        }
-                        method = Get
-                    }
+                    val response = execute(config, "devices/2fa/binding")
                     getDevices<BoundDevice>(response)
                 }
             }
@@ -186,8 +168,8 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
     val webAuthnDevice: DeviceImplementation<WebAuthnDevice> by lazy {
         object : DeviceImplementation<WebAuthnDevice> {
             override suspend fun get(): List<WebAuthnDevice> {
-                // Implementation to fetch WebAuthn devices
-                return emptyList()
+                val response = execute(config, "devices/2fa/webauthn")
+                return getDevices<WebAuthnDevice>(response)
             }
 
             override suspend fun delete(device: WebAuthnDevice) {
@@ -224,7 +206,8 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
         object : DeviceImplementation<ProfileDevice> {
             override suspend fun get(): List<ProfileDevice> {
                 // Implementation to fetch Profile devices
-                return emptyList()
+                val response = execute(config, "devices/profile")
+                return getDevices<ProfileDevice>(response)
             }
 
             override suspend fun delete(device: ProfileDevice) {
@@ -258,6 +241,7 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
     }
 
     private suspend inline fun <reified T> getDevices(response: HttpResponse): List<T> {
+        println("Status: ${response.status} -> ${response.bodyAsText()}")
         val body = response.bodyAsText()
         val jsonObject = Json.parseToJsonElement(body).jsonObject
         val result = jsonObject["result"]?.jsonArray
@@ -277,7 +261,7 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
             .appendPath("realms")
             .appendPath(config.realm)
             .appendPath("users")
-            .appendPath(config.ssoTokenString ?: "")
+            .appendPath(config.userId) // Placeholder user ID
             .appendEncodedPath(path)
             .appendQueryParameter("_queryFilter", "true")
             .build().toString()
@@ -293,9 +277,36 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
             .appendPath("realms")
             .appendPath(config.realm)
             .appendPath("users")
-            .appendPath(config.ssoTokenString ?: "")
             .appendEncodedPath(device.urlSuffix)
             .appendEncodedPath(device.id)
         return uri.build()
+    }
+
+    private suspend fun execute(
+        config: DeviceClientConfig,
+        path: String,
+        requestType: RequestType = RequestType.LIST,
+    ): HttpResponse {
+        val urlString = composeUrl(config, path)
+        println(urlString)
+        val request = httpClient.prepareRequest {
+            url(urlString)
+            header(config.cookieName, config.ssoTokenString ?: "")
+            header("Content-Type", "application/json")
+            header("Accept-API-Version", "resource=1.0")
+            header("x-requested-platform", "Android")
+            method = when (requestType) {
+                RequestType.LIST -> Get
+                RequestType.DELETE -> Delete
+                RequestType.UPDATE -> Put
+            }
+        }
+        return request.execute()
+    }
+
+    private enum class RequestType {
+        LIST,
+        DELETE,
+        UPDATE
     }
 }

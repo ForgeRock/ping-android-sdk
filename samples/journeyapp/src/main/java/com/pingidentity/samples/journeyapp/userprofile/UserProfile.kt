@@ -31,6 +31,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.pingidentity.samples.journeyapp.json
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.HorizontalDivider
 
 @Composable
 fun UserProfile(userProfileViewModel: UserProfileViewModel) {
@@ -154,6 +157,67 @@ fun UserProfile(userProfileViewModel: UserProfileViewModel) {
                             modifier = Modifier.padding(top = 8.dp)
                         )
                     }
+                }
+            }
+
+            // Device List Section
+            if (state.deviceList.isNotEmpty()) {
+                Card(
+                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+                    modifier = Modifier.fillMaxWidth().padding(8.dp),
+                    shape = MaterialTheme.shapes.medium,
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(8.dp)
+                    ) {
+                        Text(
+                            text = "${state.selectedDeviceType.name} Devices (${state.deviceList.size})",
+                            style = MaterialTheme.typography.titleMedium,
+                            modifier = Modifier.padding(bottom = 8.dp)
+                        )
+
+                        LazyColumn(
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            items(state.deviceList) { deviceName ->
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 8.dp, horizontal = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = deviceName,
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                }
+                                if (deviceName != state.deviceList.last()) {
+                                    HorizontalDivider(
+                                        modifier = Modifier.padding(horizontal = 4.dp),
+                                        thickness = 1.dp,
+                                        color = MaterialTheme.colorScheme.outlineVariant
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            } else if (state.selectedDeviceType != DeviceType.OATH) {
+                // Show empty state when a device type is selected but no devices found
+                Card(
+                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+                    modifier = Modifier.fillMaxWidth().padding(8.dp),
+                    shape = MaterialTheme.shapes.medium,
+                ) {
+                    Text(
+                        text = "No ${state.selectedDeviceType.name} devices found",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(16.dp)
+                    )
                 }
             }
         }

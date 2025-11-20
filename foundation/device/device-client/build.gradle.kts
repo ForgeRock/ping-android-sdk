@@ -11,6 +11,7 @@ plugins {
     id("com.pingidentity.convention.jacoco")
     alias(libs.plugins.androidLibrary)
     alias(libs.plugins.kotlinAndroid)
+    alias(libs.plugins.kotlinSerialization)
 }
 
 android {

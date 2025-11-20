@@ -17,8 +17,8 @@ import com.pingidentity.utils.Result
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import kotlinx.coroutines.yield
+import kotlinx.serialization.json.jsonPrimitive
 
 class UserProfileViewModel : ViewModel() {
     var state = MutableStateFlow(UserProfileState())
@@ -54,11 +54,14 @@ class UserProfileViewModel : ViewModel() {
             s.copy(selectedDeviceType = deviceType)
         }
         viewModelScope.launch {
-            val user = journey.user()
+            val user = journey.user() ?: return@launch
+            val userInfo = user.userinfo(false) as Result.Success
             val deviceClient = DeviceClient {
-                ssoTokenString = user?.session().toString()
+                ssoTokenString = user.session().value
                 serverUrl = "https://openam-sdks.forgeblocks.com/am"
-                realm = user?.session()?.realm ?: ""
+                realm = user.session().realm.replace("/", "")
+                cookieName = "5421aeddf91aa20"
+                userId = userInfo.value["sub"]?.jsonPrimitive?.content ?: ""
             }
             try {
                 when (deviceType) {
@@ -77,10 +80,18 @@ class UserProfileViewModel : ViewModel() {
                             s.copy(deviceList = deviceNames)
                         }
                     }
-
-                    else -> {
+                    DeviceType.BOUND -> {
+                        val devices = deviceClient.boundDevice.get()
+                        val deviceNames = devices.map { it.deviceName }
                         state.update { s ->
-                            s.copy(deviceList = emptyList())
+                            s.copy(deviceList = deviceNames)
+                        }
+                    }
+                    DeviceType.WEBAUTHN -> {
+                        val devices = deviceClient.webAuthnDevice.get()
+                        val deviceNames = devices.map { it.deviceName }
+                        state.update { s ->
+                            s.copy(deviceList = deviceNames)
                         }
                     }
                 }
