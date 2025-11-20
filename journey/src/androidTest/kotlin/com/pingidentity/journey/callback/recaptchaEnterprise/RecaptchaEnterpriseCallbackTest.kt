@@ -319,7 +319,7 @@ class RecaptchaEnterpriseCallbackTest : BaseJourneyTest() {
         val recaptchaEnterpriseFailure = node.callbacks.first() as ReCaptchaEnterpriseCallback
         assertTrue(recaptchaEnterpriseFailure.reCaptchaSiteKey.isNotEmpty())
         assertEquals(
-            "6LfAykUqAAAAAE6aZOg9pNiS3XduyGZ5y-8U-z8B",
+            IntegrationTestConfig.recaptchaSiteKey,
             recaptchaEnterpriseFailure.reCaptchaSiteKey
         )
 
@@ -366,7 +366,7 @@ class RecaptchaEnterpriseCallbackTest : BaseJourneyTest() {
         val recaptchaEnterpriseFailure = node.callbacks.first() as ReCaptchaEnterpriseCallback
         assertTrue(recaptchaEnterpriseFailure.reCaptchaSiteKey.isNotEmpty())
         assertEquals(
-            "6LfAykUqAAAAAE6aZOg9pNiS3XduyGZ5y-8U-z8B",
+            IntegrationTestConfig.recaptchaSiteKey,
             recaptchaEnterpriseFailure.reCaptchaSiteKey
         )
 
@@ -407,7 +407,7 @@ class RecaptchaEnterpriseCallbackTest : BaseJourneyTest() {
         val recaptchaEnterpriseFailure = node.callbacks.first() as ReCaptchaEnterpriseCallback
         assertTrue(recaptchaEnterpriseFailure.reCaptchaSiteKey.isNotEmpty())
         assertEquals(
-            "6LfAykUqAAAAAE6aZOg9pNiS3XduyGZ5y-8U-z8B",
+            IntegrationTestConfig.recaptchaSiteKey,
             recaptchaEnterpriseFailure.reCaptchaSiteKey
         )
 
