@@ -54,6 +54,13 @@ allprojects {
             force("io.netty:netty-codec-http:4.1.125.Final")
             force("io.netty:netty-codec-http2:4.1.125.Final")
             force("io.netty:netty-all:4.1.125.Final")
+
+            // Force secure version of protobuf to address security vulnerabilities
+            // Used transitively by various Google dependencies
+            // Updated to 3.25.5 (latest stable as of Nov 2025)
+            force("com.google.protobuf:protobuf-java:3.25.5")
+            force("com.google.protobuf:protobuf-kotlin:3.25.5")
+            force("com.google.protobuf:protobuf-javalite:3.25.5")
         }
     }
 }
