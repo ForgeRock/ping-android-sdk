@@ -46,6 +46,22 @@ allprojects {
             force("com.fasterxml.jackson.module:jackson-module-kotlin:2.15.0")
             force("com.fasterxml.jackson.dataformat:jackson-dataformat-xml:2.15.0")
             force("com.fasterxml.jackson.core:jackson-databind:2.15.0")
+
+            // Force secure version of netty-codec to address security vulnerabilities
+            // Used transitively by ktor-client-cio
+            // Updated to 4.1.125.Final per Mend SCA recommendation (Nov 2025)
+            force("io.netty:netty-codec:4.1.125.Final")
+            force("io.netty:netty-codec-http:4.1.125.Final")
+            force("io.netty:netty-codec-http2:4.1.125.Final")
+            force("io.netty:netty-all:4.1.125.Final")
+
+            // Force secure version of protobuf to address security vulnerabilities
+            // Used transitively by various Google dependencies
+            // Updated to 4.29.2 (latest stable) which fixes CVE-2024-7254 and all known CVEs
+            force("com.google.protobuf:protobuf-java:4.29.2")
+            force("com.google.protobuf:protobuf-kotlin:4.29.2")
+            force("com.google.protobuf:protobuf-javalite:4.29.2")
+            force("com.google.protobuf:protobuf-kotlin-lite:4.29.2")
         }
     }
 }
