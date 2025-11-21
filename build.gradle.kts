@@ -68,7 +68,7 @@ allprojects {
             // Updated to 18.0.2 which fixes CVE-2022-2390
             force("com.google.android.gms:play-services-basement:18.0.2")
             // Force secure version of nimbus-jose-jwt to address security vulnerabilities
-            // Updated to 10.5 which fixes CVE-2025-53864
+            // Force the existing to fix CVE-2025-53864
             force("com.nimbusds:nimbus-jose-jwt:10.5")
         }
     }
