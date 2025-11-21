@@ -62,6 +62,11 @@ allprojects {
             force("com.google.protobuf:protobuf-kotlin:4.29.2")
             force("com.google.protobuf:protobuf-javalite:4.29.2")
             force("com.google.protobuf:protobuf-kotlin-lite:4.29.2")
+
+            // Force secure version of play-services-basement to address security vulnerabilities
+            // Used transitively by recaptcha:recaptcha
+            // Updated to 18.0.2 which fixes CVE-2022-2390
+            force("com.google.android.gms:play-services-basement:18.0.2")
         }
     }
 }
