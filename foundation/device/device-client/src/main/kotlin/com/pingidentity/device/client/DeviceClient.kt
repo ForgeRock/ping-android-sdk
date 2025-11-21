@@ -56,14 +56,12 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
 
             override suspend fun deleteDevice(device: OathDevice) {
                 withContext(Dispatchers.IO) {
-                    httpClient.request {
-                        url.apply { composeUrlForDevice(config, device) }
-                        headers {
-                            append("Authorization", "Bearer $ssoTokenString")
-                            append("Content-Type", "application/json")
-                        }
-                        method = Delete
-                    }
+                    val response = execute(
+                        config = config,
+                        path = "devices/2fa/oath",
+                        requestType = RequestType.DELETE,
+                    )
+                    println("Delete OATH Device Response: ${response.status} -> ${response.bodyAsText()}")
                 }
             }
         }
@@ -81,14 +79,12 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
 
             override suspend fun deleteDevice(device: PushDevice) {
                 withContext(Dispatchers.IO) {
-                    httpClient.request {
-                        url.apply { composeUrlForDevice(config, device) }
-                        headers {
-                            append("Authorization", "Bearer $ssoTokenString")
-                            append("Content-Type", "application/json")
-                        }
-                        method = Delete
-                    }
+                    val response = execute(
+                        config = config,
+                        path = "devices/2fa/push/${device.id}",
+                        requestType = RequestType.DELETE,
+                    )
+                    println("Delete OATH Device Response: ${response.status} -> ${response.bodyAsText()}")
                 }
             }
         }
@@ -106,29 +102,23 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
 
             override suspend fun deleteDevice(device: BoundDevice) {
                 withContext(Dispatchers.IO) {
-                    httpClient.request {
-                        url.apply { composeUrlForDevice(config, device) }
-                        headers {
-                            append("Authorization", "Bearer $ssoTokenString")
-                            append("Content-Type", "application/json")
-                        }
-                        method = Delete
-                    }
+                    val response = execute(
+                        config = config,
+                        path = "devices/2fa/binding/${device.id}",
+                        requestType = RequestType.DELETE,
+                    )
+                    println("Delete OATH Device Response: ${response.status} -> ${response.bodyAsText()}")
                 }
             }
 
             override suspend fun updateDevice(device: BoundDevice) {
                 withContext(Dispatchers.IO) {
-                    httpClient.request {
-                        url.apply { composeUrlForDevice(config, device) }
-                        headers {
-                            append("Authorization", "Bearer $ssoTokenString")
-                            append("Content-Type", "application/json")
-                        }
-                        method = Put
-                        contentType(ContentType.Application.Json)
-                        setBody(Json.encodeToString(device))
-                    }
+                    val response = execute(
+                        config = config,
+                        path = "devices/2fa/binding/${device.id}",
+                        requestType = RequestType.UPDATE,
+                    )
+                    println("Update Bound Device Response: ${response.status} -> ${response.bodyAsText()}")
                 }
             }
         }
@@ -144,7 +134,7 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
             override suspend fun deleteDevice(device: WebAuthnDevice) {
                 withContext(Dispatchers.IO) {
                     httpClient.request {
-                        url.apply { composeUrlForDevice(config, device) }
+                        url(composeUrlForDevice(config, device))
                         headers {
                             append("Authorization", "Bearer $ssoTokenString")
                             append("Content-Type", "application/json")
@@ -220,7 +210,7 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
         } ?: emptyList()
     }
 
-    private fun composeUrl(
+    private fun composeUrlForDeviceList(
         config: DeviceClientConfig,
         path: String,
     ): String {
@@ -239,7 +229,7 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
     private fun composeUrlForDevice(
         config: DeviceClientConfig,
         device: Device,
-    ): Uri {
+    ): String {
         val uri = Uri.Builder()
             .encodedPath(config.serverUrl)
             .appendPath("json")
@@ -248,15 +238,16 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
             .appendPath("users")
             .appendEncodedPath(device.urlSuffix)
             .appendEncodedPath(device.id)
-        return uri.build()
+        return uri.build().toString()
     }
 
     private suspend fun execute(
         config: DeviceClientConfig,
         path: String,
+        device: Device? = null,
         requestType: RequestType = RequestType.LIST,
     ): HttpResponse {
-        val urlString = composeUrl(config, path)
+        val urlString = composeUrlForDeviceList(config, path)
         println(urlString)
         val request = httpClient.prepareRequest {
             url(urlString)

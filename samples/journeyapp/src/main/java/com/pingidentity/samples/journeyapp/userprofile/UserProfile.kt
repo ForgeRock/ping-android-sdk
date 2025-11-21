@@ -34,6 +34,11 @@ import com.pingidentity.samples.journeyapp.json
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 
 @Composable
 fun UserProfile(userProfileViewModel: UserProfileViewModel) {
@@ -194,6 +199,33 @@ fun UserProfile(userProfileViewModel: UserProfileViewModel) {
                                         style = MaterialTheme.typography.bodyLarge,
                                         modifier = Modifier.weight(1f)
                                     )
+
+                                    // Edit button
+                                    IconButton(
+                                        onClick = {
+                                            userProfileViewModel.onEditDevice(deviceName)
+                                        },
+                                        enabled = state.canUpdateDevice()
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Filled.Edit,
+                                            contentDescription = "Edit device",
+                                            tint = MaterialTheme.colorScheme.primary
+                                        )
+                                    }
+
+                                    // Delete button
+                                    IconButton(
+                                        onClick = {
+                                            userProfileViewModel.onDeleteDevice(deviceName)
+                                        }
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Filled.Delete,
+                                            contentDescription = "Delete device",
+                                            tint = MaterialTheme.colorScheme.error
+                                        )
+                                    }
                                 }
                                 if (deviceName != state.deviceList.last()) {
                                     HorizontalDivider(

@@ -25,3 +25,10 @@ data class UserProfileState(
     var showDeviceInfo: Boolean = false,
     var selectedDeviceType: DeviceType = DeviceType.OATH
 )
+
+fun UserProfileState.canUpdateDevice(): Boolean {
+    return when (selectedDeviceType) {
+        DeviceType.WEBAUTHN, DeviceType.BOUND, DeviceType.PROFILE -> true
+        else -> false
+    }
+}

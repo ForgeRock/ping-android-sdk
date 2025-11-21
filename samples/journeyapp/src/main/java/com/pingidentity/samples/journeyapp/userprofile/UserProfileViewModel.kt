@@ -7,6 +7,8 @@
 
 package com.pingidentity.samples.journeyapp.userprofile
 
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Text
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.pingidentity.device.client.DeviceClient
@@ -108,6 +110,78 @@ class UserProfileViewModel : ViewModel() {
                     s.copy(deviceList = emptyList())
                 }
                 println(exception.message)
+            }
+        }
+    }
+
+    fun onEditDevice(deviceName: String) {
+        // TODO: Implement edit device functionality
+        viewModelScope.launch {
+            println("Edit device: $deviceName")
+            // Placeholder for future implementation
+        }
+    }
+
+    fun onDeleteDevice(deviceName: String) {
+        viewModelScope.launch {
+            val user = journey.user() ?: return@launch
+            val userInfo = user.userinfo(false) as? Result.Success ?: return@launch
+            val deviceClient = DeviceClient {
+                ssoTokenString = user.session().value
+                serverUrl = "https://openam-sdks.forgeblocks.com/am"
+                realm = user.session().realm
+                cookieName = "5421aeddf91aa20"
+                userId = userInfo.value["sub"]?.jsonPrimitive?.content ?: ""
+            }
+
+            try {
+                when (state.value.selectedDeviceType) {
+                    DeviceType.OATH -> {
+                        val devices = deviceClient.oathDeviceClient.getDevices()
+                        val deviceToDelete = devices.find { it.deviceName == deviceName }
+                        deviceToDelete?.let {
+                            deviceClient.oathDeviceClient.deleteDevice(it)
+                            // Refresh the device list
+                            setDeviceType(DeviceType.OATH)
+                        }
+                    }
+                    DeviceType.PUSH -> {
+                        val devices = deviceClient.pushDeviceClient.getDevices()
+                        val deviceToDelete = devices.find { it.deviceName == deviceName }
+                        deviceToDelete?.let {
+                            deviceClient.pushDeviceClient.deleteDevice(it)
+                            setDeviceType(DeviceType.PUSH)
+                        }
+                    }
+                    DeviceType.BOUND -> {
+                        val devices = deviceClient.boundDevice.getDevices()
+                        val deviceToDelete = devices.find { it.deviceName == deviceName }
+                        deviceToDelete?.let {
+                            deviceClient.boundDevice.deleteDevice(it)
+                            setDeviceType(DeviceType.BOUND)
+                        }
+                    }
+                    DeviceType.WEBAUTHN -> {
+                        val devices = deviceClient.webAuthnDevice.getDevices()
+                        val deviceToDelete = devices.find { it.deviceName == deviceName }
+                        deviceToDelete?.let {
+                            deviceClient.webAuthnDevice.deleteDevice(it)
+                            setDeviceType(DeviceType.WEBAUTHN)
+                        }
+                    }
+                    DeviceType.PROFILE -> {
+                        val devices = deviceClient.profileDevice.getDevices()
+                        val deviceToDelete = devices.find { it.deviceName == deviceName }
+                        deviceToDelete?.let {
+                            deviceClient.profileDevice.deleteDevice(it)
+                            setDeviceType(DeviceType.PROFILE)
+                        }
+                    }
+                }
+            } catch (exception: Exception) {
+                println("Error deleting device: ${exception.message}")
+                // Optionally refresh the list to ensure consistency
+                setDeviceType(state.value.selectedDeviceType)
             }
         }
     }
