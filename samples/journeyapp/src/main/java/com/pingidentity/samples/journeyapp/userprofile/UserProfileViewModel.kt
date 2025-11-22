@@ -7,8 +7,6 @@
 
 package com.pingidentity.samples.journeyapp.userprofile
 
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Text
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.pingidentity.device.client.DeviceClient
@@ -53,25 +51,17 @@ class UserProfileViewModel : ViewModel() {
 
     fun setDeviceType(deviceType: DeviceType) {
         state.update { s ->
-            s.copy(selectedDeviceType = deviceType)
+            s.copy(selectedDeviceType = deviceType, isLoading = true)
         }
         viewModelScope.launch {
-            val user = journey.user() ?: return@launch
-            val userInfo = user.userinfo(false) as Result.Success
-            val deviceClient = DeviceClient {
-                ssoTokenString = user.session().value
-                serverUrl = "https://openam-sdks.forgeblocks.com/am"
-                realm = user.session().realm
-                cookieName = "5421aeddf91aa20"
-                userId = userInfo.value["sub"]?.jsonPrimitive?.content ?: ""
-            }
+            val deviceClient = buildDeviceClient() ?: return@launch
             try {
                 when (deviceType) {
                     DeviceType.OATH -> {
                         val devices = deviceClient.oathDeviceClient.getDevices()
                         val deviceNames = devices.map { it.deviceName }
                         state.update { s ->
-                            s.copy(deviceList = deviceNames)
+                            s.copy(deviceList = deviceNames, isLoading = false)
                         }
                     }
 
@@ -79,35 +69,35 @@ class UserProfileViewModel : ViewModel() {
                         val devices = deviceClient.pushDeviceClient.getDevices()
                         val deviceNames = devices.map { it.deviceName }
                         state.update { s ->
-                            s.copy(deviceList = deviceNames)
+                            s.copy(deviceList = deviceNames, isLoading = false)
                         }
                     }
                     DeviceType.BOUND -> {
                         val devices = deviceClient.boundDevice.getDevices()
                         val deviceNames = devices.map { it.deviceName }
                         state.update { s ->
-                            s.copy(deviceList = deviceNames)
+                            s.copy(deviceList = deviceNames, isLoading = false)
                         }
                     }
                     DeviceType.WEBAUTHN -> {
                         val devices = deviceClient.webAuthnDevice.getDevices()
                         val deviceNames = devices.map { it.deviceName }
                         state.update { s ->
-                            s.copy(deviceList = deviceNames)
+                            s.copy(deviceList = deviceNames, isLoading = false)
                         }
                     }
                     DeviceType.PROFILE -> {
                         val devices = deviceClient.profileDevice.getDevices()
                         val deviceNames = devices.map { it.deviceName }
                         state.update { s ->
-                            s.copy(deviceList = deviceNames)
+                            s.copy(deviceList = deviceNames, isLoading = false)
                         }
                     }
                 }
             } catch (exception: Exception) {
                 yield()
                 state.update { s ->
-                    s.copy(deviceList = emptyList())
+                    s.copy(deviceList = emptyList(), isLoading = false)
                 }
                 println(exception.message)
             }
@@ -115,25 +105,51 @@ class UserProfileViewModel : ViewModel() {
     }
 
     fun onEditDevice(deviceName: String) {
-        // TODO: Implement edit device functionality
         viewModelScope.launch {
             println("Edit device: $deviceName")
-            // Placeholder for future implementation
+            val deviceClient = buildDeviceClient() ?: return@launch
+            try {
+                when (state.value.selectedDeviceType) {
+                    DeviceType.OATH -> {
+                        // Send an update that this is not possible.
+                    }
+                    DeviceType.PUSH -> {
+                        // Send an update that this is not possible.
+                    }
+                    DeviceType.BOUND -> {
+                        val devices = deviceClient.boundDevice.getDevices()
+                        val deviceToUpdate = devices.find { it.deviceName == deviceName }
+                        deviceToUpdate?.let {
+                            deviceClient.boundDevice.updateDevice(it)
+                            setDeviceType(DeviceType.BOUND)
+                        }
+                    }
+                    DeviceType.WEBAUTHN -> {
+                        val devices = deviceClient.webAuthnDevice.getDevices()
+                        val deviceToUpdate = devices.find { it.deviceName == deviceName }
+                        deviceToUpdate?.let {
+                            deviceClient.webAuthnDevice.updateDevice(it)
+                            setDeviceType(DeviceType.WEBAUTHN)
+                        }
+                    }
+                    DeviceType.PROFILE -> {
+                        val devices = deviceClient.profileDevice.getDevices()
+                        val deviceToUpdate = devices.find { it.deviceName == deviceName }
+                        deviceToUpdate?.let {
+                            deviceClient.profileDevice.updateDevice(it)
+                            setDeviceType(DeviceType.PROFILE)
+                        }
+                    }
+                }
+            } catch (exception: Exception) {
+                println("Error editing device: ${exception.message}")
+            }
         }
     }
 
     fun onDeleteDevice(deviceName: String) {
         viewModelScope.launch {
-            val user = journey.user() ?: return@launch
-            val userInfo = user.userinfo(false) as? Result.Success ?: return@launch
-            val deviceClient = DeviceClient {
-                ssoTokenString = user.session().value
-                serverUrl = "https://openam-sdks.forgeblocks.com/am"
-                realm = user.session().realm
-                cookieName = "5421aeddf91aa20"
-                userId = userInfo.value["sub"]?.jsonPrimitive?.content ?: ""
-            }
-
+            val deviceClient = buildDeviceClient() ?: return@launch
             try {
                 when (state.value.selectedDeviceType) {
                     DeviceType.OATH -> {
@@ -183,6 +199,18 @@ class UserProfileViewModel : ViewModel() {
                 // Optionally refresh the list to ensure consistency
                 setDeviceType(state.value.selectedDeviceType)
             }
+        }
+    }
+
+    private suspend fun buildDeviceClient(): DeviceClient? {
+        val user = journey.user() ?: return null
+        val userInfo = user.userinfo(false) as? Result.Success ?: return null
+        return DeviceClient {
+            ssoTokenString = user.session().value
+            serverUrl = "https://openam-sdks.forgeblocks.com/am"
+            realm = user.session().realm
+            cookieName = "5421aeddf91aa20"
+            userId = userInfo.value["sub"]?.jsonPrimitive?.content ?: ""
         }
     }
 }

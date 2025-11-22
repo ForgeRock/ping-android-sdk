@@ -23,7 +23,8 @@ data class UserProfileState(
     var error: OidcError? = null,
     var deviceList: List<String> = emptyList(),
     var showDeviceInfo: Boolean = false,
-    var selectedDeviceType: DeviceType = DeviceType.OATH
+    var selectedDeviceType: DeviceType = DeviceType.OATH,
+    var isLoading: Boolean = false
 )
 
 fun UserProfileState.canUpdateDevice(): Boolean {

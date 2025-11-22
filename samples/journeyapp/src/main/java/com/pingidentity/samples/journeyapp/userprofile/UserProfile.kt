@@ -17,6 +17,7 @@ import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
@@ -39,6 +40,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Refresh
 
 @Composable
 fun UserProfile(userProfileViewModel: UserProfileViewModel) {
@@ -47,6 +49,13 @@ fun UserProfile(userProfileViewModel: UserProfileViewModel) {
     LaunchedEffect(true) {
         // Not relaunch when recomposition
         userProfileViewModel.userinfo()
+        // Load initial device list for default device type
+        userProfileViewModel.setDeviceType(state.selectedDeviceType)
+    }
+
+    // Refresh device list when device type changes
+    LaunchedEffect(state.selectedDeviceType) {
+        userProfileViewModel.setDeviceType(state.selectedDeviceType)
     }
     Row(modifier = Modifier.fillMaxWidth()) {
         Column(
@@ -178,11 +187,41 @@ fun UserProfile(userProfileViewModel: UserProfileViewModel) {
                             .fillMaxWidth()
                             .padding(8.dp)
                     ) {
-                        Text(
-                            text = "${state.selectedDeviceType.name} Devices (${state.deviceList.size})",
-                            style = MaterialTheme.typography.titleMedium,
-                            modifier = Modifier.padding(bottom = 8.dp)
-                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "${state.selectedDeviceType.name} Devices (${state.deviceList.size})",
+                                style = MaterialTheme.typography.titleMedium,
+                                modifier = Modifier.weight(1f)
+                            )
+
+                            // Refresh button
+                            IconButton(
+                                onClick = {
+                                    userProfileViewModel.setDeviceType(state.selectedDeviceType)
+                                }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.Refresh,
+                                    contentDescription = "Refresh device list",
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
+
+                        if (state.isLoading) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                horizontalArrangement = Arrangement.Center
+                            ) {
+                                CircularProgressIndicator()
+                            }
+                        } else {
 
                         LazyColumn(
                             modifier = Modifier.fillMaxWidth()
@@ -235,6 +274,7 @@ fun UserProfile(userProfileViewModel: UserProfileViewModel) {
                                     )
                                 }
                             }
+                        }
                         }
                     }
                 }
