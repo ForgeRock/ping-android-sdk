@@ -17,7 +17,7 @@ import kotlinx.serialization.json.JsonObject
  * Abstract class representing a device.
  */
 @Serializable
-sealed class Device {
+abstract class Device {
     abstract val id: String
     abstract val deviceName: String
     abstract val urlSuffix: String

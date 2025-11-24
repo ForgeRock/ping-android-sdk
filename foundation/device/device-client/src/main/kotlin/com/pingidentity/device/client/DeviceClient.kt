@@ -25,7 +25,6 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.serializer
 import kotlin.collections.emptyList
 import kotlin.collections.map
 
@@ -47,14 +46,14 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
         object : ImmutableDevice<OathDevice> {
             override suspend fun getDevices(): List<OathDevice> {
                 return withContext(Dispatchers.IO) {
-                    val response = execute(config, "devices/2fa/oath")
+                    val response = execute<OathDevice>(config, "devices/2fa/oath")
                     getDevices<OathDevice>(response)
                 }
             }
 
             override suspend fun deleteDevice(device: OathDevice) {
                 withContext(Dispatchers.IO) {
-                    val response = execute(
+                    val response = execute<OathDevice>(
                         config = config,
                         path = "devices/2fa/oath",
                         device = device,
@@ -71,14 +70,14 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
             override suspend fun getDevices(): List<PushDevice> {
                 return withContext(Dispatchers.IO) {
                     // Use journey and httpClient to fetch Push devices
-                    val response = execute(config, "devices/2fa/push")
+                    val response = execute<PushDevice>(config, "devices/2fa/push")
                     getDevices<PushDevice>(response)
                 }
             }
 
             override suspend fun deleteDevice(device: PushDevice) {
                 withContext(Dispatchers.IO) {
-                    val response = execute(
+                    val response = execute<PushDevice>(
                         config = config,
                         path = "devices/2fa/push/${device.id}",
                         device = device,
@@ -95,14 +94,14 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
             override suspend fun getDevices(): List<BoundDevice> {
                 return withContext(Dispatchers.IO) {
                     // Use journey and httpClient to fetch Push devices
-                    val response = execute(config, "devices/2fa/binding")
+                    val response = execute<BoundDevice>(config, "devices/2fa/binding")
                     getDevices<BoundDevice>(response)
                 }
             }
 
             override suspend fun deleteDevice(device: BoundDevice) {
                 withContext(Dispatchers.IO) {
-                    val response = execute(
+                    val response = execute<BoundDevice>(
                         config = config,
                         path = "devices/2fa/binding",
                         device = device,
@@ -114,7 +113,7 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
 
             override suspend fun updateDevice(device: BoundDevice) {
                 withContext(Dispatchers.IO) {
-                    val response = execute(
+                    val response = execute<BoundDevice>(
                         config = config,
                         path = "devices/2fa/binding",
                         device = device,
@@ -129,13 +128,13 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
     val webAuthnDevice: MutableDevice<WebAuthnDevice> by lazy {
         object : MutableDevice<WebAuthnDevice> {
             override suspend fun getDevices(): List<WebAuthnDevice> {
-                val response = execute(config, "devices/2fa/webauthn")
+                val response = execute<WebAuthnDevice>(config, "devices/2fa/webauthn")
                 return getDevices<WebAuthnDevice>(response)
             }
 
             override suspend fun deleteDevice(device: WebAuthnDevice) {
                 withContext(Dispatchers.IO) {
-                    val response = execute(
+                    val response = execute<WebAuthnDevice>(
                         config = config,
                         path = "devices/2fa/webauthn",
                         device = device,
@@ -147,7 +146,7 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
 
             override suspend fun updateDevice(device: WebAuthnDevice) {
                 withContext(Dispatchers.IO) {
-                    val response = execute(
+                    val response = execute<WebAuthnDevice>(
                         config = config,
                         path = "devices/2fa/webauthn",
                         device = device,
@@ -163,13 +162,13 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
         object : MutableDevice<ProfileDevice> {
             override suspend fun getDevices(): List<ProfileDevice> {
                 // Implementation to fetch Profile devices
-                val response = execute(config, "devices/profile")
+                val response = execute<ProfileDevice>(config, "devices/profile")
                 return getDevices<ProfileDevice>(response)
             }
 
             override suspend fun deleteDevice(device: ProfileDevice) {
                 withContext(Dispatchers.IO) {
-                    val response = execute(
+                    val response = execute<ProfileDevice>(
                         config = config,
                         path = "devices/profile",
                         device = device,
@@ -181,7 +180,7 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
 
             override suspend fun updateDevice(device: ProfileDevice) {
                 withContext(Dispatchers.IO) {
-                    val response = execute(
+                    val response = execute<ProfileDevice>(
                         config = config,
                         path = "devices/profile",
                         device = device,
@@ -234,10 +233,10 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
         return uri.build().toString()
     }
 
-    private suspend fun execute(
+    private suspend inline fun <reified T : Device> execute(
         config: DeviceClientConfig,
         path: String,
-        device: Device? = null,
+        device: T? = null,
         requestType: RequestType = RequestType.LIST,
     ): HttpResponse {
         val urlString = if (requestType == RequestType.LIST) {
@@ -261,7 +260,7 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
                 RequestType.UPDATE -> Put
             }
             if (requestType == RequestType.UPDATE) {
-                setBody(Json.encodeToString(Json.serializersModule.serializer(), device!!))
+                setBody(Json.encodeToString(device!!))
                 contentType(ContentType.Application.Json)
             }
         }
