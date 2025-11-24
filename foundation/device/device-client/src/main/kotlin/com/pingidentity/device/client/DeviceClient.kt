@@ -33,6 +33,13 @@ class DeviceClientConfig {
     var ssoTokenString: String? = null
     var serverUrl: String = ""
     var realm: String = ""
+        get() {
+            return if (field.isNotBlank() && field.startsWith("/")) {
+                field.substring(1)
+            } else {
+                field
+            }
+        }
     var cookieName: String = ""
     var userId: String = ""
     var httpClient: HttpClient = HttpClient()
@@ -53,13 +60,12 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
 
             override suspend fun deleteDevice(device: OathDevice) {
                 withContext(Dispatchers.IO) {
-                    val response = execute<OathDevice>(
+                    execute<OathDevice>(
                         config = config,
                         path = "devices/2fa/oath",
                         device = device,
                         requestType = RequestType.DELETE,
                     )
-                    println("Delete OATH Device Response: ${response.status} -> ${response.bodyAsText()}")
                 }
             }
         }
@@ -69,7 +75,6 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
         object : ImmutableDevice<PushDevice> {
             override suspend fun getDevices(): List<PushDevice> {
                 return withContext(Dispatchers.IO) {
-                    // Use journey and httpClient to fetch Push devices
                     val response = execute<PushDevice>(config, "devices/2fa/push")
                     getDevices<PushDevice>(response)
                 }
@@ -77,13 +82,12 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
 
             override suspend fun deleteDevice(device: PushDevice) {
                 withContext(Dispatchers.IO) {
-                    val response = execute<PushDevice>(
+                    execute<PushDevice>(
                         config = config,
                         path = "devices/2fa/push/${device.id}",
                         device = device,
                         requestType = RequestType.DELETE,
                     )
-                    println("Delete Push Device Response: ${response.status} -> ${response.bodyAsText()}")
                 }
             }
         }
@@ -93,7 +97,6 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
         object : MutableDevice<BoundDevice> {
             override suspend fun getDevices(): List<BoundDevice> {
                 return withContext(Dispatchers.IO) {
-                    // Use journey and httpClient to fetch Push devices
                     val response = execute<BoundDevice>(config, "devices/2fa/binding")
                     getDevices<BoundDevice>(response)
                 }
@@ -101,25 +104,23 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
 
             override suspend fun deleteDevice(device: BoundDevice) {
                 withContext(Dispatchers.IO) {
-                    val response = execute<BoundDevice>(
+                    execute<BoundDevice>(
                         config = config,
                         path = "devices/2fa/binding",
                         device = device,
                         requestType = RequestType.DELETE,
                     )
-                    println("Delete Bound Device Response: ${response.status} -> ${response.bodyAsText()}")
                 }
             }
 
             override suspend fun updateDevice(device: BoundDevice) {
                 withContext(Dispatchers.IO) {
-                    val response = execute<BoundDevice>(
+                    execute<BoundDevice>(
                         config = config,
                         path = "devices/2fa/binding",
                         device = device,
                         requestType = RequestType.UPDATE,
                     )
-                    println("Update Bound Device Response: ${response.status} -> ${response.bodyAsText()}")
                 }
             }
         }
@@ -134,25 +135,23 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
 
             override suspend fun deleteDevice(device: WebAuthnDevice) {
                 withContext(Dispatchers.IO) {
-                    val response = execute<WebAuthnDevice>(
+                    execute<WebAuthnDevice>(
                         config = config,
                         path = "devices/2fa/webauthn",
                         device = device,
                         requestType = RequestType.DELETE,
                     )
-                    println("Delete WebAuthnDevice Device Response: ${response.status} -> ${response.bodyAsText()}")
                 }
             }
 
             override suspend fun updateDevice(device: WebAuthnDevice) {
                 withContext(Dispatchers.IO) {
-                    val response = execute<WebAuthnDevice>(
+                    execute<WebAuthnDevice>(
                         config = config,
                         path = "devices/2fa/webauthn",
                         device = device,
                         requestType = RequestType.UPDATE,
                     )
-                    println("Update WebAuthnDevice Device Response: ${response.status} -> ${response.bodyAsText()}")
                 }
             }
         }
@@ -161,32 +160,29 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
     val profileDevice: MutableDevice<ProfileDevice> by lazy {
         object : MutableDevice<ProfileDevice> {
             override suspend fun getDevices(): List<ProfileDevice> {
-                // Implementation to fetch Profile devices
                 val response = execute<ProfileDevice>(config, "devices/profile")
                 return getDevices<ProfileDevice>(response)
             }
 
             override suspend fun deleteDevice(device: ProfileDevice) {
                 withContext(Dispatchers.IO) {
-                    val response = execute<ProfileDevice>(
+                    execute<ProfileDevice>(
                         config = config,
                         path = "devices/profile",
                         device = device,
                         requestType = RequestType.DELETE,
                     )
-                    println("Delete ProfileDevice Device Response: ${response.status} -> ${response.bodyAsText()}")
                 }
             }
 
             override suspend fun updateDevice(device: ProfileDevice) {
                 withContext(Dispatchers.IO) {
-                    val response = execute<ProfileDevice>(
+                    execute<ProfileDevice>(
                         config = config,
                         path = "devices/profile",
                         device = device,
                         requestType = RequestType.UPDATE,
                     )
-                    println("Update ProfileDevice Device Response: ${response.status} -> ${response.bodyAsText()}")
                 }
             }
         }
@@ -208,7 +204,7 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
             .encodedPath(config.serverUrl)
             .appendPath("json")
             .appendPath("realms")
-            .appendPath("alpha")
+            .appendEncodedPath(config.realm)
             .appendPath("users")
             .appendPath(config.userId) // Placeholder user ID
     }
