@@ -99,9 +99,9 @@ The Device Client module supports the following device types:
 #### Get All OATH Devices
 
 ```kotlin
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.launch
 
-runBlocking {
+viewmodelScope.launch {
     val oathDevices: List<OathDevice> = deviceClient.oathDeviceClient.getDevices()
     
     oathDevices.forEach { device ->
@@ -118,9 +118,9 @@ runBlocking {
 #### Get All Push Devices
 
 ```kotlin
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.launch
 
-runBlocking {
+viewmodelScope.launch {
     val pushDevices: List<PushDevice> = deviceClient.pushDeviceClient.getDevices()
     
     pushDevices.forEach { device ->
@@ -135,9 +135,9 @@ runBlocking {
 #### Get All Bound Devices
 
 ```kotlin
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.launch
 
-runBlocking {
+viewmodelScope.launch {
     val boundDevices: List<BoundDevice> = deviceClient.boundDevice.getDevices()
     
     boundDevices.forEach { device ->
@@ -153,9 +153,9 @@ runBlocking {
 #### Get All WebAuthn Devices
 
 ```kotlin
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.launch
 
-runBlocking {
+viewmodelScope.launch {
     val webAuthnDevices: List<WebAuthnDevice> = deviceClient.webAuthnDevice.getDevices()
     
     webAuthnDevices.forEach { device ->
@@ -170,9 +170,9 @@ runBlocking {
 #### Get All Profile Devices
 
 ```kotlin
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.launch
 
-runBlocking {
+viewmodelScope.launch {
     val profileDevices: List<ProfileDevice> = deviceClient.profileDevice.getDevices()
     
     profileDevices.forEach { device ->
@@ -194,9 +194,9 @@ runBlocking {
 Update device properties such as the device name (only available for MutableDevice types):
 
 ```kotlin
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.launch
 
-runBlocking {
+viewmodelScope.launch {
     val devices = deviceClient.boundDevice.getDevices()
     
     if (devices.isNotEmpty()) {
@@ -218,9 +218,9 @@ runBlocking {
 Remove a device from the user's registered devices:
 
 ```kotlin
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.launch
 
-runBlocking {
+viewmodelScope.launch {
     val devices = deviceClient.pushDeviceClient.getDevices()
     
     if (devices.isNotEmpty()) {
@@ -315,130 +315,16 @@ if (node is SuccessNode) {
 }
 ```
 
-## Integration with Jetpack Compose
 
-For applications using Jetpack Compose, integrate the Device Client using a ViewModel for state management:
+### Key Features of this Implementation
 
-### ViewModel
-
-```kotlin
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
-import com.pingidentity.device.client.DeviceClient
-import com.pingidentity.device.client.OathDevice
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.launch
-
-class DeviceViewModel(private val deviceClient: DeviceClient) : ViewModel() {
-    
-    private val _devices = MutableStateFlow<List<OathDevice>>(emptyList())
-    val devices: StateFlow<List<OathDevice>> = _devices
-    
-    private val _isLoading = MutableStateFlow(false)
-    val isLoading: StateFlow<Boolean> = _isLoading
-    
-    private val _error = MutableStateFlow<String?>(null)
-    val error: StateFlow<String?> = _error
-    
-    fun loadDevices() {
-        viewModelScope.launch {
-            _isLoading.value = true
-            _error.value = null
-            
-            try {
-                val deviceList = deviceClient.oathDeviceClient.getDevices()
-                _devices.value = deviceList
-            } catch (e: Exception) {
-                _error.value = "Failed to load devices: ${e.message}"
-            } finally {
-                _isLoading.value = false
-            }
-        }
-    }
-    
-    fun deleteDevice(device: OathDevice) {
-        viewModelScope.launch {
-            try {
-                deviceClient.oathDeviceClient.deleteDevice(device)
-                loadDevices() // Refresh the list
-            } catch (e: Exception) {
-                _error.value = "Failed to delete device: ${e.message}"
-            }
-        }
-    }
-}
-```
-
-### Composable View
-
-```kotlin
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
-
-@Composable
-fun DeviceManagementScreen(viewModel: DeviceViewModel = viewModel()) {
-    val devices by viewModel.devices.collectAsState()
-    val isLoading by viewModel.isLoading.collectAsState()
-    val error by viewModel.error.collectAsState()
-    
-    LaunchedEffect(Unit) {
-        viewModel.loadDevices()
-    }
-    
-    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-        Text("Registered Devices", style = MaterialTheme.typography.headlineMedium)
-        
-        Spacer(modifier = Modifier.height(16.dp))
-        
-        if (isLoading) {
-            CircularProgressIndicator()
-        } else if (error != null) {
-            Text("Error: $error", color = MaterialTheme.colorScheme.error)
-        } else {
-            LazyColumn {
-                items(devices) { device ->
-                    DeviceCard(
-                        device = device,
-                        onDelete = { viewModel.deleteDevice(device) },
-                        onRename = { newName -> viewModel.updateDeviceName(device, newName) }
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun DeviceCard(
-    device: OathDevice,
-    onDelete: () -> Unit,
-    onRename: (String) -> Unit
-) {
-    Card(modifier = Modifier.fillMaxWidth().padding(8.dp)) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text("Name: ${device.deviceName}", style = MaterialTheme.typography.titleMedium)
-            Text("UUID: ${device.uuid}")
-            Text("Created: ${device.createdDate}")
-            
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                TextButton(onClick = { /* Show rename dialog */ }) {
-                    Text("Rename")
-                }
-                TextButton(onClick = onDelete) {
-                    Text("Delete")
-                }
-            }
-        }
-    }
-}
-```
+1. **Device Type Filtering**: Radio buttons to switch between different device types
+2. **Loading States**: CircularProgressIndicator shown during API calls
+3. **Automatic Refresh**: Device list refreshes after create/update/delete operations
+4. **Conditional Edit Button**: Edit button only enabled for MutableDevice types (Bound, WebAuthn, Profile)
+5. **Error Handling**: Try-catch blocks with fallback to empty list
+6. **State Management**: Centralized state using StateFlow for reactive UI updates
+7. **Manual Refresh**: Refresh button to reload the current device list
 
 ## Advanced Configuration
 
@@ -481,23 +367,20 @@ val deviceClient = DeviceClient {
 Always wrap device operations in try-catch blocks to handle potential network or parsing errors:
 
 ```kotlin
-import kotlinx.coroutines.runBlocking
 
-runBlocking {
-    try {
-        val devices = deviceClient.oathDeviceClient.getDevices()
-        // Process devices
-    } catch (e: Exception) {
-        when (e) {
-            is kotlinx.serialization.SerializationException -> {
-                println("Failed to parse device data: ${e.message}")
-            }
-            is io.ktor.client.network.sockets.SocketTimeoutException -> {
-                println("Network timeout: ${e.message}")
-            }
-            else -> {
-                println("Unexpected error: ${e.message}")
-            }
+try {
+    val devices = deviceClient.oathDeviceClient.getDevices()
+    // Process devices
+} catch (e: Exception) {
+    when (e) {
+        is kotlinx.serialization.SerializationException -> {
+            println("Failed to parse device data: ${e.message}")
+        }
+        is io.ktor.client.network.sockets.SocketTimeoutException -> {
+            println("Network timeout: ${e.message}")
+        }
+        else -> {
+            println("Unexpected error: ${e.message}")
         }
     }
 }
@@ -660,6 +543,10 @@ Updates the specified device's properties.
 
 **Issue**: "JSON parsing error"
 - **Solution**: Ensure the server response format matches the expected data model. Check API version compatibility.
+
+## Testing
+
+Unit tests are included in the module to verify the functionality of device retrieval, updating, and deletion. Mocking frameworks are used to simulate server responses.
 
 ## Dependencies
 

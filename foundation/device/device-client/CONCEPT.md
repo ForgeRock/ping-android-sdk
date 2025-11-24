@@ -233,80 +233,114 @@ This pattern:
 
 ### Delete Implementation
 
-All device types follow the same pattern for deletion:
+All device types follow the same pattern for deletion, using the centralized `execute()` helper method:
 
 ```kotlin
 override suspend fun deleteDevice(device: OathDevice) {
     withContext(Dispatchers.IO) {
-        httpClient.request {
-            url.apply { composeUrlForDevice(config, device) }
-            headers {
-                append(config.cookieName, config.ssoTokenString ?: "")
-                append("Content-Type", "application/json")
-            }
-            method = Delete
-        }
+        execute<OathDevice>(
+            config = config,
+            path = "devices/2fa/oath",
+            device = device,
+            requestType = RequestType.DELETE,
+        )
     }
 }
 ```
 
-The `composeUrlForDevice()` helper method constructs the device-specific URL:
-
+For BoundDevice:
 ```kotlin
-private fun composeUrlForDevice(
-    config: DeviceClientConfig,
-    device: Device,
-): Uri {
-    val uri = Uri.Builder()
-        .encodedPath(config.serverUrl)
-        .appendPath("json")
-        .appendPath("realms")
-        .appendEncodedPath(config.realm)
-        .appendPath("users")
-        .appendEncodedPath(device.urlSuffix)
-        .appendEncodedPath(device.id)
-    return uri.build()
+override suspend fun deleteDevice(device: BoundDevice) {
+    withContext(Dispatchers.IO) {
+        execute<BoundDevice>(
+            config = config,
+            path = "devices/2fa/binding",
+            device = device,
+            requestType = RequestType.DELETE,
+        )
+    }
 }
 ```
 
+The delete operation:
+- Uses the centralized `execute()` method with type-specific generics
+- Switches to `Dispatchers.IO` for network operations
+- Passes the device type, path, device object, and DELETE request type
+- The `execute()` method handles URL composition, headers, and HTTP request execution
+
 ### Update Implementation
 
-Mutable device types (BoundDevice, WebAuthnDevice, ProfileDevice) support updates:
+Mutable device types (BoundDevice, WebAuthnDevice, ProfileDevice) support updates using the same centralized pattern:
 
 ```kotlin
 override suspend fun updateDevice(device: BoundDevice) {
     withContext(Dispatchers.IO) {
-        httpClient.request {
-            url.apply { composeUrlForDevice(config, device) }
-            headers {
-                append(config.cookieName, config.ssoTokenString ?: "")
-                append("Content-Type", "application/json")
-            }
-            method = Put
-            contentType(ContentType.Application.Json)
-            setBody(Json.encodeToString(device))
-        }
+        execute<BoundDevice>(
+            config = config,
+            path = "devices/2fa/binding",
+            device = device,
+            requestType = RequestType.UPDATE,
+        )
+    }
+}
+```
+
+For WebAuthnDevice:
+```kotlin
+override suspend fun updateDevice(device: WebAuthnDevice) {
+    withContext(Dispatchers.IO) {
+        execute<WebAuthnDevice>(
+            config = config,
+            path = "devices/2fa/webauthn",
+            device = device,
+            requestType = RequestType.UPDATE,
+        )
+    }
+}
+```
+
+For ProfileDevice:
+```kotlin
+override suspend fun updateDevice(device: ProfileDevice) {
+    withContext(Dispatchers.IO) {
+        execute<ProfileDevice>(
+            config = config,
+            path = "devices/profile",
+            device = device,
+            requestType = RequestType.UPDATE,
+        )
     }
 }
 ```
 
 The update operation:
-- Uses `Json.encodeToString()` to serialize the device object
-- Sets the Content-Type header to application/json
+- Uses type-specific serialization with inline reified generics
+- Switches to `Dispatchers.IO` for network operations
+- Serializes the device object using `Json.encodeToString(device!!)` (handled by execute method)
+- Sets the Content-Type header to application/json (handled by execute method)
 - Sends the serialized device data in the request body
-- Uses the same URL pattern as delete with the device ID
+- Uses the PUT HTTP method with the device-specific URL
 
 ### Execute Helper Method
 
-A centralized execute method handles common HTTP operations:
+A centralized, type-safe execute method handles all HTTP operations using inline reified generics:
 
 ```kotlin
-private suspend fun execute(
+private suspend inline fun <reified T : Device> execute(
     config: DeviceClientConfig,
     path: String,
+    device: T? = null,
     requestType: RequestType = RequestType.LIST,
 ): HttpResponse {
-    val urlString = composeUrl(config, path)
+    val urlString = if (requestType == RequestType.LIST) {
+        composeUrlForDeviceList(config, path)
+    } else {
+        composeUrlForDevice(
+            config = config,
+            device = device!!,
+        )
+    }
+    
     val request = httpClient.prepareRequest {
         url(urlString)
         header(config.cookieName, config.ssoTokenString ?: "")
@@ -318,22 +352,110 @@ private suspend fun execute(
             RequestType.DELETE -> Delete
             RequestType.UPDATE -> Put
         }
+        if (requestType == RequestType.UPDATE) {
+            setBody(Json.encodeToString(device!!))
+            contentType(ContentType.Application.Json)
+        }
     }
     return request.execute()
 }
+
+private enum class RequestType {
+    LIST,
+    DELETE,
+    UPDATE
+}
 ```
+
+#### Key Design Decisions
+
+1. **Inline Reified Generics**: Using `inline fun <reified T : Device>` allows type-safe serialization without requiring polymorphic serialization or manual serializer registration
+
+2. **Type Safety**: Each device type is serialized correctly using its specific serializer, avoiding runtime serialization errors
+
+3. **Centralized Logic**: All HTTP operations (GET, DELETE, PUT) are handled by a single method, reducing code duplication
+
+4. **Platform Headers**: Custom headers like `x-requested-platform: Android` help with server-side analytics and logging
+
+#### Benefits of This Approach
+
+- **Compile-time Type Safety**: The compiler ensures correct device types are passed to each operation
+- **Automatic Serialization**: Kotlin Serialization automatically handles device serialization based on the reified type
+- **No Polymorphic Serialization Required**: Since Device is not sealed and devices don't share a common polymorphic hierarchy, inline reified functions provide type-specific serialization
+- **Reduced Boilerplate**: Single execute method handles all device types and operations
+
+### URL Composition Helper Methods
+
+The module uses three helper methods to compose URLs for different operations:
+
+#### Base URL Composition
+
+```kotlin
+private fun composeBaseUrl(config: DeviceClientConfig): Uri.Builder {
+    return Uri.Builder()
+        .encodedPath(config.serverUrl)
+        .appendPath("json")
+        .appendPath("realms")
+        .appendEncodedPath(config.realm)
+        .appendPath("users")
+        .appendPath(config.userId)
+}
+```
+
+This creates the base URL structure:
+```
+{serverUrl}/json/realms/{realm}/users/{userId}
+```
+
+#### Device List URL
+
+```kotlin
+private fun composeUrlForDeviceList(
+    config: DeviceClientConfig,
+    path: String,
+): String {
+    return composeBaseUrl(config)
+        .appendEncodedPath(path)
+        .appendQueryParameter("_queryFilter", "true")
+        .build().toString()
+}
+```
+
+Used for GET operations to retrieve all devices of a type:
+```
+{baseUrl}/devices/2fa/oath?_queryFilter=true
+```
+
+#### Individual Device URL
+
+```kotlin
+private fun composeUrlForDevice(
+    config: DeviceClientConfig,
+    device: Device,
+): String {
+    val uri = composeBaseUrl(config)
+        .appendEncodedPath(device.urlSuffix)
+        .appendEncodedPath(device.id)
+    return uri.build().toString()
+}
+```
+
+Used for DELETE and UPDATE operations on specific devices:
+```
+{baseUrl}/devices/2fa/oath/{deviceId}
+```
+
+The `device.urlSuffix` property determines the device type path segment, and `device.id` identifies the specific device instance.
 
 ## Authentication Strategy
 
 The Device Client uses cookie-based authentication with the SSO token:
 
 ```kotlin
-headers {
-    append(config.cookieName, config.ssoTokenString ?: "")
-    append("Content-Type", "application/json")
-    append("Accept-API-Version", "resource=1.0")
-    append("x-requested-platform", "Android")
-}
+header(config.cookieName, config.ssoTokenString ?: "")
+header("Content-Type", "application/json")
+header("Accept-API-Version", "resource=1.0")
+header("x-requested-platform", "Android")
 ```
 
 This approach:
@@ -342,6 +464,235 @@ This approach:
 - Provides secure access to user-specific device data
 - Includes API versioning for backward compatibility
 - Identifies the platform for server-side analytics
+
+## Real-World UI Integration Pattern
+
+### State-Driven Architecture
+
+The recommended pattern for UI integration uses a state-driven architecture with the following components:
+
+```mermaid
+graph TB
+    A[UserProfileView] --> B[UserProfileViewModel]
+    B --> C[MutableStateFlow<UserProfileState>]
+    B --> D[DeviceClient]
+    D --> E[ImmutableDevice<br/>OathDevice, PushDevice]
+    D --> F[MutableDevice<br/>BoundDevice, WebAuthnDevice, ProfileDevice]
+    C --> A
+    E --> B
+    F --> B
+```
+
+### State Management
+
+The state encapsulates all UI-relevant data:
+
+```kotlin
+data class UserProfileState(
+    var user: JsonObject? = null,
+    var error: OidcError? = null,
+    var deviceList: List<String> = emptyList(),
+    var showDeviceInfo: Boolean = false,
+    var selectedDeviceType: DeviceType = DeviceType.OATH,
+    var isLoading: Boolean = false
+)
+```
+
+Key state properties:
+- **deviceList**: Currently displayed device names
+- **selectedDeviceType**: Active device filter
+- **isLoading**: Loading indicator state
+- **error**: Error messages for user feedback
+
+### Device Type Filtering
+
+Users can filter devices by type using radio buttons:
+
+```kotlin
+enum class DeviceType {
+    OATH,      // ImmutableDevice
+    PUSH,      // ImmutableDevice
+    BOUND,     // MutableDevice
+    WEBAUTHN,  // MutableDevice
+    PROFILE    // MutableDevice
+}
+```
+
+The ViewModel switches between device clients based on the selected type:
+
+```kotlin
+fun setDeviceType(deviceType: DeviceType) {
+    state.update { s ->
+        s.copy(selectedDeviceType = deviceType, isLoading = true)
+    }
+    viewModelScope.launch {
+        val deviceClient = buildDeviceClient() ?: return@launch
+        try {
+            when (deviceType) {
+                DeviceType.OATH -> {
+                    val devices = deviceClient.oathDeviceClient.getDevices()
+                    state.update { s ->
+                        s.copy(deviceList = devices.map { it.deviceName }, isLoading = false)
+                    }
+                }
+                // ... other device types
+            }
+        } catch (exception: Exception) {
+            state.update { s ->
+                s.copy(deviceList = emptyList(), isLoading = false)
+            }
+        }
+    }
+}
+```
+
+### CRUD Operation Pattern
+
+#### Delete Operation
+
+All device types support deletion with automatic list refresh:
+
+```kotlin
+fun onDeleteDevice(deviceName: String) {
+    viewModelScope.launch {
+        val deviceClient = buildDeviceClient() ?: return@launch
+        try {
+            when (state.value.selectedDeviceType) {
+                DeviceType.OATH -> {
+                    val devices = deviceClient.oathDeviceClient.getDevices()
+                    val deviceToDelete = devices.find { it.deviceName == deviceName }
+                    deviceToDelete?.let {
+                        deviceClient.oathDeviceClient.deleteDevice(it)
+                        setDeviceType(DeviceType.OATH) // Refresh list
+                    }
+                }
+                // ... other device types
+            }
+        } catch (exception: Exception) {
+            println("Error deleting device: ${exception.message}")
+            setDeviceType(state.value.selectedDeviceType) // Refresh on error
+        }
+    }
+}
+```
+
+#### Update Operation
+
+Only MutableDevice types (Bound, WebAuthn, Profile) support updates:
+
+```kotlin
+fun onEditDevice(deviceName: String) {
+    viewModelScope.launch {
+        val deviceClient = buildDeviceClient() ?: return@launch
+        try {
+            when (state.value.selectedDeviceType) {
+                DeviceType.BOUND -> {
+                    val devices = deviceClient.boundDevice.getDevices()
+                    val deviceToUpdate = devices.find { it.deviceName == deviceName }
+                    deviceToUpdate?.let {
+                        val updatedDevice = it.copy(deviceName = "Updated Name")
+                        deviceClient.boundDevice.updateDevice(updatedDevice)
+                        setDeviceType(DeviceType.BOUND) // Refresh list
+                    }
+                }
+                // ... other mutable device types
+                else -> {
+                    // Update not supported for immutable devices
+                }
+            }
+        } catch (exception: Exception) {
+            println("Error updating device: ${exception.message}")
+        }
+    }
+}
+```
+
+### UI Features
+
+#### Conditional Edit Button
+
+The edit button is only enabled for MutableDevice types:
+
+```kotlin
+fun canUpdateDevice(): Boolean {
+    return when (selectedDeviceType) {
+        DeviceType.BOUND, DeviceType.WEBAUTHN, DeviceType.PROFILE -> true
+        DeviceType.OATH, DeviceType.PUSH -> false
+    }
+}
+
+// In the UI:
+IconButton(
+    onClick = { viewModel.onEditDevice(deviceName) },
+    enabled = canUpdateDevice()
+) {
+    Icon(imageVector = Icons.Filled.Edit, ...)
+}
+```
+
+#### Loading States
+
+A loading indicator is shown during API calls:
+
+```kotlin
+if (state.isLoading) {
+    CircularProgressIndicator()
+} else {
+    LazyColumn {
+        items(state.deviceList) { deviceName ->
+            DeviceRow(deviceName, onEdit, onDelete)
+        }
+    }
+}
+```
+
+#### Automatic Refresh
+
+The device list automatically refreshes when:
+1. The user switches device types
+2. After a successful delete operation
+3. After a successful update operation
+4. On error (to ensure consistency)
+
+```kotlin
+LaunchedEffect(state.selectedDeviceType) {
+    viewModel.setDeviceType(state.selectedDeviceType)
+}
+```
+
+### DeviceClient Construction
+
+The DeviceClient is built from the user's session:
+
+```kotlin
+private suspend fun buildDeviceClient(): DeviceClient? {
+    val user = journey.user() ?: return null
+    val userInfo = user.userinfo(false) as? Result.Success ?: return null
+    return DeviceClient {
+        ssoTokenString = user.session().value
+        serverUrl = "https://openam-sdks.forgeblocks.com/am"
+        realm = user.session().realm
+        cookieName = "iPlanetDirectoryPro"
+        userId = userInfo.value["sub"]?.jsonPrimitive?.content ?: ""
+    }
+}
+```
+
+This pattern:
+- Extracts the SSO token from the authenticated session
+- Uses the user's realm from the session
+- Retrieves the user ID from the userinfo endpoint
+- Returns null if the user is not authenticated
+
+### Best Practices
+
+1. **Always Refresh After Mutations**: Call `setDeviceType()` after delete/update to ensure UI consistency
+2. **Handle Errors Gracefully**: Catch exceptions and update state accordingly
+3. **Use Loading States**: Show feedback during async operations
+4. **Conditional Features**: Disable/hide features based on device type capabilities
+5. **Type-Safe State**: Use sealed classes or enums for device types
+6. **Centralized DeviceClient Creation**: Build DeviceClient once and reuse
+7. **Reactive UI**: Use StateFlow with `collectAsState()` for automatic recomposition
 
 ## Device Update Flow
 
