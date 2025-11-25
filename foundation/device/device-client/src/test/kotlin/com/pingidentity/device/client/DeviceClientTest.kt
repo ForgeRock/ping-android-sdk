@@ -18,6 +18,7 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import java.net.URL
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -47,7 +48,7 @@ class DeviceClientTest {
     fun `Test DeviceClient configuration`() {
         val deviceClient = DeviceClient {
             ssoTokenString = "test-token"
-            serverUrl = "https://test.example.com"
+            serverUrl = URL("https://test.example.com")
             realm = "test-realm"
             cookieName = "test-cookie"
             userId = "user-123"
@@ -69,7 +70,7 @@ class DeviceClientTest {
 
         val deviceClient = DeviceClient {
             ssoTokenString = "test-token"
-            serverUrl = "https://test.example.com"
+            serverUrl = URL("https://test.example.com")
             realm = "alpha"
             cookieName = "test-cookie"
             userId = "user-123"
@@ -100,7 +101,7 @@ class DeviceClientTest {
 
         val deviceClient = DeviceClient {
             ssoTokenString = "test-token"
-            serverUrl = "https://test.example.com"
+            serverUrl = URL("https://test.example.com")
             realm = "alpha"
             cookieName = "test-cookie"
             userId = "user-123"
@@ -122,7 +123,7 @@ class DeviceClientTest {
 
         val deviceClient = DeviceClient {
             ssoTokenString = "test-token"
-            serverUrl = "https://test.example.com"
+            serverUrl = URL("https://test.example.com")
             realm = "alpha"
             cookieName = "test-cookie"
             userId = "user-123"
@@ -161,7 +162,7 @@ class DeviceClientTest {
 
         val deviceClient = DeviceClient {
             ssoTokenString = "test-token"
-            serverUrl = "https://test.example.com"
+            serverUrl = URL("https://test.example.com")
             realm = "alpha"
             cookieName = "test-cookie"
             userId = "user-123"
@@ -182,7 +183,7 @@ class DeviceClientTest {
 
         val deviceClient = DeviceClient {
             ssoTokenString = "test-token"
-            serverUrl = "https://test.example.com"
+            serverUrl = URL("https://test.example.com")
             realm = "alpha"
             cookieName = "test-cookie"
             userId = "user-123"
@@ -221,7 +222,7 @@ class DeviceClientTest {
 
         val deviceClient = DeviceClient {
             ssoTokenString = "test-token"
-            serverUrl = "https://test.example.com"
+            serverUrl = URL("https://test.example.com")
             realm = "alpha"
             cookieName = "test-cookie"
             userId = "user-123"
@@ -243,7 +244,7 @@ class DeviceClientTest {
 
         val deviceClient = DeviceClient {
             ssoTokenString = "test-token"
-            serverUrl = "https://test.example.com"
+            serverUrl = URL("https://test.example.com")
             realm = "alpha"
             cookieName = "test-cookie"
             userId = "user-123"
@@ -270,7 +271,7 @@ class DeviceClientTest {
 
         val deviceClient = DeviceClient {
             ssoTokenString = "test-token"
-            serverUrl = "https://test.example.com"
+            serverUrl = URL("https://test.example.com")
             realm = "alpha"
             cookieName = "test-cookie"
             userId = "user-123"
@@ -310,7 +311,7 @@ class DeviceClientTest {
 
         val deviceClient = DeviceClient {
             ssoTokenString = "test-token"
-            serverUrl = "https://test.example.com"
+            serverUrl = URL("https://test.example.com")
             realm = "alpha"
             cookieName = "test-cookie"
             userId = "user-123"
@@ -332,7 +333,7 @@ class DeviceClientTest {
 
         val deviceClient = DeviceClient {
             ssoTokenString = "test-token"
-            serverUrl = "https://test.example.com"
+            serverUrl = URL("https://test.example.com")
             realm = "alpha"
             cookieName = "test-cookie"
             userId = "user-123"
@@ -359,7 +360,7 @@ class DeviceClientTest {
 
         val deviceClient = DeviceClient {
             ssoTokenString = "test-token"
-            serverUrl = "https://test.example.com"
+            serverUrl = URL("https://test.example.com")
             realm = "alpha"
             cookieName = "test-cookie"
             userId = "user-123"
@@ -404,7 +405,7 @@ class DeviceClientTest {
 
         val deviceClient = DeviceClient {
             ssoTokenString = "test-token"
-            serverUrl = "https://test.example.com"
+            serverUrl = URL("https://test.example.com")
             realm = "alpha"
             cookieName = "test-cookie"
             userId = "user-123"
@@ -428,7 +429,7 @@ class DeviceClientTest {
 
         val deviceClient = DeviceClient {
             ssoTokenString = "test-token"
-            serverUrl = "https://test.example.com"
+            serverUrl = URL("https://test.example.com")
             realm = "alpha"
             cookieName = "test-cookie"
             userId = "user-123"
@@ -459,7 +460,7 @@ class DeviceClientTest {
 
         val deviceClient = DeviceClient {
             ssoTokenString = "test-token"
-            serverUrl = "https://test.example.com"
+            serverUrl = URL("https://test.example.com")
             realm = "alpha"
             cookieName = "test-cookie"
             userId = "user-123"
@@ -516,7 +517,7 @@ class DeviceClientTest {
 
         val deviceClient = DeviceClient {
             ssoTokenString = "test-token"
-            serverUrl = "https://test.example.com"
+            serverUrl = URL("https://test.example.com")
             realm = "alpha"
             cookieName = "test-cookie"
             userId = "user-123"
@@ -542,7 +543,7 @@ class DeviceClientTest {
 
         val deviceClient = DeviceClient {
             ssoTokenString = "test-token"
-            serverUrl = "https://test.example.com"
+            serverUrl = URL("https://test.example.com")
             realm = "alpha"
             cookieName = "test-cookie"
             userId = "user-123"
@@ -562,8 +563,8 @@ class DeviceClientTest {
     fun `Test DeviceClientConfig default values`() {
         val config = DeviceClientConfig()
 
-        assertEquals(null, config.ssoTokenString)
-        assertEquals("", config.serverUrl)
+        assertEquals("", config.ssoTokenString)
+        assertEquals(URL("http://localhost"), config.serverUrl)
         assertEquals("", config.realm)
         assertEquals("", config.cookieName)
         assertEquals("", config.userId)
@@ -575,13 +576,13 @@ class DeviceClientTest {
         val config = DeviceClientConfig()
 
         config.ssoTokenString = "new-token"
-        config.serverUrl = "https://new.example.com"
+        config.serverUrl = URL("https://new.example.com")
         config.realm = "new-realm"
         config.cookieName = "new-cookie"
         config.userId = "new-user-123"
 
         assertEquals("new-token", config.ssoTokenString)
-        assertEquals("https://new.example.com", config.serverUrl)
+        assertEquals(URL("https://new.example.com"), config.serverUrl)
         assertEquals("new-realm", config.realm)
         assertEquals("new-cookie", config.cookieName)
         assertEquals("new-user-123", config.userId)

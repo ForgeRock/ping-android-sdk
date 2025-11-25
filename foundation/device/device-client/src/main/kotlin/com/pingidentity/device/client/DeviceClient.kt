@@ -25,6 +25,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
+import java.net.URL
 import kotlin.collections.emptyList
 import kotlin.collections.map
 
@@ -36,11 +37,11 @@ import kotlin.collections.map
 @PingDsl
 class DeviceClientConfig {
     /** SSO token string for authentication. */
-    var ssoTokenString: String? = null
+    var ssoTokenString: String = ""
     /** Server URL. */
-    var serverUrl: String = ""
+    var serverUrl: URL = URL("http://localhost")
     /** Realm name. */
-    var realm: String = ""
+    var realm: String = "root"
         get() {
             return if (field.isNotBlank() && field.startsWith("/")) {
                 field.substring(1)
@@ -49,7 +50,7 @@ class DeviceClientConfig {
             }
         }
     /** Cookie name for authentication. */
-    var cookieName: String = ""
+    var cookieName: String = "iPlanetDirectoryPro"
     /** User ID. */
     var userId: String = ""
     /** HTTP client instance. */
@@ -70,13 +71,13 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
         object : ImmutableDevice<OathDevice> {
             override suspend fun getDevices(): List<OathDevice> {
                 return withContext(Dispatchers.IO) {
-                    getDeviceList<OathDevice>(config, "devices/2fa/oath")
+                    devices<OathDevice>(config, "devices/2fa/oath")
                 }
             }
 
             override suspend fun deleteDevice(device: OathDevice) {
                 withContext(Dispatchers.IO) {
-                    deleteDevice<OathDevice>(config, device)
+                    delete<OathDevice>(config, device)
                 }
             }
         }
@@ -87,13 +88,13 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
         object : ImmutableDevice<PushDevice> {
             override suspend fun getDevices(): List<PushDevice> {
                 return withContext(Dispatchers.IO) {
-                    getDeviceList<PushDevice>(config, "devices/2fa/push")
+                    devices<PushDevice>(config, "devices/2fa/push")
                 }
             }
 
             override suspend fun deleteDevice(device: PushDevice) {
                 withContext(Dispatchers.IO) {
-                    deleteDevice<PushDevice>(config, device)
+                    delete<PushDevice>(config, device)
                 }
             }
         }
@@ -104,19 +105,19 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
         object : MutableDevice<BoundDevice> {
             override suspend fun getDevices(): List<BoundDevice> {
                 return withContext(Dispatchers.IO) {
-                    getDeviceList<BoundDevice>(config, "devices/2fa/binding")
+                    devices<BoundDevice>(config, "devices/2fa/binding")
                 }
             }
 
             override suspend fun deleteDevice(device: BoundDevice) {
                 withContext(Dispatchers.IO) {
-                    deleteDevice<BoundDevice>(config, device)
+                    delete<BoundDevice>(config, device)
                 }
             }
 
             override suspend fun updateDevice(device: BoundDevice) {
                 withContext(Dispatchers.IO) {
-                    updateDevice<BoundDevice>(
+                    update<BoundDevice>(
                         config = config,
                         device = device,
                     )
@@ -130,19 +131,19 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
         object : MutableDevice<WebAuthnDevice> {
             override suspend fun getDevices(): List<WebAuthnDevice> {
                 return withContext(Dispatchers.IO) {
-                    getDeviceList<WebAuthnDevice>(config, "devices/2fa/webauthn")
+                    devices<WebAuthnDevice>(config, "devices/2fa/webauthn")
                 }
             }
 
             override suspend fun deleteDevice(device: WebAuthnDevice) {
                 withContext(Dispatchers.IO) {
-                    deleteDevice<WebAuthnDevice>(config, device)
+                    delete<WebAuthnDevice>(config, device)
                 }
             }
 
             override suspend fun updateDevice(device: WebAuthnDevice) {
                 withContext(Dispatchers.IO) {
-                    updateDevice<WebAuthnDevice>(
+                    update<WebAuthnDevice>(
                         config = config,
                         device = device,
                     )
@@ -156,19 +157,19 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
         object : MutableDevice<ProfileDevice> {
             override suspend fun getDevices(): List<ProfileDevice> {
                 return withContext(Dispatchers.IO) {
-                    getDeviceList<ProfileDevice>(config, "devices/profile")
+                    devices<ProfileDevice>(config, "devices/profile")
                 }
             }
 
             override suspend fun deleteDevice(device: ProfileDevice) {
                 withContext(Dispatchers.IO) {
-                    deleteDevice<ProfileDevice>(config, device)
+                    delete<ProfileDevice>(config, device)
                 }
             }
 
             override suspend fun updateDevice(device: ProfileDevice) {
                 withContext(Dispatchers.IO) {
-                    updateDevice<ProfileDevice>(
+                    update<ProfileDevice>(
                         config = config,
                         device = device,
                     )
@@ -182,7 +183,7 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
      */
     private fun composeBaseUrl(config: DeviceClientConfig): Uri.Builder {
         return Uri.Builder()
-            .encodedPath(config.serverUrl)
+            .encodedPath(config.serverUrl.toString())
             .appendPath("json")
             .appendPath("realms")
             .appendEncodedPath(config.realm)
@@ -223,16 +224,15 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
      * @param path The API path for the device type.
      * @return List of devices of type [T].
      */
-    private suspend inline fun <reified T : Device> getDeviceList(
+    private suspend inline fun <reified T : Device> devices(
         config: DeviceClientConfig,
         path: String,
     ): List<T> {
         val request = httpClient.prepareRequest {
             url(composeUrlForDeviceList(config, path))
-            header(config.cookieName, config.ssoTokenString ?: "")
-            header("Content-Type", "application/json")
-            header("Accept-API-Version", "resource=1.0")
-            header("x-requested-platform", "Android")
+            header(config.cookieName, config.ssoTokenString)
+            header(CONTENT_TYPE_KEY, CONTENT_TYPE_JSON)
+            header(ACCEPT_API_VERSION_KEY, ACCEPT_API_VERSION_VALUE)
             method = Get
         }
         val body = request.execute().bodyAsText()
@@ -251,7 +251,7 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
      * @param device The device to delete.
      * @return The HTTP response from the server.
      */
-    private suspend inline fun <reified T : Device> deleteDevice(
+    private suspend inline fun <reified T : Device> delete(
         config: DeviceClientConfig,
         device: T,
     ): HttpResponse {
@@ -261,10 +261,9 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
         )
         val request = httpClient.prepareRequest {
             url(urlString)
-            header(config.cookieName, config.ssoTokenString ?: "")
-            header("Content-Type", "application/json")
-            header("Accept-API-Version", "resource=1.0")
-            header("x-requested-platform", "Android")
+            header(config.cookieName, config.ssoTokenString)
+            header(CONTENT_TYPE_KEY, CONTENT_TYPE_JSON)
+            header(ACCEPT_API_VERSION_KEY, ACCEPT_API_VERSION_VALUE)
             method = Delete
         }
         return request.execute()
@@ -277,7 +276,7 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
      * @param device The device to update.
      * @return The HTTP response from the server.
      */
-    private suspend inline fun <reified T : Device> updateDevice(
+    private suspend inline fun <reified T : Device> update(
         config: DeviceClientConfig,
         device: T,
     ): HttpResponse {
@@ -286,14 +285,20 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
                 config = config,
                 device = device,
             ))
-            header(config.cookieName, config.ssoTokenString ?: "")
-            header("Content-Type", "application/json")
-            header("Accept-API-Version", "resource=1.0")
-            header("x-requested-platform", "Android")
+            header(config.cookieName, config.ssoTokenString)
+            header(CONTENT_TYPE_KEY, CONTENT_TYPE_JSON)
+            header(ACCEPT_API_VERSION_KEY, ACCEPT_API_VERSION_VALUE)
             method = Put
             setBody(Json.encodeToString(device))
             contentType(ContentType.Application.Json)
         }
         return request.execute()
+    }
+
+    companion object {
+        private const val CONTENT_TYPE_KEY = "Content-Type"
+        private const val CONTENT_TYPE_JSON = "application/json"
+        private const val ACCEPT_API_VERSION_KEY = "Accept-API-Version"
+        private const val ACCEPT_API_VERSION_VALUE = "resource=1.0"
     }
 }
