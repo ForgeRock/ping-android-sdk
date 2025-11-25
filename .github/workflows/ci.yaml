@@ -47,6 +47,7 @@ jobs:
     if: ${{ vars.ENABLE_INTEGRATION_TESTS == 'true' }}
     needs: create-testrail-run
     secrets:
+      E2E_CONFIG: ${{ secrets.E2E_CONFIG }}
       SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
       TESTRAIL_USERNAME: ${{ secrets.TESTRAIL_USERNAME }}

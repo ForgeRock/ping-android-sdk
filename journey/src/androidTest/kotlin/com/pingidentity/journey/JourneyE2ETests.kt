@@ -35,6 +35,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertNotEquals
 import org.junit.Test
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
 @SmallTest
@@ -200,7 +201,7 @@ class JourneyE2ETests : BaseJourneyTest() {
     fun handleFailure() = runTest {
         val myJourney = Journey {
             logger = Logger.STANDARD
-            timeout = 1.seconds.inWholeMilliseconds // Set a short timeout for testing failure
+            timeout = 10.milliseconds.inWholeMilliseconds // Set a short timeout for testing failure
             serverUrl = SERVER_URL
             realm = REALM
             cookie = COOKIE
