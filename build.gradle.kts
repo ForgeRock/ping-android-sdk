@@ -48,7 +48,7 @@ allprojects {
             force("com.fasterxml.jackson.core:jackson-databind:2.15.0")
 
             // Force secure version of netty-codec to address security vulnerabilities
-            // Used transitively by ktor-client-cio
+            // Used transitively by com.android.tools.emulator:proto
             // Updated to 4.1.125.Final per Mend SCA recommendation (Nov 2025)
             force("io.netty:netty-codec:4.1.125.Final")
             force("io.netty:netty-codec-http:4.1.125.Final")
