@@ -14,7 +14,8 @@ import kotlinx.serialization.json.JsonIgnoreUnknownKeys
 import kotlinx.serialization.json.JsonObject
 
 /**
- * Abstract class representing a device.
+ * Abstract base class for all device types.
+ * All device models must extend this class.
  */
 @Serializable
 abstract class Device {
@@ -24,41 +25,33 @@ abstract class Device {
 }
 
 /**
- * Interface defining immutable device operations.
+ * Interface for immutable device operations.
+ * Supports fetching and deleting devices.
  */
 interface ImmutableDevice<T> {
     /**
-     * Retrieves a list of devices.
-     * @return A list of devices of type [T].
+     * Fetch all devices of type [T].
      */
     suspend fun getDevices(): List<T>
-
     /**
-     * Deletes the specified device.
-     * @param device The device to delete.
+     * Delete a device of type [T].
      */
     suspend fun deleteDevice(device: T)
 }
 
 /**
- * Interface defining mutable device operations.
+ * Interface for mutable device operations.
+ * Extends [ImmutableDevice] and adds update support.
  */
 interface MutableDevice<T> : ImmutableDevice<T> {
     /**
-     * Updates the specified device.
-     * @param device The device to update.
+     * Update a device of type [T].
      */
     suspend fun updateDevice(device: T)
 }
 
 /**
- * Data class representing a Binding device.
- * @property id The ID of the device.
- * @property deviceName The name of the device.
- * @property deviceId The device ID.
- * @property uuid The UUID of the device.
- * @property createdDate The creation date of the device.
- * @property lastAccessDate The last access date of the device.
+ * Data class for Bound devices.
  */
 @Serializable
 @JsonIgnoreUnknownKeys
@@ -76,12 +69,7 @@ data class BoundDevice(
 }
 
 /**
- * Data class representing an Oath device.
- * @property id The ID of the device.
- * @property deviceName The name of the device.
- * @property uuid The UUID of the device.
- * @property createdDate The creation date of the device.
- * @property lastAccessDate The last access date of the device.
+ * Data class for OATH devices.
  */
 @Serializable
 @JsonIgnoreUnknownKeys
@@ -98,12 +86,7 @@ data class OathDevice(
 }
 
 /**
- * Data class representing a Push device.
- * @property id The ID of the device.
- * @property deviceName The name of the device.
- * @property uuid The UUID of the device.
- * @property createdDate The creation date of the device.
- * @property lastAccessDate The last access date of the device.
+ * Data class for Push devices.
  */
 @Serializable
 @JsonIgnoreUnknownKeys
@@ -120,13 +103,7 @@ data class PushDevice(
 }
 
 /**
- * Data class representing a WebAuthn device.
- * @property id The ID of the device.
- * @property deviceName The name of the device.
- * @property uuid The UUID of the device.
- * @property credentialId The credential ID of the device.
- * @property createdDate The creation date of the device.
- * @property lastAccessDate The last access date of the device.
+ * Data class for WebAuthn devices.
  */
 @Serializable
 @JsonIgnoreUnknownKeys
@@ -144,13 +121,7 @@ data class WebAuthnDevice(
 }
 
 /**
- * Data class representing a Profile device.
- * @property id The ID of the device.
- * @property deviceName The name of the device (alias).
- * @property identifier The identifier of the device.
- * @property metadata The metadata of the device.
- * @property location The location of the device.
- * @property lastSelectedDate The last selected date of the device.
+ * Data class for Profile devices.
  */
 @Serializable
 @JsonIgnoreUnknownKeys
@@ -169,11 +140,8 @@ data class ProfileDevice(
 }
 
 /**
- * Data class representing a location.
- * @property latitude The latitude of the location.
- * @property longitude The longitude of the location.
+ * Data class for device location.
  */
 @SuppressLint("UnsafeOptInUsageError")
 @Serializable
 data class Location(val latitude: Double, val longitude: Double)
-
