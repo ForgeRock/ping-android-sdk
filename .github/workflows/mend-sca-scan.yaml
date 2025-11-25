@@ -24,15 +24,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Clone the repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v5
         with:
           ref: ${{ github.event.pull_request.head.ref }}
           repository: ${{github.event.pull_request.head.repo.full_name}}
-          fetch-depth: 0
 
       - name: Download and cache the Mend CLI executable
         id: cache-mend
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         env:
           mend-cache-name: cache-mend-executable
         with:
@@ -62,7 +61,7 @@ jobs:
           mend dep --no-color -s ${{ vars.MEND_PRODUCT_NAME }}//${{ vars.MEND_PROJECT_NAME }} -u 2>&1 | tee mend-sca-scan-result.txt
 
           # Extract scan results with more robust parsing
-          MEND_SCA_SCAN_URL=$(grep -Eo '(http|https)://[^ ]+' mend-sca-scan-result.txt)
+          MEND_SCA_SCAN_URL=$(grep -Eo '(http|https)://saas\.whitesourcesoftware\.com[^ ]+' mend-sca-scan-result.txt | head -n 1)
           MEND_SCA_SCAN_SUMMARY=$(grep -E "Detected.*vulnerabilities" mend-sca-scan-result.txt || echo 'No vulnerabilities detected')
           
           # Initialize counts with default value of 0

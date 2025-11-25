@@ -5,7 +5,7 @@
 # of the MIT license. See the LICENSE file for details.
 #
 
-name: BrowserStack Test Results
+name: BrowserStack Journey Tests Results
 
 on:
   workflow_call:
@@ -26,7 +26,7 @@ on:
         required: true
 
 jobs:
-  browserstack-results:
+  browserstack-journey-results:
     runs-on: ubuntu-latest
     steps:
       - name: "Workflow inputs:"
@@ -101,7 +101,7 @@ jobs:
 
       - name: Publish BrowserStack Results Summary
         run: |
-          echo "## 🌐 BrowserStack Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "## 🌐 BrowserStack Journey Test Results" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Build ID:** ${{ env.BROWSERSTACK_JOURNEY_BUILD_ID }}" >> $GITHUB_STEP_SUMMARY
           echo "**Build URL:** [View on BrowserStack](${{ env.BROWSERSTACK_BUILD_URL }})" >> $GITHUB_STEP_SUMMARY

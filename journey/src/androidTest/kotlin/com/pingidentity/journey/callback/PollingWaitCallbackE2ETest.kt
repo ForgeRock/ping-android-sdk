@@ -47,7 +47,7 @@ class PollingWaitCallbackE2ETest : BaseJourneyTest() {
         assertEquals(ConfirmationCallbackMessageType.INFORMATION, confirmationCallback.messageType)
         assertTrue(confirmationCallback.options.contains("Exit"))
         assertEquals(ConfirmationCallbackOptionType.UNSPECIFIED_OPTION, confirmationCallback.optionType)
-        assertEquals(ConfirmationCallbackSelection.NO, confirmationCallback.defaultOption)
+        assertEquals(ConfirmationCallbackSelection.YES, confirmationCallback.defaultOption)
         // Set the selected index to YES to simulate user "exiting" the polling wait... (see SDKS-4277)
         confirmationCallback.selectedIndex = ConfirmationCallbackSelection.YES.selection
 

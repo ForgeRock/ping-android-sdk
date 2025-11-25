@@ -334,7 +334,7 @@ dependencies {
     implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")
     // optional - needed for credentials support from play services, for devices running
     // Android 13 and below.
-    implementation("com.google.android.gms:play-services-auth:1.5.0")
+    implementation("androidx.credentials:credentials-play-services-auth:1.5.0")
 
     // Facebook Login
     implementation("com.facebook.android:facebook-login:18.0.3")

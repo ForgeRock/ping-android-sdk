@@ -47,6 +47,7 @@ jobs:
     if: ${{ vars.ENABLE_INTEGRATION_TESTS == 'true' }}
     needs: create-testrail-run
     secrets:
+      E2E_CONFIG: ${{ secrets.E2E_CONFIG }}
       SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
       TESTRAIL_USERNAME: ${{ secrets.TESTRAIL_USERNAME }}
@@ -70,9 +71,9 @@ jobs:
       SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
 
   # Execute e2e test cases in BrowserStack. The workflow outputs the newly created run id.
-  browserstack-run:
+  browserstack-davinci-run:
     name: Run tests in BrowserStack
-    uses: ./.github/workflows/browserstack-run.yaml
+    uses: ./.github/workflows/browserstack-davinci-run.yaml
     needs: browserstack-prepare-artifacts
     secrets:
       BROWSERSTACK_USERNAME: ${{ secrets.BROWSERSTACK_USERNAME }}
@@ -88,21 +89,21 @@ jobs:
       BROWSERSTACK_ACCESS_KEY: ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
       SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
 
-  # Wait for BrowserStack test run to finish and publish results
-  browserstack-results:
-    name: BrowserStack test results
-    uses: ./.github/workflows/browserstack-results.yaml
-    needs: browserstack-run
+  # Wait for BrowserStack davinci test run to finish and publish results
+  browserstack-davinci-results:
+    name: BrowserStack DaVinci Test Results
+    uses: ./.github/workflows/browserstack-davinci-results.yaml
+    needs: browserstack-davinci-run
     secrets:
       BROWSERSTACK_USERNAME: ${{ secrets.BROWSERSTACK_USERNAME }}
       BROWSERSTACK_ACCESS_KEY: ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
       SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
     with:
-      browserstack-build-id: ${{ needs.browserstack-run.outputs.browserstack-build-id }}
+      browserstack-davinci-build-id: ${{ needs.browserstack-davinci-run.outputs.browserstack-davinci-build-id }}
 
   # Wait for BrowserStack journey test run to finish and publish results
   browserstack-journey-results:
-    name: BrowserStack journey test results
+    name: BrowserStack Journey Test Results
     uses: ./.github/workflows/browserstack-journey-results.yaml
     needs: browserstack-journey-run
     secrets:

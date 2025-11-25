@@ -24,15 +24,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Clone the repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v5
         with:
           ref: ${{ github.event.pull_request.head.ref }}
           repository: ${{github.event.pull_request.head.repo.full_name}}
-          fetch-depth: 0
 
       - name: Download and cache the Mend CLI executable
         id: cache-mend
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         env:
           mend-cache-name: cache-mend-executable
         with:
@@ -64,8 +63,7 @@ jobs:
           export MEND_SAST_HIGH_COUNT=$(jq '.[0].stats.high' ${{ vars.MEND_SAST_REPORT_NAME }}.json)
           export MEND_SAST_MEDIUM_COUNT=$(jq '.[0].stats.medium' ${{ vars.MEND_SAST_REPORT_NAME }}.json)
           export MEND_SAST_LOW_COUNT=$(jq '.[0].stats.low' ${{ vars.MEND_SAST_REPORT_NAME }}.json)
-          export MEND_SAST_SCAN_URL=$(grep -Eo '(http|https)://[^ ]+' mend-sast-scan-result.txt)
-
+          export MEND_SAST_SCAN_URL=$(grep -Eo '(http|https)://saas\.whitesourcesoftware\.com[^ ]+' mend-sast-scan-result.txt | head -n 1)
           echo "MEND_SAST_TOTAL_VULNERABILITIES_COUNT=$MEND_SAST_TOTAL_VULNERABILITIES_COUNT" >> $GITHUB_ENV
           echo "MEND_SAST_CRITICAL_COUNT=$MEND_SAST_CRITICAL_COUNT" >> $GITHUB_ENV
           echo "MEND_SAST_HIGH_COUNT=$MEND_SAST_HIGH_COUNT" >> $GITHUB_ENV
