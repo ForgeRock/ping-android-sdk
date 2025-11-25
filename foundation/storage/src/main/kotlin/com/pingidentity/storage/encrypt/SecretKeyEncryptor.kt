@@ -13,7 +13,6 @@ import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import com.pingidentity.android.ContextProvider
 import com.pingidentity.logger.Logger
-import com.pingidentity.utils.PingDsl
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -60,7 +59,7 @@ open class SecretKeyEncryptorConfig {
     lateinit var context: Context
     lateinit var keyAlias: String
     var enforceAsymmetricKey = false
-    var throwWhenEncryptError = true
+    var throwWhenEncryptError = false
     var symmetricKeySize = 256
     var invalidatedByBiometricEnrollment = true
     var strongBoxPreferred = true
