@@ -163,7 +163,7 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
             .appendPath("realms")
             .appendEncodedPath(config.realm)
             .appendPath("users")
-            .appendPath(config.userId) // Placeholder user ID
+            .appendPath(config.userId)
     }
 
     private fun composeUrlForDeviceList(
