@@ -5,10 +5,7 @@
  * of the MIT license. See the LICENSE file for details.
  */
 
-package com.pingidentity.davinci.plugin
-
-import com.pingidentity.orchestrate.FlowContext
-import com.pingidentity.orchestrate.Request
+package com.pingidentity.orchestrate
 
 /**
  * An interface that should be implemented by classes that need to be transformed itself to a Request.

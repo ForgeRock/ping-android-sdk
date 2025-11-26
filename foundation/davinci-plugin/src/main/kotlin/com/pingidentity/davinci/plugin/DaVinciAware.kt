@@ -7,6 +7,10 @@
 
 package com.pingidentity.davinci.plugin
 
+import com.pingidentity.orchestrate.Workflow
+
+typealias DaVinci = Workflow
+
 /**
  * An interface that should be implemented by classes that need to be aware of the DaVinci workflow.
  * The Davinci will be injected to the classes that implement this interface.

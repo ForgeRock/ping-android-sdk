@@ -5,9 +5,7 @@
  * of the MIT license. See the LICENSE file for details.
  */
 
-package com.pingidentity.journey.plugin
-
-import com.pingidentity.orchestrate.ContinueNode
+package com.pingidentity.orchestrate
 
 /**
  * An interface that should be implemented by classes that need to be aware of the ContinueNode.

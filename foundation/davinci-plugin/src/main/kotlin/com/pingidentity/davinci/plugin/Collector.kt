@@ -8,7 +8,6 @@
 package com.pingidentity.davinci.plugin
 
 import com.pingidentity.orchestrate.Action
-import com.pingidentity.orchestrate.ContinueNode
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import java.util.UUID
@@ -50,14 +49,6 @@ interface Collector<T> : Action {
         return null
     }
 }
-
-/**
- * Extension property for Connector class to get a list of collectors.
- *
- * @return A list of Collector instances.
- */
-val ContinueNode.collectors: List<Collector<*>>
-    get() = this.actions.filterIsInstance<Collector<*>>()
 
 /**
  * Type alias for a list of collectors.

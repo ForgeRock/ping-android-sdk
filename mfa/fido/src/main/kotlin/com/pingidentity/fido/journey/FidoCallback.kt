@@ -15,13 +15,13 @@ import androidx.credentials.exceptions.publickeycredential.CreatePublicKeyCreden
 import androidx.credentials.exceptions.publickeycredential.GetPublicKeyCredentialDomException
 import com.pingidentity.fido.Constants
 import com.pingidentity.journey.plugin.AbstractCallback
-import com.pingidentity.journey.plugin.ContinueNodeAware
 import com.pingidentity.journey.plugin.Journey
 import com.pingidentity.journey.plugin.JourneyAware
 import com.pingidentity.journey.plugin.ValueCallback
 import com.pingidentity.journey.plugin.callbacks
 import com.pingidentity.logger.Logger
 import com.pingidentity.orchestrate.ContinueNode
+import com.pingidentity.orchestrate.ContinueNodeAware
 
 /**
  * Abstract base class for FIDO2 callbacks in ForgeRock Journey workflows.
