@@ -29,10 +29,3 @@ data class UserProfileState(
     var deviceToEdit: String? = null,
     var newDeviceName: String = ""
 )
-
-fun UserProfileState.canUpdateDevice(): Boolean {
-    return when (selectedDeviceType) {
-        DeviceType.WEBAUTHN, DeviceType.BOUND, DeviceType.PROFILE -> true
-        else -> false
-    }
-}

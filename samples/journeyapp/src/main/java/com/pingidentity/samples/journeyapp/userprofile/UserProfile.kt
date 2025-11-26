@@ -247,7 +247,6 @@ fun UserProfile(userProfileViewModel: UserProfileViewModel) {
                                         onClick = {
                                             userProfileViewModel.openEditDialog(deviceName)
                                         },
-                                        enabled = state.canUpdateDevice()
                                     ) {
                                         Icon(
                                             imageVector = Icons.Filled.Edit,
