@@ -11,9 +11,6 @@
 
 The Device Client module provides a unified API for managing various types of Multi-Factor Authentication (MFA) devices and user profile devices registered with Ping Identity services. It abstracts the complexities of interacting with different device types through a consistent interface, enabling developers to retrieve, update, and delete user devices across multiple authentication methods.
 
-**Documentation Note:**  
-The codebase uses concise but informative KDoc comments for classes and functions, focusing on usage and intent. Single-variable documentation is omitted for properties that are self-explanatory.
-
 ## Architecture
 
 ### Device Management Interface
@@ -81,15 +78,15 @@ The module supports the following device types, all extending from the abstract 
 classDiagram
     class ImmutableDevice~T~ {
         <<interface>>
-        +getDevices() List~T~
-        +deleteDevice(device: T)
+        +devices() List~T~
+        +delete(device: T)
     }
     
     class MutableDevice~T~ {
         <<interface>>
-        +getDevices() List~T~
-        +deleteDevice(device: T)
-        +updateDevice(device: T)
+        +devices() List~T~
+        +delete(device: T)
+        +update(device: T)
     }
     
     class Device {
@@ -162,7 +159,6 @@ class DeviceClientConfig {
     var serverUrl: String = ""
     var realm: String = ""
     var cookieName: String = ""
-    var userId: String = ""
     var httpClient: HttpClient = HttpClient()
 }
 ```
@@ -173,7 +169,6 @@ class DeviceClientConfig {
 - **serverUrl**: The base URL of the Ping Identity server
 - **realm**: The authentication realm
 - **cookieName**: The name of the cookie used for session management (e.g., "iPlanetDirectoryPro")
-- **userId**: The user identifier for device operations
 - **httpClient**: The Ktor HTTP client used for network requests (can be customized)
 
 ## Device Retrieval Flow
@@ -192,8 +187,12 @@ sequenceDiagram
     App->>DeviceClient: oathDeviceClient.getDevices()
     DeviceClient->>ImmutableDevice: getDevices()
     ImmutableDevice->>ImmutableDevice: composeUrl(path)
-    ImmutableDevice->>HttpClient: execute(config, path)
-    HttpClient->>PingServer: GET /users/{userId}/devices/2fa/oath
+    ImmutableDevice->>HttpClient: getUserIdFromSession(config)
+    HttpClient->>PingServer: GET /sessions
+    PingServer-->>HttpClient: HTTP Response (JSON)
+    ImmutableDevice-->>ImmutableDevice: Parse JSON and retrieve username
+    ImmutableDevice->>HttpClient: execute(config, path) with username
+    HttpClient->>PingServer: GET /users/{username}/devices/2fa/oath
     PingServer-->>HttpClient: HTTP Response (JSON)
     HttpClient-->>ImmutableDevice: HttpResponse
     ImmutableDevice->>ImmutableDevice: getDevices<OathDevice>(response)
@@ -204,7 +203,7 @@ sequenceDiagram
 
 ### URL Composition Strategy
 
-The module composes URLs dynamically based on the configuration and device type, using helper methods with clear KDoc:
+The module composes URLs dynamically based on the configuration and device type. Helper methods are documented as follows:
 
 ```kotlin
 /**
@@ -237,7 +236,7 @@ All device operations are implemented as suspend functions with descriptive KDoc
  * @param path The API path for the device type.
  * @return List of devices of type [T].
  */
-private suspend inline fun <reified T : Device> getDeviceList(
+private suspend inline fun <reified T : Device> devices(
     config: DeviceClientConfig,
     path: String,
 ): List<T> { ... }
@@ -251,7 +250,7 @@ private suspend inline fun <reified T : Device> getDeviceList(
  * @param device The device to delete.
  * @return The HTTP response from the server.
  */
-private suspend inline fun <reified T : Device> deleteDevice(
+private suspend inline fun <reified T : Device> delete(
     config: DeviceClientConfig,
     device: T,
 ): HttpResponse { ... }
@@ -265,7 +264,7 @@ private suspend inline fun <reified T : Device> deleteDevice(
  * @param device The device to update.
  * @return The HTTP response from the server.
  */
-private suspend inline fun <reified T : Device> updateDevice(
+private suspend inline fun <reified T : Device> update(
     config: DeviceClientConfig,
     device: T,
 ): HttpResponse { ... }
