@@ -8,7 +8,6 @@
 package com.pingidentity.journey.plugin
 
 import com.pingidentity.orchestrate.Action
-import com.pingidentity.orchestrate.ContinueNode
 import kotlinx.serialization.json.JsonObject
 
 /**
@@ -28,13 +27,6 @@ interface Callback : Action {
     fun payload(): JsonObject
 }
 
-/**
- * Extension property for Connector class to get a list of collectors.
- *
- * @return A list of Collector instances.
- */
-val ContinueNode.callbacks: List<Callback>
-    get() = this.actions.filterIsInstance<Callback>()
 
 
 /**
