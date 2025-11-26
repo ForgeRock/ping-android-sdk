@@ -30,9 +30,9 @@ abstract class Device {
  */
 interface DeviceInterface<T> {
     /**
-     * Fetch all devices of type [T].
+     * Fetch all devices of type [T] encapsulated in a [Result].
      */
-    suspend fun devices(): List<T>
+    suspend fun devices(): Result<List<T>>
     /**
      * Delete a device of type [T].
      */
@@ -70,7 +70,7 @@ data class BoundDevice(
 data class OathDevice(
     @SerialName("_id")
     override val id: String,
-    override val deviceName: String,
+    override var deviceName: String,
     val uuid: String,
     val createdDate: Long,
     val lastAccessDate: Long
@@ -87,7 +87,7 @@ data class OathDevice(
 data class PushDevice(
     @SerialName("_id")
     override val id: String,
-    override val deviceName: String,
+    override var deviceName: String,
     val uuid: String,
     val createdDate: Long,
     val lastAccessDate: Long

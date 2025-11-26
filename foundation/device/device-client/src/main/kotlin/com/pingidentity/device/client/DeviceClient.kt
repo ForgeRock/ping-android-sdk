@@ -40,7 +40,7 @@ class DeviceClientConfig {
     /** SSO token string for authentication. */
     var ssoTokenString: String = ""
     /** Server URL. */
-    var serverUrl: URL = URL("http://localhost")
+    lateinit var serverUrl: URL
     /** Realm name. */
     var realm: String = "root"
         get() {
@@ -78,9 +78,9 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
     }
 
     /** OATH device operations (read/delete). */
-    val oathDeviceClient: DeviceInterface<OathDevice> by lazy {
+    val oathDevice: DeviceInterface<OathDevice> by lazy {
         object : DeviceInterface<OathDevice> {
-            override suspend fun devices(): List<OathDevice> {
+            override suspend fun devices(): Result<List<OathDevice>> {
                 return withContext(Dispatchers.IO) {
                     devices<OathDevice>(config, "devices/2fa/oath")
                 }
@@ -104,9 +104,9 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
     }
 
     /** Push device operations (read/delete). */
-    val pushDeviceClient: DeviceInterface<PushDevice> by lazy {
+    val pushDevice: DeviceInterface<PushDevice> by lazy {
         object : DeviceInterface<PushDevice> {
-            override suspend fun devices(): List<PushDevice> {
+            override suspend fun devices(): Result<List<PushDevice>> {
                 return withContext(Dispatchers.IO) {
                     devices<PushDevice>(config, "devices/2fa/push")
                 }
@@ -132,7 +132,7 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
     /** Bound device operations (read/delete/update). */
     val boundDevice: DeviceInterface<BoundDevice> by lazy {
         object : DeviceInterface<BoundDevice> {
-            override suspend fun devices(): List<BoundDevice> {
+            override suspend fun devices(): Result<List<BoundDevice>> {
                 return withContext(Dispatchers.IO) {
                     devices<BoundDevice>(config, "devices/2fa/binding")
                 }
@@ -158,7 +158,7 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
     /** WebAuthn device operations (read/delete/update). */
     val webAuthnDevice: DeviceInterface<WebAuthnDevice> by lazy {
         object : DeviceInterface<WebAuthnDevice> {
-            override suspend fun devices(): List<WebAuthnDevice> {
+            override suspend fun devices(): Result<List<WebAuthnDevice>> {
                 return withContext(Dispatchers.IO) {
                     devices<WebAuthnDevice>(config, "devices/2fa/webauthn")
                 }
@@ -184,7 +184,7 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
     /** Profile device operations (read/delete/update). */
     val profileDevice: DeviceInterface<ProfileDevice> by lazy {
         object : DeviceInterface<ProfileDevice> {
-            override suspend fun devices(): List<ProfileDevice> {
+            override suspend fun devices(): Result<List<ProfileDevice>> {
                 return withContext(Dispatchers.IO) {
                     devices<ProfileDevice>(config, "devices/profile")
                 }
@@ -217,10 +217,10 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
     private suspend inline fun <reified T : Device> devices(
         config: DeviceClientConfig,
         path: String,
-    ): List<T> {
+    ): Result<List<T>> {
         val userId = getCachedUserId()
         if (userId.isBlank()) {
-            return emptyList()
+            return Result.failure(Exception("User ID cannot be blank."))
         }
         val request = httpClient.prepareRequest {
             url(
@@ -238,10 +238,12 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
         val body = request.execute().bodyAsText()
         val jsonObject = Json.parseToJsonElement(body).jsonObject
         val result = jsonObject["result"]?.jsonArray
-        return result?.map {
-            val obj = it.jsonObject
-            Json.decodeFromString(obj.toString())
-        } ?: emptyList()
+        return Result.success(
+            result?.map {
+                val obj = it.jsonObject
+                Json.decodeFromString(obj.toString())
+            } ?: emptyList()
+        )
     }
 
     /**

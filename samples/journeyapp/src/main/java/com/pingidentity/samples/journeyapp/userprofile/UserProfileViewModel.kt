@@ -93,7 +93,8 @@ class UserProfileViewModel : ViewModel() {
             try {
                 when (deviceType) {
                     DeviceType.OATH -> {
-                        val devices = deviceClient.oathDeviceClient.devices()
+                        val deviceResult = deviceClient.oathDevice.devices()
+                        val devices = deviceResult.getOrThrow()
                         val deviceNames = devices.map { it.deviceName }
                         state.update { s ->
                             s.copy(deviceList = deviceNames, isLoading = false)
@@ -101,28 +102,32 @@ class UserProfileViewModel : ViewModel() {
                     }
 
                     DeviceType.PUSH -> {
-                        val devices = deviceClient.pushDeviceClient.devices()
+                        val deviceResult = deviceClient.pushDevice.devices()
+                        val devices = deviceResult.getOrThrow()
                         val deviceNames = devices.map { it.deviceName }
                         state.update { s ->
                             s.copy(deviceList = deviceNames, isLoading = false)
                         }
                     }
                     DeviceType.BOUND -> {
-                        val devices = deviceClient.boundDevice.devices()
+                        val deviceResult = deviceClient.boundDevice.devices()
+                        val devices = deviceResult.getOrThrow()
                         val deviceNames = devices.map { it.deviceName }
                         state.update { s ->
                             s.copy(deviceList = deviceNames, isLoading = false)
                         }
                     }
                     DeviceType.WEBAUTHN -> {
-                        val devices = deviceClient.webAuthnDevice.devices()
+                        val deviceResult = deviceClient.webAuthnDevice.devices()
+                        val devices = deviceResult.getOrThrow()
                         val deviceNames = devices.map { it.deviceName }
                         state.update { s ->
                             s.copy(deviceList = deviceNames, isLoading = false)
                         }
                     }
                     DeviceType.PROFILE -> {
-                        val devices = deviceClient.profileDevice.devices()
+                        val deviceResult = deviceClient.profileDevice.devices()
+                        val devices = deviceResult.getOrThrow()
                         val deviceNames = devices.map { it.deviceName }
                         state.update { s ->
                             s.copy(deviceList = deviceNames, isLoading = false)
@@ -144,12 +149,26 @@ class UserProfileViewModel : ViewModel() {
             val deviceClient = buildDeviceClient() ?: return@launch
             try {
                 when (state.value.selectedDeviceType) {
-                    DeviceType.OATH, DeviceType.PUSH -> {
-                        // Update not supported for immutable devices
-                        println("Update not supported for ${state.value.selectedDeviceType}")
+                    DeviceType.OATH -> {
+                        val devices = deviceClient.oathDevice.devices().getOrThrow()
+                        val deviceToUpdate = devices.find { it.deviceName == deviceName }
+                        deviceToUpdate?.let {
+                            it.deviceName = newDeviceName
+                            deviceClient.oathDevice.update(it)
+                            setDeviceType(DeviceType.OATH)
+                        }
+                    }
+                    DeviceType.PUSH -> {
+                        val devices = deviceClient.pushDevice.devices().getOrThrow()
+                        val deviceToUpdate = devices.find { it.deviceName == deviceName }
+                        deviceToUpdate?.let {
+                            it.deviceName = newDeviceName
+                            deviceClient.pushDevice.update(it)
+                            setDeviceType(DeviceType.PUSH)
+                        }
                     }
                     DeviceType.BOUND -> {
-                        val devices = deviceClient.boundDevice.devices()
+                        val devices = deviceClient.boundDevice.devices().getOrThrow()
                         val deviceToUpdate = devices.find { it.deviceName == deviceName }
                         deviceToUpdate?.let {
                             it.deviceName = newDeviceName
@@ -159,7 +178,7 @@ class UserProfileViewModel : ViewModel() {
                         }
                     }
                     DeviceType.WEBAUTHN -> {
-                        val devices = deviceClient.webAuthnDevice.devices()
+                        val devices = deviceClient.webAuthnDevice.devices().getOrThrow()
                         val deviceToUpdate = devices.find { it.deviceName == deviceName }
                         deviceToUpdate?.let {
                             it.deviceName = newDeviceName
@@ -168,7 +187,7 @@ class UserProfileViewModel : ViewModel() {
                         }
                     }
                     DeviceType.PROFILE -> {
-                        val devices = deviceClient.profileDevice.devices()
+                        val devices = deviceClient.profileDevice.devices().getOrThrow()
                         val deviceToUpdate = devices.find { it.deviceName == deviceName }
                         deviceToUpdate?.let {
                             it.deviceName = newDeviceName
@@ -189,24 +208,24 @@ class UserProfileViewModel : ViewModel() {
             try {
                 when (state.value.selectedDeviceType) {
                     DeviceType.OATH -> {
-                        val devices = deviceClient.oathDeviceClient.devices()
+                        val devices = deviceClient.oathDevice.devices().getOrThrow()
                         val deviceToDelete = devices.find { it.deviceName == deviceName }
                         deviceToDelete?.let {
-                            deviceClient.oathDeviceClient.delete(it)
+                            deviceClient.oathDevice.delete(it)
                             // Refresh the device list
                             setDeviceType(DeviceType.OATH)
                         }
                     }
                     DeviceType.PUSH -> {
-                        val devices = deviceClient.pushDeviceClient.devices()
+                        val devices = deviceClient.pushDevice.devices().getOrThrow()
                         val deviceToDelete = devices.find { it.deviceName == deviceName }
                         deviceToDelete?.let {
-                            deviceClient.pushDeviceClient.delete(it)
+                            deviceClient.pushDevice.delete(it)
                             setDeviceType(DeviceType.PUSH)
                         }
                     }
                     DeviceType.BOUND -> {
-                        val devices = deviceClient.boundDevice.devices()
+                        val devices = deviceClient.boundDevice.devices().getOrThrow()
                         val deviceToDelete = devices.find { it.deviceName == deviceName }
                         deviceToDelete?.let {
                             deviceClient.boundDevice.delete(it)
@@ -214,7 +233,7 @@ class UserProfileViewModel : ViewModel() {
                         }
                     }
                     DeviceType.WEBAUTHN -> {
-                        val devices = deviceClient.webAuthnDevice.devices()
+                        val devices = deviceClient.webAuthnDevice.devices().getOrThrow()
                         val deviceToDelete = devices.find { it.deviceName == deviceName }
                         deviceToDelete?.let {
                             deviceClient.webAuthnDevice.delete(it)
@@ -222,7 +241,7 @@ class UserProfileViewModel : ViewModel() {
                         }
                     }
                     DeviceType.PROFILE -> {
-                        val devices = deviceClient.profileDevice.devices()
+                        val devices = deviceClient.profileDevice.devices().getOrThrow()
                         val deviceToDelete = devices.find { it.deviceName == deviceName }
                         deviceToDelete?.let {
                             deviceClient.profileDevice.delete(it)

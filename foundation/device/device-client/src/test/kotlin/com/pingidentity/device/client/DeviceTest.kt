@@ -24,12 +24,15 @@ class DeviceTest {
             TestDevice(id = "2", deviceName = "Test Device 2")
         )
         val immutableDevice = TestDeviceInterface(testDeviceList)
-        assertTrue { immutableDevice.devices().containsAll(testDeviceList) }
-        assertTrue { immutableDevice.devices().size == 2 }
+        val devices = immutableDevice.devices().getOrThrow()
+        assertTrue { devices.containsAll(testDeviceList) }
+        assertTrue { devices.size == 2 }
         val deviceToDelete = testDeviceList[0]
         immutableDevice.delete(deviceToDelete)
-        assertTrue { immutableDevice.devices().size == 1 }
-        assertFalse { immutableDevice.devices().contains(deviceToDelete) }
+
+        val updatedDevices = immutableDevice.devices().getOrThrow()
+        assertTrue { updatedDevices.size == 1 }
+        assertFalse { updatedDevices.contains(deviceToDelete) }
     }
 
     @Test
@@ -39,14 +42,15 @@ class DeviceTest {
             TestDevice(id = "2", deviceName = "Test Device 2")
         )
         val mutableDevice = TestDeviceInterface(mutableDeviceList)
+        var devices = mutableDevice.devices().getOrThrow()
 
-        assertEquals(2, mutableDevice.devices().size)
+        assertEquals(2, devices.size)
 
         // Update device name
         val updatedDevice = TestDevice(id = "1", deviceName = "Updated Device 1")
         mutableDevice.update(updatedDevice)
 
-        val devices = mutableDevice.devices()
+        devices = mutableDevice.devices().getOrThrow()
         assertEquals(2, devices.size)
         assertEquals("Updated Device 1", devices.find { it.id == "1" }?.deviceName)
     }
@@ -233,7 +237,8 @@ class DeviceTest {
     fun `Test ImmutableDevice getDevices returns empty list when no devices`() = runTest {
         val emptyDevice = TestDeviceInterface(mutableListOf())
 
-        assertTrue { emptyDevice.devices().isEmpty() }
+        assertTrue { emptyDevice.devices().isSuccess }
+        assertTrue { emptyDevice.devices().getOrThrow().isEmpty() }
     }
 
     @Test
@@ -246,7 +251,7 @@ class DeviceTest {
         val nonExistentDevice = TestDevice(id = "999", deviceName = "Non-existent")
         immutableDevice.delete(nonExistentDevice)
 
-        assertEquals(1, immutableDevice.devices().size)
+        assertEquals(1, immutableDevice.devices().getOrThrow().size)
     }
 
     @Test
@@ -260,13 +265,13 @@ class DeviceTest {
 
         // Delete device
         mutableDevice.delete(devices[1])
-        assertEquals(2, mutableDevice.devices().size)
+        assertEquals(2, mutableDevice.devices().getOrThrow().size)
 
         // Update remaining device
         val updatedDevice = TestDevice(id = "1", deviceName = "Updated Device 1")
         mutableDevice.update(updatedDevice)
 
-        val result = mutableDevice.devices()
+        val result = mutableDevice.devices().getOrThrow()
         assertEquals(2, result.size)
         assertEquals("Updated Device 1", result.find { it.id == "1" }?.deviceName)
     }
@@ -290,8 +295,8 @@ class DeviceTest {
     private class TestDeviceInterface(
         private val deviceList: MutableList<Device> = mutableListOf<Device>()
     ): DeviceInterface<Device> {
-        override suspend fun devices(): List<Device> {
-            return deviceList
+        override suspend fun devices(): Result<List<Device>> {
+            return Result.success(deviceList)
         }
 
         override suspend fun delete(device: Device) {
