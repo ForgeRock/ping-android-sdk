@@ -23,7 +23,7 @@ class DeviceTest {
             TestDevice(id = "1", deviceName = "Test Device 1"),
             TestDevice(id = "2", deviceName = "Test Device 2")
         )
-        val immutableDevice = TestDeviceInterface(testDeviceList)
+        val immutableDevice = TestDeviceRepository(testDeviceList)
         val devices = immutableDevice.devices().getOrThrow()
         assertTrue { devices.containsAll(testDeviceList) }
         assertTrue { devices.size == 2 }
@@ -41,7 +41,7 @@ class DeviceTest {
             TestDevice(id = "1", deviceName = "Test Device 1"),
             TestDevice(id = "2", deviceName = "Test Device 2")
         )
-        val mutableDevice = TestDeviceInterface(mutableDeviceList)
+        val mutableDevice = TestDeviceRepository(mutableDeviceList)
         var devices = mutableDevice.devices().getOrThrow()
 
         assertEquals(2, devices.size)
@@ -235,7 +235,7 @@ class DeviceTest {
 
     @Test
     fun `Test ImmutableDevice getDevices returns empty list when no devices`() = runTest {
-        val emptyDevice = TestDeviceInterface(mutableListOf())
+        val emptyDevice = TestDeviceRepository(mutableListOf())
 
         assertTrue { emptyDevice.devices().isSuccess }
         assertTrue { emptyDevice.devices().getOrThrow().isEmpty() }
@@ -246,7 +246,7 @@ class DeviceTest {
         val devices = mutableListOf<Device>(
             TestDevice(id = "1", deviceName = "Device 1")
         )
-        val immutableDevice = TestDeviceInterface(devices)
+        val immutableDevice = TestDeviceRepository(devices)
 
         val nonExistentDevice = TestDevice(id = "999", deviceName = "Non-existent")
         immutableDevice.delete(nonExistentDevice)
@@ -261,7 +261,7 @@ class DeviceTest {
             TestDevice(id = "2", deviceName = "Device 2"),
             TestDevice(id = "3", deviceName = "Device 3")
         )
-        val mutableDevice = TestDeviceInterface(devices)
+        val mutableDevice = TestDeviceRepository(devices)
 
         // Delete device
         mutableDevice.delete(devices[1])
@@ -292,9 +292,9 @@ class DeviceTest {
         assertEquals("custom/url/suffix", boundDevice.urlSuffix)
     }
 
-    private class TestDeviceInterface(
+    private class TestDeviceRepository(
         private val deviceList: MutableList<Device> = mutableListOf<Device>()
-    ): DeviceInterface<Device> {
+    ): DeviceRepository<Device> {
         override suspend fun devices(): Result<List<Device>> {
             return Result.success(deviceList)
         }

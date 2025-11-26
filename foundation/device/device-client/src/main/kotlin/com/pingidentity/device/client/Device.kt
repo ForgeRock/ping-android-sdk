@@ -28,7 +28,7 @@ abstract class Device {
  * Interface for device operations.
  * Supports fetching and deleting devices.
  */
-interface DeviceInterface<T> {
+interface DeviceRepository<T> {
     /**
      * Fetch all devices of type [T] encapsulated in a [Result].
      */

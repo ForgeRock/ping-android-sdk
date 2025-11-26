@@ -78,8 +78,8 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
     }
 
     /** OATH device operations (read/delete). */
-    val oathDevice: DeviceInterface<OathDevice> by lazy {
-        object : DeviceInterface<OathDevice> {
+    val oathDevice: DeviceRepository<OathDevice> by lazy {
+        object : DeviceRepository<OathDevice> {
             override suspend fun devices(): Result<List<OathDevice>> {
                 return withContext(Dispatchers.IO) {
                     devices<OathDevice>(config, "devices/2fa/oath")
@@ -104,8 +104,8 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
     }
 
     /** Push device operations (read/delete). */
-    val pushDevice: DeviceInterface<PushDevice> by lazy {
-        object : DeviceInterface<PushDevice> {
+    val pushDevice: DeviceRepository<PushDevice> by lazy {
+        object : DeviceRepository<PushDevice> {
             override suspend fun devices(): Result<List<PushDevice>> {
                 return withContext(Dispatchers.IO) {
                     devices<PushDevice>(config, "devices/2fa/push")
@@ -130,8 +130,8 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
     }
 
     /** Bound device operations (read/delete/update). */
-    val boundDevice: DeviceInterface<BoundDevice> by lazy {
-        object : DeviceInterface<BoundDevice> {
+    val boundDevice: DeviceRepository<BoundDevice> by lazy {
+        object : DeviceRepository<BoundDevice> {
             override suspend fun devices(): Result<List<BoundDevice>> {
                 return withContext(Dispatchers.IO) {
                     devices<BoundDevice>(config, "devices/2fa/binding")
@@ -156,8 +156,8 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
     }
 
     /** WebAuthn device operations (read/delete/update). */
-    val webAuthnDevice: DeviceInterface<WebAuthnDevice> by lazy {
-        object : DeviceInterface<WebAuthnDevice> {
+    val webAuthnDevice: DeviceRepository<WebAuthnDevice> by lazy {
+        object : DeviceRepository<WebAuthnDevice> {
             override suspend fun devices(): Result<List<WebAuthnDevice>> {
                 return withContext(Dispatchers.IO) {
                     devices<WebAuthnDevice>(config, "devices/2fa/webauthn")
@@ -182,8 +182,8 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
     }
 
     /** Profile device operations (read/delete/update). */
-    val profileDevice: DeviceInterface<ProfileDevice> by lazy {
-        object : DeviceInterface<ProfileDevice> {
+    val profileDevice: DeviceRepository<ProfileDevice> by lazy {
+        object : DeviceRepository<ProfileDevice> {
             override suspend fun devices(): Result<List<ProfileDevice>> {
                 return withContext(Dispatchers.IO) {
                     devices<ProfileDevice>(config, "devices/profile")
@@ -297,14 +297,17 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
             throw IllegalStateException("User ID cannot be blank.")
         }
         val request = httpClient.prepareRequest {
-            url(composeUrlForDevice(
-                config = config,
-                device = device,
-                userId = userId,
-            ))
+            url(
+                composeUrlForDevice(
+                    config = config,
+                    device = device,
+                    userId = userId,
+                )
+            )
             header(config.cookieName, config.ssoTokenString)
             header(CONTENT_TYPE_KEY, CONTENT_TYPE_JSON)
             header(ACCEPT_API_VERSION_KEY, ACCEPT_API_VERSION_VALUE)
+            header("If-Match", "*")
             method = Put
             setBody(Json.encodeToString(device))
             contentType(ContentType.Application.Json)
