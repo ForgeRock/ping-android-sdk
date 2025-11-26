@@ -18,7 +18,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.yield
-import kotlinx.serialization.json.jsonPrimitive
+import java.net.URL
 
 class UserProfileViewModel : ViewModel() {
     var state = MutableStateFlow(UserProfileState())
@@ -106,21 +106,19 @@ class UserProfileViewModel : ViewModel() {
 
     fun onEditDevice(deviceName: String) {
         viewModelScope.launch {
-            println("Edit device: $deviceName")
             val deviceClient = buildDeviceClient() ?: return@launch
             try {
                 when (state.value.selectedDeviceType) {
-                    DeviceType.OATH -> {
-                        // Send an update that this is not possible.
-                    }
-                    DeviceType.PUSH -> {
-                        // Send an update that this is not possible.
+                    DeviceType.OATH, DeviceType.PUSH -> {
+                        // Update not supported for immutable devices
+                        println("Update not supported for ${state.value.selectedDeviceType}")
                     }
                     DeviceType.BOUND -> {
                         val devices = deviceClient.boundDevice.getDevices()
                         val deviceToUpdate = devices.find { it.deviceName == deviceName }
                         deviceToUpdate?.let {
                             deviceClient.boundDevice.updateDevice(it)
+                            // Refresh only the device list, reusing cached userId
                             setDeviceType(DeviceType.BOUND)
                         }
                     }
@@ -204,13 +202,11 @@ class UserProfileViewModel : ViewModel() {
 
     private suspend fun buildDeviceClient(): DeviceClient? {
         val user = journey.user() ?: return null
-        val userInfo = user.userinfo(false) as? Result.Success ?: return null
         return DeviceClient {
             ssoTokenString = user.session().value
-            serverUrl = "https://openam-sdks.forgeblocks.com/am"
+            serverUrl = URL("https://openam-sdks.forgeblocks.com/am")
             realm = user.session().realm
             cookieName = "5421aeddf91aa20"
-            userId = userInfo.value["sub"]?.jsonPrimitive?.content ?: ""
         }
     }
 }

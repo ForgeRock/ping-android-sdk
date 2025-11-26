@@ -19,6 +19,7 @@ import io.ktor.http.HttpMethod.Companion.Put
 import io.ktor.client.request.setBody
 import io.ktor.client.request.url
 import io.ktor.http.ContentType
+import io.ktor.http.HttpMethod.Companion.Post
 import io.ktor.http.contentType
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -51,8 +52,6 @@ class DeviceClientConfig {
         }
     /** Cookie name for authentication. */
     var cookieName: String = "iPlanetDirectoryPro"
-    /** User ID. */
-    var userId: String = ""
     /** HTTP client instance. */
     var httpClient: HttpClient = HttpClient()
 }
@@ -65,6 +64,18 @@ class DeviceClientConfig {
 class DeviceClient(block: DeviceClientConfig.() -> Unit) {
     private val config: DeviceClientConfig = DeviceClientConfig().apply(block)
     private val httpClient: HttpClient = config.httpClient
+
+    private var cachedUserId: String? = null
+
+    /**
+     * Get the user ID from session, with caching to avoid redundant API calls.
+     */
+    private suspend fun getCachedUserId(): String {
+        if (cachedUserId == null) {
+            cachedUserId = getUserIdFromSession(config)
+        }
+        return cachedUserId ?: ""
+    }
 
     /** OATH device operations (read/delete). */
     val oathDeviceClient: ImmutableDevice<OathDevice> by lazy {
@@ -179,45 +190,6 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
     }
 
     /**
-     * Compose the base URL for device endpoints using the provided config.
-     */
-    private fun composeBaseUrl(config: DeviceClientConfig): Uri.Builder {
-        return Uri.Builder()
-            .encodedPath(config.serverUrl.toString())
-            .appendPath("json")
-            .appendPath("realms")
-            .appendEncodedPath(config.realm)
-            .appendPath("users")
-            .appendPath(config.userId)
-    }
-
-    /**
-     * Compose the URL for fetching a list of devices of a specific type.
-     */
-    private fun composeUrlForDeviceList(
-        config: DeviceClientConfig,
-        path: String,
-    ): String {
-        return composeBaseUrl(config)
-            .appendEncodedPath(path)
-            .appendQueryParameter("_queryFilter", "true")
-            .build().toString()
-    }
-
-    /**
-     * Compose the URL for a specific device resource.
-     */
-    private fun composeUrlForDevice(
-        config: DeviceClientConfig,
-        device: Device,
-    ): String {
-        val uri = composeBaseUrl(config)
-            .appendEncodedPath(device.urlSuffix)
-            .appendEncodedPath(device.id)
-        return uri.build().toString()
-    }
-
-    /**
      * Fetch a list of devices of type [T] from the server.
      *
      * @param config The client configuration.
@@ -228,8 +200,18 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
         config: DeviceClientConfig,
         path: String,
     ): List<T> {
+        val userId = getCachedUserId()
+        if (userId.isBlank()) {
+            return emptyList()
+        }
         val request = httpClient.prepareRequest {
-            url(composeUrlForDeviceList(config, path))
+            url(
+                composeUrlForDeviceList(
+                    config = config,
+                    path = path,
+                    userId = userId,
+                )
+            )
             header(config.cookieName, config.ssoTokenString)
             header(CONTENT_TYPE_KEY, CONTENT_TYPE_JSON)
             header(ACCEPT_API_VERSION_KEY, ACCEPT_API_VERSION_VALUE)
@@ -255,9 +237,14 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
         config: DeviceClientConfig,
         device: T,
     ): HttpResponse {
+        val userId = getCachedUserId()
+        if (userId.isBlank()) {
+            throw IllegalStateException("User ID cannot be blank.")
+        }
         val urlString = composeUrlForDevice(
             config = config,
             device = device,
+            userId = userId,
         )
         val request = httpClient.prepareRequest {
             url(urlString)
@@ -280,10 +267,15 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
         config: DeviceClientConfig,
         device: T,
     ): HttpResponse {
+        val userId = getCachedUserId()
+        if (userId.isBlank()) {
+            throw IllegalStateException("User ID cannot be blank.")
+        }
         val request = httpClient.prepareRequest {
             url(composeUrlForDevice(
                 config = config,
                 device = device,
+                userId = userId,
             ))
             header(config.cookieName, config.ssoTokenString)
             header(CONTENT_TYPE_KEY, CONTENT_TYPE_JSON)
@@ -295,10 +287,74 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
         return request.execute()
     }
 
+    private suspend fun getUserIdFromSession(
+        config: DeviceClientConfig,
+    ): String {
+        val uri = composeBaseUrl(config)
+            .appendPath("sessions")
+            .appendQueryParameter("_action", "getSessionInfo")
+            .build().toString()
+        val request = httpClient.prepareRequest {
+            url(uri)
+            header(CONTENT_TYPE_KEY, CONTENT_TYPE_JSON)
+            header(ACCEPT_API_VERSION_KEY, API_VERSION_2_1)
+            header(config.cookieName, config.ssoTokenString)
+            method = Post
+        }
+        val response = request.execute()
+        val body = response.bodyAsText()
+        val jsonObject = Json.parseToJsonElement(body).jsonObject
+        return jsonObject["username"]?.toString()?.replace("\"", "") ?: ""
+    }
+
+    /**
+     * Compose the base URL for device endpoints using the provided config.
+     */
+    private fun composeBaseUrl(config: DeviceClientConfig): Uri.Builder {
+        return Uri.Builder()
+            .encodedPath(config.serverUrl.toString())
+            .appendPath("json")
+            .appendPath("realms")
+            .appendEncodedPath(config.realm)
+    }
+
+    /**
+     * Compose the URL for fetching a list of devices of a specific type.
+     */
+    private fun composeUrlForDeviceList(
+        config: DeviceClientConfig,
+        path: String,
+        userId: String,
+    ): String {
+        return composeBaseUrl(config)
+            .appendPath("users")
+            .appendEncodedPath(userId)
+            .appendEncodedPath(path)
+            .appendQueryParameter("_queryFilter", "true")
+            .build().toString()
+    }
+
+    /**
+     * Compose the URL for a specific device resource.
+     */
+    private fun composeUrlForDevice(
+        config: DeviceClientConfig,
+        device: Device,
+        userId: String,
+    ): String {
+        val uri = composeBaseUrl(config)
+            .appendPath("users")
+            .appendEncodedPath(userId)
+            .appendEncodedPath(device.urlSuffix)
+            .appendEncodedPath(device.id)
+        return uri.build().toString()
+    }
+
     companion object {
         private const val CONTENT_TYPE_KEY = "Content-Type"
         private const val CONTENT_TYPE_JSON = "application/json"
         private const val ACCEPT_API_VERSION_KEY = "Accept-API-Version"
         private const val ACCEPT_API_VERSION_VALUE = "resource=1.0"
+        private const val API_VERSION_2_1 = "resource=2.1, protocol=1.0"
     }
 }

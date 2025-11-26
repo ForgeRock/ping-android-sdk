@@ -51,7 +51,6 @@ class DeviceClientTest {
             serverUrl = URL("https://test.example.com")
             realm = "test-realm"
             cookieName = "test-cookie"
-            userId = "user-123"
         }
 
         assertNotNull(deviceClient)
@@ -73,7 +72,6 @@ class DeviceClientTest {
             serverUrl = URL("https://test.example.com")
             realm = "alpha"
             cookieName = "test-cookie"
-            userId = "user-123"
             httpClient = mockClient
         }
 
@@ -104,7 +102,6 @@ class DeviceClientTest {
             serverUrl = URL("https://test.example.com")
             realm = "alpha"
             cookieName = "test-cookie"
-            userId = "user-123"
             httpClient = mockClient
         }
 
@@ -126,7 +123,6 @@ class DeviceClientTest {
             serverUrl = URL("https://test.example.com")
             realm = "alpha"
             cookieName = "test-cookie"
-            userId = "user-123"
             httpClient = mockClient
         }
 
@@ -165,7 +161,6 @@ class DeviceClientTest {
             serverUrl = URL("https://test.example.com")
             realm = "alpha"
             cookieName = "test-cookie"
-            userId = "user-123"
             httpClient = mockClient
         }
 
@@ -186,7 +181,6 @@ class DeviceClientTest {
             serverUrl = URL("https://test.example.com")
             realm = "alpha"
             cookieName = "test-cookie"
-            userId = "user-123"
             httpClient = mockClient
         }
 
@@ -225,7 +219,6 @@ class DeviceClientTest {
             serverUrl = URL("https://test.example.com")
             realm = "alpha"
             cookieName = "test-cookie"
-            userId = "user-123"
             httpClient = mockClient
         }
 
@@ -247,7 +240,6 @@ class DeviceClientTest {
             serverUrl = URL("https://test.example.com")
             realm = "alpha"
             cookieName = "test-cookie"
-            userId = "user-123"
             httpClient = mockClient
         }
 
@@ -274,7 +266,6 @@ class DeviceClientTest {
             serverUrl = URL("https://test.example.com")
             realm = "alpha"
             cookieName = "test-cookie"
-            userId = "user-123"
             httpClient = mockClient
         }
 
@@ -314,7 +305,6 @@ class DeviceClientTest {
             serverUrl = URL("https://test.example.com")
             realm = "alpha"
             cookieName = "test-cookie"
-            userId = "user-123"
             httpClient = mockClient
         }
 
@@ -336,7 +326,6 @@ class DeviceClientTest {
             serverUrl = URL("https://test.example.com")
             realm = "alpha"
             cookieName = "test-cookie"
-            userId = "user-123"
             httpClient = mockClient
         }
 
@@ -363,7 +352,6 @@ class DeviceClientTest {
             serverUrl = URL("https://test.example.com")
             realm = "alpha"
             cookieName = "test-cookie"
-            userId = "user-123"
             httpClient = mockClient
         }
 
@@ -408,7 +396,6 @@ class DeviceClientTest {
             serverUrl = URL("https://test.example.com")
             realm = "alpha"
             cookieName = "test-cookie"
-            userId = "user-123"
             httpClient = mockClient
         }
 
@@ -432,7 +419,6 @@ class DeviceClientTest {
             serverUrl = URL("https://test.example.com")
             realm = "alpha"
             cookieName = "test-cookie"
-            userId = "user-123"
             httpClient = mockClient
         }
 
@@ -463,7 +449,6 @@ class DeviceClientTest {
             serverUrl = URL("https://test.example.com")
             realm = "alpha"
             cookieName = "test-cookie"
-            userId = "user-123"
             httpClient = mockClient
         }
 
@@ -520,7 +505,6 @@ class DeviceClientTest {
             serverUrl = URL("https://test.example.com")
             realm = "alpha"
             cookieName = "test-cookie"
-            userId = "user-123"
             httpClient = mockClient
         }
 
@@ -546,7 +530,6 @@ class DeviceClientTest {
             serverUrl = URL("https://test.example.com")
             realm = "alpha"
             cookieName = "test-cookie"
-            userId = "user-123"
             httpClient = mockClient
         }
 
@@ -565,9 +548,8 @@ class DeviceClientTest {
 
         assertEquals("", config.ssoTokenString)
         assertEquals(URL("http://localhost"), config.serverUrl)
-        assertEquals("", config.realm)
-        assertEquals("", config.cookieName)
-        assertEquals("", config.userId)
+        assertEquals("root", config.realm)
+        assertEquals("iPlanetDirectoryPro", config.cookieName)
         assertNotNull(config.httpClient)
     }
 
@@ -579,12 +561,10 @@ class DeviceClientTest {
         config.serverUrl = URL("https://new.example.com")
         config.realm = "new-realm"
         config.cookieName = "new-cookie"
-        config.userId = "new-user-123"
 
         assertEquals("new-token", config.ssoTokenString)
         assertEquals(URL("https://new.example.com"), config.serverUrl)
         assertEquals("new-realm", config.realm)
         assertEquals("new-cookie", config.cookieName)
-        assertEquals("new-user-123", config.userId)
     }
 }
