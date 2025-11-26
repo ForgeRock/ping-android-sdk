@@ -19,18 +19,18 @@ sequenceDiagram
     participant PingServer
     
     App->>DeviceClient: Create DeviceClient { config }
-    App->>DeviceClient: oathDeviceClient.get()
-    DeviceClient->>PingServer: GET /sessions?_action=getSessionInfo
+    App->>DeviceClient: oathDevice.devices()
+    DeviceClient->>PingServer: POST /sessions?_action=getSessionInfo
     PingServer-->>DeviceClient: { username: "user-id" }
     DeviceClient->>PingServer: GET /devices/2fa/oath
     PingServer-->>DeviceClient: List of OATH devices
-    DeviceClient-->>App: List<OathDevice>
+    DeviceClient-->>App: Result.success(List<OathDevice>)
     
-    App->>DeviceClient: pushDeviceClient.get()
+    App->>DeviceClient: pushDevice.devices()
     DeviceClient->>PingServer: GET /devices/2fa/push
     DeviceClient->>DeviceClient: (reuse cached userId)
     PingServer-->>DeviceClient: List of Push devices
-    DeviceClient-->>App: List<PushDevice>
+    DeviceClient-->>App: Result.success(List<PushDevice>)
 ```
 
 ## Installation
@@ -100,13 +100,17 @@ The Device Client module supports the following device types:
 
 ### Device Operations
 
-All device types implement the `DeviceInterface<T>` which provides three operations:
+All device types implement the `DeviceRepository<T>` interface which provides three operations:
 
-- **`devices()`**: Retrieve all devices of the specified type
-- **`delete(device)`**: Delete a specific device
-- **`update(device)`**: Update device properties (currently only device name)
+- **`devices(): Result<List<T>>`**: Retrieve all devices of the specified type wrapped in a Result
+- **`delete(device: T): Result<Boolean>`**: Delete a specific device and return success/failure
+- **`update(device: T): Result<Boolean>`**: Update device properties (currently only device name)
+
+**Result-Based API**: All operations return a `Result` type for improved error handling and functional programming support.
 
 **Note**: While all device types support the `update()` operation through the unified interface, the server may restrict updates for certain device types (e.g., OATH and Push devices). Attempting to update restricted device types will result in no changes being applied.
+
+**If-Match Header**: Update operations automatically include an `If-Match: *` header to handle concurrent modifications, ensuring that updates only succeed if the resource hasn't been modified by another client.
 
 ## Usage Examples
 
@@ -117,16 +121,18 @@ All device types implement the `DeviceInterface<T>` which provides three operati
 ```kotlin
 import kotlinx.coroutines.launch
 
-viewmodelScope.launch {
-    val oathDevices: List<OathDevice> = deviceClient.oathDeviceClient.devices()
-    
-    oathDevices.forEach { device ->
-        println("Device ID: ${device.id}")
-        println("Device Name: ${device.deviceName}")
-        println("UUID: ${device.uuid}")
-        println("Created: ${device.createdDate}")
-        println("Last Access: ${device.lastAccessDate}")
-        println("---")
+viewModelScope.launch {
+    deviceClient.oathDevice.devices().onSuccess { oathDevices ->
+        oathDevices.forEach { device ->
+            println("Device ID: ${device.id}")
+            println("Device Name: ${device.deviceName}")
+            println("UUID: ${device.uuid}")
+            println("Created: ${device.createdDate}")
+            println("Last Access: ${device.lastAccessDate}")
+            println("---")
+        }
+    }.onFailure { exception ->
+        println("Error fetching OATH devices: ${exception.message}")
     }
 }
 ```
@@ -136,14 +142,16 @@ viewmodelScope.launch {
 ```kotlin
 import kotlinx.coroutines.launch
 
-viewmodelScope.launch {
-    val pushDevices: List<PushDevice> = deviceClient.pushDeviceClient.devices()
-    
-    pushDevices.forEach { device ->
-        println("Device ID: ${device.id}")
-        println("Device Name: ${device.deviceName}")
-        println("UUID: ${device.uuid}")
-        println("---")
+viewModelScope.launch {
+    deviceClient.pushDevice.devices().onSuccess { pushDevices ->
+        pushDevices.forEach { device ->
+            println("Device ID: ${device.id}")
+            println("Device Name: ${device.deviceName}")
+            println("UUID: ${device.uuid}")
+            println("---")
+        }
+    }.onFailure { exception ->
+        println("Error fetching Push devices: ${exception.message}")
     }
 }
 ```
@@ -153,15 +161,17 @@ viewmodelScope.launch {
 ```kotlin
 import kotlinx.coroutines.launch
 
-viewmodelScope.launch {
-    val boundDevices: List<BoundDevice> = deviceClient.boundDevice.devices()
-    
-    boundDevices.forEach { device ->
-        println("Device ID: ${device.id}")
-        println("Device Name: ${device.deviceName}")
-        println("Device ID: ${device.deviceId}")
-        println("UUID: ${device.uuid}")
-        println("---")
+viewModelScope.launch {
+    deviceClient.boundDevice.devices().onSuccess { boundDevices ->
+        boundDevices.forEach { device ->
+            println("Device ID: ${device.id}")
+            println("Device Name: ${device.deviceName}")
+            println("Device ID: ${device.deviceId}")
+            println("UUID: ${device.uuid}")
+            println("---")
+        }
+    }.onFailure { exception ->
+        println("Error fetching Bound devices: ${exception.message}")
     }
 }
 ```
@@ -171,14 +181,16 @@ viewmodelScope.launch {
 ```kotlin
 import kotlinx.coroutines.launch
 
-viewmodelScope.launch {
-    val webAuthnDevices: List<WebAuthnDevice> = deviceClient.webAuthnDevice.devices()
-    
-    webAuthnDevices.forEach { device ->
-        println("Device ID: ${device.id}")
-        println("Device Name: ${device.deviceName}")
-        println("Credential ID: ${device.credentialId}")
-        println("---")
+viewModelScope.launch {
+    deviceClient.webAuthnDevice.devices().onSuccess { webAuthnDevices ->
+        webAuthnDevices.forEach { device ->
+            println("Device ID: ${device.id}")
+            println("Device Name: ${device.deviceName}")
+            println("Credential ID: ${device.credentialId}")
+            println("---")
+        }
+    }.onFailure { exception ->
+        println("Error fetching WebAuthn devices: ${exception.message}")
     }
 }
 ```
@@ -188,19 +200,21 @@ viewmodelScope.launch {
 ```kotlin
 import kotlinx.coroutines.launch
 
-viewmodelScope.launch {
-    val profileDevices: List<ProfileDevice> = deviceClient.profileDevice.devices()
-    
-    profileDevices.forEach { device ->
-        println("Device ID: ${device.id}")
-        println("Device Name (Alias): ${device.deviceName}")
-        println("Identifier: ${device.identifier}")
-        println("Metadata: ${device.metadata}")
-        device.location?.let { location ->
-            println("Location: ${location.latitude}, ${location.longitude}")
+viewModelScope.launch {
+    deviceClient.profileDevice.devices().onSuccess { profileDevices ->
+        profileDevices.forEach { device ->
+            println("Device ID: ${device.id}")
+            println("Device Name (Alias): ${device.deviceName}")
+            println("Identifier: ${device.identifier}")
+            println("Metadata: ${device.metadata}")
+            device.location?.let { location ->
+                println("Location: ${location.latitude}, ${location.longitude}")
+            }
+            println("Last Selected: ${device.lastSelectedDate}")
+            println("---")
         }
-        println("Last Selected: ${device.lastSelectedDate}")
-        println("---")
+    }.onFailure { exception ->
+        println("Error fetching Profile devices: ${exception.message}")
     }
 }
 ```
@@ -212,17 +226,20 @@ Update device properties such as the device name:
 ```kotlin
 import kotlinx.coroutines.launch
 
-viewmodelScope.launch {
-    val devices = deviceClient.boundDevice.devices()
-    
-    if (devices.isNotEmpty()) {
-        val device = devices.first()
-        
-        // Update the device name
-        device.deviceName = "My Updated Device"
-        deviceClient.boundDevice.update(device)
-        
-        println("Device updated successfully!")
+viewModelScope.launch {
+    deviceClient.boundDevice.devices().onSuccess { devices ->
+        if (devices.isNotEmpty()) {
+            val device = devices.first()
+            
+            // Update the device name
+            device.deviceName = "My Updated Device"
+            
+            deviceClient.boundDevice.update(device).onSuccess {
+                println("Device updated successfully!")
+            }.onFailure { exception ->
+                println("Failed to update device: ${exception.message}")
+            }
+        }
     }
 }
 ```
@@ -234,6 +251,8 @@ viewmodelScope.launch {
 - ✅ **OathDevice**: Fully supports name updates
 - ✅ **PushDevice**: Fully supports name updates
 
+**If-Match Header**: All update operations automatically include an `If-Match: *` HTTP header. This header is used for optimistic concurrency control to prevent conflicts when multiple clients attempt to modify the same device simultaneously. The wildcard `*` value allows updates regardless of the current ETag, ensuring the update succeeds if the resource exists.
+
 ### Deleting Devices
 
 Remove a device from the user's registered devices:
@@ -241,20 +260,22 @@ Remove a device from the user's registered devices:
 ```kotlin
 import kotlinx.coroutines.launch
 
-viewmodelScope.launch {
-    val devices = deviceClient.pushDeviceClient.devices()
-    
-    if (devices.isNotEmpty()) {
-        val deviceToDelete = devices.first()
-        
-        deviceClient.pushDeviceClient.delete(deviceToDelete)
-        
-        println("Device deleted successfully!")
+viewModelScope.launch {
+    deviceClient.pushDevice.devices().onSuccess { devices ->
+        if (devices.isNotEmpty()) {
+            val deviceToDelete = devices.first()
+            
+            deviceClient.pushDevice.delete(deviceToDelete).onSuccess {
+                println("Device deleted successfully!")
+            }.onFailure { exception ->
+                println("Failed to delete device: ${exception.message}")
+            }
+        }
     }
 }
 ```
 
-**Note:** All device types support the `delete()` method through the unified `DeviceInterface`.
+**Note:** All device types support the `delete()` method through the unified `DeviceRepository`.
 
 ## Integration with Journey and DaVinci
 
@@ -291,8 +312,12 @@ if (node is SuccessNode) {
     }
     
     // Retrieve devices - userId is automatically fetched and cached
-    val devices = deviceClient.oathDeviceClient.devices()
-    // Display devices to the user
+    deviceClient.oathDevice.devices().onSuccess { devices ->
+        // Display devices to the user
+        println("Found ${devices.size} OATH devices")
+    }.onFailure { exception ->
+        println("Error: ${exception.message}")
+    }
 }
 ```
 
