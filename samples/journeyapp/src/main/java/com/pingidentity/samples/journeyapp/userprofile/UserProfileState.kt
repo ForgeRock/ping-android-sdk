@@ -24,7 +24,10 @@ data class UserProfileState(
     var deviceList: List<String> = emptyList(),
     var showDeviceInfo: Boolean = false,
     var selectedDeviceType: DeviceType = DeviceType.OATH,
-    var isLoading: Boolean = false
+    var isLoading: Boolean = false,
+    var showEditDialog: Boolean = false,
+    var deviceToEdit: String? = null,
+    var newDeviceName: String = ""
 )
 
 fun UserProfileState.canUpdateDevice(): Boolean {

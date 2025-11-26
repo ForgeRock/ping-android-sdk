@@ -90,18 +90,23 @@ The DeviceClient automatically caches the `userId` retrieved from the session to
 
 The Device Client module supports the following device types:
 
-| Device Type        | Interface Type  | Description                                            | Use Case                        |
-|--------------------|-----------------|--------------------------------------------------------|---------------------------------|
-| **OathDevice**     | ImmutableDevice | Time-based (TOTP) or HMAC-based (HOTP) OTP devices    | Authenticator apps (Google Authenticator, etc.) |
-| **PushDevice**     | ImmutableDevice | Push notification-based authentication devices         | Mobile push notifications       |
-| **BoundDevice**    | MutableDevice   | Cryptographically bound devices                        | Device binding authentication   |
-| **WebAuthnDevice** | MutableDevice   | FIDO2/WebAuthn devices (biometric, security keys)     | Passwordless authentication     |
-| **ProfileDevice**  | MutableDevice   | User profile devices tracking metadata and location    | Device profiling and analytics  |
+| Device Type        | Description                                            | Use Case                        |
+|--------------------|--------------------------------------------------------|---------------------------------|
+| **OathDevice**     | Time-based (TOTP) or HMAC-based (HOTP) OTP devices    | Authenticator apps (Google Authenticator, etc.) |
+| **PushDevice**     | Push notification-based authentication devices         | Mobile push notifications       |
+| **BoundDevice**    | Cryptographically bound devices                        | Device binding authentication   |
+| **WebAuthnDevice** | FIDO2/WebAuthn devices (biometric, security keys)     | Passwordless authentication     |
+| **ProfileDevice**  | User profile devices tracking metadata and location    | Device profiling and analytics  |
 
-### Device Capabilities
+### Device Operations
 
-- **ImmutableDevice**: Supports `devices()` and `delete()` operations
-- **MutableDevice**: Supports `devices()`, `delete()`, and `update()` operations
+All device types implement the `DeviceInterface<T>` which provides three operations:
+
+- **`devices()`**: Retrieve all devices of the specified type
+- **`delete(device)`**: Delete a specific device
+- **`update(device)`**: Update device properties (currently only device name)
+
+**Note**: While all device types support the `update()` operation through the unified interface, the server may restrict updates for certain device types (e.g., OATH and Push devices). Attempting to update restricted device types will result in no changes being applied.
 
 ## Usage Examples
 
@@ -202,7 +207,7 @@ viewmodelScope.launch {
 
 ### Updating Devices
 
-Update device properties such as the device name (only available for MutableDevice types):
+Update device properties such as the device name:
 
 ```kotlin
 import kotlinx.coroutines.launch
@@ -214,15 +219,20 @@ viewmodelScope.launch {
         val device = devices.first()
         
         // Update the device name
-        val updatedDevice = device.copy(deviceName = "My Updated Device")
-        deviceClient.boundDevice.update(updatedDevice)
+        device.deviceName = "My Updated Device"
+        deviceClient.boundDevice.update(device)
         
         println("Device updated successfully!")
     }
 }
 ```
 
-**Note:** Only `MutableDevice` implementations (BoundDevice, WebAuthnDevice, ProfileDevice) support the `update()` method. ImmutableDevice types (OathDevice, PushDevice) do not support updates.
+**Supported Device Types for Updates:**
+- ✅ **BoundDevice**: Fully supports name updates
+- ✅ **WebAuthnDevice**: Fully supports name updates
+- ✅ **ProfileDevice**: Fully supports name updates
+- ✅ **OathDevice**: Fully supports name updates
+- ✅ **PushDevice**: Fully supports name updates
 
 ### Deleting Devices
 
@@ -244,7 +254,7 @@ viewmodelScope.launch {
 }
 ```
 
-**Note:** Both `ImmutableDevice` and `MutableDevice` implementations support the `delete()` method.
+**Note:** All device types support the `delete()` method through the unified `DeviceInterface`.
 
 ## Integration with Journey and DaVinci
 
@@ -481,15 +491,15 @@ DeviceClient(block: DeviceClientConfig.() -> Unit)
 
 #### Properties
 
-| Property          | Type                              | Description                           |
-|-------------------|-----------------------------------|---------------------------------------|
-| oathDeviceClient  | ImmutableDevice<OathDevice>       | Client for managing OATH devices      |
-| pushDeviceClient  | ImmutableDevice<PushDevice>       | Client for managing Push devices      |
-| boundDevice       | MutableDevice<BoundDevice>        | Client for managing Bound devices     |
-| webAuthnDevice    | MutableDevice<WebAuthnDevice>     | Client for managing WebAuthn devices  |
-| profileDevice     | MutableDevice<ProfileDevice>      | Client for managing Profile devices   |
+| Property          | Type                          | Description                           |
+|-------------------|-------------------------------|---------------------------------------|
+| oathDeviceClient  | DeviceInterface<OathDevice>   | Client for managing OATH devices      |
+| pushDeviceClient  | DeviceInterface<PushDevice>   | Client for managing Push devices      |
+| boundDevice       | DeviceInterface<BoundDevice>    | Client for managing Bound devices     |
+| webAuthnDevice    | DeviceInterface<WebAuthnDevice> | Client for managing WebAuthn devices  |
+| profileDevice     | DeviceInterface<ProfileDevice>  | Client for managing Profile devices   |
 
-### ImmutableDevice<T>
+### DeviceInterface<T>
 
 #### Methods
 
@@ -515,12 +525,6 @@ Deletes the specified device.
 - `device`: The device to delete
 
 **Throws:** Network or server errors
-
-### MutableDevice<T>
-
-Extends `ImmutableDevice<T>` with additional methods:
-
-#### Methods
 
 ```kotlin
 suspend fun update(device: T)

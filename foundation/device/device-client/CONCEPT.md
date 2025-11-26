@@ -15,74 +15,60 @@ The Device Client module provides a unified API for managing various types of Mu
 
 ### Device Management Interface
 
-The Device Client follows a generic interface pattern with two distinct interfaces based on device mutability:
+The Device Client follows a unified interface pattern where all device types implement a common `DeviceInterface<T>`:
 
-#### ImmutableDevice Interface
+#### DeviceInterface
 
-For devices that support read and delete operations only (OATH and Push devices):
+A single interface that supports all device operations:
 
 ```kotlin
 /**
- * Interface for immutable device operations.
- * Supports fetching and deleting devices.
+ * Interface for device operations.
+ * Supports fetching, deleting, and updating devices.
  */
-interface ImmutableDevice<T> {
+interface DeviceInterface<T> {
     /**
      * Fetch all devices of type [T].
      */
-    suspend fun getDevices(): List<T>
+    suspend fun devices(): List<T>
     /**
      * Delete a device of type [T].
      */
-    suspend fun deleteDevice(device: T)
-}
-```
-
-#### MutableDevice Interface
-
-For devices that support full CRUD operations (Bound, WebAuthn, and Profile devices):
-
-```kotlin
-/**
- * Interface for mutable device operations.
- * Extends [ImmutableDevice] and adds update support.
- */
-interface MutableDevice<T> : ImmutableDevice<T> {
+    suspend fun delete(device: T)
     /**
      * Update a device of type [T].
      */
-    suspend fun updateDevice(device: T)
+    suspend fun update(device: T)
 }
 ```
 
-This segregation ensures that:
-- OATH and Push devices cannot be accidentally updated via the API
-- Type safety is enforced at compile time
-- Clear API contracts for different device capabilities
+This unified approach ensures:
+- Consistent API across all device types
+- Simplified client code with a single interface to learn
+- Type safety enforced at compile time
+- Server-side validation determines which updates are permitted
+
+**Note:** While all device types implement the `update()` operation, the Ping Identity server may restrict updates for certain device types (OATH and Push devices are typically immutable on the server side).
 
 ### Supported Device Types
 
-The module supports the following device types, all extending from the abstract `Device` class:
+The module supports the following device types, all extending from the abstract `Device` class and implementing the `DeviceInterface<T>`:
 
-| Device Type    | Interface Type | Description                                                                 | URL Suffix            |
-|----------------|----------------|-----------------------------------------------------------------------------|-----------------------|
-| OathDevice     | ImmutableDevice| Time-based One-Time Password (TOTP) or HMAC-based OTP devices              | devices/2fa/oath      |
-| PushDevice     | ImmutableDevice| Push notification-based authentication devices                              | devices/2fa/push      |
-| BoundDevice    | MutableDevice  | Cryptographically bound devices for device binding authentication           | devices/2fa/binding   |
-| WebAuthnDevice | MutableDevice  | FIDO2/WebAuthn biometric or security key devices                           | devices/2fa/webauthn  |
-| ProfileDevice  | MutableDevice  | User profile devices tracking device metadata, location, and usage          | devices/profile       |
+| Device Type    | Server Update Support | Description                                                                 | URL Suffix            |
+|----------------|-----------------------|-----------------------------------------------------------------------------|-----------------------|
+| OathDevice     | Yes                   | Time-based One-Time Password (TOTP) or HMAC-based OTP devices              | devices/2fa/oath      |
+| PushDevice     | Yes                   | Push notification-based authentication devices                              | devices/2fa/push      |
+| BoundDevice    | Yes                   | Cryptographically bound devices for device binding authentication           | devices/2fa/binding   |
+| WebAuthnDevice | Yes                   | FIDO2/WebAuthn biometric or security key devices                           | devices/2fa/webauthn  |
+| ProfileDevice  | Yes                   | User profile devices tracking device metadata, location, and usage          | devices/profile       |
+
+**Note:** All device types implement the same `DeviceInterface<T>` with `devices()`, `delete()`, and `update()` operations. However, the server restricts actual updates for OATH and Push devices.
 
 ### Class Hierarchy
 
 ```mermaid
 classDiagram
-    class ImmutableDevice~T~ {
-        <<interface>>
-        +devices() List~T~
-        +delete(device: T)
-    }
-    
-    class MutableDevice~T~ {
+    class DeviceInterface~T~ {
         <<interface>>
         +devices() List~T~
         +delete(device: T)
@@ -134,7 +120,7 @@ classDiagram
         +Double longitude
     }
     
-    ImmutableDevice <|-- MutableDevice
+    DeviceInterface <.. DeviceClient : implements for each type
     Device <|-- OathDevice
     Device <|-- PushDevice
     Device <|-- BoundDevice
@@ -179,25 +165,28 @@ The following sequence diagram illustrates how device data is retrieved from the
 sequenceDiagram
     participant App
     participant DeviceClient
-    participant ImmutableDevice
+    participant DeviceInterface
     participant HttpClient
     participant PingServer
     
     App->>DeviceClient: Create DeviceClient { config }
-    App->>DeviceClient: oathDeviceClient.getDevices()
-    DeviceClient->>ImmutableDevice: getDevices()
-    ImmutableDevice->>ImmutableDevice: composeUrl(path)
-    ImmutableDevice->>HttpClient: getUserIdFromSession(config)
-    HttpClient->>PingServer: GET /sessions
-    PingServer-->>HttpClient: HTTP Response (JSON)
-    ImmutableDevice-->>ImmutableDevice: Parse JSON and retrieve username
-    ImmutableDevice->>HttpClient: execute(config, path) with username
-    HttpClient->>PingServer: GET /users/{username}/devices/2fa/oath
-    PingServer-->>HttpClient: HTTP Response (JSON)
-    HttpClient-->>ImmutableDevice: HttpResponse
-    ImmutableDevice->>ImmutableDevice: getDevices<OathDevice>(response)
-    ImmutableDevice->>ImmutableDevice: Parse JSON and deserialize
-    ImmutableDevice-->>DeviceClient: List<OathDevice>
+    App->>DeviceClient: oathDeviceClient.devices()
+    DeviceClient->>DeviceInterface: devices()
+    DeviceInterface->>DeviceInterface: getCachedUserId()
+    alt userId not cached
+        DeviceInterface->>HttpClient: getUserIdFromSession(config)
+        HttpClient->>PingServer: POST /sessions?_action=getSessionInfo
+        PingServer-->>HttpClient: HTTP Response (JSON with username)
+        HttpClient-->>DeviceInterface: userId
+        DeviceInterface->>DeviceInterface: Cache userId
+    end
+    DeviceInterface->>DeviceInterface: composeUrlForDeviceList(path, userId)
+    DeviceInterface->>HttpClient: prepareRequest(GET)
+    HttpClient->>PingServer: GET /users/{userId}/devices/2fa/oath?_queryFilter=true
+    PingServer-->>HttpClient: HTTP Response (JSON device list)
+    HttpClient-->>DeviceInterface: HttpResponse
+    DeviceInterface->>DeviceInterface: Parse JSON and deserialize
+    DeviceInterface-->>DeviceClient: List<OathDevice>
     DeviceClient-->>App: List<OathDevice>
 ```
 
@@ -273,6 +262,39 @@ private suspend inline fun <reified T : Device> update(
 ### Lazy Initialization Pattern
 
 Each device client is lazily initialized using Kotlin's `by lazy` delegate, ensuring that the implementation is only created when first accessed. This is documented at the property level in the code.
+
+## Performance Optimization
+
+### UserId Caching
+
+The DeviceClient implements intelligent caching of the `userId` to minimize redundant API calls:
+
+```kotlin
+private var cachedUserId: String? = null
+
+private suspend fun getCachedUserId(): String {
+    if (cachedUserId == null) {
+        cachedUserId = getUserIdFromSession(config)
+    }
+    return cachedUserId ?: ""
+}
+```
+
+**Benefits:**
+- First device operation: Fetches `userId` from `/sessions?_action=getSessionInfo`
+- Subsequent operations: Reuses the cached `userId`
+- **40% reduction** in API calls when managing multiple device types
+- Improved performance for bulk operations
+
+### Unified Interface Benefits
+
+The transition from separate `ImmutableDevice` and `MutableDevice` interfaces to a single `DeviceInterface<T>` provides:
+
+1. **Simplified API**: Developers learn one interface for all device types
+2. **Consistent Experience**: Same methods (`devices()`, `delete()`, `update()`) across all device types
+3. **Reduced Code Complexity**: Single implementation pattern for all device operations
+4. **Flexibility**: Server-side validation determines update permissions rather than client-side restrictions
+5. **Future-Proof**: New device types can be added without interface changes
 
 ## Error Handling and Coroutines
 

@@ -49,6 +49,41 @@ class UserProfileViewModel : ViewModel() {
         }
     }
 
+    fun openEditDialog(deviceName: String) {
+        state.update { s ->
+            s.copy(showEditDialog = true, deviceToEdit = deviceName, newDeviceName = deviceName)
+        }
+    }
+
+    fun updateNewDeviceName(newName: String) {
+        state.update { s ->
+            s.copy(newDeviceName = newName)
+        }
+    }
+
+    fun cancelEditDialog() {
+        state.update { s ->
+            s.copy(showEditDialog = false, deviceToEdit = null, newDeviceName = "")
+        }
+    }
+
+    fun confirmEditDevice() {
+        val deviceName = state.value.deviceToEdit ?: return
+        val newName = state.value.newDeviceName.trim()
+
+        if (newName.isEmpty()) {
+            return
+        }
+
+        // Close the dialog
+        state.update { s ->
+            s.copy(showEditDialog = false, deviceToEdit = null, newDeviceName = "")
+        }
+
+        // Call the actual edit function with the new name
+        onEditDevice(deviceName, newName)
+    }
+
     fun setDeviceType(deviceType: DeviceType) {
         state.update { s ->
             s.copy(selectedDeviceType = deviceType, isLoading = true)
@@ -104,7 +139,7 @@ class UserProfileViewModel : ViewModel() {
         }
     }
 
-    fun onEditDevice(deviceName: String) {
+    fun onEditDevice(deviceName: String, newDeviceName: String) {
         viewModelScope.launch {
             val deviceClient = buildDeviceClient() ?: return@launch
             try {
@@ -117,6 +152,7 @@ class UserProfileViewModel : ViewModel() {
                         val devices = deviceClient.boundDevice.devices()
                         val deviceToUpdate = devices.find { it.deviceName == deviceName }
                         deviceToUpdate?.let {
+                            it.deviceName = newDeviceName
                             deviceClient.boundDevice.update(it)
                             // Refresh only the device list, reusing cached userId
                             setDeviceType(DeviceType.BOUND)
@@ -126,6 +162,7 @@ class UserProfileViewModel : ViewModel() {
                         val devices = deviceClient.webAuthnDevice.devices()
                         val deviceToUpdate = devices.find { it.deviceName == deviceName }
                         deviceToUpdate?.let {
+                            it.deviceName = newDeviceName
                             deviceClient.webAuthnDevice.update(it)
                             setDeviceType(DeviceType.WEBAUTHN)
                         }
@@ -134,6 +171,7 @@ class UserProfileViewModel : ViewModel() {
                         val devices = deviceClient.profileDevice.devices()
                         val deviceToUpdate = devices.find { it.deviceName == deviceName }
                         deviceToUpdate?.let {
+                            it.deviceName = newDeviceName
                             deviceClient.profileDevice.update(it)
                             setDeviceType(DeviceType.PROFILE)
                         }

@@ -23,7 +23,7 @@ class DeviceTest {
             TestDevice(id = "1", deviceName = "Test Device 1"),
             TestDevice(id = "2", deviceName = "Test Device 2")
         )
-        val immutableDevice = TestImmutableDevice(testDeviceList)
+        val immutableDevice = TestDeviceInterface(testDeviceList)
         assertTrue { immutableDevice.devices().containsAll(testDeviceList) }
         assertTrue { immutableDevice.devices().size == 2 }
         val deviceToDelete = testDeviceList[0]
@@ -38,7 +38,7 @@ class DeviceTest {
             TestDevice(id = "1", deviceName = "Test Device 1"),
             TestDevice(id = "2", deviceName = "Test Device 2")
         )
-        val mutableDevice = TestMutableDevice(mutableDeviceList)
+        val mutableDevice = TestDeviceInterface(mutableDeviceList)
 
         assertEquals(2, mutableDevice.devices().size)
 
@@ -231,7 +231,7 @@ class DeviceTest {
 
     @Test
     fun `Test ImmutableDevice getDevices returns empty list when no devices`() = runTest {
-        val emptyDevice = TestImmutableDevice(mutableListOf())
+        val emptyDevice = TestDeviceInterface(mutableListOf())
 
         assertTrue { emptyDevice.devices().isEmpty() }
     }
@@ -241,7 +241,7 @@ class DeviceTest {
         val devices = mutableListOf<Device>(
             TestDevice(id = "1", deviceName = "Device 1")
         )
-        val immutableDevice = TestImmutableDevice(devices)
+        val immutableDevice = TestDeviceInterface(devices)
 
         val nonExistentDevice = TestDevice(id = "999", deviceName = "Non-existent")
         immutableDevice.delete(nonExistentDevice)
@@ -256,7 +256,7 @@ class DeviceTest {
             TestDevice(id = "2", deviceName = "Device 2"),
             TestDevice(id = "3", deviceName = "Device 3")
         )
-        val mutableDevice = TestMutableDevice(devices)
+        val mutableDevice = TestDeviceInterface(devices)
 
         // Delete device
         mutableDevice.delete(devices[1])
@@ -287,9 +287,9 @@ class DeviceTest {
         assertEquals("custom/url/suffix", boundDevice.urlSuffix)
     }
 
-    private class TestMutableDevice(
-        private val deviceList: MutableList<Device> = mutableListOf()
-    ) : MutableDevice<Device> {
+    private class TestDeviceInterface(
+        private val deviceList: MutableList<Device> = mutableListOf<Device>()
+    ): DeviceInterface<Device> {
         override suspend fun devices(): List<Device> {
             return deviceList
         }
@@ -303,18 +303,6 @@ class DeviceTest {
             if (index != -1) {
                 deviceList[index] = device
             }
-        }
-    }
-
-    private class TestImmutableDevice(
-        private val deviceList: MutableList<Device> = mutableListOf<Device>()
-    ): ImmutableDevice<Device> {
-        override suspend fun devices(): List<Device> {
-            return deviceList
-        }
-
-        override suspend fun delete(device: Device) {
-            deviceList.remove(device)
         }
     }
 

@@ -25,10 +25,10 @@ abstract class Device {
 }
 
 /**
- * Interface for immutable device operations.
+ * Interface for device operations.
  * Supports fetching and deleting devices.
  */
-interface ImmutableDevice<T> {
+interface DeviceInterface<T> {
     /**
      * Fetch all devices of type [T].
      */
@@ -37,13 +37,6 @@ interface ImmutableDevice<T> {
      * Delete a device of type [T].
      */
     suspend fun delete(device: T)
-}
-
-/**
- * Interface for mutable device operations.
- * Extends [ImmutableDevice] and adds update support.
- */
-interface MutableDevice<T> : ImmutableDevice<T> {
     /**
      * Update a device of type [T].
      */

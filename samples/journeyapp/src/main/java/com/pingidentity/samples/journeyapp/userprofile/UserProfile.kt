@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -23,6 +24,8 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -242,7 +245,7 @@ fun UserProfile(userProfileViewModel: UserProfileViewModel) {
                                     // Edit button
                                     IconButton(
                                         onClick = {
-                                            userProfileViewModel.onEditDevice(deviceName)
+                                            userProfileViewModel.openEditDialog(deviceName)
                                         },
                                         enabled = state.canUpdateDevice()
                                     ) {
@@ -295,4 +298,60 @@ fun UserProfile(userProfileViewModel: UserProfileViewModel) {
             }
         }
     }
+
+    // Edit Device Dialog
+    if (state.showEditDialog) {
+        EditDeviceDialog(
+            currentName = state.deviceToEdit ?: "",
+            newName = state.newDeviceName,
+            onNameChange = { userProfileViewModel.updateNewDeviceName(it) },
+            onConfirm = { userProfileViewModel.confirmEditDevice() },
+            onDismiss = { userProfileViewModel.cancelEditDialog() }
+        )
+    }
+}
+
+@Composable
+fun EditDeviceDialog(
+    currentName: String,
+    newName: String,
+    onNameChange: (String) -> Unit,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(text = "Edit Device Name")
+        },
+        text = {
+            Column {
+                Text(
+                    text = "Current name: $currentName",
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+                TextField(
+                    value = newName,
+                    onValueChange = onNameChange,
+                    label = { Text("New device name") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = onConfirm,
+                enabled = newName.trim().isNotEmpty()
+            ) {
+                Text("Save")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
 }

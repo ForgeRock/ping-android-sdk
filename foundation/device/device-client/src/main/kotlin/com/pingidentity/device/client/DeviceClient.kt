@@ -78,8 +78,8 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
     }
 
     /** OATH device operations (read/delete). */
-    val oathDeviceClient: ImmutableDevice<OathDevice> by lazy {
-        object : ImmutableDevice<OathDevice> {
+    val oathDeviceClient: DeviceInterface<OathDevice> by lazy {
+        object : DeviceInterface<OathDevice> {
             override suspend fun devices(): List<OathDevice> {
                 return withContext(Dispatchers.IO) {
                     devices<OathDevice>(config, "devices/2fa/oath")
@@ -91,12 +91,21 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
                     delete<OathDevice>(config, device)
                 }
             }
+
+            override suspend fun update(device: OathDevice) {
+                withContext(Dispatchers.IO) {
+                    update<OathDevice>(
+                        config = config,
+                        device = device,
+                    )
+                }
+            }
         }
     }
 
     /** Push device operations (read/delete). */
-    val pushDeviceClient: ImmutableDevice<PushDevice> by lazy {
-        object : ImmutableDevice<PushDevice> {
+    val pushDeviceClient: DeviceInterface<PushDevice> by lazy {
+        object : DeviceInterface<PushDevice> {
             override suspend fun devices(): List<PushDevice> {
                 return withContext(Dispatchers.IO) {
                     devices<PushDevice>(config, "devices/2fa/push")
@@ -108,12 +117,21 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
                     delete<PushDevice>(config, device)
                 }
             }
+
+            override suspend fun update(device: PushDevice) {
+                withContext(Dispatchers.IO) {
+                    update<PushDevice>(
+                        config = config,
+                        device = device,
+                    )
+                }
+            }
         }
     }
 
     /** Bound device operations (read/delete/update). */
-    val boundDevice: MutableDevice<BoundDevice> by lazy {
-        object : MutableDevice<BoundDevice> {
+    val boundDevice: DeviceInterface<BoundDevice> by lazy {
+        object : DeviceInterface<BoundDevice> {
             override suspend fun devices(): List<BoundDevice> {
                 return withContext(Dispatchers.IO) {
                     devices<BoundDevice>(config, "devices/2fa/binding")
@@ -138,8 +156,8 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
     }
 
     /** WebAuthn device operations (read/delete/update). */
-    val webAuthnDevice: MutableDevice<WebAuthnDevice> by lazy {
-        object : MutableDevice<WebAuthnDevice> {
+    val webAuthnDevice: DeviceInterface<WebAuthnDevice> by lazy {
+        object : DeviceInterface<WebAuthnDevice> {
             override suspend fun devices(): List<WebAuthnDevice> {
                 return withContext(Dispatchers.IO) {
                     devices<WebAuthnDevice>(config, "devices/2fa/webauthn")
@@ -164,8 +182,8 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
     }
 
     /** Profile device operations (read/delete/update). */
-    val profileDevice: MutableDevice<ProfileDevice> by lazy {
-        object : MutableDevice<ProfileDevice> {
+    val profileDevice: DeviceInterface<ProfileDevice> by lazy {
+        object : DeviceInterface<ProfileDevice> {
             override suspend fun devices(): List<ProfileDevice> {
                 return withContext(Dispatchers.IO) {
                     devices<ProfileDevice>(config, "devices/profile")
@@ -287,6 +305,11 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
         return request.execute()
     }
 
+    /**
+     * Fetch the user ID from the session.
+     * @param config The client configuration.
+     * @return The user ID.
+     */
     internal suspend fun getUserIdFromSession(
         config: DeviceClientConfig,
     ): String {
