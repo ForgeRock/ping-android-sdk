@@ -38,7 +38,6 @@ import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
-import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
 
 internal val NodeTransform =
@@ -108,15 +107,20 @@ private fun transform(
         return object : ContinueNode(context, journey, json, callbacks) {
             private fun asJson(): JsonObject {
                 return buildJsonObject {
-                    put(AUTH_ID, json[AUTH_ID]?.jsonPrimitive?.content ?: "")
-                    putJsonArray(CALLBACKS) {
-                        callbacks.forEach {
-                            if (it.payload().isNotEmpty()) {
-                                add(it.payload())
+                    json.forEach { (key, value) ->
+                        if (key == CALLBACKS) {
+                            putJsonArray(CALLBACKS) {
+                                callbacks.forEach {
+                                    if (it.payload().isNotEmpty()) {
+                                        add(it.payload())
+                                    }
+                                }
                             }
+                        } else {
+                            put(key, value)
                         }
                     }
-                }
+               }
             }
 
             override fun asRequest(): Request {
