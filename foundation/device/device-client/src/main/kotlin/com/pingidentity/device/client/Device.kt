@@ -32,11 +32,11 @@ interface ImmutableDevice<T> {
     /**
      * Fetch all devices of type [T].
      */
-    suspend fun getDevices(): List<T>
+    suspend fun devices(): List<T>
     /**
      * Delete a device of type [T].
      */
-    suspend fun deleteDevice(device: T)
+    suspend fun delete(device: T)
 }
 
 /**
@@ -47,7 +47,7 @@ interface MutableDevice<T> : ImmutableDevice<T> {
     /**
      * Update a device of type [T].
      */
-    suspend fun updateDevice(device: T)
+    suspend fun update(device: T)
 }
 
 /**

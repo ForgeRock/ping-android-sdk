@@ -24,12 +24,12 @@ class DeviceTest {
             TestDevice(id = "2", deviceName = "Test Device 2")
         )
         val immutableDevice = TestImmutableDevice(testDeviceList)
-        assertTrue { immutableDevice.getDevices().containsAll(testDeviceList) }
-        assertTrue { immutableDevice.getDevices().size == 2 }
+        assertTrue { immutableDevice.devices().containsAll(testDeviceList) }
+        assertTrue { immutableDevice.devices().size == 2 }
         val deviceToDelete = testDeviceList[0]
-        immutableDevice.deleteDevice(deviceToDelete)
-        assertTrue { immutableDevice.getDevices().size == 1 }
-        assertFalse { immutableDevice.getDevices().contains(deviceToDelete) }
+        immutableDevice.delete(deviceToDelete)
+        assertTrue { immutableDevice.devices().size == 1 }
+        assertFalse { immutableDevice.devices().contains(deviceToDelete) }
     }
 
     @Test
@@ -40,13 +40,13 @@ class DeviceTest {
         )
         val mutableDevice = TestMutableDevice(mutableDeviceList)
 
-        assertEquals(2, mutableDevice.getDevices().size)
+        assertEquals(2, mutableDevice.devices().size)
 
         // Update device name
         val updatedDevice = TestDevice(id = "1", deviceName = "Updated Device 1")
-        mutableDevice.updateDevice(updatedDevice)
+        mutableDevice.update(updatedDevice)
 
-        val devices = mutableDevice.getDevices()
+        val devices = mutableDevice.devices()
         assertEquals(2, devices.size)
         assertEquals("Updated Device 1", devices.find { it.id == "1" }?.deviceName)
     }
@@ -233,7 +233,7 @@ class DeviceTest {
     fun `Test ImmutableDevice getDevices returns empty list when no devices`() = runTest {
         val emptyDevice = TestImmutableDevice(mutableListOf())
 
-        assertTrue { emptyDevice.getDevices().isEmpty() }
+        assertTrue { emptyDevice.devices().isEmpty() }
     }
 
     @Test
@@ -244,9 +244,9 @@ class DeviceTest {
         val immutableDevice = TestImmutableDevice(devices)
 
         val nonExistentDevice = TestDevice(id = "999", deviceName = "Non-existent")
-        immutableDevice.deleteDevice(nonExistentDevice)
+        immutableDevice.delete(nonExistentDevice)
 
-        assertEquals(1, immutableDevice.getDevices().size)
+        assertEquals(1, immutableDevice.devices().size)
     }
 
     @Test
@@ -259,14 +259,14 @@ class DeviceTest {
         val mutableDevice = TestMutableDevice(devices)
 
         // Delete device
-        mutableDevice.deleteDevice(devices[1])
-        assertEquals(2, mutableDevice.getDevices().size)
+        mutableDevice.delete(devices[1])
+        assertEquals(2, mutableDevice.devices().size)
 
         // Update remaining device
         val updatedDevice = TestDevice(id = "1", deviceName = "Updated Device 1")
-        mutableDevice.updateDevice(updatedDevice)
+        mutableDevice.update(updatedDevice)
 
-        val result = mutableDevice.getDevices()
+        val result = mutableDevice.devices()
         assertEquals(2, result.size)
         assertEquals("Updated Device 1", result.find { it.id == "1" }?.deviceName)
     }
@@ -290,15 +290,15 @@ class DeviceTest {
     private class TestMutableDevice(
         private val deviceList: MutableList<Device> = mutableListOf()
     ) : MutableDevice<Device> {
-        override suspend fun getDevices(): List<Device> {
+        override suspend fun devices(): List<Device> {
             return deviceList
         }
 
-        override suspend fun deleteDevice(device: Device) {
+        override suspend fun delete(device: Device) {
             deviceList.remove(device)
         }
 
-        override suspend fun updateDevice(device: Device) {
+        override suspend fun update(device: Device) {
             val index = deviceList.indexOfFirst { it.id == device.id }
             if (index != -1) {
                 deviceList[index] = device
@@ -309,11 +309,11 @@ class DeviceTest {
     private class TestImmutableDevice(
         private val deviceList: MutableList<Device> = mutableListOf<Device>()
     ): ImmutableDevice<Device> {
-        override suspend fun getDevices(): List<Device> {
+        override suspend fun devices(): List<Device> {
             return deviceList
         }
 
-        override suspend fun deleteDevice(device: Device) {
+        override suspend fun delete(device: Device) {
             deviceList.remove(device)
         }
     }

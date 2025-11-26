@@ -86,7 +86,7 @@ class DeviceClientTest {
             httpClient = mockClient
         }
 
-        val devices = deviceClient.oathDeviceClient.getDevices()
+        val devices = deviceClient.oathDeviceClient.devices()
         assertTrue { devices.isEmpty() }
     }
 
@@ -116,7 +116,7 @@ class DeviceClientTest {
             httpClient = mockClient
         }
 
-        val devices = deviceClient.oathDeviceClient.getDevices()
+        val devices = deviceClient.oathDeviceClient.devices()
         assertEquals(1, devices.size)
         assertEquals("oath-1", devices[0].id)
         assertEquals("OATH Device 1", devices[0].deviceName)
@@ -146,7 +146,7 @@ class DeviceClientTest {
         )
 
         // Should not throw exception
-        deviceClient.oathDeviceClient.deleteDevice(device)
+        deviceClient.oathDeviceClient.delete(device)
     }
 
     @Test
@@ -175,7 +175,7 @@ class DeviceClientTest {
             httpClient = mockClient
         }
 
-        val devices = deviceClient.pushDeviceClient.getDevices()
+        val devices = deviceClient.pushDeviceClient.devices()
         assertEquals(1, devices.size)
         assertEquals("push-1", devices[0].id)
         assertEquals("Push Device 1", devices[0].deviceName)
@@ -203,7 +203,7 @@ class DeviceClientTest {
             lastAccessDate = 1700100000
         )
 
-        deviceClient.pushDeviceClient.deleteDevice(device)
+        deviceClient.pushDeviceClient.delete(device)
     }
 
     @Test
@@ -233,7 +233,7 @@ class DeviceClientTest {
             httpClient = mockClient
         }
 
-        val devices = deviceClient.boundDevice.getDevices()
+        val devices = deviceClient.boundDevice.devices()
         assertEquals(1, devices.size)
         assertEquals("bound-1", devices[0].id)
         assertEquals("Bound Device 1", devices[0].deviceName)
@@ -263,7 +263,7 @@ class DeviceClientTest {
             lastAccessDate = 1700100000
         )
 
-        deviceClient.boundDevice.deleteDevice(device)
+        deviceClient.boundDevice.delete(device)
     }
 
     @Test
@@ -289,7 +289,7 @@ class DeviceClientTest {
             lastAccessDate = 1700100000
         )
 
-        deviceClient.boundDevice.updateDevice(device)
+        deviceClient.boundDevice.update(device)
     }
 
     @Test
@@ -319,7 +319,7 @@ class DeviceClientTest {
             httpClient = mockClient
         }
 
-        val devices = deviceClient.webAuthnDevice.getDevices()
+        val devices = deviceClient.webAuthnDevice.devices()
         assertEquals(1, devices.size)
         assertEquals("webauthn-1", devices[0].id)
         assertEquals("WebAuthn Device 1", devices[0].deviceName)
@@ -349,7 +349,7 @@ class DeviceClientTest {
             lastAccessDate = 1700100000
         )
 
-        deviceClient.webAuthnDevice.deleteDevice(device)
+        deviceClient.webAuthnDevice.delete(device)
     }
 
     @Test
@@ -375,7 +375,7 @@ class DeviceClientTest {
             lastAccessDate = 1700100000
         )
 
-        deviceClient.webAuthnDevice.updateDevice(device)
+        deviceClient.webAuthnDevice.update(device)
     }
 
     @Test
@@ -410,7 +410,7 @@ class DeviceClientTest {
             httpClient = mockClient
         }
 
-        val devices = deviceClient.profileDevice.getDevices()
+        val devices = deviceClient.profileDevice.devices()
         assertEquals(1, devices.size)
         assertEquals("profile-1", devices[0].id)
         assertEquals("Profile Device 1", devices[0].deviceName)
@@ -446,7 +446,7 @@ class DeviceClientTest {
             lastSelectedDate = 1700100000
         )
 
-        deviceClient.profileDevice.deleteDevice(device)
+        deviceClient.profileDevice.delete(device)
     }
 
     @Test
@@ -476,7 +476,7 @@ class DeviceClientTest {
             lastSelectedDate = 1700100000
         )
 
-        deviceClient.profileDevice.updateDevice(device)
+        deviceClient.profileDevice.update(device)
     }
 
     @Test
@@ -519,7 +519,7 @@ class DeviceClientTest {
             httpClient = mockClient
         }
 
-        val devices = deviceClient.oathDeviceClient.getDevices()
+        val devices = deviceClient.oathDeviceClient.devices()
         assertEquals(3, devices.size)
         assertEquals("OATH Device 1", devices[0].deviceName)
         assertEquals("OATH Device 2", devices[1].deviceName)
@@ -545,7 +545,7 @@ class DeviceClientTest {
         }
 
         try {
-            deviceClient.oathDeviceClient.getDevices()
+            deviceClient.oathDeviceClient.devices()
             // If no exception is thrown, test passes (client handles errors gracefully)
         } catch (e: Exception) {
             // Expected behavior - client may throw exception for error responses

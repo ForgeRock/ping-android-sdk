@@ -80,13 +80,13 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
     /** OATH device operations (read/delete). */
     val oathDeviceClient: ImmutableDevice<OathDevice> by lazy {
         object : ImmutableDevice<OathDevice> {
-            override suspend fun getDevices(): List<OathDevice> {
+            override suspend fun devices(): List<OathDevice> {
                 return withContext(Dispatchers.IO) {
                     devices<OathDevice>(config, "devices/2fa/oath")
                 }
             }
 
-            override suspend fun deleteDevice(device: OathDevice) {
+            override suspend fun delete(device: OathDevice) {
                 withContext(Dispatchers.IO) {
                     delete<OathDevice>(config, device)
                 }
@@ -97,13 +97,13 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
     /** Push device operations (read/delete). */
     val pushDeviceClient: ImmutableDevice<PushDevice> by lazy {
         object : ImmutableDevice<PushDevice> {
-            override suspend fun getDevices(): List<PushDevice> {
+            override suspend fun devices(): List<PushDevice> {
                 return withContext(Dispatchers.IO) {
                     devices<PushDevice>(config, "devices/2fa/push")
                 }
             }
 
-            override suspend fun deleteDevice(device: PushDevice) {
+            override suspend fun delete(device: PushDevice) {
                 withContext(Dispatchers.IO) {
                     delete<PushDevice>(config, device)
                 }
@@ -114,19 +114,19 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
     /** Bound device operations (read/delete/update). */
     val boundDevice: MutableDevice<BoundDevice> by lazy {
         object : MutableDevice<BoundDevice> {
-            override suspend fun getDevices(): List<BoundDevice> {
+            override suspend fun devices(): List<BoundDevice> {
                 return withContext(Dispatchers.IO) {
                     devices<BoundDevice>(config, "devices/2fa/binding")
                 }
             }
 
-            override suspend fun deleteDevice(device: BoundDevice) {
+            override suspend fun delete(device: BoundDevice) {
                 withContext(Dispatchers.IO) {
                     delete<BoundDevice>(config, device)
                 }
             }
 
-            override suspend fun updateDevice(device: BoundDevice) {
+            override suspend fun update(device: BoundDevice) {
                 withContext(Dispatchers.IO) {
                     update<BoundDevice>(
                         config = config,
@@ -140,19 +140,19 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
     /** WebAuthn device operations (read/delete/update). */
     val webAuthnDevice: MutableDevice<WebAuthnDevice> by lazy {
         object : MutableDevice<WebAuthnDevice> {
-            override suspend fun getDevices(): List<WebAuthnDevice> {
+            override suspend fun devices(): List<WebAuthnDevice> {
                 return withContext(Dispatchers.IO) {
                     devices<WebAuthnDevice>(config, "devices/2fa/webauthn")
                 }
             }
 
-            override suspend fun deleteDevice(device: WebAuthnDevice) {
+            override suspend fun delete(device: WebAuthnDevice) {
                 withContext(Dispatchers.IO) {
                     delete<WebAuthnDevice>(config, device)
                 }
             }
 
-            override suspend fun updateDevice(device: WebAuthnDevice) {
+            override suspend fun update(device: WebAuthnDevice) {
                 withContext(Dispatchers.IO) {
                     update<WebAuthnDevice>(
                         config = config,
@@ -166,19 +166,19 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
     /** Profile device operations (read/delete/update). */
     val profileDevice: MutableDevice<ProfileDevice> by lazy {
         object : MutableDevice<ProfileDevice> {
-            override suspend fun getDevices(): List<ProfileDevice> {
+            override suspend fun devices(): List<ProfileDevice> {
                 return withContext(Dispatchers.IO) {
                     devices<ProfileDevice>(config, "devices/profile")
                 }
             }
 
-            override suspend fun deleteDevice(device: ProfileDevice) {
+            override suspend fun delete(device: ProfileDevice) {
                 withContext(Dispatchers.IO) {
                     delete<ProfileDevice>(config, device)
                 }
             }
 
-            override suspend fun updateDevice(device: ProfileDevice) {
+            override suspend fun update(device: ProfileDevice) {
                 withContext(Dispatchers.IO) {
                     update<ProfileDevice>(
                         config = config,
