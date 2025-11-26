@@ -147,57 +147,92 @@ class UserProfileViewModel : ViewModel() {
     fun onEditDevice(deviceName: String, newDeviceName: String) {
         viewModelScope.launch {
             val deviceClient = buildDeviceClient() ?: return@launch
-            try {
-                when (state.value.selectedDeviceType) {
-                    DeviceType.OATH -> {
-                        val devices = deviceClient.oathDevice.devices().getOrThrow()
-                        val deviceToUpdate = devices.find { it.deviceName == deviceName }
-                        deviceToUpdate?.let {
-                            it.deviceName = newDeviceName
-                            deviceClient.oathDevice.update(it)
-                            setDeviceType(DeviceType.OATH)
-                        }
-                    }
-                    DeviceType.PUSH -> {
-                        val devices = deviceClient.pushDevice.devices().getOrThrow()
-                        val deviceToUpdate = devices.find { it.deviceName == deviceName }
-                        deviceToUpdate?.let {
-                            it.deviceName = newDeviceName
-                            deviceClient.pushDevice.update(it)
-                            setDeviceType(DeviceType.PUSH)
-                        }
-                    }
-                    DeviceType.BOUND -> {
-                        val devices = deviceClient.boundDevice.devices().getOrThrow()
-                        val deviceToUpdate = devices.find { it.deviceName == deviceName }
-                        deviceToUpdate?.let {
-                            it.deviceName = newDeviceName
-                            deviceClient.boundDevice.update(it)
-                            // Refresh only the device list, reusing cached userId
-                            setDeviceType(DeviceType.BOUND)
-                        }
-                    }
-                    DeviceType.WEBAUTHN -> {
-                        val devices = deviceClient.webAuthnDevice.devices().getOrThrow()
-                        val deviceToUpdate = devices.find { it.deviceName == deviceName }
-                        deviceToUpdate?.let {
-                            it.deviceName = newDeviceName
-                            deviceClient.webAuthnDevice.update(it)
-                            setDeviceType(DeviceType.WEBAUTHN)
-                        }
-                    }
-                    DeviceType.PROFILE -> {
-                        val devices = deviceClient.profileDevice.devices().getOrThrow()
-                        val deviceToUpdate = devices.find { it.deviceName == deviceName }
-                        deviceToUpdate?.let {
-                            it.deviceName = newDeviceName
-                            deviceClient.profileDevice.update(it)
-                            setDeviceType(DeviceType.PROFILE)
-                        }
+            when (state.value.selectedDeviceType) {
+                DeviceType.OATH -> {
+                    val devices = deviceClient.oathDevice.devices().getOrThrow()
+                    val deviceToUpdate = devices.find { it.deviceName == deviceName }
+                    deviceToUpdate?.let {
+                        it.deviceName = newDeviceName
+                        deviceClient.oathDevice.update(it)
+                            .onSuccess {
+                                println("Device updated successfully")
+                                setDeviceType(DeviceType.OATH)
+                            }
+                            .onFailure {
+                                println("Error editing device: ${it.message}")
+                                // Optionally refresh the list to ensure consistency
+                                setDeviceType(state.value.selectedDeviceType)
+                            }
                     }
                 }
-            } catch (exception: Exception) {
-                println("Error editing device: ${exception.message}")
+                DeviceType.PUSH -> {
+                    val devices = deviceClient.pushDevice.devices().getOrThrow()
+                    val deviceToUpdate = devices.find { it.deviceName == deviceName }
+                    deviceToUpdate?.let {
+                        it.deviceName = newDeviceName
+                        deviceClient.pushDevice.update(it)
+                            .onSuccess {
+                                println("Device updated successfully")
+                                setDeviceType(DeviceType.PUSH)
+                            }
+                            .onFailure {
+                                println("Error editing device: ${it.message}")
+                                // Optionally refresh the list to ensure consistency
+                                setDeviceType(state.value.selectedDeviceType)
+                            }
+                    }
+                }
+                DeviceType.BOUND -> {
+                    val devices = deviceClient.boundDevice.devices().getOrThrow()
+                    val deviceToUpdate = devices.find { it.deviceName == deviceName }
+                    deviceToUpdate?.let {
+                        it.deviceName = newDeviceName
+                        deviceClient.boundDevice.update(it)
+                            .onSuccess {
+                                println("Device updated successfully")
+                                setDeviceType(DeviceType.BOUND)
+                            }
+                            .onFailure {
+                                println("Error editing device: ${it.message}")
+                                // Optionally refresh the list to ensure consistency
+                                setDeviceType(state.value.selectedDeviceType)
+                            }
+                    }
+                }
+                DeviceType.WEBAUTHN -> {
+                    val devices = deviceClient.webAuthnDevice.devices().getOrThrow()
+                    val deviceToUpdate = devices.find { it.deviceName == deviceName }
+                    deviceToUpdate?.let {
+                        it.deviceName = newDeviceName
+                        deviceClient.webAuthnDevice.update(it)
+                            .onSuccess {
+                                println("Device updated successfully")
+                                setDeviceType(DeviceType.WEBAUTHN)
+                            }
+                            .onFailure {
+                                println("Error editing device: ${it.message}")
+                                // Optionally refresh the list to ensure consistency
+                                setDeviceType(state.value.selectedDeviceType)
+                            }
+                    }
+                }
+                DeviceType.PROFILE -> {
+                    val devices = deviceClient.profileDevice.devices().getOrThrow()
+                    val deviceToUpdate = devices.find { it.deviceName == deviceName }
+                    deviceToUpdate?.let {
+                        it.deviceName = newDeviceName
+                        deviceClient.profileDevice.update(it)
+                            .onSuccess {
+                                println("Device updated successfully")
+                                setDeviceType(DeviceType.PROFILE)
+                            }
+                            .onFailure {
+                                println("Error editing device: ${it.message}")
+                                // Optionally refresh the list to ensure consistency
+                                setDeviceType(state.value.selectedDeviceType)
+                            }
+                    }
+                }
             }
         }
     }
@@ -205,54 +240,88 @@ class UserProfileViewModel : ViewModel() {
     fun onDeleteDevice(deviceName: String) {
         viewModelScope.launch {
             val deviceClient = buildDeviceClient() ?: return@launch
-            try {
-                when (state.value.selectedDeviceType) {
-                    DeviceType.OATH -> {
-                        val devices = deviceClient.oathDevice.devices().getOrThrow()
-                        val deviceToDelete = devices.find { it.deviceName == deviceName }
-                        deviceToDelete?.let {
-                            deviceClient.oathDevice.delete(it)
-                            // Refresh the device list
-                            setDeviceType(DeviceType.OATH)
-                        }
-                    }
-                    DeviceType.PUSH -> {
-                        val devices = deviceClient.pushDevice.devices().getOrThrow()
-                        val deviceToDelete = devices.find { it.deviceName == deviceName }
-                        deviceToDelete?.let {
-                            deviceClient.pushDevice.delete(it)
-                            setDeviceType(DeviceType.PUSH)
-                        }
-                    }
-                    DeviceType.BOUND -> {
-                        val devices = deviceClient.boundDevice.devices().getOrThrow()
-                        val deviceToDelete = devices.find { it.deviceName == deviceName }
-                        deviceToDelete?.let {
-                            deviceClient.boundDevice.delete(it)
-                            setDeviceType(DeviceType.BOUND)
-                        }
-                    }
-                    DeviceType.WEBAUTHN -> {
-                        val devices = deviceClient.webAuthnDevice.devices().getOrThrow()
-                        val deviceToDelete = devices.find { it.deviceName == deviceName }
-                        deviceToDelete?.let {
-                            deviceClient.webAuthnDevice.delete(it)
-                            setDeviceType(DeviceType.WEBAUTHN)
-                        }
-                    }
-                    DeviceType.PROFILE -> {
-                        val devices = deviceClient.profileDevice.devices().getOrThrow()
-                        val deviceToDelete = devices.find { it.deviceName == deviceName }
-                        deviceToDelete?.let {
-                            deviceClient.profileDevice.delete(it)
-                            setDeviceType(DeviceType.PROFILE)
-                        }
+            when (state.value.selectedDeviceType) {
+                DeviceType.OATH -> {
+                    val devices = deviceClient.oathDevice.devices().getOrThrow()
+                    val deviceToDelete = devices.find { it.deviceName == deviceName }
+                    deviceToDelete?.let {
+                        deviceClient.oathDevice.delete(it)
+                            .onSuccess {
+                                println("Device deleted successfully")
+                                // Refresh the device list
+                                setDeviceType(DeviceType.OATH)
+                            }
+                            .onFailure {
+                                println("Error deleting device: ${it.message}")
+                                // Optionally refresh the list to ensure consistency
+                                setDeviceType(state.value.selectedDeviceType)
+                            }
                     }
                 }
+                DeviceType.PUSH -> {
+                    val devices = deviceClient.pushDevice.devices().getOrThrow()
+                    val deviceToDelete = devices.find { it.deviceName == deviceName }
+                    deviceToDelete?.let {
+                        deviceClient.pushDevice.delete(it)
+                        setDeviceType(DeviceType.PUSH)
+                    }
+                }
+                DeviceType.BOUND -> {
+                    val devices = deviceClient.boundDevice.devices().getOrThrow()
+                    val deviceToDelete = devices.find { it.deviceName == deviceName }
+                    deviceToDelete?.let {
+                        deviceClient.boundDevice.delete(it)
+                            .onSuccess {
+                                println("Device deleted successfully")
+                                // Refresh the device list
+                                setDeviceType(DeviceType.BOUND)
+                            }
+                            .onFailure {
+                                println("Error deleting device: ${it.message}")
+                                // Optionally refresh the list to ensure consistency
+                                setDeviceType(state.value.selectedDeviceType)
+                            }
+                    }
+                }
+                DeviceType.WEBAUTHN -> {
+                    val devices = deviceClient.webAuthnDevice.devices().getOrThrow()
+                    val deviceToDelete = devices.find { it.deviceName == deviceName }
+                    deviceToDelete?.let {
+                        deviceClient.webAuthnDevice.delete(it)
+                            .onSuccess {
+                                println("Device deleted successfully")
+                                // Refresh the device list
+                                setDeviceType(DeviceType.WEBAUTHN)
+                            }
+                            .onFailure {
+                                println("Error deleting device: ${it.message}")
+                                // Optionally refresh the list to ensure consistency
+                                setDeviceType(state.value.selectedDeviceType)
+                            }
+                    }
+                }
+                DeviceType.PROFILE -> {
+                    val devices = deviceClient.profileDevice.devices().getOrThrow()
+                    val deviceToDelete = devices.find { it.deviceName == deviceName }
+                    deviceToDelete?.let {
+                        deviceClient.profileDevice.delete(it)
+                            .onSuccess {
+                                println("Device deleted successfully")
+                                // Refresh the device list
+                                setDeviceType(DeviceType.PROFILE)
+                            }
+                            .onFailure {
+                                println("Error deleting device: ${it.message}")
+                                // Optionally refresh the list to ensure consistency
+                                setDeviceType(state.value.selectedDeviceType)
+                            }
+                    }
+                }
+            }
+            try {
             } catch (exception: Exception) {
                 println("Error deleting device: ${exception.message}")
-                // Optionally refresh the list to ensure consistency
-                setDeviceType(state.value.selectedDeviceType)
+
             }
         }
     }

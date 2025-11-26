@@ -11,7 +11,6 @@ import com.pingidentity.utils.PingDsl
 import io.ktor.client.HttpClient
 import io.ktor.client.request.header
 import io.ktor.client.request.prepareRequest
-import io.ktor.client.statement.HttpResponse
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.HttpMethod.Companion.Delete
 import io.ktor.http.HttpMethod.Companion.Get
@@ -20,6 +19,7 @@ import io.ktor.client.request.setBody
 import io.ktor.client.request.url
 import io.ktor.http.ContentType
 import io.ktor.http.HttpMethod.Companion.Post
+import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -86,14 +86,14 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
                 }
             }
 
-            override suspend fun delete(device: OathDevice) {
-                withContext(Dispatchers.IO) {
+            override suspend fun delete(device: OathDevice): Result<Boolean> {
+                return withContext(Dispatchers.IO) {
                     delete<OathDevice>(config, device)
                 }
             }
 
-            override suspend fun update(device: OathDevice) {
-                withContext(Dispatchers.IO) {
+            override suspend fun update(device: OathDevice): Result<Boolean> {
+                return withContext(Dispatchers.IO) {
                     update<OathDevice>(
                         config = config,
                         device = device,
@@ -112,14 +112,14 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
                 }
             }
 
-            override suspend fun delete(device: PushDevice) {
-                withContext(Dispatchers.IO) {
+            override suspend fun delete(device: PushDevice): Result<Boolean> {
+                return withContext(Dispatchers.IO) {
                     delete<PushDevice>(config, device)
                 }
             }
 
-            override suspend fun update(device: PushDevice) {
-                withContext(Dispatchers.IO) {
+            override suspend fun update(device: PushDevice): Result<Boolean> {
+                return withContext(Dispatchers.IO) {
                     update<PushDevice>(
                         config = config,
                         device = device,
@@ -138,14 +138,14 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
                 }
             }
 
-            override suspend fun delete(device: BoundDevice) {
-                withContext(Dispatchers.IO) {
+            override suspend fun delete(device: BoundDevice): Result<Boolean> {
+                return withContext(Dispatchers.IO) {
                     delete<BoundDevice>(config, device)
                 }
             }
 
-            override suspend fun update(device: BoundDevice) {
-                withContext(Dispatchers.IO) {
+            override suspend fun update(device: BoundDevice): Result<Boolean> {
+                return withContext(Dispatchers.IO) {
                     update<BoundDevice>(
                         config = config,
                         device = device,
@@ -164,14 +164,14 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
                 }
             }
 
-            override suspend fun delete(device: WebAuthnDevice) {
-                withContext(Dispatchers.IO) {
+            override suspend fun delete(device: WebAuthnDevice): Result<Boolean> {
+                return withContext(Dispatchers.IO) {
                     delete<WebAuthnDevice>(config, device)
                 }
             }
 
-            override suspend fun update(device: WebAuthnDevice) {
-                withContext(Dispatchers.IO) {
+            override suspend fun update(device: WebAuthnDevice): Result<Boolean> {
+                return withContext(Dispatchers.IO) {
                     update<WebAuthnDevice>(
                         config = config,
                         device = device,
@@ -190,14 +190,14 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
                 }
             }
 
-            override suspend fun delete(device: ProfileDevice) {
-                withContext(Dispatchers.IO) {
+            override suspend fun delete(device: ProfileDevice): Result<Boolean> {
+                return withContext(Dispatchers.IO) {
                     delete<ProfileDevice>(config, device)
                 }
             }
 
-            override suspend fun update(device: ProfileDevice) {
-                withContext(Dispatchers.IO) {
+            override suspend fun update(device: ProfileDevice): Result<Boolean> {
+                return withContext(Dispatchers.IO) {
                     update<ProfileDevice>(
                         config = config,
                         device = device,
@@ -256,7 +256,7 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
     private suspend inline fun <reified T : Device> delete(
         config: DeviceClientConfig,
         device: T,
-    ): HttpResponse {
+    ): Result<Boolean> {
         val userId = getCachedUserId()
         if (userId.isBlank()) {
             throw IllegalStateException("User ID cannot be blank.")
@@ -273,7 +273,12 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
             header(ACCEPT_API_VERSION_KEY, ACCEPT_API_VERSION_VALUE)
             method = Delete
         }
-        return request.execute()
+        val response = request.execute()
+        return if (response.status == HttpStatusCode.OK) {
+            Result.success(true)
+        } else {
+            Result.failure(Exception("Failed to delete device: ${response.status} - ${response.bodyAsText()}"))
+        }
     }
 
     /**
@@ -286,7 +291,7 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
     private suspend inline fun <reified T : Device> update(
         config: DeviceClientConfig,
         device: T,
-    ): HttpResponse {
+    ): Result<Boolean> {
         val userId = getCachedUserId()
         if (userId.isBlank()) {
             throw IllegalStateException("User ID cannot be blank.")
@@ -304,7 +309,12 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
             setBody(Json.encodeToString(device))
             contentType(ContentType.Application.Json)
         }
-        return request.execute()
+        val response = request.execute()
+        return if (response.status == HttpStatusCode.OK) {
+            Result.success(true)
+        } else {
+            Result.failure(Exception("Failed to update device: ${response.status} - ${response.bodyAsText()}"))
+        }
     }
 
     /**
