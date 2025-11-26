@@ -287,7 +287,7 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
         return request.execute()
     }
 
-    private suspend fun getUserIdFromSession(
+    internal suspend fun getUserIdFromSession(
         config: DeviceClientConfig,
     ): String {
         val uri = composeBaseUrl(config)

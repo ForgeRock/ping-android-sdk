@@ -34,11 +34,22 @@ class DeviceClientTest {
         return HttpClient(MockEngine) {
             engine {
                 addHandler { request ->
-                    respond(
-                        content = responseBody,
-                        status = responseStatus,
-                        headers = headersOf(HttpHeaders.ContentType, "application/json")
-                    )
+                    // Check if this is a session info request
+                    if (request.url.toString().contains("sessions") &&
+                        request.url.toString().contains("_action=getSessionInfo")) {
+                        respond(
+                            content = """{"username": "test-user-id"}""",
+                            status = HttpStatusCode.OK,
+                            headers = headersOf(HttpHeaders.ContentType, "application/json")
+                        )
+                    } else {
+                        // Handle device requests
+                        respond(
+                            content = responseBody,
+                            status = responseStatus,
+                            headers = headersOf(HttpHeaders.ContentType, "application/json")
+                        )
+                    }
                 }
             }
         }
