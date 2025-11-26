@@ -8,13 +8,19 @@
 package com.pingidentity.journey
 
 import android.net.Uri
+import android.os.LocaleList
 import com.pingidentity.journey.Constants.ACCEPT_API_VERSION
+import com.pingidentity.journey.Constants.ACCEPT_LANGUAGE
 import com.pingidentity.journey.Constants.AUTH_INDEX_TYPE
 import com.pingidentity.journey.Constants.AUTH_INDEX_VALUE
 import com.pingidentity.journey.Constants.COOKIE
 import com.pingidentity.journey.Constants.FORCE_AUTH
 import com.pingidentity.journey.Constants.NO_SESSION
 import com.pingidentity.journey.Constants.REALM
+import com.pingidentity.journey.Constants.REQUESTED_PLATFORM_KEY
+import com.pingidentity.journey.Constants.REQUESTED_PLATFORM_VALUE
+import com.pingidentity.journey.Constants.REQUESTED_WITH_KEY
+import com.pingidentity.journey.Constants.REQUESTED_WITH_VALUE
 import com.pingidentity.journey.Constants.RESOURCE_2_1_PROTOCOL_1_0
 import com.pingidentity.journey.Constants.SERVICE
 import com.pingidentity.journey.Constants.START_REQUEST
@@ -29,6 +35,7 @@ import com.pingidentity.orchestrate.SharedContext
 import com.pingidentity.orchestrate.Workflow
 import com.pingidentity.orchestrate.WorkflowConfig
 import com.pingidentity.orchestrate.module.CustomHeader
+import com.pingidentity.utils.toAcceptLanguage
 
 typealias Journey = Workflow
 
@@ -112,6 +119,9 @@ fun Journey(block: JourneyConfig.() -> Unit = {}): Journey {
     config.apply {
         module(CustomHeader) {
             header(ACCEPT_API_VERSION, RESOURCE_2_1_PROTOCOL_1_0)
+            header(REQUESTED_WITH_KEY, REQUESTED_WITH_VALUE)
+            header(REQUESTED_PLATFORM_KEY, REQUESTED_PLATFORM_VALUE)
+            header(ACCEPT_LANGUAGE, LocaleList.getDefault().toAcceptLanguage())
         }
         module(RequestUrl)
         module(Session) // Persist the Session after success

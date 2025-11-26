@@ -14,6 +14,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
@@ -28,8 +29,8 @@ import com.pingidentity.journey.callback.ChoiceCallback
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChoiceCallback(callback: ChoiceCallback,  onNodeUpdated: () -> Unit) {
-    var expanded by remember { mutableStateOf(false) }
-    var selectedItem by remember {
+    var expanded by remember(callback) { mutableStateOf(false) }
+    var selectedItem by remember(callback) {
         mutableStateOf(callback.choices[callback.defaultChoice])
     }
 
@@ -47,7 +48,7 @@ fun ChoiceCallback(callback: ChoiceCallback,  onNodeUpdated: () -> Unit) {
 
             // text field
             TextField(
-                modifier = Modifier.menuAnchor(),
+                modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable, true),
                 value = selectedItem,
                 onValueChange = {},
                 readOnly = true,
@@ -80,4 +81,3 @@ fun ChoiceCallback(callback: ChoiceCallback,  onNodeUpdated: () -> Unit) {
         }
     }
 }
-

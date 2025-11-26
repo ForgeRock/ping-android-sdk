@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Ping Identity. All rights reserved.
+ * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -12,6 +12,8 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.jsonArray
+
+private const val OPTIONS = "options"
 
 /**
  * Data class representing a Device.
@@ -40,7 +42,7 @@ data class Device(
          * @return A list of devices.
          */
         fun devices(input: JsonObject): List<Device> {
-            return input["options"]?.jsonArray?.map { jsonElement ->
+            return input[OPTIONS]?.jsonArray?.map { jsonElement ->
                 json.decodeFromJsonElement<Device>(jsonElement)
             } ?: emptyList()
         }

@@ -51,6 +51,7 @@ abstract class AbstractCallback : Callback {
      * @param value The value to set.
      * @return The updated JsonObject.
      */
+    @Synchronized
     fun input(vararg value: Any): JsonObject {
         val orig = json["input"]?.jsonArray
 
@@ -67,19 +68,6 @@ abstract class AbstractCallback : Callback {
                         is Double -> put("value", element as Double)
                     }
                 })
-            }
-        }
-
-        // Convert the JsonObject to a mutable map
-        val mutableMap = json.toMutableMap()
-
-        // Modify the map
-        mutableMap["input"] = updated
-
-        // Convert the map back to a JsonObject
-        json = buildJsonObject {
-            mutableMap.forEach { (key, value) ->
-                put(key, value)
             }
         }
         return update(updated)

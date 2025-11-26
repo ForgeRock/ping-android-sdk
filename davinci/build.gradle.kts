@@ -42,7 +42,7 @@ dependencies {
     api(project(":foundation:oidc"))
     api(project(":foundation:logger"))
     implementation(project(":foundation:android"))
-    implementation(project(":foundation:storage"))
+    api(project(":foundation:storage"))
 
     //Access HttpClient object
     implementation(libs.ktor.client.core)
@@ -60,4 +60,5 @@ dependencies {
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.test.runner)
     androidTestImplementation(project(":foundation:testrail"))
+    androidTestImplementation(project(":protect"))
 }

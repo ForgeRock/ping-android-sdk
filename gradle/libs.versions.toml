@@ -1,54 +1,73 @@
 [versions]
-coilSvg = "2.4.0"
-compileSdk = "35"
-targetSdk = "35"
-minSdk = "28"
+coilSvg = "2.7.0"
+compileSdk = "36"
+targetSdk = "36"
+minSdk = "29"
 jvmTarget = "17"
 
-activityCompose = "1.9.3"
-agp = "8.7.3"
+forgerockAuth = "4.8.2"
+activityCompose = "1.10.1"
+agp = "8.12.2"
 coreSplashscreen = "1.0.1"
-datastore = "1.0.0" # DataStorageTest failed when using 1.1.1 https://issuetracker.google.com/issues/337870543
-kotlin = "2.0.0"
-compose = "1.7.6"
-compose-material3 = "1.3.1"
-coreKtx = "1.15.0"
+datastore = "1.1.7"
+kotlin = "2.2.10"
+compose = "1.9.0"
+compose-material3 = "1.3.2"
+coreKtx = "1.17.0"
 junit = "4.13.2"
-junitVersion = "1.2.1"
-espressoCore = "3.6.1"
-appcompat = "1.7.0"
+junitVersion = "1.3.0"
+espressoCore = "3.7.0"
+appcompat = "1.7.1"
 material = "1.12.0"
-jetbrainsKotlinJvm = "2.0.0"
+jetbrainsKotlinJvm = "2.2.10"
 
-ktor = "2.3.11" #There is a defect in 3.0.0-beta-1 which related to AcceptAllCookiesStorage, Using Int instead of Long when calculating the cookie exipration
-coroutines = "1.7.3"
-materialIconsExtended = "1.7.6"
-navVersion = "2.8.5"
-securityCrypto = "1.1.0-alpha06"
-serialization = "1.6.2"
-pluginSserialization = "2.0.0"
-coreKtxVersion = "1.6.1"
-junitKtx = "1.2.1"
-androidx-test-runner = "1.6.2"
+ktor = "3.2.3" #There is a defect in 3.0.0-beta-1 which related to AcceptAllCookiesStorage, Using Int instead of Long when calculating the cookie exipration
+coroutines = "1.10.2"
+materialIconsExtended = "1.7.8"
+navVersion = "2.9.3"
+serialization = "1.9.0"
+pluginSserialization = "2.2.10"
+coreKtxVersion = "1.7.0"
+junitKtx = "1.3.0"
+androidx-test-runner = "1.7.0"
 androidx-credentials = "1.5.0"
-robolectric = "4.12.2"
-composeBom = "2024.12.01"
-activity = "1.9.3"
-mockk = "1.13.10"
+play-services-fido = "21.2.0"
+robolectric = "4.16"
+composeBom = "2025.08.01"
+activity = "1.10.1"
+mockk = "1.14.5"
 testLogger = "4.0.0"
+bcpkix-jdk18on = "1.82"
+androidx-annotation = "1.9.1"
 
-nimbus-jose-jwt = "9.37.3"
-biometric-ktx = "1.1.0"
-activityKtx = "1.9.3"
-browser = "1.8.0"
-
-nexus = "1.3.0"
-dokka = "1.9.20"
+activityKtx = "1.10.1"
+browser = "1.9.0"
+nexus = "2.0.0"
+dokka = "2.0.0"
 googleid = "1.1.1"
-facebook-login = "18.0.3"
+facebook-login = "18.1.3"
 
-coilCompose = "2.4.0"
+coilCompose = "2.7.0"
 startupRuntime = "1.2.0"
+
+com-pingidentity-signals = "5.2.0"
+kotlin-playservices-coroutine = "1.10.2"
+
+barcodeScanning = "17.3.0"
+cameraCamera2 = "1.4.2"
+lifecycleRuntimeKtx = "2.9.3"
+firebase-messaging = "25.0.0"
+playServicesAuthBlockstore = "16.4.0"
+kotlinxCoroutinesPlayServices = "1.10.2"
+googleServicesPlugin = "4.4.3"
+firebaseBom = "32.7.4"
+osmdroidAndroid = "6.1.20"
+biometric = "1.4.0-alpha02"
+nimbus-jose-jwt = "10.5"
+security-crypto = "1.1.0"
+
+play-services-location = "21.3.0"
+google-android-recaptcha = "18.6.1" # This version is compatible with API Level 29 and does not require desugaring.
 
 [libraries]
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activityCompose" }
@@ -56,14 +75,21 @@ androidx-core-splashscreen = { module = "androidx.core:core-splashscreen", versi
 androidx-datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "datastore" }
 androidx-datastore-core = { module = "androidx.datastore:datastore-core", version.ref = "datastore" }
 androidx-datastore = { module = "androidx.datastore:datastore", version.ref = "datastore" }
+androidx-credentials = { group = "androidx.credentials", name = "credentials", version.ref = "androidx-credentials" }
+play-services-fido = { module = "com.google.android.gms:play-services-fido", version.ref = "play-services-fido" }
+androidx-annotation = { module = "androidx.annotation:annotation", version.ref = "androidx-annotation" }
+bcpkix-jdk18on = { module = "org.bouncycastle:bcpkix-jdk18on", version.ref = "bcpkix-jdk18on" }
+
+#For Migration only
+androidx-security-crypto = { module = "androidx.security:security-crypto", version.ref = "security-crypto" }
 
 androidx-material-icons-extended = { module = "androidx.compose.material:material-icons-extended", version.ref = "materialIconsExtended" }
 androidx-navigation-compose = { module = "androidx.navigation:navigation-compose", version.ref = "navVersion" }
-androidx-security-crypto-ktx = { module = "androidx.security:security-crypto-ktx", version.ref = "securityCrypto" }
 androidx-ui-tooling = { module = "androidx.compose.ui:ui-tooling" }
 androidx-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview" }
 coil-compose = { module = "io.coil-kt:coil-compose", version.ref = "coilCompose" }
 coil-svg = { module = "io.coil-kt:coil-svg", version.ref = "coilSvg" }
+forgerock-auth = { module = "org.forgerock:forgerock-auth", version.ref = "forgerockAuth" }
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
 compose-ui = { module = "androidx.compose.ui:ui", version.ref = "compose" }
 compose-foundation = { module = "androidx.compose.foundation:foundation", version.ref = "compose" }
@@ -95,11 +121,7 @@ androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", versi
 
 androidx-activity = { group = "androidx.activity", name = "activity", version.ref = "activity" }
 mockk = { module = "io.mockk:mockk", version.ref = "mockk" }
-androidx-credentials = { group = "androidx.credentials", name = "credentials", version.ref = "androidx-credentials" }
-androidx-credentials-play-services-auth = { group = "androidx.credentials", name = "credentials-play-services-auth", version.ref = "androidx-credentials" }
 
-androidx-biometric-ktx = { module = "androidx.biometric:biometric-ktx", version.ref = "biometric-ktx" }
-nimbus-jose-jwt = { module = "com.nimbusds:nimbus-jose-jwt", version.ref = "nimbus-jose-jwt" }
 androidx-activity-ktx = { group = "androidx.activity", name = "activity-ktx", version.ref = "activityKtx" }
 androidx-browser = { group = "androidx.browser", name = "browser", version.ref = "browser" }
 
@@ -109,6 +131,28 @@ dokka-gradlePlugin = { group = "org.jetbrains.dokka", name = "org.jetbrains.dokk
 googleid = { group = "com.google.android.libraries.identity.googleid", name = "googleid", version.ref = "googleid" }
 facebook-login = { module = "com.facebook.android:facebook-login", version.ref = "facebook-login" }
 androidx-startup-runtime = { group = "androidx.startup", name = "startup-runtime", version.ref = "startupRuntime" }
+com-pingidentity-signals  = { group = "com.pingidentity.signals", name = "android-sdk", version.ref = "com-pingidentity-signals" }
+androidx-camera-camera2 = { module = "androidx.camera:camera-camera2", version.ref = "cameraCamera2" }
+androidx-camera-lifecycle = { module = "androidx.camera:camera-lifecycle", version.ref = "cameraCamera2" }
+androidx-camera-view = { module = "androidx.camera:camera-view", version.ref = "cameraCamera2" }
+androidx-lifecycle-runtime-ktx = { module = "androidx.lifecycle:lifecycle-runtime-ktx", version.ref = "lifecycleRuntimeKtx" }
+androidx-lifecycle-viewmodel-compose = { module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycleRuntimeKtx" }
+androidx-ui-graphics = { module = "androidx.compose.ui:ui-graphics" }
+androidx-sqlite = { group = "androidx.sqlite", name = "sqlite", version = "2.5.2" }
+sqlcipher = { group = "net.zetetic", name = "android-database-sqlcipher", version = "4.5.4" }
+commons-codec = { group = "commons-codec", name = "commons-codec", version = "1.15" }
+barcode-scanning = { module = "com.google.mlkit:barcode-scanning", version.ref = "barcodeScanning" }
+play-services-auth-blockstore = { module = "com.google.android.gms:play-services-auth-blockstore", version.ref = "playServicesAuthBlockstore" }
+kotlinx-coroutines-play-services = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-play-services", version.ref = "kotlinxCoroutinesPlayServices" }
+firebase-messaging = { group = "com.google.firebase", name = "firebase-messaging", version.ref = "firebase-messaging" }
+firebase-bom = { module = "com.google.firebase:firebase-bom", version.ref = "firebaseBom" }
+osmdroid-android = { module = "org.osmdroid:osmdroid-android", version.ref = "osmdroidAndroid" }
+androidx-biometric = { module = "androidx.biometric:biometric", version.ref = "biometric" }
+androidx-biometric-ktx = { module = "androidx.biometric:biometric-ktx", version.ref = "biometric" }
+nimbus-jose-jwt = { module = "com.nimbusds:nimbus-jose-jwt", version.ref = "nimbus-jose-jwt" }
+
+play-services-location = { module = "com.google.android.gms:play-services-location", version.ref = "play-services-location"}
+google-android-recaptcha = { module = "com.google.android.recaptcha:recaptcha", version.ref = "google-android-recaptcha" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
@@ -120,3 +164,4 @@ testLogger = { id = "com.adarshr.test-logger", version.ref = "testLogger" }
 compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 nexusPublish = { id = "io.github.gradle-nexus.publish-plugin", version.ref = "nexus" }
 dokka = { id = "org.jetbrains.dokka", version.ref = "dokka" }
+googleServices = { id = "com.google.gms.google-services", version.ref = "googleServicesPlugin" }

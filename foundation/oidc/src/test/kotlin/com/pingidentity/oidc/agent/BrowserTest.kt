@@ -49,7 +49,7 @@ class BrowserTest {
                 pingEndIdpSessionEndpoint = "http://localhost/ping-end-idp-session",
                 revocationEndpoint = "http://localhost/revocation"
             )
-            storage = MemoryStorage<Token>()
+            storage = { MemoryStorage() }
             clientId = "test-client-id"
         }
 
@@ -86,7 +86,7 @@ class BrowserTest {
                 pingEndIdpSessionEndpoint = "", //This is empty
                 revocationEndpoint = "http://localhost/revocation"
             )
-            storage = MemoryStorage<Token>()
+            storage = { MemoryStorage() }
             clientId = "test-client-id"
         }
 

@@ -45,6 +45,9 @@ inline fun <reified T : Any> EncryptedDataToJsonSerializer(
             try {
                 return if (input.isNotEmpty()) {
                     val result = encryptor.decrypt(input.readBytes())
+                    if(T::class == ByteArray::class) {
+                        return if (result.isEmpty()) null else result as T
+                    }
                     return if (result.isEmpty()) null else json.decodeFromString(String(result))
                 } else {
                     null
@@ -66,11 +69,16 @@ inline fun <reified T : Any> EncryptedDataToJsonSerializer(
             output: OutputStream,
         ) {
             t?.let {
-                output.write(
-                    encryptor.encrypt(
-                        json.encodeToString(serializer, it).toByteArray()
+                if (t is ByteArray) {
+                    output.write(encryptor.encrypt(t))
+                    return
+                } else {
+                    output.write(
+                        encryptor.encrypt(
+                            json.encodeToString(serializer, it).toByteArray()
+                        )
                     )
-                )
+                }
             }
         }
 

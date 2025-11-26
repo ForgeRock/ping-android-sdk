@@ -7,37 +7,64 @@
 
 package com.pingidentity.journey.module
 
-import android.content.Context
-import androidx.datastore.core.DataStore
-import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
-import androidx.datastore.dataStore
-import com.pingidentity.android.ContextProvider
 import com.pingidentity.journey.SSOToken
-import com.pingidentity.storage.DataStoreStorage
-import com.pingidentity.storage.EncryptedDataToJsonSerializer
+import com.pingidentity.logger.Logger
+import com.pingidentity.storage.EncryptedDataStoreStorage
+import com.pingidentity.storage.EncryptedDataStoreStorageConfig
 import com.pingidentity.storage.Storage
-import com.pingidentity.storage.encrypt.SecretKeyEncryptor
 import com.pingidentity.utils.PingDsl
 
 private const val COM_PING_SDK_V_1_SESSION = "com.pingidentity.sdk.v1.session"
 
-//Default
-private val Context.defaultSessionDataStore: DataStore<SSOToken?> by dataStore(
-    COM_PING_SDK_V_1_SESSION,
-    EncryptedDataToJsonSerializer(SecretKeyEncryptor {
-        keyAlias = COM_PING_SDK_V_1_SESSION
-    }), ReplaceFileCorruptionHandler { null }
-)
-
 @PingDsl
 class SessionConfig {
+
+    /**
+     * Logger instance for logging.
+     */
+    var logger: Logger = Logger.logger
+
     /**
      * Storage for storing SSOToken.
      */
-    lateinit var storage: Storage<SSOToken>
+    internal lateinit var tokenStorage: Storage<SSOToken>
+
+    /**
+     * storage function to create a DataStoreStorage instance.
+     */
+    var storage: () -> Storage<SSOToken> = {
+        EncryptedDataStoreStorage(storageOption)
+    }
+
+    /**
+     * Default DataStore for SSOToken.
+     */
+    internal var storageOption: EncryptedDataStoreStorageConfig.() -> Unit = {
+        fileName = COM_PING_SDK_V_1_SESSION
+        keyAlias = COM_PING_SDK_V_1_SESSION
+        logger = this@SessionConfig.logger
+    }
+
+    /**
+     * Configures the storage for SSOToken.
+     * @param block A lambda to configure the DataStoreStorageConfig.
+     */
+    fun storage(block: EncryptedDataStoreStorageConfig.() -> Unit) {
+        val previous = storageOption
+        storageOption = {
+            previous()
+            block()
+        }
+    }
+
+    /**
+     * Initializes the token storage.
+     * This should be called before using the SessionConfig.
+     */
     internal fun init() {
-        if (!::storage.isInitialized) {
-            storage = DataStoreStorage(ContextProvider.context.defaultSessionDataStore, false)
+        if (!::tokenStorage.isInitialized) {
+            tokenStorage = storage()
         }
     }
 }
+

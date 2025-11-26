@@ -9,6 +9,7 @@ package com.pingidentity.journey
 
 import android.content.Context
 import android.net.Uri
+import android.os.LocaleList
 import com.pingidentity.journey.callback.NameCallback
 import com.pingidentity.journey.callback.PasswordCallback
 import com.pingidentity.journey.module.NodeTransform
@@ -29,6 +30,7 @@ import com.pingidentity.orchestrate.module.CustomHeader
 import com.pingidentity.storage.MemoryStorage
 import com.pingidentity.testrail.TestRailWatcher
 import com.pingidentity.utils.Result
+import com.pingidentity.utils.toAcceptLanguage
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
@@ -36,6 +38,7 @@ import io.ktor.client.network.sockets.SocketTimeoutException
 import io.ktor.client.request.forms.FormDataContent
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.content.TextContent
+import io.ktor.http.headersOf
 import io.ktor.utils.io.ByteReadChannel
 import io.mockk.every
 import io.mockk.mockk
@@ -46,6 +49,8 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.junit.Rule
 import org.junit.rules.TestWatcher
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -57,6 +62,7 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 
+@RunWith(RobolectricTestRunner::class)
 class JourneyTest {
     @JvmField
     @Rule
@@ -172,7 +178,7 @@ class JourneyTest {
                     followRedirects = false
                 }
                 module(Session) {
-                    storage = sessionStorage
+                    storage = { sessionStorage }
                 }
             }
 
@@ -194,13 +200,13 @@ class JourneyTest {
                     followRedirects = false
                 }
                 module(Session) {
-                    storage = sessionStorage
+                    storage = { sessionStorage }
                 }
             }
 
         var node = journey.start("myLogin") // Return first Node
         assertTrue(node is ContinueNode)
-        assertTrue { (node as ContinueNode).callbacks.size == 2 }
+        assertTrue { node.callbacks.size == 2 }
 
         (node.callbacks[0] as? NameCallback)?.name = "My First Name"
         (node.callbacks[1] as? PasswordCallback)?.password = "My Password"
@@ -241,16 +247,16 @@ class JourneyTest {
                         "http://localhost/.well-known/openid-configuration"
                     scopes = mutableSetOf("openid", "email", "address")
                     redirectUri = "http://localhost:8080"
-                    storage = tokenStorage
+                    storage = { tokenStorage }
                 }
                 module(Session) {
-                    storage = sessionStorage
+                    storage = { sessionStorage }
                 }
             }
 
         var node = journey.start("myLogin") // Return first Node
         assertTrue(node is ContinueNode)
-        assertTrue { (node as ContinueNode).callbacks.size == 2 }
+        assertTrue { node.callbacks.size == 2 }
 
         (node.callbacks[0] as? NameCallback)?.name = "My First Name"
         (node.callbacks[1] as? PasswordCallback)?.password = "My Password"
@@ -283,7 +289,11 @@ class JourneyTest {
 
         // Assert the headers are set
         assertEquals("resource=2.1, protocol=1.0", startRequest.headers["Accept-API-Version"])
+        assertEquals("ping-sdk", startRequest.headers["x-requested-with"])
+        assertEquals("android", startRequest.headers["x-requested-platform"])
         assertEquals("resource=2.1, protocol=1.0", request.headers["Accept-API-Version"])
+        assertNotNull(request.headers[Constants.ACCEPT_LANGUAGE])
+        assertEquals(LocaleList.getDefault().toAcceptLanguage(), request.headers[Constants.ACCEPT_LANGUAGE])
 
         assertEquals("Dummy Session Token", node.session.value)
 
@@ -338,7 +348,7 @@ class JourneyTest {
                             "http://localhost/.well-known/openid-configuration"
                         scopes = mutableSetOf("openid", "email", "address")
                         redirectUri = "http://localhost:8080"
-                        storage = MemoryStorage()
+                        storage = { MemoryStorage() }
                         logger = Logger.STANDARD
                         acrValues = "acrValues"
                         display = "display"
@@ -349,7 +359,7 @@ class JourneyTest {
                         additionalParameters = mutableMapOf("apKey" to "apValue")
                     }
                     module(Session) {
-                        storage = MemoryStorage()
+                        storage = { MemoryStorage() }
                     }
                 }
 
@@ -400,11 +410,11 @@ class JourneyTest {
                             "http://localhost/.well-known/openid-configuration"
                         scopes = mutableSetOf("openid", "email", "address")
                         redirectUri = "http://localhost:8080"
-                        storage = tokenStorage
+                        storage = { tokenStorage }
                         logger = Logger.STANDARD
                     }
                     module(Session) {
-                        storage = sessionStorage
+                        storage = { sessionStorage }
                     }
                 }
 
@@ -437,7 +447,7 @@ class JourneyTest {
                         followRedirects = false
                     }
                     module(Session) {
-                        storage = sessionStorage
+                        storage = { sessionStorage }
                     }
                 }
 
@@ -446,7 +456,7 @@ class JourneyTest {
                 noSession = true
             }
             assertTrue(node is ContinueNode)
-            assertTrue { (node as ContinueNode).callbacks.size == 2 }
+            assertTrue { node.callbacks.size == 2 }
 
             node = node.next()
             assertTrue(node is SuccessNode)
@@ -473,7 +483,7 @@ class JourneyTest {
                     followRedirects = false
                 }
                 module(Session) {
-                    storage = sessionStorage
+                    storage = { sessionStorage }
                 }
             }
 
@@ -495,7 +505,7 @@ class JourneyTest {
                     followRedirects = false
                 }
                 module(Session) {
-                    storage = sessionStorage
+                    storage = { sessionStorage }
                 }
             }
 
@@ -523,12 +533,194 @@ class JourneyTest {
                     followRedirects = false
                 }
                 module(Session) {
-                    storage = sessionStorage
+                    storage = { sessionStorage }
                 }
             }
 
         val node = journey.start() // Return first Node
         assertTrue(node is ErrorNode)
-        assertEquals("error",node.message)
+        assertEquals("error", node.message)
+    }
+
+    @Test
+    fun `Journey handles 3xx redirect status code with FailureNode`() = runTest {
+        val mockEngine = MockEngine {
+            respond(
+                content = ByteReadChannel(""),
+                status = HttpStatusCode.Found,
+                headers = headersOf("location", "http://example.com/redirect")
+            )
+        }
+        val journey = Journey {
+            serverUrl = "http://localhost/am"
+            logger = Logger.CONSOLE
+            httpClient = HttpClient(mockEngine) {
+                followRedirects = false
+            }
+            module(Session) {
+                storage = { MemoryStorage() }
+            }
+        }
+
+        val node = journey.start()
+        assertTrue(node is FailureNode)
+        assertTrue(node.cause is com.pingidentity.exception.ApiException)
+        val exception = node.cause as com.pingidentity.exception.ApiException
+        assertEquals(302, exception.status)
+        assertContains(exception.message ?: "", "Unexpected redirect")
+    }
+
+    @Test
+    fun `Journey handles 4xx error with code 1999 as FailureNode`() = runTest {
+        val mockEngine = MockEngine {
+            respond(
+                content = ByteReadChannel("""{"code": 1999, "message": "Request timed out"}"""),
+                status = HttpStatusCode.BadRequest,
+            )
+        }
+        val journey = Journey {
+            serverUrl = "http://localhost/am"
+            logger = Logger.CONSOLE
+            httpClient = HttpClient(mockEngine) {
+                followRedirects = false
+            }
+            module(Session) {
+                storage = { MemoryStorage() }
+            }
+        }
+
+        val node = journey.start()
+        assertTrue(node is FailureNode)
+        assertTrue(node.cause is com.pingidentity.exception.ApiException)
+        val exception = node.cause as com.pingidentity.exception.ApiException
+        assertEquals(400, exception.status)
+        assertEquals("Request timed out", exception.message)
+    }
+
+    @Test
+    fun `Journey handles 4xx error with requestTimedOut text as FailureNode`() = runTest {
+        val mockEngine = MockEngine {
+            respond(
+                content = ByteReadChannel("""{"code": "requestTimedOut", "message": "The request timed out"}"""),
+                status = HttpStatusCode.BadRequest,
+            )
+        }
+        val journey = Journey {
+            serverUrl = "http://localhost/am"
+            logger = Logger.CONSOLE
+            httpClient = HttpClient(mockEngine) {
+                followRedirects = false
+            }
+            module(Session) {
+                storage = { MemoryStorage() }
+            }
+        }
+
+        val node = journey.start()
+        assertTrue(node is FailureNode)
+        assertTrue(node.cause is com.pingidentity.exception.ApiException)
+        val exception = node.cause as com.pingidentity.exception.ApiException
+        assertEquals(400, exception.status)
+        assertEquals("The request timed out", exception.message)
+    }
+
+    @Test
+    fun `Journey handles 4xx API error as ErrorNode`() = runTest {
+        val mockEngine = MockEngine {
+            respond(
+                content = ByteReadChannel("""{"code": 401, "message": "Invalid credentials", "reason": "UNAUTHORIZED"}"""),
+                status = HttpStatusCode.Unauthorized,
+            )
+        }
+        val journey = Journey {
+            serverUrl = "http://localhost/am"
+            logger = Logger.CONSOLE
+            httpClient = HttpClient(mockEngine) {
+                followRedirects = false
+            }
+            module(Session) {
+                storage = { MemoryStorage() }
+            }
+        }
+
+        val node = journey.start()
+        assertTrue(node is ErrorNode)
+        assertEquals("Invalid credentials", node.message)
+    }
+
+    @Test
+    fun `Journey handles 5xx server error as ErrorNode`() = runTest {
+        val mockEngine = MockEngine {
+            respond(
+                content = ByteReadChannel("""{"error": "server_error", "message": "Internal server error"}"""),
+                status = HttpStatusCode.InternalServerError,
+            )
+        }
+        val journey = Journey {
+            serverUrl = "http://localhost/am"
+            logger = Logger.CONSOLE
+            httpClient = HttpClient(mockEngine) {
+                followRedirects = false
+            }
+            module(Session) {
+                storage = { MemoryStorage() }
+            }
+        }
+
+        val node = journey.start()
+        assertTrue(node is ErrorNode)
+        assertEquals("Internal server error", node.message)
+    }
+
+    @Test
+    fun `Journey handles 503 service unavailable as ErrorNode`() = runTest {
+        val mockEngine = MockEngine {
+            respond(
+                content = ByteReadChannel("""{"message": "Service temporarily unavailable"}"""),
+                status = HttpStatusCode.ServiceUnavailable,
+            )
+        }
+        val journey = Journey {
+            serverUrl = "http://localhost/am"
+            logger = Logger.CONSOLE
+            httpClient = HttpClient(mockEngine) {
+                followRedirects = false
+            }
+            module(Session) {
+                storage = { MemoryStorage() }
+            }
+        }
+
+        val node = journey.start()
+        assertTrue(node is ErrorNode)
+        assertEquals("Service temporarily unavailable", node.message)
+    }
+
+    @Test
+    fun `Journey handles 200 with success token response`() = runTest {
+        val mockEngine = MockEngine {
+            respond(
+                content = sessionResponse(),
+                status = HttpStatusCode.OK,
+                headers = authenticateHeader
+            )
+        }
+        val journey = Journey {
+            serverUrl = "http://localhost/am"
+            logger = Logger.CONSOLE
+            httpClient = HttpClient(mockEngine) {
+                followRedirects = false
+            }
+            module(Session) {
+                storage = { MemoryStorage() }
+            }
+        }
+
+        val node = journey.start()
+        assertTrue(node is SuccessNode)
+        assertEquals("Dummy Session Token", node.session.value)
+        val ssoToken = node.session as SSOToken
+        assertEquals("/enduser/?realm=/alpha", ssoToken.successUrl)
+        assertEquals("/alpha", ssoToken.realm)
     }
 }

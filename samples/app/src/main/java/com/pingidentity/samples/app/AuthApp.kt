@@ -11,8 +11,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
-import androidx.compose.material.icons.filled.Bolt
-import androidx.compose.material.icons.filled.OpenInBrowser
 import androidx.compose.material.icons.filled.RocketLaunch
 import androidx.compose.material.icons.rounded.Menu
 import androidx.compose.material3.DrawerValue
@@ -87,7 +85,7 @@ fun AuthApp() {
                                 Icon(Icons.Filled.RocketLaunch, "")
                                 IconButton(onClick = {
                                     logoutViewModel.logout {
-                                        navController.navigate(Destinations.DAVINCI)
+                                        navController.navigate(Destinations.ENV_ROUTE)
                                     }
                                 }) {
                                     Icon(Icons.AutoMirrored.Filled.Logout, "Logout")

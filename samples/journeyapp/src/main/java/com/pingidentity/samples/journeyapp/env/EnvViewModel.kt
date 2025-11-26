@@ -7,9 +7,11 @@
 
 package com.pingidentity.samples.journeyapp.env
 
+import android.net.Uri
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.core.net.toUri
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.lifecycle.ViewModel
@@ -62,11 +64,12 @@ val localhost =  Journey {
 
 var journey = forgeblock
 lateinit var oidcClient: OidcClient
+lateinit var redirectUri: Uri //For Social Login redirect parameter using Auth Tab
 
 class EnvViewModel : ViewModel() {
 
     private val servers = listOf(forgeblock, localhost)
-    val oidcConfigs = listOf(forgeblock.oidcConfig(), localhost.oidcConfig() )
+    val oidcConfigs = listOf(forgeblock.oidcConfig(), localhost.oidcConfig())
 
     var current by mutableStateOf(forgeblock.oidcConfig())
         private set
@@ -82,11 +85,18 @@ class EnvViewModel : ViewModel() {
 
         servers.first { it.oidcConfig().clientId == config.clientId }.let { journey = it }
 
+        val server = servers.firstOrNull { it.oidcConfig().clientId == config.clientId } ?: forgeblock
+        journey = server
+
+        val oidcConfig = server.oidcConfig()
+
+        redirectUri = oidcConfig.redirectUri.toUri()
+
         oidcClient = OidcClient {
-            clientId = config.clientId
-            discoveryEndpoint = config.discoveryEndpoint
-            scopes = config.scopes
-            redirectUri = config.redirectUri
+            clientId = oidcConfig.clientId
+            discoveryEndpoint = oidcConfig.discoveryEndpoint
+            scopes = oidcConfig.scopes
+            redirectUri = oidcConfig.redirectUri
         }
 
         if (current.clientId != config.clientId) {
@@ -95,7 +105,7 @@ class EnvViewModel : ViewModel() {
             }
         }
 
-        current = config
+        current = oidcConfig
 
         CoroutineScope(Dispatchers.IO).launch {
             context.settingDataStore.edit { preferences ->

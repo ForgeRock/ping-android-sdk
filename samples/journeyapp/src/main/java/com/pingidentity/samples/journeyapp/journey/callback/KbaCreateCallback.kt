@@ -14,10 +14,12 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -29,13 +31,18 @@ import com.pingidentity.journey.callback.KbaCreateCallback
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun KbaCreateCallback(callback: KbaCreateCallback,  onNodeUpdated: () -> Unit) {
-    var expanded by remember { mutableStateOf(false) }
-    var selectedItem by remember {
+    var expanded by remember(callback) { mutableStateOf(false) }
+    var selectedItem by remember(callback) {
         mutableStateOf(callback.predefinedQuestions[0])
     }
-
-    var answer by remember {
+    var isCustomQuestion by remember(callback) { mutableStateOf(false) }
+    var customQuestion by remember(callback) { mutableStateOf("") }
+    var answer by remember(callback) {
         mutableStateOf("")
+    }
+
+    LaunchedEffect(true) {
+        callback.selectedQuestion = selectedItem
     }
 
     Column(modifier = Modifier
@@ -50,8 +57,8 @@ fun KbaCreateCallback(callback: KbaCreateCallback,  onNodeUpdated: () -> Unit) {
 
             // text field
             TextField(
-                modifier = Modifier.menuAnchor(),
-                value = selectedItem,
+                modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable, true),
+                value = if (isCustomQuestion) "Provide your own" else selectedItem,
                 onValueChange = {},
                 readOnly = true,
                 label = { Text(text = callback.prompt) },
@@ -74,15 +81,48 @@ fun KbaCreateCallback(callback: KbaCreateCallback,  onNodeUpdated: () -> Unit) {
                         Text(text = selectedOption)
                     }, onClick = {
                         selectedItem = selectedOption
+                        isCustomQuestion = false
                         expanded = false
                         callback.selectedQuestion = callback.predefinedQuestions[index]
                         onNodeUpdated()
                     })
                 }
+
+                // Add "Provide your own" option if allowed
+                if (callback.allowUserDefinedQuestions) {
+                    DropdownMenuItem(text = {
+                        Text(text = "Provide your own")
+                    }, onClick = {
+                        isCustomQuestion = true
+                        expanded = false
+                        // Clear the question until user provides one
+                        callback.selectedQuestion = ""
+                        onNodeUpdated()
+                    })
+                }
             }
         }
+
+        // Show custom question field when "Provide your own" is selected
+        if (isCustomQuestion) {
+            OutlinedTextField(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp),
+                value = customQuestion,
+                onValueChange = { value ->
+                    customQuestion = value
+                    callback.selectedQuestion = value
+                    onNodeUpdated()
+                },
+                label = { Text(text = "Your Question") },
+            )
+        }
+
         OutlinedTextField(
-            modifier = Modifier,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 8.dp),
             value = answer,
             onValueChange = { value ->
                 answer = value
@@ -91,8 +131,5 @@ fun KbaCreateCallback(callback: KbaCreateCallback,  onNodeUpdated: () -> Unit) {
             },
             label = { Text(text = "Answer") },
         )
-
     }
-
 }
-

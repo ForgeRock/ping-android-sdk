@@ -25,11 +25,13 @@ import com.pingidentity.davinci.plugin.collectors
 import com.pingidentity.logger.Logger
 import com.pingidentity.logger.STANDARD
 import com.pingidentity.oidc.Token
+import com.pingidentity.oidc.module.user
 import com.pingidentity.orchestrate.ContinueNode
 import com.pingidentity.orchestrate.SuccessNode
 import com.pingidentity.orchestrate.module.Cookie
 import com.pingidentity.orchestrate.module.Cookies
 import com.pingidentity.orchestrate.module.CustomHeader
+import com.pingidentity.orchestrate.module.CustomParameter
 import com.pingidentity.storage.MemoryStorage
 import com.pingidentity.test.readFile
 import com.pingidentity.testrail.TestRailCase
@@ -131,18 +133,19 @@ class DaVinciTest {
                 redirectUri = "http://localhost:8080"
             }
             module(Cookie) {
-                storage = MemoryStorage()
+                storage = { MemoryStorage() }
                 persist = mutableListOf("ST")
             }
         }
 
-        assertEquals(5, daVinci.config.modules.size)
+        assertEquals(6, daVinci.config.modules.size)
         val list = daVinci.config.modules
         assertEquals(list[0].module, CustomHeader)
-        assertEquals(list[1].module, NodeTransform)
-        assertEquals(list[2].module, ContinueNode)
-        assertEquals(list[3].module, Oidc)
-        assertEquals(list[4].module, Cookie)
+        assertEquals(list[1].module, CustomParameter)
+        assertEquals(list[2].module, NodeTransform)
+        assertEquals(list[3].module, ContinueNode)
+        assertEquals(list[4].module, Oidc)
+        assertEquals(list[5].module, Cookie)
 
     }
 
@@ -162,11 +165,11 @@ class DaVinciTest {
                             "http://localhost/.well-known/openid-configuration"
                         scopes = mutableSetOf("openid", "email", "address")
                         redirectUri = "http://localhost:8080"
-                        storage = tokenStorage
+                        storage = { tokenStorage }
                         logger = Logger.STANDARD
                     }
                     module(Cookie) {
-                        storage = cookieStorage
+                        storage = { cookieStorage }
                         persist = mutableListOf("ST")
                     }
                 }
@@ -256,7 +259,7 @@ class DaVinciTest {
                             "http://localhost/.well-known/openid-configuration"
                         scopes = mutableSetOf("openid", "email", "address")
                         redirectUri = "http://localhost:8080"
-                        storage = MemoryStorage()
+                        storage = { MemoryStorage() }
                         logger = Logger.STANDARD
                         acrValues = "acrValues"
                         display = "display"
@@ -266,7 +269,7 @@ class DaVinciTest {
                         uiLocales = "ui_locales"
                     }
                     module(Cookie) {
-                        storage = MemoryStorage()
+                        storage = { MemoryStorage() }
                     }
                 }
 
@@ -313,11 +316,11 @@ class DaVinciTest {
                             "http://localhost/.well-known/openid-configuration"
                         scopes = mutableSetOf("openid", "email", "address")
                         redirectUri = "http://localhost:8080"
-                        storage = tokenStorage
+                        storage = { tokenStorage }
                         logger = Logger.STANDARD
                     }
                     module(Cookie) {
-                        storage = cookieStorage
+                        storage = { cookieStorage }
                         persist = mutableListOf("ST")
                     }
                 }
@@ -372,10 +375,10 @@ class DaVinciTest {
                     "http://localhost/.well-known/openid-configuration"
                 scopes = mutableSetOf("openid", "email", "address")
                 redirectUri = "http://localhost:8080"
-                storage = MemoryStorage()
+                storage = { MemoryStorage() }
             }
             module(Cookie) {
-                storage = MemoryStorage()
+                storage = { MemoryStorage() }
                 persist = mutableListOf("ST")
             }
         }

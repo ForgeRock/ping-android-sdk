@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Ping Identity. All rights reserved.
+ * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -8,14 +8,17 @@
 package com.pingidentity.davinci.collector
 
 import com.pingidentity.davinci.plugin.Submittable
+import com.pingidentity.orchestrate.Closeable
 import kotlinx.serialization.json.JsonObject
+
+private const val SUBMIT = "submit"
 
 /**
  * A collector for device registration.
  */
-class DeviceRegistrationCollector : FieldCollector<String>(), Submittable {
+class DeviceRegistrationCollector : FieldCollector<String>(), Submittable, Closeable {
 
-    override fun eventType(): String = "submit"
+    override fun eventType(): String = SUBMIT
 
     // The list of devices available for registration.
     lateinit var devices: List<Device>
@@ -23,15 +26,20 @@ class DeviceRegistrationCollector : FieldCollector<String>(), Submittable {
 
     var value: Device? = null
 
-   override fun init(input: JsonObject) {
+    override fun init(input: JsonObject): DeviceRegistrationCollector {
         super.init(input)
         devices = Device.devices(input)
+        return this
     }
 
     override fun payload(): String? {
         value?.let {
             return it.type
         } ?: return null
+    }
+
+    override fun close() {
+        value = null
     }
 
 }

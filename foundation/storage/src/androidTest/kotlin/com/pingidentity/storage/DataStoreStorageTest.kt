@@ -21,6 +21,7 @@ import org.junit.Rule
 import org.junit.rules.TestWatcher
 import org.junit.runner.RunWith
 import kotlin.test.AfterTest
+import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -43,6 +44,7 @@ class DataStoreStorageTest {
 
     @TestRailCase(21605, 21611)
     @Test
+    @Ignore("https://pingidentity.atlassian.net/browse/SDKS-4403, wait for next datastore release, tested with 1.2.0-alpha2, seem resolved")
     fun testDataStore() = runTest {
             val storage = DataStoreStorage(context.dataStore)
             val v = storage.get()

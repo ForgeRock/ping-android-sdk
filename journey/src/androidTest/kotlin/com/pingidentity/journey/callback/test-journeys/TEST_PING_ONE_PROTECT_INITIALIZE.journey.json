@@ -1,0 +1,226 @@
+{
+  "meta": {
+    "exportDate": "2025-09-17T23:42:25.397Z",
+    "exportTool": "frodo",
+    "exportToolVersion": "v3.3.0 [v20.18.0]",
+    "exportedBy": "stoyan.petrov@forgerock.com",
+    "origin": "https://openam-sdks.forgeblocks.com/am",
+    "originAmVersion": "8.1.0"
+  },
+  "trees": {
+    "TEST_PING_ONE_PROTECT_INITIALIZE": {
+      "circlesOfTrust": {},
+      "emailTemplates": {},
+      "innerNodes": {},
+      "nodes": {
+        "5b3645a0-2123-4d5f-8d31-3b835aca8940": {
+          "_id": "5b3645a0-2123-4d5f-8d31-3b835aca8940",
+          "_outcomes": [
+            {
+              "displayName": "init-default",
+              "id": "init-default"
+            },
+            {
+              "displayName": "init-custom",
+              "id": "init-custom"
+            },
+            {
+              "displayName": "init-error",
+              "id": "init-error"
+            }
+          ],
+          "_type": {
+            "_id": "ChoiceCollectorNode",
+            "collection": true,
+            "name": "Choice Collector"
+          },
+          "choices": [
+            "init-default",
+            "init-custom",
+            "init-error"
+          ],
+          "defaultChoice": "default-init",
+          "prompt": "Select Test Case"
+        },
+        "66b10af1-889c-4d71-81a1-0e077805645b": {
+          "_id": "66b10af1-889c-4d71-81a1-0e077805645b",
+          "_outcomes": [
+            {
+              "displayName": "True",
+              "id": "true"
+            },
+            {
+              "displayName": "False",
+              "id": "false"
+            }
+          ],
+          "_type": {
+            "_id": "product-PingOneProtectInitializeNode",
+            "collection": true,
+            "name": "PingOne Protect Initialize"
+          },
+          "behavioralDataCollection": true,
+          "consoleLogEnabled": false,
+          "deviceAttributesToIgnore": [],
+          "deviceKeyRsyncIntervals": 14,
+          "disableHub": false,
+          "disableTags": false,
+          "enableTrust": false,
+          "lazyMetadata": false,
+          "pingOneWorker": "TestSDKs"
+        },
+        "9b259c98-5573-4f55-8cd8-355134059c52": {
+          "_id": "9b259c98-5573-4f55-8cd8-355134059c52",
+          "_outcomes": [
+            {
+              "displayName": "Outcome",
+              "id": "outcome"
+            }
+          ],
+          "_type": {
+            "_id": "UsernameCollectorNode",
+            "collection": true,
+            "name": "Username Collector"
+          }
+        },
+        "abc5bd57-9330-42c1-9f6d-1756b178aa01": {
+          "_id": "abc5bd57-9330-42c1-9f6d-1756b178aa01",
+          "_outcomes": [
+            {
+              "displayName": "True",
+              "id": "true"
+            },
+            {
+              "displayName": "False",
+              "id": "false"
+            }
+          ],
+          "_type": {
+            "_id": "product-PingOneProtectInitializeNode",
+            "collection": true,
+            "name": "PingOne Protect Initialize"
+          },
+          "behavioralDataCollection": false,
+          "consoleLogEnabled": true,
+          "customHost": "custom.host.com",
+          "deviceAttributesToIgnore": [
+            "Model",
+            "Manufacturer",
+            "Screen size"
+          ],
+          "deviceKeyRsyncIntervals": 14,
+          "disableHub": true,
+          "disableTags": true,
+          "enableTrust": true,
+          "lazyMetadata": true,
+          "pingOneWorker": "TestSDKs"
+        },
+        "bf60dde2-b91a-4431-8cd5-338178d60942": {
+          "_id": "bf60dde2-b91a-4431-8cd5-338178d60942",
+          "_outcomes": [
+            {
+              "displayName": "True",
+              "id": "true"
+            },
+            {
+              "displayName": "False",
+              "id": "false"
+            }
+          ],
+          "_type": {
+            "_id": "MessageNode",
+            "collection": true,
+            "name": "Message Node"
+          },
+          "message": {
+            "en": "Failure"
+          },
+          "messageNo": {},
+          "messageYes": {}
+        }
+      },
+      "saml2Entities": {},
+      "scripts": {},
+      "socialIdentityProviders": {},
+      "themes": [],
+      "tree": {
+        "_id": "TEST_PING_ONE_PROTECT_INITIALIZE",
+        "enabled": true,
+        "entryNodeId": "5b3645a0-2123-4d5f-8d31-3b835aca8940",
+        "identityResource": "managed/alpha_user",
+        "innerTreeOnly": false,
+        "mustRun": false,
+        "noSession": false,
+        "nodes": {
+          "5b3645a0-2123-4d5f-8d31-3b835aca8940": {
+            "connections": {
+              "init-custom": "abc5bd57-9330-42c1-9f6d-1756b178aa01",
+              "init-default": "66b10af1-889c-4d71-81a1-0e077805645b",
+              "init-error": "66b10af1-889c-4d71-81a1-0e077805645b"
+            },
+            "displayName": "Choice Collector",
+            "nodeType": "ChoiceCollectorNode",
+            "x": 51,
+            "y": 78.80555558204651
+          },
+          "66b10af1-889c-4d71-81a1-0e077805645b": {
+            "connections": {
+              "false": "bf60dde2-b91a-4431-8cd5-338178d60942",
+              "true": "9b259c98-5573-4f55-8cd8-355134059c52"
+            },
+            "displayName": "Protect Initialize (default)",
+            "nodeType": "product-PingOneProtectInitializeNode",
+            "x": 42.283203125,
+            "y": 301.927734375
+          },
+          "9b259c98-5573-4f55-8cd8-355134059c52": {
+            "connections": {
+              "outcome": "70e691a5-1e33-4ac3-a356-e7b6d60d92e0"
+            },
+            "displayName": "Username Collector",
+            "nodeType": "UsernameCollectorNode",
+            "x": 406,
+            "y": 379.8055555820465
+          },
+          "abc5bd57-9330-42c1-9f6d-1756b178aa01": {
+            "connections": {
+              "false": "bf60dde2-b91a-4431-8cd5-338178d60942",
+              "true": "9b259c98-5573-4f55-8cd8-355134059c52"
+            },
+            "displayName": "Protect Initialize (custom)",
+            "nodeType": "product-PingOneProtectInitializeNode",
+            "x": 44.283203125,
+            "y": 453.927734375
+          },
+          "bf60dde2-b91a-4431-8cd5-338178d60942": {
+            "connections": {
+              "false": "e301438c-0bd0-429c-ab0c-66126501069a",
+              "true": "9b259c98-5573-4f55-8cd8-355134059c52"
+            },
+            "displayName": "Report Error",
+            "nodeType": "MessageNode",
+            "x": 307,
+            "y": 112.927734375
+          }
+        },
+        "staticNodes": {
+          "70e691a5-1e33-4ac3-a356-e7b6d60d92e0": {
+            "x": 692,
+            "y": 130
+          },
+          "e301438c-0bd0-429c-ab0c-66126501069a": {
+            "x": 701,
+            "y": 348
+          },
+          "startNode": {
+            "x": 21,
+            "y": 16
+          }
+        },
+        "uiConfig": {
+          "categories": "[]"
+        }
+      }
+    }
+  }
+}

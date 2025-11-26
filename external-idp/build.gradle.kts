@@ -41,6 +41,7 @@ dependencies {
     compileOnly(libs.facebook.login)
 
     testImplementation(libs.kotlin.test)
+    testImplementation(libs.androidx.core.ktx)
     testImplementation(libs.mockk)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.ktor.client.mock)

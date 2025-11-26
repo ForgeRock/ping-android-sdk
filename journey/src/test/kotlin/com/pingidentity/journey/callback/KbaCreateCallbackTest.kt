@@ -15,6 +15,7 @@ import kotlinx.serialization.json.jsonPrimitive
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class KbaCreateCallbackTest {
 
@@ -75,6 +76,7 @@ class KbaCreateCallbackTest {
         )
         assertEquals("", callback.selectedQuestion)
         assertEquals("", callback.selectedAnswer)
+        assertTrue(callback.allowUserDefinedQuestions)
     }
 
     @Test
@@ -94,5 +96,4 @@ class KbaCreateCallbackTest {
             payload["input"]?.jsonArray?.get(1)?.jsonObject?.get("value")?.jsonPrimitive?.content
         )
     }
-
 }

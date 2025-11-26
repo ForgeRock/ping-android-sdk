@@ -31,9 +31,9 @@ nexusPublishing {
         sonatype {
             username = System.getenv("OSS_USERNAME") //Token Id
             password = System.getenv("OSS_PASSWORD") //Token
-            stagingProfileId = System.getenv("OSS_STAGING_PROFILE_ID")
-            nexusUrl.set(uri("https://oss.sonatype.org/service/local/"))
-            snapshotRepositoryUrl.set(uri("https://oss.sonatype.org/content/repositories/snapshots/"))
+            //stagingProfileId = System.getenv("OSS_STAGING_PROFILE_ID")
+            nexusUrl.set(uri("https://ossrh-staging-api.central.sonatype.com/service/local/"))
+            snapshotRepositoryUrl.set(uri("https://central.sonatype.com/repository/maven-snapshots/"))
         }
     }
 }
@@ -46,6 +46,30 @@ allprojects {
             force("com.fasterxml.jackson.module:jackson-module-kotlin:2.15.0")
             force("com.fasterxml.jackson.dataformat:jackson-dataformat-xml:2.15.0")
             force("com.fasterxml.jackson.core:jackson-databind:2.15.0")
+
+            // Force secure version of netty-codec to address security vulnerabilities
+            // Used transitively by com.android.tools.emulator:proto
+            // Updated to 4.1.125.Final per Mend SCA recommendation (Nov 2025)
+            force("io.netty:netty-codec:4.1.125.Final")
+            force("io.netty:netty-codec-http:4.1.125.Final")
+            force("io.netty:netty-codec-http2:4.1.125.Final")
+            force("io.netty:netty-all:4.1.125.Final")
+
+            // Force secure version of protobuf to address security vulnerabilities
+            // Used transitively by various Google dependencies
+            // Updated to 4.29.2 (latest stable) which fixes CVE-2024-7254 and all known CVEs
+            force("com.google.protobuf:protobuf-java:4.29.2")
+            force("com.google.protobuf:protobuf-kotlin:4.29.2")
+            force("com.google.protobuf:protobuf-javalite:4.29.2")
+            force("com.google.protobuf:protobuf-kotlin-lite:4.29.2")
+
+            // Force secure version of play-services-basement to address security vulnerabilities
+            // Used transitively by recaptcha client
+            // Updated to 18.0.2 which fixes CVE-2022-2390
+            force("com.google.android.gms:play-services-basement:18.0.2")
+            // Force secure version of nimbus-jose-jwt to address security vulnerabilities
+            // Force the existing to fix CVE-2025-53864
+            force("com.nimbusds:nimbus-jose-jwt:10.5")
         }
     }
 }
@@ -59,4 +83,18 @@ subprojects {
     configure<TestLoggerExtension> {
         theme = ThemeType.MOCHA
     }
+}
+
+// Commend to generate all doc ./gradlew dokkaGenerate
+dependencies {
+    subprojects
+        .filter {
+            //it.plugins does not work
+            val buildFile = it.buildFile
+            buildFile.exists() && buildFile.readText()
+                .contains("com.pingidentity.convention.centralPublish")
+        }
+        .forEach { subproject ->
+            dokka(subproject)
+        }
 }

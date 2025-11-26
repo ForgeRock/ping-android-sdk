@@ -14,6 +14,7 @@ import com.pingidentity.android.ContextProvider
 import com.pingidentity.exception.ApiException
 import com.pingidentity.logger.CONSOLE
 import com.pingidentity.logger.Logger
+import com.pingidentity.storage.EncryptedDataStoreStorageConfig
 import com.pingidentity.storage.MemoryStorage
 import com.pingidentity.storage.StorageDelegate
 import com.pingidentity.testrail.TestRailCase
@@ -27,6 +28,8 @@ import io.ktor.http.headersOf
 import io.ktor.utils.io.ByteReadChannel
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
+import org.junit.Assert
+import org.junit.Assert.assertFalse
 import org.junit.Rule
 import org.junit.rules.TestWatcher
 import org.junit.runner.RunWith
@@ -62,12 +65,12 @@ class OidcClientConfigTest {
                         content =
                             ByteReadChannel(
                                 "{\n" +
-                                    "  \"authorization_endpoint\" : \"https://auth.test-one-pingone.com/as/authorize\",\n" +
-                                    "  \"token_endpoint\" : \"https://auth.test-one-pingone.com/as/token\",\n" +
-                                    "  \"userinfo_endpoint\" : \"https://auth.test-one-pingone.com/as/userinfo\",\n" +
-                                    "  \"end_session_endpoint\" : \"https://auth.test-one-pingone.com/as/signoff\",\n" +
-                                    "  \"revocation_endpoint\" : \"https://auth.test-one-pingone.com/as/revoke\"\n" +
-                                    "}",
+                                        "  \"authorization_endpoint\" : \"https://auth.test-one-pingone.com/as/authorize\",\n" +
+                                        "  \"token_endpoint\" : \"https://auth.test-one-pingone.com/as/token\",\n" +
+                                        "  \"userinfo_endpoint\" : \"https://auth.test-one-pingone.com/as/userinfo\",\n" +
+                                        "  \"end_session_endpoint\" : \"https://auth.test-one-pingone.com/as/signoff\",\n" +
+                                        "  \"revocation_endpoint\" : \"https://auth.test-one-pingone.com/as/revoke\"\n" +
+                                        "}",
                             ),
                         status = HttpStatusCode.OK,
                         headers = headersOf(HttpHeaders.ContentType, "application/json"),
@@ -78,7 +81,7 @@ class OidcClientConfigTest {
                 OidcClientConfig().apply {
                     this.httpClient = httpClient
                     discoveryEndpoint = "http://localhost"
-                    this.storage = MemoryStorage<Token>()
+                    storage = { MemoryStorage() }
                 }
             oidcClientConfig.init()
 
@@ -120,7 +123,8 @@ class OidcClientConfigTest {
                 OidcClientConfig().apply {
                     this.httpClient = httpClient
                     discoveryEndpoint = "http://localhost"
-                    this.storage = MemoryStorage<Token>()
+                    storage = { MemoryStorage() }
+
                 }
 
             assertFailsWith<ApiException> {
@@ -137,7 +141,8 @@ class OidcClientConfigTest {
                 openId = OpenIdConfiguration()
                 agent = mockk()
                 logger = mockk()
-                storage = mockk<StorageDelegate<Token>>()
+                storage = { mockk<StorageDelegate<Token>>() }
+                storage { fileName = "test" }
                 discoveryEndpoint = "http://localhost"
                 clientId = "clientId"
                 scope("openid")
@@ -157,6 +162,8 @@ class OidcClientConfigTest {
         assertEquals(otherConfig.openId, oidcClientConfig.openId)
         assertEquals(otherConfig.agent, oidcClientConfig.agent)
         assertEquals(otherConfig.logger, oidcClientConfig.logger)
+        assertFalse(otherConfig.isTokenStorageInitialized())
+        assertFalse(oidcClientConfig.isTokenStorageInitialized())
         assertEquals(otherConfig.storage, oidcClientConfig.storage)
         assertEquals(otherConfig.discoveryEndpoint, oidcClientConfig.discoveryEndpoint)
         assertEquals(otherConfig.clientId, oidcClientConfig.clientId)
@@ -181,7 +188,7 @@ class OidcClientConfigTest {
                 refreshThreshold = 100
                 agent = mockk()
                 logger = mockk()
-                storage = mockk<StorageDelegate<Token>>()
+                storage = { mockk<StorageDelegate<Token>>() }
                 discoveryEndpoint = "http://localhost"
                 clientId = "clientId"
                 scope("openid")
@@ -198,9 +205,9 @@ class OidcClientConfigTest {
                 httpClient = mockk()
             }
 
-        //Ensure there are 19 properties in the class for now.
+        //Ensure there are 21 properties in the class for now.
         val clazz: KClass<OidcClientConfig> = OidcClientConfig::class
-        assertEquals(clazz.memberProperties.size, 19)
+        assertEquals(clazz.memberProperties.size, 21)
 
         val clonedConfig = oidcClientConfig.clone()
 
@@ -208,7 +215,57 @@ class OidcClientConfigTest {
         assertEquals(oidcClientConfig.refreshThreshold, clonedConfig.refreshThreshold)
         assertEquals(oidcClientConfig.agent, clonedConfig.agent)
         assertEquals(oidcClientConfig.logger, clonedConfig.logger)
-        assertEquals(oidcClientConfig.storage, clonedConfig.storage)
+        assertFalse(clonedConfig.isTokenStorageInitialized())
+        assertFalse(oidcClientConfig.isTokenStorageInitialized())
+        assertEquals(oidcClientConfig.discoveryEndpoint, clonedConfig.discoveryEndpoint)
+        assertEquals(oidcClientConfig.clientId, clonedConfig.clientId)
+        assertEquals(oidcClientConfig.scopes, clonedConfig.scopes)
+        assertEquals(oidcClientConfig.redirectUri, clonedConfig.redirectUri)
+        assertEquals(oidcClientConfig.signOutRedirectUri, clonedConfig.signOutRedirectUri)
+        assertEquals(oidcClientConfig.loginHint, clonedConfig.loginHint)
+        assertEquals(oidcClientConfig.state, clonedConfig.state)
+        assertEquals(oidcClientConfig.nonce, clonedConfig.nonce)
+        assertEquals(oidcClientConfig.display, clonedConfig.display)
+        assertEquals(oidcClientConfig.prompt, clonedConfig.prompt)
+        assertEquals(oidcClientConfig.uiLocales, clonedConfig.uiLocales)
+        assertEquals(oidcClientConfig.acrValues, clonedConfig.acrValues)
+        assertEquals(oidcClientConfig.additionalParameters, clonedConfig.additionalParameters)
+        assertEquals(oidcClientConfig.httpClient, clonedConfig.httpClient)
+    }
+
+    @Test
+    fun `clone should create a new instance with same properties after init`() = runTest {
+        val oidcClientConfig =
+            OidcClientConfig().apply {
+                openId = OpenIdConfiguration()
+                refreshThreshold = 100
+                agent = mockk()
+                logger = mockk()
+                storage = { mockk<StorageDelegate<Token>>() }
+                discoveryEndpoint = "http://localhost"
+                clientId = "clientId"
+                scope("openid")
+                redirectUri = "http://localhost/callback"
+                signOutRedirectUri = "http://localhost/signout"
+                loginHint = "loginHint"
+                state = "state"
+                nonce = "nonce"
+                display = "display"
+                prompt = "prompt"
+                uiLocales = "uiLocales"
+                acrValues = "acrValues"
+                additionalParameters = mapOf("param" to "value")
+                httpClient = mockk()
+            }
+        oidcClientConfig.init()
+
+        val clonedConfig = oidcClientConfig.clone()
+
+        assertEquals(oidcClientConfig.openId, clonedConfig.openId)
+        assertEquals(oidcClientConfig.refreshThreshold, clonedConfig.refreshThreshold)
+        assertEquals(oidcClientConfig.agent, clonedConfig.agent)
+        assertEquals(oidcClientConfig.logger, clonedConfig.logger)
+        assertEquals(oidcClientConfig.tokenStorage, clonedConfig.tokenStorage)
         assertEquals(oidcClientConfig.discoveryEndpoint, clonedConfig.discoveryEndpoint)
         assertEquals(oidcClientConfig.clientId, clonedConfig.clientId)
         assertEquals(oidcClientConfig.scopes, clonedConfig.scopes)
@@ -240,13 +297,57 @@ class OidcClientConfigTest {
     @Test
     fun `httpclient should be initialized`() = runTest {
         val oidcClientConfig = OidcClientConfig().apply {
-            storage = mockk()
+            storage = { mockk() }
             openId = mockk()
             logger = Logger.CONSOLE
         }
         oidcClientConfig.init()
         //Access the httpclient and make sure it is initialized
         oidcClientConfig.httpClient
+    }
+
+    @Test
+    fun `storageOption should be customizable`() {
+        val oidcClientConfig = OidcClientConfig()
+        oidcClientConfig.storage {
+            fileName = "custom_file"
+        }
+
+        val config = EncryptedDataStoreStorageConfig().apply(oidcClientConfig.storageOption)
+
+        //Override the default file name
+        Assert.assertEquals("custom_file", config.fileName)
+        //Keep the default keyAlias
+        Assert.assertEquals("com.pingidentity.sdk.v1.tokens", config.keyAlias)
+        Assert.assertTrue(config.strongBoxPreferred)
+    }
+    @Test
+    fun `storageOption should be accumulate customization`() {
+        val oidcClientConfig = OidcClientConfig()
+        oidcClientConfig.storage {
+            fileName = "custom_file"
+        }
+
+        oidcClientConfig.storage {
+            strongBoxPreferred = false
+        }
+
+        oidcClientConfig.storage {
+            symmetricKeySize = 128
+        }
+
+        oidcClientConfig.storage {
+            keyAlias = "custom_key_alias"
+        }
+
+        val config = EncryptedDataStoreStorageConfig().apply(oidcClientConfig.storageOption)
+
+        //Override the default file name
+        Assert.assertEquals("custom_file", config.fileName)
+        //Keep the default keyAlias
+        Assert.assertEquals("custom_key_alias", config.keyAlias)
+        assertFalse(config.strongBoxPreferred)
+        Assert.assertEquals(128, config.symmetricKeySize)
     }
 
 }

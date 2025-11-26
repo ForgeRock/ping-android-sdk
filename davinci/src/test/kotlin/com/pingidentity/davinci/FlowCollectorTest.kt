@@ -8,11 +8,10 @@
 import com.pingidentity.davinci.collector.FlowCollector
 import com.pingidentity.testrail.TestRailCase
 import com.pingidentity.testrail.TestRailWatcher
-import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
-import org.junit.Assert.*
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Rule
 import org.junit.rules.TestWatcher
 import kotlin.test.Test
@@ -72,5 +71,37 @@ class FlowCollectorTest {
         assertEquals("testType", flowCollector.type)
     }
 
+    @Test
+    fun `close should clear value`() {
+        val flowCollector = FlowCollector()
+        flowCollector.value = "testValue"
 
+        // Verify value is set
+        assertEquals("testValue", flowCollector.value)
+        assertEquals("testValue", flowCollector.payload())
+
+        // Close the collector
+        flowCollector.close()
+
+        // Verify value is cleared
+        assertEquals("", flowCollector.value)
+        assertNull(flowCollector.payload())
+    }
+
+    @Test
+    fun `close should allow reuse after clearing`() {
+        val flowCollector = FlowCollector()
+
+        // First value
+        flowCollector.value = "value1"
+        assertEquals("value1", flowCollector.payload())
+
+        // Close and set new value
+        flowCollector.close()
+        assertEquals("", flowCollector.value)
+
+        // Second value
+        flowCollector.value = "value2"
+        assertEquals("value2", flowCollector.payload())
+    }
 }

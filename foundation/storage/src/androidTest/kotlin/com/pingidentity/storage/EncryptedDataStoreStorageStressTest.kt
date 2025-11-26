@@ -7,18 +7,11 @@
 
 package com.pingidentity.storage
 
-import android.app.Application
-import android.content.Context
-import androidx.datastore.core.DataStore
-import androidx.datastore.dataStore
-import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.SmallTest
-import com.pingidentity.storage.encrypt.SecretKeyEncryptor
 import com.pingidentity.testrail.TestRailCase
 import com.pingidentity.testrail.TestRailWatcher
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import org.junit.Rule
 import org.junit.rules.TestWatcher
@@ -27,6 +20,7 @@ import java.security.KeyStore
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
+import kotlin.time.Duration.Companion.seconds
 
 
 @RunWith(AndroidJUnit4::class)
@@ -36,15 +30,14 @@ class EncryptedDataStoreStorageStressTest {
     @Rule
     val watcher: TestWatcher = TestRailWatcher
 
-    private val applicationContext: Context by lazy { ApplicationProvider.getApplicationContext<Application>() }
-    private val Context.dataStore: DataStore<Data?> by dataStore(this.javaClass.simpleName, EncryptedDataToJsonSerializer(
-        SecretKeyEncryptor {
-            keyAlias = EncryptedDataStoreStorageStressTest::class.java.simpleName
-        }
-    ))
+    private lateinit var storage: Storage<Data>
 
     @BeforeTest
     fun setUp() = runTest {
+        storage = EncryptedDataStoreStorage {
+            fileName =  EncryptedDataStoreStorageStressTest::class.java.simpleName
+            keyAlias = EncryptedDataStoreStorageStressTest::class.java.simpleName
+        }
         clear()
     }
 
@@ -55,7 +48,7 @@ class EncryptedDataStoreStorageStressTest {
         }
 
     private suspend fun clear() {
-        applicationContext.dataStore.updateData { null }
+        storage.delete()
         val keyStore = KeyStore.getInstance("AndroidKeyStore")
         keyStore.load(null)
         keyStore.deleteEntry(EncryptedDataStoreStorageStressTest::class.java.simpleName)
@@ -63,10 +56,8 @@ class EncryptedDataStoreStorageStressTest {
 
     @TestRailCase(21635)
     @Test
-    fun testDataStoreStress() = runBlocking {
-        val storage = DataStoreStorage(applicationContext.dataStore)
-
-        //Can't really test the concurrency, the mutex for save and get are queueing the requests
+    fun testDataStoreStress() = runTest(timeout = 5.seconds) {
+        // Reduced iterations to complete within time limit
         repeat(100) {
             launch {
                 val data = Data(it, "some data")

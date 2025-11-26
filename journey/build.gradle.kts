@@ -5,8 +5,12 @@
  * of the MIT license. See the LICENSE file for details.
  */
 
+description = "Journey library"
+
 plugins {
     id("com.pingidentity.convention.android.library")
+    // id("com.pingidentity.convention.centralPublish") // we are not publishing this module for now
+    id("com.pingidentity.convention.jacoco")
     alias(libs.plugins.androidLibrary)
     alias(libs.plugins.kotlinAndroid)
     alias(libs.plugins.kotlinSerialization)
@@ -22,6 +26,13 @@ android {
     testVariants.all {
         this.mergedFlavor.manifestPlaceholders["appRedirectUriScheme"] = "com.pingidentity.demo"
     }
+
+    buildTypes {
+        debug {
+            enableAndroidTestCoverage = true
+            enableUnitTestCoverage = true
+        }
+    }
 }
 
 dependencies {
@@ -30,8 +41,8 @@ dependencies {
     api(project(":foundation:oidc"))
     api(project(":foundation:orchestrate"))
     api(project(":foundation:logger"))
+    api(project(":foundation:storage"))
     implementation(project(":foundation:android"))
-    implementation(project(":foundation:storage"))
 
     testImplementation(project(":foundation:testrail"))
     implementation(libs.androidx.datastore)
@@ -44,4 +55,17 @@ dependencies {
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.robolectric)
     testImplementation(libs.ktor.client.mock)
+    testImplementation(project(":protect"))
+    testImplementation(project(":mfa:fido"))
+
+    androidTestImplementation(libs.kotlinx.coroutines.test)
+    androidTestImplementation(libs.androidx.junit)
+    androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(project(":foundation:testrail"))
+    androidTestImplementation(project(":protect"))
+    androidTestImplementation(project(":foundation:device:device-profile"))
+    androidTestImplementation(project(":foundation:device:device-id"))
+    androidTestImplementation(project(":recaptcha-enterprise"))
+    androidTestImplementation(project(":mfa:binding"))
+    androidTestImplementation(libs.bcpkix.jdk18on)
 }

@@ -33,7 +33,10 @@ import com.pingidentity.samples.app.json
 import kotlinx.serialization.encodeToString
 
 @Composable
-fun Centralize(centralizeLoginViewModel: CentralizeLoginViewModel) {
+fun Centralize(
+    centralizeLoginViewModel: CentralizeLoginViewModel,
+    onSuccess: (() -> Unit) = {},
+) {
     val scroll = rememberScrollState(0)
     LaunchedEffect(true) {
         // Not relaunch when recomposition
@@ -44,54 +47,36 @@ fun Centralize(centralizeLoginViewModel: CentralizeLoginViewModel) {
 
     Column(
         modifier =
-        Modifier
-            .fillMaxWidth(),
+            Modifier
+                .fillMaxWidth(),
     ) {
         Card(
             elevation =
-            CardDefaults.cardElevation(
-                defaultElevation = 10.dp,
-            ),
+                CardDefaults.cardElevation(
+                    defaultElevation = 10.dp,
+                ),
             modifier =
-            Modifier
-                .weight(1f)
-                .fillMaxHeight()
-                .fillMaxWidth()
-                .padding(8.dp),
+                Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+                    .fillMaxWidth()
+                    .padding(8.dp),
             border = BorderStroke(2.dp, Color.Black),
             shape = MaterialTheme.shapes.medium,
         ) {
+            state.user?.let {
+                LaunchedEffect(true) {
+                    onSuccess()
+                }
+            }
             Text(
                 modifier =
-                Modifier
-                    .padding(4.dp)
-                    .verticalScroll(scroll),
+                    Modifier
+                        .padding(4.dp)
+                        .verticalScroll(scroll),
                 text =
-                state.token?.let {
-                    json.encodeToString(it)
-                } ?: state.error?.toString() ?: "",
+                    state.error?.toString() ?: "",
             )
-        }
-
-        Row(
-            modifier =
-            Modifier
-                .padding(8.dp)
-                .fillMaxWidth(),
-            horizontalArrangement = Arrangement.aligned(Alignment.End),
-        ) {
-            Button(
-                modifier = Modifier.padding(4.dp),
-                onClick = { centralizeLoginViewModel.login() },
-            ) {
-                Text(text = "AccessToken")
-            }
-            Button(
-                modifier = Modifier.padding(4.dp),
-                onClick = { centralizeLoginViewModel.reset() },
-            ) {
-                Text(text = "Clear")
-            }
         }
     }
 }

@@ -103,7 +103,7 @@ class IdpCollectorTest {
         idpCollector.davinci = daVinci
 
         coEvery { idpRequestHandler.authorize("http://test.com") } returns Request()
-        val result = idpCollector.authorize(idpRequestHandler)
+        val result = idpCollector.authorize(idpRequestHandler = idpRequestHandler)
         assertTrue(result.isSuccess)
     }
 
@@ -128,7 +128,7 @@ class IdpCollectorTest {
         coEvery { idpRequestHandler.authorize("http://test.com") } throws
                 ApiException(404, "Unsupported IDP")
 
-        val result = idpCollector.authorize(idpRequestHandler)
+        val result = idpCollector.authorize(idpRequestHandler = idpRequestHandler)
         assertTrue(result.isFailure)
         assertTrue { result.exceptionOrNull() is ApiException }
     }

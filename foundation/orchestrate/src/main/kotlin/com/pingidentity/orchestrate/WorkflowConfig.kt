@@ -16,6 +16,7 @@ import io.ktor.client.engine.cio.CIO
 import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.logging.LogLevel
 import io.ktor.client.plugins.logging.Logging
+import kotlin.time.Duration.Companion.seconds
 
 /**
  * Enum class representing the mode of module override.
@@ -37,7 +38,7 @@ open class WorkflowConfig {
     val modules = mutableListOf<ModuleRegistry<*>>()
 
     // Timeout for the HTTP client, default is 15 seconds
-    var timeout: Long = 15000
+    var timeout: Long = 15.seconds.inWholeMilliseconds
 
     // Logger for the log, default is None
     var logger = Logger.logger

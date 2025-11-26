@@ -7,14 +7,16 @@
 
 package com.pingidentity.idp.davinci
 
+import android.net.Uri
+import androidx.core.net.toUri
 import com.pingidentity.browser.BrowserLauncher
 import com.pingidentity.davinci.plugin.Collector
 import com.pingidentity.davinci.plugin.ContinueNodeAware
-import com.pingidentity.davinci.plugin.RequestInterceptor
 import com.pingidentity.davinci.plugin.DaVinciAware
-import com.pingidentity.idp.UnsupportedIdPException
+import com.pingidentity.davinci.plugin.RequestInterceptor
 import com.pingidentity.idp.FacebookHandler
 import com.pingidentity.idp.GoogleHandler
+import com.pingidentity.idp.UnsupportedIdPException
 import com.pingidentity.orchestrate.ContinueNode
 import com.pingidentity.orchestrate.FlowContext
 import com.pingidentity.orchestrate.Request
@@ -76,7 +78,7 @@ class IdpCollector : Collector<Nothing>, ContinueNodeAware, DaVinciAware, Reques
      *
      * @param input The JSON object containing initialization data.
      */
-    override fun init(input: JsonObject) {
+    override fun init(input: JsonObject) : IdpCollector{
         idpEnabled = input["idpEnabled"]?.jsonPrimitive?.boolean ?: true
         idpId = input["idpId"]?.jsonPrimitive?.content ?: ""
         idpType = input["idpType"]?.jsonPrimitive?.content ?: ""
@@ -87,6 +89,7 @@ class IdpCollector : Collector<Nothing>, ContinueNodeAware, DaVinciAware, Reques
                 ?.jsonObject?.get("href")?.jsonPrimitive?.content
                 ?: ""
         )
+        return this
     }
 
     /**
@@ -99,16 +102,17 @@ class IdpCollector : Collector<Nothing>, ContinueNodeAware, DaVinciAware, Reques
     /**
      * Authorizes the user using the specified IdP.
      *
+     * @param redirectUri The redirect URI for the browser-based IdP authentication.
      * @param idpRequestHandler The IdP request handler to use, if null will use the predefined handler.
      * @return A Result object indicating success or failure.
      */
     suspend fun authorize(
-        idpRequestHandler: IdpRequestHandler? = null
+        redirectUri: Uri = "".toUri(),
+        idpRequestHandler: IdpRequestHandler = getRequestHandler(redirectUri),
     ): Result<Unit> {
-        val requestHandler: IdpRequestHandler = idpRequestHandler ?: getRequestHandler()
         try {
             BrowserLauncher.logger = davinci.config.logger
-            resumeRequest = requestHandler.authorize(link.toString())
+            resumeRequest = idpRequestHandler.authorize(link.toString())
             return Result.success(Unit)
         } catch (e: Exception) {
             yield()
@@ -116,7 +120,7 @@ class IdpCollector : Collector<Nothing>, ContinueNodeAware, DaVinciAware, Reques
         }
     }
 
-    private fun getRequestHandler(): IdpRequestHandler {
+    private fun getRequestHandler(redirectUri: Uri): IdpRequestHandler {
 
         return when (idpType) {
             "GOOGLE" -> {
@@ -124,7 +128,7 @@ class IdpCollector : Collector<Nothing>, ContinueNodeAware, DaVinciAware, Reques
                     GoogleRequestHandler(
                         davinci.config.httpClient,
                         GoogleHandler()
-                    ), BrowserRequestHandler(continueNode)
+                    ), BrowserRequestHandler(continueNode, redirectUri)
                 )
             }
 
@@ -133,12 +137,12 @@ class IdpCollector : Collector<Nothing>, ContinueNodeAware, DaVinciAware, Reques
                     FacebookRequestHandler(
                         davinci.config.httpClient,
                         FacebookHandler()
-                    ), BrowserRequestHandler(continueNode)
+                    ), BrowserRequestHandler(continueNode, redirectUri)
                 )
             }
 
             else -> {
-                BrowserRequestHandler(continueNode)
+                BrowserRequestHandler(continueNode, redirectUri)
             }
         }
     }
@@ -149,11 +153,11 @@ private class IdpRequestHandlerDelegate(
     val fallback: IdpRequestHandler
 ) : IdpRequestHandler by idpRequestHandler {
     override suspend fun authorize(url: String): Request {
-        try {
-            return idpRequestHandler.authorize(url)
+        return try {
+            idpRequestHandler.authorize(url)
         } catch (e: UnsupportedIdPException) {
             // Fallback to use browser
-            return fallback.authorize(url)
+            fallback.authorize(url)
         }
     }
 

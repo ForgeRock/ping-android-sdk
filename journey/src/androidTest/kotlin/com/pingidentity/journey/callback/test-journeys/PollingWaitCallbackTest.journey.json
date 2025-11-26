@@ -1,0 +1,187 @@
+{
+  "meta": {
+    "exportDate": "2025-07-30T16:28:20.643Z",
+    "exportTool": "frodo",
+    "exportToolVersion": "v3.3.0 [v20.18.0]",
+    "exportedBy": "stoyan.petrov@forgerock.com",
+    "origin": "https://openam-sdks.forgeblocks.com/am",
+    "originAmVersion": "8.1.0"
+  },
+  "trees": {
+    "PollingWaitCallbackTest": {
+      "circlesOfTrust": {},
+      "emailTemplates": {},
+      "innerNodes": {
+        "9972203b-52ac-4edd-a934-bd682b398d4c": {
+          "_id": "9972203b-52ac-4edd-a934-bd682b398d4c",
+          "_outcomes": [
+            {
+              "displayName": "Outcome",
+              "id": "outcome"
+            }
+          ],
+          "_type": {
+            "_id": "UsernameCollectorNode",
+            "collection": true,
+            "name": "Username Collector"
+          }
+        },
+        "ce45777d-a335-4286-84d6-4d9a8820e7bb": {
+          "_id": "ce45777d-a335-4286-84d6-4d9a8820e7bb",
+          "_outcomes": [
+            {
+              "displayName": "Outcome",
+              "id": "outcome"
+            }
+          ],
+          "_type": {
+            "_id": "PasswordCollectorNode",
+            "collection": true,
+            "name": "Password Collector"
+          }
+        }
+      },
+      "nodes": {
+        "2856fbf5-8d61-48ac-bc5e-a62da3373350": {
+          "_id": "2856fbf5-8d61-48ac-bc5e-a62da3373350",
+          "_outcomes": [
+            {
+              "displayName": "Outcome",
+              "id": "outcome"
+            }
+          ],
+          "_type": {
+            "_id": "PageNode",
+            "collection": true,
+            "name": "Page Node"
+          },
+          "nodes": [
+            {
+              "_id": "9972203b-52ac-4edd-a934-bd682b398d4c",
+              "displayName": "Username Collector",
+              "nodeType": "UsernameCollectorNode"
+            },
+            {
+              "_id": "ce45777d-a335-4286-84d6-4d9a8820e7bb",
+              "displayName": "Password Collector",
+              "nodeType": "PasswordCollectorNode"
+            }
+          ],
+          "pageDescription": {},
+          "pageHeader": {}
+        },
+        "9af2f983-54f3-48f1-b3b4-f8b92ea7b2d1": {
+          "_id": "9af2f983-54f3-48f1-b3b4-f8b92ea7b2d1",
+          "_outcomes": [
+            {
+              "displayName": "True",
+              "id": "true"
+            },
+            {
+              "displayName": "False",
+              "id": "false"
+            }
+          ],
+          "_type": {
+            "_id": "DataStoreDecisionNode",
+            "collection": true,
+            "name": "Data Store Decision"
+          }
+        },
+        "d4780aa6-c791-4b3b-86e2-6198769b1682": {
+          "_id": "d4780aa6-c791-4b3b-86e2-6198769b1682",
+          "_outcomes": [
+            {
+              "displayName": "Done",
+              "id": "DONE"
+            },
+            {
+              "displayName": "Exited",
+              "id": "EXITED"
+            },
+            {
+              "displayName": "Spam",
+              "id": "SPAM"
+            }
+          ],
+          "_type": {
+            "_id": "PollingWaitNode",
+            "collection": true,
+            "name": "Polling Wait Node"
+          },
+          "exitMessage": {
+            "en": "Exit"
+          },
+          "exitable": true,
+          "secondsToWait": 5,
+          "spamDetectionEnabled": true,
+          "spamDetectionTolerance": 3,
+          "waitingMessage": {
+            "en": "Please Wait"
+          }
+        }
+      },
+      "saml2Entities": {},
+      "scripts": {},
+      "socialIdentityProviders": {},
+      "themes": [],
+      "tree": {
+        "_id": "PollingWaitCallbackTest",
+        "enabled": true,
+        "entryNodeId": "2856fbf5-8d61-48ac-bc5e-a62da3373350",
+        "identityResource": "managed/alpha_user",
+        "innerTreeOnly": false,
+        "mustRun": false,
+        "noSession": false,
+        "nodes": {
+          "2856fbf5-8d61-48ac-bc5e-a62da3373350": {
+            "connections": {
+              "outcome": "9af2f983-54f3-48f1-b3b4-f8b92ea7b2d1"
+            },
+            "displayName": "Page Node",
+            "nodeType": "PageNode",
+            "x": 260,
+            "y": 181
+          },
+          "9af2f983-54f3-48f1-b3b4-f8b92ea7b2d1": {
+            "connections": {
+              "false": "e301438c-0bd0-429c-ab0c-66126501069a",
+              "true": "d4780aa6-c791-4b3b-86e2-6198769b1682"
+            },
+            "displayName": "Data Store Decision",
+            "nodeType": "DataStoreDecisionNode",
+            "x": 576,
+            "y": 115.375
+          },
+          "d4780aa6-c791-4b3b-86e2-6198769b1682": {
+            "connections": {
+              "DONE": "e301438c-0bd0-429c-ab0c-66126501069a",
+              "EXITED": "70e691a5-1e33-4ac3-a356-e7b6d60d92e0"
+            },
+            "displayName": "Polling Wait Node",
+            "nodeType": "PollingWaitNode",
+            "x": 851,
+            "y": 79
+          }
+        },
+        "staticNodes": {
+          "70e691a5-1e33-4ac3-a356-e7b6d60d92e0": {
+            "x": 1084,
+            "y": 469
+          },
+          "e301438c-0bd0-429c-ab0c-66126501069a": {
+            "x": 1243,
+            "y": 248
+          },
+          "startNode": {
+            "x": 131,
+            "y": 58
+          }
+        },
+        "uiConfig": {
+          "categories": "[]"
+        }
+      }
+    }
+  }
+}

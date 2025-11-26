@@ -7,9 +7,11 @@
 
 package com.pingidentity.samples.app.env
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
@@ -23,24 +25,53 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.pingidentity.device.id.DefaultDeviceIdentifier
 import com.pingidentity.oidc.OidcClientConfig
 import java.net.URL
 
 @Composable
 fun Env(envViewModel: EnvViewModel = viewModel<EnvViewModel>()) {
+    var deviceId by remember { mutableStateOf("Loading Device ID...") }
 
-    LazyColumn(modifier = Modifier) {
-        envViewModel.oidcConfigs.forEach {
-            item {
-                ServerSetting(option = it, envViewModel.current.clientId == it.clientId) {
-                    envViewModel.select(it)
+    LaunchedEffect(Unit) {
+        deviceId = try {
+            DefaultDeviceIdentifier.id()
+        } catch (_: Exception) {
+            "Error loading Device ID"
+        }
+    }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        LazyColumn(modifier = Modifier
+            .fillMaxSize()
+            .padding(bottom = 48.dp) // Add padding to avoid overlap with the device ID
+        ) {
+            envViewModel.oidcConfigs.forEach {
+                item {
+                    ServerSetting(option = it, envViewModel.current.clientId == it.clientId) {
+                        envViewModel.select(it)
+                    }
                 }
             }
         }
+        Text(
+            text = "Device ID: $deviceId",
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(16.dp),
+            style = MaterialTheme.typography.bodySmall,
+            textAlign = TextAlign.Center
+        )
     }
 }
 

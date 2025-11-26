@@ -1,9 +1,4 @@
-<p align="center">
-  <a href="https://github.com/ForgeRock/ping-android-sdk">
-    <img src="https://www.pingidentity.com/content/dam/picr/nav/Ping-Logo-2.svg" alt="Ping Identity Logo" width="200">
-  </a>
-  <hr/>
-</p>
+[![Ping Identity](https://www.pingidentity.com/content/dam/picr/nav/Ping-Logo-2.svg)](https://github.com/ForgeRock/ping-android-sdk)
 
 # Journey: Authentication and Authorization SDK
 
@@ -82,7 +77,8 @@ discovery of OpenID
 Connect (OIDC) endpoints using the `discoveryEndpoint` attribute.
 
 ```kotlin
-val journey = Journey {
+val journey = Journey { 
+    serverUrl = "your_server_url"
     module(Oidc) {
         clientId = "your_client_id"
         discoveryEndpoint =
@@ -100,18 +96,52 @@ The `Journey` configuration block offers further customization options:
 
 ```kotlin
 val journey = Journey {
-    timeout = 30 // Network request timeout in seconds (default: 30s)
+    timeout = 30000 // Network request timeout in milliseconds (default: 15000ms)
     logger = Logger.STANDARD // Use the standard logger for Logcat output
+    serverUrl = "<server_url>" // Specify the server URL
     realm = "<realm_name>" // Specify the realm for authentication
     cookie = "<cookie_name>" // Specify the cookie name for session management
     module(Oidc) {
         clientId = "your_client_id"
         discoveryEndpoint =
-                "https://your_openam_domain/am/oauth2/alpha/.well-known/openid-configuration"
+            "https://your_openam_domain/am/oauth2/alpha/.well-known/openid-configuration"
         // ... other OIDC configurations
+
+        // Storage configuration options
+        storage {
+            fileName = "test"
+            keyAlias = "myKeyAlias"
+            strongBoxPreferred = true
+            cacheStrategy = CacheStrategy.CACHE_ON_FAILURE
+        }
+    }
+    module(Session) {
+        storage {
+            //keep default filename and keyalias.
+            strongBoxPreferred = false
+            cacheStrategy = CacheStrategy.CACHE_ON_FAILURE
+        }
     }
 }
 ```
+
+#### Storage Configuration Explained
+
+The `storage` block allows you to configure how data is persisted for each module. The options
+include:
+
+- **fileName**: The name of the file used for persistent storage.
+- **keyAlias**: If provided, enables encryption using AndroidKeyStore. This results in the use of
+  `EncryptedDataStoreStorage`.
+- **strongBoxPreferred**: If set to `true`, attempts to use hardware-backed StrongBox for key
+  storage (if available).
+- **cacheStrategy**: Controls in-memory caching behavior. Options:
+    - `NO_CACHE`: No caching, always fetch fresh data.
+    - `CACHE_ON_FAILURE`: Cache in memory only if storage operation fails.
+    - `CACHE`: Cache in memory, even if the storage operation fails.
+
+> **Note:** Data that store in the cache is kept in plain text and is not encrypted. A device that
+> can output a memory dump may expose sensitive information
 
 ### Navigating the Authentication Flow
 
@@ -179,7 +209,6 @@ The following Callback will be supported in the Core Journey Module:
 
 | Callback Name                   | Callback Description                                                                                |
 |---------------------------------|-----------------------------------------------------------------------------------------------------|
-| AppIntegrity                    | Collects a generated token from the client to verify the integrity of the app                       |
 | BooleanAttributeInputCallback   | Collects true or false.                                                                             |
 | ChoiceCallback                  | Collects single user input from available choices, retrieves selected choice from user interaction. |
 | ConfirmationCallback            | Retrieve a selected option from a list of options.                                                  |
@@ -411,7 +440,8 @@ C4Context
 
 ### Journey's Callback Customization & Extension
 
-Please refer to [journey-plugin](https://github.com/ForgeRock/ping-android-sdk/tree/develop/foundation/journey-plugin)
+Please refer
+to [journey-plugin](https://github.com/ForgeRock/ping-android-sdk/tree/develop/foundation/journey-plugin)
 for customizing the Journey's callback.
 
 Callback below will be supported by other modules:
@@ -430,6 +460,4 @@ Callback below will be supported by other modules:
 | WebAuthnAuthenticationCallback   | WebAuthn Authentication.                                                       |
 | SelectIdpCallback                | External Identity provider selection.                                          |
 | IdpCallback                      | External Identity provider authentication.                                     |
-
-
 

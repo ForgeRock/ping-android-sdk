@@ -9,10 +9,6 @@ package com.pingidentity.journey.callback
 
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.int
-import kotlinx.serialization.json.jsonArray
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -48,7 +44,7 @@ class TextOutputCallbackTest {
         callback.init(jsonObject)
 
         assertEquals("Test", callback.message)
-        assertEquals(0, callback.messageType)
+        assertEquals(TextOutputCallbackMessageType.INFORMATION, callback.messageType)
     }
 
     @Test
@@ -76,7 +72,7 @@ class TextOutputCallbackTest {
         val payload = callback.payload()
 
         assertEquals("Test", callback.message)
-        assertEquals(1, callback.messageType)
+        assertEquals(TextOutputCallbackMessageType.WARNING, callback.messageType)
         assertEquals(2, payload.size, "Payload should not be empty when messageType is not 4")
     }
 

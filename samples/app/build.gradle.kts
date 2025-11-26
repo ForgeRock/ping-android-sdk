@@ -1,4 +1,13 @@
 /*
+ * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ *
+ * This software may be modified and distributed under the terms
+ * of the MIT license. See the LICENSE file for details.
+ */
+
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
+/*
  * Copyright (c) 2024 - 2025 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
@@ -13,12 +22,12 @@ plugins {
 
 android {
     namespace = "com.pingidentity.samples.app"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.pingidentity.samples.app"
-        minSdk = 28
-        targetSdk = 35
+        minSdk = 29
+        targetSdk = 36
         versionCode = 1
         versionName = "1.0"
 
@@ -40,8 +49,10 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-    kotlinOptions {
-        jvmTarget = "17"
+    kotlin {
+        compilerOptions {
+            jvmTarget.set(JvmTarget.JVM_17)
+        }
     }
 
     signingConfigs {
@@ -64,6 +75,7 @@ android {
 dependencies {
 
     implementation(project(":foundation:android"))
+    implementation(project(":foundation:device:device-id"))
     val composeBom = platform(libs.androidx.compose.bom)
     implementation(composeBom)
 
@@ -74,12 +86,16 @@ dependencies {
     implementation(project(":external-idp"))
 
     //To enable Native Google Sign-In, fall back to browser if Google SDK is not available.
-    implementation(libs.googleid)
-    implementation(libs.androidx.credentials.play.services.auth)
 
     implementation(libs.facebook.login)
 
-    implementation(project(":foundation:storage"))
+    // FIDO2
+    //To Support nod-discoverable fido2 credential
+    implementation(libs.play.services.fido)
+    implementation(project(":mfa:fido"))
+
+    //Protect
+    implementation(project(":protect"))
 
     implementation(libs.androidx.datastore.preferences)
 

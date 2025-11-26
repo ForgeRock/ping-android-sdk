@@ -35,9 +35,10 @@ import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -45,6 +46,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
+@RunWith(RobolectricTestRunner::class)
 class CustomCallbackTest {
     private lateinit var mockEngine: MockEngine
     private val mockContext: Context = mockk()
@@ -110,7 +112,7 @@ class CustomCallbackTest {
                     followRedirects = false
                 }
                 module(Session) {
-                    storage = sessionStorage
+                    tokenStorage = sessionStorage
                 }
             }
 

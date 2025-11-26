@@ -9,9 +9,6 @@ package com.pingidentity.journey.callback
 
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.buildJsonArray
-import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.int
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
@@ -58,10 +55,10 @@ class ConfirmationCallbackTest {
               "input": [
                 {
                   "name": "IDToken2",
-                  "value": 0
+                  "value": 100
                 }
               ]
-            }                
+            }
             """
         ) as JsonObject
     }
@@ -72,11 +69,10 @@ class ConfirmationCallbackTest {
         callback.init(jsonObject)
 
         assertEquals("Please confirm your choice", callback.prompt)
-        assertEquals(0, callback.messageType)
+        assertEquals(ConfirmationCallbackMessageType.INFORMATION, callback.messageType)
         assertEquals(listOf("Yes", "No"), callback.options)
-        assertEquals(-1, callback.optionType)
-        assertEquals(1, callback.defaultOption)
-        assertEquals(1, callback.selectedIndex)
+        assertEquals(ConfirmationCallbackOptionType.UNSPECIFIED_OPTION, callback.optionType)
+        assertEquals(ConfirmationCallbackSelection.NO, callback.defaultOption)
     }
 
     @Test
@@ -91,5 +87,18 @@ class ConfirmationCallbackTest {
             payload["input"]?.jsonArray?.get(0)?.jsonObject?.get("value")?.jsonPrimitive?.int
         )
     }
+
+    @Test
+    fun `payload not explicitly set`() {
+        val callback = ConfirmationCallback()
+        callback.init(jsonObject)
+
+        val payload = callback.payload()
+        assertEquals(
+            100,
+            payload["input"]?.jsonArray?.get(0)?.jsonObject?.get("value")?.jsonPrimitive?.int
+        )
+    }
+
 
 }

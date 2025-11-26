@@ -7,6 +7,7 @@
 
 package com.pingidentity.journey.plugin
 
+import io.mockk.mockk
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
@@ -31,7 +32,7 @@ class CallbackRegistryTest {
             add(buildJsonObject { put("type", "type2") })
         }
 
-        val callbacks = CallbackRegistry.callback(jsonArray)
+        val callbacks = CallbackRegistry.callback(mockk(), jsonArray)
 
         assertEquals(2, callbacks.size)
     }
@@ -42,16 +43,30 @@ class CallbackRegistryTest {
             add(buildJsonObject { put("type", "invalidType") })
         }
 
-        val callbacks = CallbackRegistry.callback(jsonArray)
+        val callbacks = CallbackRegistry.callback(mockk(), jsonArray)
 
         assertTrue(callbacks.isEmpty())
+    }
+
+    @Test
+    fun `Should override existing callback when same type is registered again`() {
+        CallbackRegistry.register("type1", ::Dummy2Callback)
+
+        val jsonArray = buildJsonArray {
+            add(buildJsonObject { put("type", "type1") })
+        }
+
+        val callbacks = CallbackRegistry.callback(mockk(), jsonArray)
+
+        assertEquals(1, callbacks.size)
+        assertTrue(callbacks.first() is Dummy2Callback)
     }
 
     @Test
     fun `Should return empty list when jsonArray is empty`() {
         val jsonArray = buildJsonArray { }
 
-        val callbacks = CallbackRegistry.callback(jsonArray)
+        val callbacks = CallbackRegistry.callback(mockk(), jsonArray)
 
         assertTrue(callbacks.isEmpty())
     }

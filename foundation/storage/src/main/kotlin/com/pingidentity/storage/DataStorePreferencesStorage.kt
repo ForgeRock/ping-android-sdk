@@ -79,7 +79,7 @@ class DataStorePreferencesStorage<T : @Serializable Any>(
  */
 inline fun <reified T : @Serializable Any> DataStorePreferencesStorage(
     dataStore: DataStore<Preferences>,
-    cacheable: Boolean = false,
+    cacheStrategy: CacheStrategy = CacheStrategy.NO_CACHE,
 ): StorageDelegate<T> =
 
     StorageDelegate(
@@ -88,5 +88,5 @@ inline fun <reified T : @Serializable Any> DataStorePreferencesStorage(
             dataStore = dataStore,
             serializer = json.serializersModule.serializer(),
         ),
-        cacheable,
+        cacheStrategy,
     )

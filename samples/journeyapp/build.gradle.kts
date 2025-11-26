@@ -1,4 +1,13 @@
 /*
+ * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ *
+ * This software may be modified and distributed under the terms
+ * of the MIT license. See the LICENSE file for details.
+ */
+
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
+/*
  * Copyright (c) 2024 - 2025 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
@@ -13,12 +22,12 @@ plugins {
 
 android {
     namespace = "com.pingidentity.samples.journeyapp"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.pingidentity.samples.journeyapp"
-        minSdk = 28
-        targetSdk = 35
+        minSdk = 29
+        targetSdk = 36
         versionCode = 1
         versionName = "1.0"
 
@@ -51,10 +60,12 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-    kotlinOptions {
-        jvmTarget = "17"
-    }
 
+    kotlin {
+        compilerOptions {
+            jvmTarget.set(JvmTarget.JVM_17)
+        }
+    }
 }
 
 dependencies {
@@ -64,6 +75,21 @@ dependencies {
     implementation(project(":foundation:android"))
     implementation(project(":journey"))
     implementation(project(":external-idp"))
+    implementation(project(":protect"))
+    implementation(project(":mfa:fido"))
+    implementation(project(":mfa:binding"))
+    implementation(project(":mfa:binding-ui"))
+    implementation(project(":mfa:binding-migration"))
+
+    //Application Pin
+    implementation(libs.bcpkix.jdk18on)
+
+    //To Support nod-discoverable fido2 credential
+    implementation(libs.play.services.fido)
+    
+    implementation(project(":foundation:device:device-profile"))
+    implementation(project(":recaptcha-enterprise"))
+
     //implementation("com.pingidentity.sdks:davinci:0.9.0-SNAPSHOT")
     implementation(libs.androidx.datastore.preferences)
 
@@ -83,6 +109,10 @@ dependencies {
 
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.material.icons.extended)
+
+    // For fetching Device location
+    implementation(libs.play.services.location)
+    implementation(libs.kotlinx.coroutines.play.services)
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)

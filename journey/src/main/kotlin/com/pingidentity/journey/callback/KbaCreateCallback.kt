@@ -10,6 +10,7 @@ package com.pingidentity.journey.callback
 import com.pingidentity.journey.plugin.AbstractCallback
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.boolean
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonPrimitive
 
@@ -30,11 +31,13 @@ class KbaCreateCallback : AbstractCallback() {
 
     var selectedQuestion = ""
     var selectedAnswer = ""
+    var allowUserDefinedQuestions = false
 
     override fun init(name: String, value: JsonElement) {
         when (name) {
             "prompt" -> prompt = value.jsonPrimitive.content
             "predefinedQuestions" -> prepareQuestions(value.jsonArray)
+            "allowUserDefinedQuestions" -> allowUserDefinedQuestions = value.jsonPrimitive.boolean
         }
     }
 

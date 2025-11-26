@@ -13,6 +13,8 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.jsonArray
 
+private const val OPTIONS = "options"
+
 /**
  * Data class representing an option.
  * @property label The label of the option.
@@ -28,7 +30,7 @@ data class Option(val label: String, val value: String) {
          * @return A list of options.
          */
         fun options(input: JsonObject): List<Option> {
-            return input["options"]?.jsonArray?.map { jsonElement ->
+            return input[OPTIONS]?.jsonArray?.map { jsonElement ->
                 json.decodeFromJsonElement<Option>(jsonElement)
             } ?: emptyList()
         }

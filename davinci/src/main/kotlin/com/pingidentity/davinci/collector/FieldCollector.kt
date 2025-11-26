@@ -12,6 +12,11 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.boolean
 import kotlinx.serialization.json.jsonPrimitive
 
+private const val TYPE = "type"
+private const val KEY = "key"
+private const val LABEL = "label"
+private const val REQUIRED = "required"
+
 /**
  * Abstract class representing a fields from the form.
  *
@@ -30,18 +35,17 @@ abstract class FieldCollector<T> : Collector<T>, Validator {
     var required = false
         private set
 
-
     /**
      * Function to initialize the field collector.
      * @param input The input JSON object to parse.
      */
-    override fun init(input: JsonObject) {
-        type = input["type"]?.jsonPrimitive?.content ?: ""
-        key = input["key"]?.jsonPrimitive?.content ?: ""
-        label = input["label"]?.jsonPrimitive?.content ?: ""
-        required = input["required"]?.jsonPrimitive?.boolean ?: false
+    override fun init(input: JsonObject): Collector<T> {
+        type = input[TYPE]?.jsonPrimitive?.content ?: ""
+        key = input[KEY]?.jsonPrimitive?.content ?: ""
+        label = input[LABEL]?.jsonPrimitive?.content ?: ""
+        required = input[REQUIRED]?.jsonPrimitive?.boolean ?: false
+        return this
     }
-
 
     override fun validate(): List<ValidationError> {
         val errors = mutableListOf<ValidationError>()
@@ -51,9 +55,7 @@ abstract class FieldCollector<T> : Collector<T>, Validator {
         return errors.toList()
     }
 
-    override fun id(): String {
-        return key
-    }
+    override fun id() = key
 }
 
 /**

@@ -9,8 +9,4 @@ package com.pingidentity.samples.journeyapp.journey
 
 import com.pingidentity.orchestrate.Node
 
-data class JourneyState(val node: Node? = null,  var counter: Int = 0) {
-    init {
-        counter++
-    }
-}
+data class JourneyState(val node: Node? = null,  val counter: Int = 0)

@@ -11,9 +11,8 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.pingidentity.android.ContextProvider.context
 import com.pingidentity.davinci.user
-import com.pingidentity.oidc.OidcUser
 import com.pingidentity.samples.app.env.daVinci
-import com.pingidentity.samples.app.env.oidcClient
+import com.pingidentity.samples.app.env.web
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -54,7 +53,7 @@ object User {
                     }
 
                     Mode.CENTRALIZE -> {
-                        OidcUser(oidcClient)
+                        web.user()
                     }
                 }
             }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Ping Identity. All rights reserved.
+ * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -123,4 +123,40 @@ class DeviceAuthenticationCollectorTest {
         assertTrue(errors.isEmpty())
     }
 
+    @Test
+    fun `close should clear value`() {
+        collector.value = Device(id = "device1", type = "fingerprint", description = "someValue")
+
+        // Verify value is set
+        assertEquals("device1", collector.value?.id)
+        assertEquals("fingerprint", collector.value?.type)
+
+        // Close the collector
+        collector.close()
+
+        // Verify value is cleared
+        assertNull(collector.value)
+        assertNull(collector.payload())
+    }
+
+    @Test
+    fun `close should allow reuse after clearing`() {
+        val device1 = Device(id = "device1", type = "fingerprint", description = "desc1")
+        val device2 = Device(id = "device2", type = "email", description = "desc2")
+
+        // First selection
+        collector.value = device1
+        var payload = collector.payload()
+        assertEquals("device1", payload?.get("id")?.toString()?.trim('"'))
+
+        // Close and re-select
+        collector.close()
+        assertNull(collector.value)
+
+        // Second selection
+        collector.value = device2
+        payload = collector.payload()
+        assertEquals("device2", payload?.get("id")?.toString()?.trim('"'))
+        assertEquals("email", payload?.get("type")?.toString()?.trim('"'))
+    }
 }

@@ -32,7 +32,10 @@ dependencies {
     api(project(":foundation:logger"))
     implementation(project(":foundation:android"))
     implementation(project(":foundation:storage"))
-    implementation(project(":foundation:browser"))
+    implementation(project(":foundation:orchestrate"))
+
+    //Make it optional for using centralize login
+    compileOnly(project(":foundation:browser"))
 
     implementation(libs.androidx.datastore)
     implementation(libs.androidx.datastore.core)
@@ -53,6 +56,7 @@ dependencies {
     testImplementation(libs.ktor.client.mock)
     testImplementation(libs.robolectric)
     testImplementation(kotlin("reflect"))
+    testImplementation(project(":foundation:browser"))
 
     testImplementation(project(":foundation:testrail"))
 }

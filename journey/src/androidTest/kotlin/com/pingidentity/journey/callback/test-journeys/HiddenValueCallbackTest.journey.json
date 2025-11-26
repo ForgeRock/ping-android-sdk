@@ -1,0 +1,255 @@
+{
+  "meta": {
+    "exportDate": "2025-07-30T01:10:57.294Z",
+    "exportTool": "frodo",
+    "exportToolVersion": "v3.3.0 [v20.18.0]",
+    "exportedBy": "stoyan.petrov@forgerock.com",
+    "origin": "https://openam-sdks.forgeblocks.com/am",
+    "originAmVersion": "8.1.0"
+  },
+  "trees": {
+    "HiddenValueCallbackTest": {
+      "circlesOfTrust": {},
+      "emailTemplates": {},
+      "innerNodes": {
+        "c79953c0-c8b2-4121-93e2-a78f3d7cc9c4": {
+          "_id": "c79953c0-c8b2-4121-93e2-a78f3d7cc9c4",
+          "_outcomes": [
+            {
+              "displayName": "True",
+              "id": "true"
+            },
+            {
+              "displayName": "False",
+              "id": "false"
+            }
+          ],
+          "_type": {
+            "_id": "MessageNode",
+            "collection": true,
+            "name": "Message Node"
+          },
+          "message": {
+            "en": "</hr>"
+          },
+          "messageNo": {},
+          "messageYes": {
+            "en": "Next"
+          }
+        },
+        "cdd27a6c-3384-40a2-bd0a-7ba31c7e2d3b": {
+          "_id": "cdd27a6c-3384-40a2-bd0a-7ba31c7e2d3b",
+          "_outcomes": [
+            {
+              "displayName": "Outcome",
+              "id": "outcome"
+            }
+          ],
+          "_type": {
+            "_id": "PasswordCollectorNode",
+            "collection": true,
+            "name": "Password Collector"
+          }
+        },
+        "ef166c3d-8df4-4c06-a0fb-8899ecf1e270": {
+          "_id": "ef166c3d-8df4-4c06-a0fb-8899ecf1e270",
+          "_outcomes": [
+            {
+              "displayName": "Outcome",
+              "id": "outcome"
+            }
+          ],
+          "_type": {
+            "_id": "UsernameCollectorNode",
+            "collection": true,
+            "name": "Username Collector"
+          }
+        }
+      },
+      "nodes": {
+        "101388d1-0040-4bff-8804-f5ad4da30f35": {
+          "_id": "101388d1-0040-4bff-8804-f5ad4da30f35",
+          "_outcomes": [
+            {
+              "displayName": "True",
+              "id": "true"
+            },
+            {
+              "displayName": "False",
+              "id": "false"
+            }
+          ],
+          "_type": {
+            "_id": "PageNode",
+            "collection": true,
+            "name": "Page Node"
+          },
+          "nodes": [
+            {
+              "_id": "c79953c0-c8b2-4121-93e2-a78f3d7cc9c4",
+              "displayName": "Message Node",
+              "nodeType": "MessageNode"
+            }
+          ],
+          "pageDescription": {},
+          "pageHeader": {},
+          "stage": "{\"ConfirmationCallback\":[{\"id\":\"c79953c0-c8b2-4121-93e2-a78f3d7cc9c4\",\"showOnlyPositiveAnswer\":true}]}"
+        },
+        "1faa6979-240e-4639-9f7d-912aa775c79d": {
+          "_id": "1faa6979-240e-4639-9f7d-912aa775c79d",
+          "_outcomes": [
+            {
+              "displayName": "Outcome",
+              "id": "outcome"
+            }
+          ],
+          "_type": {
+            "_id": "PageNode",
+            "collection": true,
+            "name": "Page Node"
+          },
+          "nodes": [
+            {
+              "_id": "ef166c3d-8df4-4c06-a0fb-8899ecf1e270",
+              "displayName": "Username Collector",
+              "nodeType": "UsernameCollectorNode"
+            },
+            {
+              "_id": "cdd27a6c-3384-40a2-bd0a-7ba31c7e2d3b",
+              "displayName": "Password Collector",
+              "nodeType": "PasswordCollectorNode"
+            }
+          ],
+          "pageDescription": {},
+          "pageHeader": {}
+        },
+        "91bcb951-2f26-4bb3-ac6a-53f2afb97c18": {
+          "_id": "91bcb951-2f26-4bb3-ac6a-53f2afb97c18",
+          "_outcomes": [
+            {
+              "displayName": "true",
+              "id": "true"
+            }
+          ],
+          "_type": {
+            "_id": "ScriptedDecisionNode",
+            "collection": true,
+            "name": "Scripted Decision"
+          },
+          "inputs": [
+            "*"
+          ],
+          "outcomes": [
+            "true"
+          ],
+          "outputs": [
+            "*"
+          ],
+          "script": "e88f07ed-e79e-4fc8-9214-0f3f3a80e372"
+        },
+        "b7cc531b-ca54-4b8f-8196-faf8535dd194": {
+          "_id": "b7cc531b-ca54-4b8f-8196-faf8535dd194",
+          "_outcomes": [
+            {
+              "displayName": "True",
+              "id": "true"
+            },
+            {
+              "displayName": "False",
+              "id": "false"
+            }
+          ],
+          "_type": {
+            "_id": "DataStoreDecisionNode",
+            "collection": true,
+            "name": "Data Store Decision"
+          }
+        }
+      },
+      "saml2Entities": {},
+      "scripts": {
+        "e88f07ed-e79e-4fc8-9214-0f3f3a80e372": {
+          "_id": "e88f07ed-e79e-4fc8-9214-0f3f3a80e372",
+          "context": "AUTHENTICATION_TREE_DECISION_NODE",
+          "createdBy": "null",
+          "creationDate": 0,
+          "default": false,
+          "description": "Produces a HiddenValueCallback for testing purposes.",
+          "evaluatorVersion": "1.0",
+          "language": "JAVASCRIPT",
+          "lastModifiedBy": "null",
+          "lastModifiedDate": 0,
+          "name": "HiddenValueProducer",
+          "script": "\"var fr = JavaImporter (\\n  org.forgerock.json.JsonValue,\\n  org.forgerock.openam.auth.node.api.Action,\\n  com.sun.identity.authentication.callbacks.HiddenValueCallback\\n);\\n\\nwith (fr) {\\n  if (callbacks.isEmpty()) {\\n  \\taction = Action.send(new HiddenValueCallback('myId', 'myValue')).build();\\n  } else {\\n  \\taction = Action.goTo(\\\"true\\\").build();\\n  }\\n}\""
+        }
+      },
+      "socialIdentityProviders": {},
+      "themes": [],
+      "tree": {
+        "_id": "HiddenValueCallbackTest",
+        "enabled": true,
+        "entryNodeId": "1faa6979-240e-4639-9f7d-912aa775c79d",
+        "identityResource": "managed/alpha_user",
+        "innerTreeOnly": false,
+        "mustRun": false,
+        "noSession": false,
+        "nodes": {
+          "101388d1-0040-4bff-8804-f5ad4da30f35": {
+            "connections": {
+              "true": "70e691a5-1e33-4ac3-a356-e7b6d60d92e0"
+            },
+            "displayName": "Page Node",
+            "nodeType": "PageNode",
+            "x": 500,
+            "y": 1.015625
+          },
+          "1faa6979-240e-4639-9f7d-912aa775c79d": {
+            "connections": {
+              "outcome": "b7cc531b-ca54-4b8f-8196-faf8535dd194"
+            },
+            "displayName": "Page Node",
+            "nodeType": "PageNode",
+            "x": 122,
+            "y": 56
+          },
+          "91bcb951-2f26-4bb3-ac6a-53f2afb97c18": {
+            "connections": {
+              "true": "70e691a5-1e33-4ac3-a356-e7b6d60d92e0"
+            },
+            "displayName": "Scripted Decision",
+            "nodeType": "ScriptedDecisionNode",
+            "x": 589,
+            "y": 256.015625
+          },
+          "b7cc531b-ca54-4b8f-8196-faf8535dd194": {
+            "connections": {
+              "false": "e301438c-0bd0-429c-ab0c-66126501069a",
+              "true": "91bcb951-2f26-4bb3-ac6a-53f2afb97c18"
+            },
+            "displayName": "Data Store Decision",
+            "nodeType": "DataStoreDecisionNode",
+            "x": 318,
+            "y": 201
+          }
+        },
+        "staticNodes": {
+          "70e691a5-1e33-4ac3-a356-e7b6d60d92e0": {
+            "x": 921,
+            "y": 239
+          },
+          "e301438c-0bd0-429c-ab0c-66126501069a": {
+            "x": 537,
+            "y": 315
+          },
+          "startNode": {
+            "x": 50,
+            "y": 25
+          }
+        },
+        "uiConfig": {
+          "categories": "[]"
+        }
+      }
+    }
+  }
+}

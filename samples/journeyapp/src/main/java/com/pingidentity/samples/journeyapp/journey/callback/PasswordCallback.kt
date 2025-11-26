@@ -43,16 +43,17 @@ fun PasswordCallback(
             .padding(4.dp)
             .fillMaxWidth(),
     ) {
-        var passwordVisibility by remember { mutableStateOf(false) }
+        var passwordVisibility by remember(field) { mutableStateOf(false) }
+        var password by remember(field) { mutableStateOf("") }
 
         Spacer(modifier = Modifier.weight(1f, true))
 
         OutlinedTextField(
             modifier = Modifier.wrapContentWidth(Alignment.CenterHorizontally),
-            value = field.password,
+            value = password,
             onValueChange = { value ->
                 field.password = value
-                onNodeUpdated()
+                password = value
             },
             label = { androidx.compose.material3.Text(field.prompt) },
             trailingIcon = {
@@ -79,4 +80,3 @@ fun PasswordCallback(
         Spacer(modifier = Modifier.weight(1f, true))
     }
 }
-

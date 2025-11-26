@@ -81,6 +81,11 @@ class Setup<ModuleConfig : Any> internal constructor(
         workflow.transform = block
     }
 
+    fun transport(block: suspend FlowContext.(Request) -> Response) {
+        workflow.transport = block
+    }
+
+
     /**
      * Adds a sign off block to the workflow.
      * @param block The block to be added.

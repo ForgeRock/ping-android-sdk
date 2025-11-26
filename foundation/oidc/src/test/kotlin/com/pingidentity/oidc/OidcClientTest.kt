@@ -127,7 +127,7 @@ class OidcClientTest {
                     discoveryEndpoint = "http://localhost/openid-configuration"
                     redirectUri = "http://localhost/redirect"
                     clientId = "test-client-id"
-                    storage = MemoryStorage()
+                    storage = { MemoryStorage() }
                     updateAgent(testAgent)
                 }
 
@@ -150,7 +150,7 @@ class OidcClientTest {
                     discoveryEndpoint = "http://localhost/openid-configuration"
                     redirectUri = "http://localhost/redirect"
                     clientId = "test-client-id"
-                    this.storage = MemoryStorage()
+                    storage = { MemoryStorage() }
                     updateAgent(testAgent)
                 }
 
@@ -178,7 +178,7 @@ class OidcClientTest {
                     discoveryEndpoint = "http://localhost/openid-configuration"
                     redirectUri = "http://localhost/redirect"
                     clientId = "test-client-id"
-                    storage = MemoryStorage()
+                    storage = { MemoryStorage() }
                     updateAgent(testAgent)
                 }
 
@@ -219,7 +219,7 @@ class OidcClientTest {
                     discoveryEndpoint = "http://localhost/openid-configuration"
                     redirectUri = "http://localhost/redirect"
                     clientId = "test-client-id"
-                    storage = MemoryStorage()
+                    storage = { MemoryStorage() }
                     updateAgent(testAgent)
                 }
             val oidcClient = OidcClient(oidcClientConfig)
@@ -232,7 +232,7 @@ class OidcClientTest {
             oidcClient.revoke()
 
             // Check that the token is no longer in storage
-            val tokenInStorage = oidcClientConfig.storage.get()
+            val tokenInStorage = oidcClientConfig.tokenStorage.get()
             assertNull(tokenInStorage)
         }
 
@@ -246,7 +246,7 @@ class OidcClientTest {
                     discoveryEndpoint = "http://localhost/openid-configuration"
                     redirectUri = "http://localhost/redirect"
                     clientId = "test-client-id"
-                    storage = MemoryStorage()
+                    storage = { MemoryStorage() }
                     updateAgent(testAgent)
                 }
             val oidcClient = OidcClient(oidcClientConfig)
@@ -271,7 +271,7 @@ class OidcClientTest {
                     discoveryEndpoint = "http://localhost/openid-configuration"
                     redirectUri = "http://localhost/redirect"
                     clientId = "test-client-id"
-                    storage = MemoryStorage()
+                    storage = { MemoryStorage() }
                     updateAgent(testAgent)
                 }
             val oidcClient = OidcClient(oidcClientConfig)
@@ -284,7 +284,7 @@ class OidcClientTest {
             oidcClient.refresh()
 
             // Check that the token is no longer in storage
-            val tokenInStorage = oidcClientConfig.storage.get()
+            val tokenInStorage = oidcClientConfig.tokenStorage.get()
             assertNotNull(tokenInStorage)
 
             val requestTokenCount =
@@ -333,7 +333,7 @@ class OidcClientTest {
                     discoveryEndpoint = "http://localhost/openid-configuration"
                     redirectUri = "http://localhost/redirect"
                     clientId = "test-client-id"
-                    storage = MemoryStorage()
+                    storage = { MemoryStorage() }
                     updateAgent(testAgent)
                 }
 
@@ -354,7 +354,7 @@ class OidcClientTest {
                     discoveryEndpoint = "http://localhost/openid-configuration"
                     redirectUri = "http://localhost/redirect"
                     clientId = "test-client-id"
-                    storage = MemoryStorage()
+                    storage = { MemoryStorage() }
                     updateAgent(testAgent)
                 }
             val oidcClient = OidcClient(oidcClientConfig)
@@ -368,7 +368,7 @@ class OidcClientTest {
             assertTrue(endSessionResult)
 
             // Check that the token is no longer in storage
-            val tokenInStorage = oidcClientConfig.storage.get()
+            val tokenInStorage = oidcClientConfig.tokenStorage.get()
             assertNull(tokenInStorage)
 
             val revokeCalled =
@@ -423,7 +423,7 @@ class OidcClientTest {
                     discoveryEndpoint = "http://localhost/openid-configuration"
                     redirectUri = "http://localhost/redirect"
                     clientId = "test-client-id"
-                    storage = MemoryStorage()
+                    storage = { MemoryStorage() }
                     updateAgent(testAgent)
                 }
             val oidcClient = OidcClient(oidcClientConfig)
@@ -476,7 +476,7 @@ class OidcClientTest {
                     discoveryEndpoint = "http://localhost/openid-configuration"
                     redirectUri = "http://localhost/redirect"
                     clientId = "test-client-id"
-                    storage = MemoryStorage()
+                    storage = { MemoryStorage() }
                     updateAgent(testAgent)
                 }
             val oidcClient = OidcClient(oidcClientConfig)
@@ -518,7 +518,7 @@ class OidcClientTest {
                     discoveryEndpoint = "http://localhost/openid-configuration"
                     redirectUri = "http://localhost/redirect"
                     clientId = "test-client-id"
-                    this.storage = MemoryStorage<Token>()
+                    storage = { MemoryStorage() }
                     updateAgent(testAgent)
                 }
 
@@ -558,7 +558,7 @@ class OidcClientTest {
                     discoveryEndpoint = "http://localhost/openid-configuration"
                     redirectUri = "http://localhost/redirect"
                     clientId = "test-client-id"
-                    this.storage = MemoryStorage<Token>()
+                    storage = { MemoryStorage() }
                     updateAgent(testAgent)
                 }
 
@@ -602,7 +602,7 @@ class OidcClientTest {
                     discoveryEndpoint = "http://localhost/openid-configuration"
                     redirectUri = "http://localhost/redirect"
                     clientId = "test-client-id"
-                    this.storage = MemoryStorage<Token>()
+                    storage = { MemoryStorage() }
                     updateAgent(testAgent)
                 }
 
@@ -654,7 +654,7 @@ class OidcClientTest {
                     discoveryEndpoint = "http://localhost/openid-configuration"
                     redirectUri = "http://localhost/redirect"
                     clientId = "test-client-id"
-                    this.storage = MemoryStorage<Token>()
+                    storage = { MemoryStorage() }
                     updateAgent(testAgent)
                 }
 

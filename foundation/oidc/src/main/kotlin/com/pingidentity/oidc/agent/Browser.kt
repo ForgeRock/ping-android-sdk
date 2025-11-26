@@ -13,6 +13,7 @@ import androidx.browser.customtabs.CustomTabsIntent
 import com.pingidentity.browser.BrowserLauncher
 import com.pingidentity.oidc.Agent
 import com.pingidentity.oidc.AuthCode
+import com.pingidentity.oidc.Constants.ACR_VALUES
 import com.pingidentity.oidc.Constants.CLIENT_ID
 import com.pingidentity.oidc.Constants.CODE
 import com.pingidentity.oidc.Constants.CODE_CHALLENGE
@@ -139,6 +140,9 @@ var browser =
                 it.forEach { (key, value) ->
                     builder.appendQueryParameter(key, value)
                 }
+            }
+            oidcConfig.oidcClientConfig.acrValues?.let {
+                builder.appendQueryParameter(ACR_VALUES, it)
             }
 
             val pkce = Pkce.generate()

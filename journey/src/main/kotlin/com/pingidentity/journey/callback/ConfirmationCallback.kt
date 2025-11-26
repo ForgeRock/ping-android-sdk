@@ -32,27 +32,23 @@ class ConfirmationCallback : AbstractCallback() {
     var options: List<String> = emptyList()
         private set
 
-    var defaultOption = 0
+    var defaultOption = ConfirmationCallbackSelection.NO
         private set
 
-    var optionType = 0
+    var optionType = ConfirmationCallbackOptionType.YES_NO_OPTION
         private set
 
-    var messageType = 0
+    var messageType = ConfirmationCallbackMessageType.INFORMATION
         private set
 
-    var selectedIndex = 0
+    lateinit var selectedIndex: Number
 
     override fun init(name: String, value: JsonElement) {
         when (name) {
-            "prompt" -> this.prompt = value.jsonPrimitive.content ?: ""
-            "optionType" -> this.optionType = value.jsonPrimitive.int
-            "defaultOption" -> {
-                this.defaultOption = value.jsonPrimitive.int
-                this.selectedIndex = this.defaultOption
-            }
-
-            "messageType" -> this.messageType = value.jsonPrimitive.int
+            "prompt" -> this.prompt = value.jsonPrimitive.content
+            "optionType" -> this.optionType = optionTypeFromType(value.jsonPrimitive.int)
+            "defaultOption" -> this.defaultOption = selectionFromIndex(value.jsonPrimitive.int)
+            "messageType" -> this.messageType = messageTypeFromType(value.jsonPrimitive.int)
             "options" -> this.options = value.jsonArray.map {
                 it.jsonPrimitive.content
             }
@@ -60,26 +56,69 @@ class ConfirmationCallback : AbstractCallback() {
     }
 
     override fun payload(): JsonObject {
-        return input(selectedIndex)
+        return if (::selectedIndex.isInitialized) {
+            input(selectedIndex.toInt())
+        } else {
+            json
+        }
     }
 
 
     companion object {
-        //Option Type
-        const val UNSPECIFIED_OPTION: Int = -1
-        const val YES_NO_OPTION: Int = 0
-        const val YES_NO_CANCEL_OPTION: Int = 1
-        const val OK_CANCEL_OPTION: Int = 2
+        /**
+         * Maps an integer type to a ConfirmationCallbackOptionType enum.
+         *
+         * @param type The integer type.
+         * @return The corresponding ConfirmationCallbackOptionType.
+         */
+        private fun optionTypeFromType(type: Int): ConfirmationCallbackOptionType =
+            ConfirmationCallbackOptionType.entries.find { it.type == type }
+                ?: ConfirmationCallbackOptionType.UNSPECIFIED_OPTION
 
-        //Option
-        const val YES: Int = 0
-        const val NO: Int = 1
-        const val CANCEL: Int = 2
-        const val OK: Int = 3
+        /**
+         * Maps an integer type to a ConfirmationCallbackMessageType enum.
+         *
+         * @param type The integer type.
+         * @return The corresponding ConfirmationCallbackMessageType.
+         */
+        private fun messageTypeFromType(type: Int): ConfirmationCallbackMessageType =
+            ConfirmationCallbackMessageType.entries.find { it.messageType == type }
+                ?: ConfirmationCallbackMessageType.INFORMATION
 
-        //Message Type
-        const val INFORMATION: Int = 0
-        const val WARNING: Int = 1
-        const val ERROR: Int = 2
+        /**
+         * Maps an integer index to a ConfirmationCallbackSelection enum.
+         */
+        private fun selectionFromIndex(index: Int): ConfirmationCallbackSelection =
+            ConfirmationCallbackSelection.entries.find { it.selection == index }
+                ?: ConfirmationCallbackSelection.CANCEL
     }
+}
+
+/**
+ * Enum representing the types of confirmation callback options.
+ */
+enum class ConfirmationCallbackOptionType(val type: Int) {
+    UNSPECIFIED_OPTION(-1),
+    YES_NO_OPTION(0),
+    YES_NO_CANCEL_OPTION(1),
+    OK_CANCEL_OPTION(2),
+}
+
+/**
+ * Enum representing the selection made in a confirmation callback.
+ */
+enum class ConfirmationCallbackSelection(val selection: Int) {
+    YES(0),
+    NO(1),
+    CANCEL(2),
+    OK(3),
+}
+
+/**
+ * Enum representing the types of confirmation callback messages.
+ */
+enum class ConfirmationCallbackMessageType(val messageType: Int) {
+    INFORMATION(0),
+    WARNING(1),
+    ERROR(2),
 }

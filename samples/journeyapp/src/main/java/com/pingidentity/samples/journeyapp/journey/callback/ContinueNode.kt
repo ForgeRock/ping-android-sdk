@@ -16,6 +16,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.pingidentity.device.binding.journey.DeviceBindingCallback
+import com.pingidentity.device.binding.journey.DeviceSigningVerifierCallback
+import com.pingidentity.device.profile.DeviceProfileCallback
+import com.pingidentity.fido.journey.FidoAuthenticationCallback
+import com.pingidentity.fido.journey.FidoRegistrationCallback
 import com.pingidentity.idp.journey.IdpCallback
 import com.pingidentity.idp.journey.SelectIdpCallback
 import com.pingidentity.journey.callback.BooleanAttributeInputCallback
@@ -36,6 +42,9 @@ import com.pingidentity.journey.callback.ValidatedPasswordCallback
 import com.pingidentity.journey.callback.ValidatedUsernameCallback
 import com.pingidentity.journey.plugin.callbacks
 import com.pingidentity.orchestrate.ContinueNode
+import com.pingidentity.protect.journey.PingOneProtectEvaluationCallback
+import com.pingidentity.protect.journey.PingOneProtectInitializeCallback
+import com.pingidentity.recaptcha.enterprise.ReCaptchaEnterpriseCallback
 
 @Composable
 fun ContinueNode(
@@ -59,6 +68,7 @@ fun ContinueNode(
                     showNext = false
                     ConfirmationCallback(it, onNext)
                 }
+
                 is ConsentMappingCallback -> ConsentMappingCallback(it, onNodeUpdated)
                 is KbaCreateCallback -> KbaCreateCallback(it, onNodeUpdated)
                 is NumberAttributeInputCallback -> NumberAttributeInputCallback(it, onNodeUpdated)
@@ -68,12 +78,22 @@ fun ContinueNode(
                 is TermsAndConditionsCallback -> {
                     TermsAndConditionsCallback(it, onNodeUpdated)
                 }
+                is DeviceProfileCallback -> {
+                    showNext = false
+                    DeviceProfileCallback(it, onNext)
+                }
+                is ReCaptchaEnterpriseCallback -> {
+                    showNext = false
+                    ReCaptchaEnterpriseCallback(it, onNext)
+                }
+
                 is TextInputCallback -> TextInputCallback(it, onNodeUpdated)
                 is TextOutputCallback -> TextOutputCallback(it)
                 is SuspendedTextOutputCallback -> {
                     TextOutputCallback(it)
                     showNext = false
                 }
+
                 is NameCallback -> NameCallback(it, onNodeUpdated)
 
                 //External IdP
@@ -82,10 +102,43 @@ fun ContinueNode(
                     showNext = false
                     IdPCallback(it, onNext)
                 }
+
                 is ValidatedUsernameCallback -> ValidatedUsernameCallback(it, onNodeUpdated)
                 is ValidatedPasswordCallback -> ValidatedPasswordCallback(it, onNodeUpdated)
+                is PingOneProtectInitializeCallback -> {
+                    PingOneProtectInitialize(it, onNext)
+                    showNext = false
+                }
 
+                is PingOneProtectEvaluationCallback -> {
+                    PingOneProtectEvaluation(it, onNext)
+                    showNext = false
+                }
 
+                is FidoRegistrationCallback -> {
+                    FidoRegistration(it, onNext)
+                    showNext = false
+                }
+
+                is FidoAuthenticationCallback -> {
+                    FidoAuthentication(it, onNext)
+                    showNext = false
+                }
+
+                is DeviceBindingCallback -> {
+                    // Create / reuse a ViewModel bound to this composition & callback instance
+                    val vm: DeviceBindingCallbackViewModel =
+                        viewModel(factory = DeviceBindingCallbackViewModel.factory(it))
+                    DeviceBindingCallback(vm, onNext)
+                    showNext = false
+                }
+
+                is DeviceSigningVerifierCallback -> {
+                    val vm: DeviceSigningVerifierCallbackViewModel =
+                        viewModel(factory = DeviceSigningVerifierCallbackViewModel.factory(it))
+                    DeviceSigningVerifierCallback(vm, true, onNext)
+                    showNext = false
+                }
             }
         }
         if (showNext) {
@@ -98,4 +151,3 @@ fun ContinueNode(
         }
     }
 }
-

@@ -46,7 +46,9 @@ fun AppNavHost(
         }
         composable(Destinations.CENTRALIZE_ROUTE) {
             val centralizeLoginViewModel = viewModel<CentralizeLoginViewModel>()
-            Centralize(centralizeLoginViewModel)
+            Centralize(centralizeLoginViewModel) {
+                navController.navigate(Destinations.USER_INFO)
+            }
         }
     }
 }

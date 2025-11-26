@@ -7,6 +7,7 @@
 
 package com.pingidentity.journey.module
 
+import com.pingidentity.exception.ApiException
 import com.pingidentity.journey.Constants.APPLICATION_JSON
 import com.pingidentity.journey.Constants.AUTH_ID
 import com.pingidentity.journey.Constants.CALLBACKS
@@ -22,6 +23,7 @@ import com.pingidentity.journey.plugin.Callback
 import com.pingidentity.journey.plugin.CallbackRegistry
 import com.pingidentity.orchestrate.ContinueNode
 import com.pingidentity.orchestrate.ErrorNode
+import com.pingidentity.orchestrate.FailureNode
 import com.pingidentity.orchestrate.FlowContext
 import com.pingidentity.orchestrate.Module
 import com.pingidentity.orchestrate.Node
@@ -31,6 +33,8 @@ import com.pingidentity.orchestrate.catch
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -44,10 +48,36 @@ internal val NodeTransform =
                 200 -> {
                     transform(this, workflow, it.body().asJson())
                 }
-
+                in 300..<400 -> {
+                    // Redirects are unexpected in Journey flow
+                    catch {
+                        FailureNode(
+                            ApiException(
+                                it.status(),
+                                "Unexpected redirect to ${it.header("location") ?: ""}"
+                            )
+                        )
+                    }
+                }
+                in 400..<500 -> {
+                    catch {
+                        val errorBody = it.body().asJson()
+                        val errorMessage = errorBody["message"]?.jsonPrimitive?.content ?: ""
+                        val errorCode = errorBody["code"]?.jsonPrimitive?.intOrNull
+                        val errorText = errorBody["code"]?.jsonPrimitive?.contentOrNull
+                        if (errorCode == 1999 || errorText == "requestTimedOut") {
+                            // Client-side timeout or unrecoverable error
+                            FailureNode(ApiException(it.status(), errorMessage))
+                        } else {
+                            // API error
+                            error(this, errorBody)
+                        }
+                    }
+                }
                 else -> {
                     //For Network errors, unexpected errors like parsing response, return FailureNode
                     //For api errors, return ErrorNode
+                    // 5XX errors are treated as unrecoverable failures
                     catch {
                         error(this, it.body().asJson())
                     }
@@ -73,7 +103,7 @@ private fun transform(
     val callbacks = mutableListOf<Callback>()
     if (AUTH_ID in json) {
         json[CALLBACKS]?.jsonArray?.let {
-            callbacks.addAll(CallbackRegistry.callback(it))
+            callbacks.addAll(CallbackRegistry.callback(journey, it))
         }
         return object : ContinueNode(context, journey, json, callbacks) {
             private fun asJson(): JsonObject {
@@ -100,7 +130,7 @@ private fun transform(
                 return callbacks.request(context, request)
             }
         }.apply {
-            CallbackRegistry.inject(journey, this)
+            CallbackRegistry.inject(this)
         }
     } else {
         // Expect success
