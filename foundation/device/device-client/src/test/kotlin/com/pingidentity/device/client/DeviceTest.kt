@@ -299,15 +299,17 @@ class DeviceTest {
             return Result.success(deviceList)
         }
 
-        override suspend fun delete(device: Device) {
+        override suspend fun delete(device: Device): Result<Boolean> {
             deviceList.remove(device)
+            return Result.success(true)
         }
 
-        override suspend fun update(device: Device) {
+        override suspend fun update(device: Device): Result<Boolean> {
             val index = deviceList.indexOfFirst { it.id == device.id }
             if (index != -1) {
                 deviceList[index] = device
             }
+            return Result.success(true)
         }
     }
 
