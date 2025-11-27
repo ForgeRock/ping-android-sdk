@@ -51,7 +51,6 @@ This unified approach ensures:
 
 **Result-Based API**: All operations return a `Result<T>` type, enabling functional programming patterns and explicit error handling without exceptions.
 
-**Note:** While all device types implement the `update()` operation, the Ping Identity server may restrict updates for certain device types (OATH and Push devices are typically immutable on the server side).
 
 ### Supported Device Types
 
@@ -65,7 +64,7 @@ The module supports the following device types, all extending from the abstract 
 | WebAuthnDevice | Yes                   | FIDO2/WebAuthn biometric or security key devices                           | devices/2fa/webauthn  |
 | ProfileDevice  | Yes                   | User profile devices tracking device metadata, location, and usage          | devices/profile       |
 
-**Note:** All device types implement the same `DeviceRepository<T>` with `devices()`, `delete()`, and `update()` operations. However, the server restricts actual updates for OATH and Push devices.
+**Note:** All device types implement the same `DeviceRepository<T>` with `devices()`, `delete()`, and `update()` operations. 
 
 ### Class Hierarchy
 

@@ -108,8 +108,6 @@ All device types implement the `DeviceRepository<T>` interface which provides th
 
 **Result-Based API**: All operations return a `Result` type for improved error handling and functional programming support.
 
-**Note**: While all device types support the `update()` operation through the unified interface, the server may restrict updates for certain device types (e.g., OATH and Push devices). Attempting to update restricted device types will result in no changes being applied.
-
 **If-Match Header**: Update operations automatically include an `If-Match: *` header to handle concurrent modifications, ensuring that updates only succeed if the resource hasn't been modified by another client.
 
 ## Usage Examples
@@ -358,55 +356,6 @@ if (node is SuccessNode) {
     // Retrieve devices - userId is automatically fetched and cached
     val devices = deviceClient.boundDevice.devices()
     // Display devices to the user
-}
-```
-
-
-### Key Features of this Implementation
-
-1. **Device Type Filtering**: Radio buttons to switch between different device types
-2. **Loading States**: CircularProgressIndicator shown during API calls
-3. **Automatic Refresh**: Device list refreshes after create/update/delete operations
-4. **Conditional Edit Button**: Edit button only enabled for MutableDevice types (Bound, WebAuthn, Profile)
-5. **Error Handling**: Try-catch blocks with fallback to empty list
-6. **State Management**: Centralized state using StateFlow for reactive UI updates
-7. **Manual Refresh**: Refresh button to reload the current device list
-
-## Advanced Configuration
-
-### Custom HttpClient
-
-For advanced use cases, you can provide a custom Ktor `HttpClient` with specific configurations:
-
-```kotlin
-import io.ktor.client.HttpClient
-import io.ktor.client.engine.cio.CIO
-import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
-import io.ktor.client.plugins.logging.LogLevel
-import io.ktor.client.plugins.logging.Logging
-import io.ktor.serialization.kotlinx.json.json
-import kotlinx.serialization.json.Json
-import java.net.URL
-
-val customHttpClient = HttpClient(CIO) {
-    install(ContentNegotiation) {
-        json(Json {
-            prettyPrint = true
-            isLenient = true
-            ignoreUnknownKeys = true
-        })
-    }
-    install(Logging) {
-        level = LogLevel.ALL
-    }
-}
-
-val deviceClient = DeviceClient {
-    ssoTokenString = "your_sso_token"
-    serverUrl = URL("https://openam.example.com/am")
-    realm = "root"
-    cookieName = "iPlanetDirectoryPro"
-    httpClient = customHttpClient
 }
 ```
 
