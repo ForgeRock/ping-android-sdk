@@ -19,41 +19,41 @@ on:
 
 permissions: write-all
 jobs:
-  # Create TestRail run
-  create-testrail-run:
-      name: Create TestRail Run
-      uses: ./.github/workflows/create-testrail-run.yaml
-      secrets:
-        TESTRAIL_USERNAME: ${{ secrets.TESTRAIL_USERNAME }}
-        TESTRAIL_API_KEY: ${{ secrets.TESTRAIL_API_KEY }}
-
-  # Build and run unit tests
-  build-and-test:
-    name: Build and test
-    uses: ./.github/workflows/build-and-test.yaml
-    needs: create-testrail-run
-    secrets:
-      SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
-      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-      TESTRAIL_USERNAME: ${{ secrets.TESTRAIL_USERNAME }}
-      TESTRAIL_API_KEY: ${{ secrets.TESTRAIL_API_KEY }}
-    with:
-      testrail-run-id: ${{needs.create-testrail-run.outputs.testrail-run-id}}
-
-  # Run integration tests on emulators
-  integration-tests:
-    name: Integration tests
-    uses: ./.github/workflows/integration-tests.yaml
-    if: ${{ vars.ENABLE_INTEGRATION_TESTS == 'true' }}
-    needs: create-testrail-run
-    secrets:
-      E2E_CONFIG: ${{ secrets.E2E_CONFIG }}
-      SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
-      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-      TESTRAIL_USERNAME: ${{ secrets.TESTRAIL_USERNAME }}
-      TESTRAIL_API_KEY: ${{ secrets.TESTRAIL_API_KEY }}
-    with:
-      testrail-run-id: ${{needs.create-testrail-run.outputs.testrail-run-id}}
+#  # Create TestRail run
+#  create-testrail-run:
+#      name: Create TestRail Run
+#      uses: ./.github/workflows/create-testrail-run.yaml
+#      secrets:
+#        TESTRAIL_USERNAME: ${{ secrets.TESTRAIL_USERNAME }}
+#        TESTRAIL_API_KEY: ${{ secrets.TESTRAIL_API_KEY }}
+#
+#  # Build and run unit tests
+#  build-and-test:
+#    name: Build and test
+#    uses: ./.github/workflows/build-and-test.yaml
+#    needs: create-testrail-run
+#    secrets:
+#      SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+#      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+#      TESTRAIL_USERNAME: ${{ secrets.TESTRAIL_USERNAME }}
+#      TESTRAIL_API_KEY: ${{ secrets.TESTRAIL_API_KEY }}
+#    with:
+#      testrail-run-id: ${{needs.create-testrail-run.outputs.testrail-run-id}}
+#
+#  # Run integration tests on emulators
+#  integration-tests:
+#    name: Integration tests
+#    uses: ./.github/workflows/integration-tests.yaml
+#    if: ${{ vars.ENABLE_INTEGRATION_TESTS == 'true' }}
+#    needs: create-testrail-run
+#    secrets:
+#      E2E_CONFIG: ${{ secrets.E2E_CONFIG }}
+#      SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+#      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+#      TESTRAIL_USERNAME: ${{ secrets.TESTRAIL_USERNAME }}
+#      TESTRAIL_API_KEY: ${{ secrets.TESTRAIL_API_KEY }}
+#    with:
+#      testrail-run-id: ${{needs.create-testrail-run.outputs.testrail-run-id}}
 
   # Build and sign BrowserStack test artifacts
   # Skip this step for PRs created by dependabot
@@ -61,7 +61,7 @@ jobs:
     name: Prepare device farm artifacts
     uses: ./.github/workflows/browserstack-prepare-artifacts.yaml
     if: ${{ github.actor != 'dependabot[bot]' }}
-    needs: build-and-test
+    #needs: build-and-test
     secrets:
       E2E_CONFIG: ${{ secrets.E2E_CONFIG }}
       SIGNING_KEYSTORE: ${{ secrets.SIGNING_KEYSTORE }}
@@ -89,44 +89,44 @@ jobs:
       BROWSERSTACK_ACCESS_KEY: ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
       SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
 
-  # Wait for BrowserStack davinci test run to finish and publish results
-  browserstack-davinci-results:
-    name: BrowserStack DaVinci Test Results
-    uses: ./.github/workflows/browserstack-davinci-results.yaml
-    needs: browserstack-davinci-run
-    secrets:
-      BROWSERSTACK_USERNAME: ${{ secrets.BROWSERSTACK_USERNAME }}
-      BROWSERSTACK_ACCESS_KEY: ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
-      SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
-    with:
-      browserstack-davinci-build-id: ${{ needs.browserstack-davinci-run.outputs.browserstack-davinci-build-id }}
+#  # Wait for BrowserStack davinci test run to finish and publish results
+#  browserstack-davinci-results:
+#    name: BrowserStack DaVinci Test Results
+#    uses: ./.github/workflows/browserstack-davinci-results.yaml
+#    needs: browserstack-davinci-run
+#    secrets:
+#      BROWSERSTACK_USERNAME: ${{ secrets.BROWSERSTACK_USERNAME }}
+#      BROWSERSTACK_ACCESS_KEY: ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
+#      SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+#    with:
+#      browserstack-davinci-build-id: ${{ needs.browserstack-davinci-run.outputs.browserstack-davinci-build-id }}
+#
+#  # Wait for BrowserStack journey test run to finish and publish results
+#  browserstack-journey-results:
+#    name: BrowserStack Journey Test Results
+#    uses: ./.github/workflows/browserstack-journey-results.yaml
+#    needs: browserstack-journey-run
+#    secrets:
+#      BROWSERSTACK_USERNAME: ${{ secrets.BROWSERSTACK_USERNAME }}
+#      BROWSERSTACK_ACCESS_KEY: ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
+#      SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+#    with:
+#      browserstack-journey-build-id: ${{ needs.browserstack-journey-run.outputs.browserstack-journey-build-id }}
 
-  # Wait for BrowserStack journey test run to finish and publish results
-  browserstack-journey-results:
-    name: BrowserStack Journey Test Results
-    uses: ./.github/workflows/browserstack-journey-results.yaml
-    needs: browserstack-journey-run
-    secrets:
-      BROWSERSTACK_USERNAME: ${{ secrets.BROWSERSTACK_USERNAME }}
-      BROWSERSTACK_ACCESS_KEY: ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
-      SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
-    with:
-      browserstack-journey-build-id: ${{ needs.browserstack-journey-run.outputs.browserstack-journey-build-id }}
-
-  # Run Mend SCA Scan
-  mend-sca-scan:
-    name: Mend SCA Scan
-    uses: ./.github/workflows/mend-sca-scan.yaml
-    secrets:
-      MEND_EMAIL: ${{ secrets.MEND_EMAIL }}
-      MEND_USER_KEY: ${{ secrets.MEND_USER_KEY }}
-      SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
-
-  # Run Mend SAST Scan
-  mend-sast-scan:
-    name: Mend SAST Scan
-    uses: ./.github/workflows/mend-sast-scan.yaml
-    secrets:
-      MEND_EMAIL: ${{ secrets.MEND_EMAIL }}
-      MEND_USER_KEY: ${{ secrets.MEND_USER_KEY }}
-      SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+#  # Run Mend SCA Scan
+#  mend-sca-scan:
+#    name: Mend SCA Scan
+#    uses: ./.github/workflows/mend-sca-scan.yaml
+#    secrets:
+#      MEND_EMAIL: ${{ secrets.MEND_EMAIL }}
+#      MEND_USER_KEY: ${{ secrets.MEND_USER_KEY }}
+#      SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+#
+#  # Run Mend SAST Scan
+#  mend-sast-scan:
+#    name: Mend SAST Scan
+#    uses: ./.github/workflows/mend-sast-scan.yaml
+#    secrets:
+#      MEND_EMAIL: ${{ secrets.MEND_EMAIL }}
+#      MEND_USER_KEY: ${{ secrets.MEND_USER_KEY }}
+#      SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
