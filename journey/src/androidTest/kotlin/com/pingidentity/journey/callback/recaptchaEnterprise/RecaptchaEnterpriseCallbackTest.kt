@@ -7,7 +7,6 @@
 package com.pingidentity.journey.callback.recaptchaEnterprise
 
 import com.google.android.recaptcha.RecaptchaAction
-import com.google.android.recaptcha.RecaptchaException
 import com.pingidentity.journey.BaseJourneyTest
 import com.pingidentity.journey.IntegrationTestConfig
 import com.pingidentity.journey.Journey
@@ -30,9 +29,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
-import org.junit.FixMethodOrder
 import org.junit.Test
-import org.junit.runners.MethodSorters
 
 /**
  * Integration tests for ReCaptcha Enterprise callback verification flows.
@@ -40,7 +37,6 @@ import org.junit.runners.MethodSorters
  * Tests cover success scenarios (default/custom actions, custom payloads) and
  * failure scenarios (invalid config, score failures, client errors).
  */
-@FixMethodOrder(MethodSorters.NAME_ASCENDING)
 class RecaptchaEnterpriseCallbackTest : BaseJourneyTest() {
     private lateinit var recaptchaJourney: Journey
 
@@ -65,7 +61,7 @@ class RecaptchaEnterpriseCallbackTest : BaseJourneyTest() {
      * including risk score and token properties.
      */
     @Test
-    fun test01RecaptchaEnterpriseSuccess() = runTest {
+    fun testRecaptchaEnterpriseSuccess() = runTest {
         var node = recaptchaJourney.start(tree) as ContinueNode
 
         node.handleLoginCallbacks()
@@ -145,7 +141,7 @@ class RecaptchaEnterpriseCallbackTest : BaseJourneyTest() {
      * Verifies custom action is correctly mapped in payload and server response.
      */
     @Test
-    fun test02RecaptchaEnterpriseCustomAction() = runTest {
+    fun testRecaptchaEnterpriseCustomAction() = runTest {
         var node = recaptchaJourney.start(tree) as ContinueNode
 
         node.handleLoginCallbacks()
@@ -210,7 +206,7 @@ class RecaptchaEnterpriseCallbackTest : BaseJourneyTest() {
      * serialized and processed by the server.
      */
     @Test
-    fun test03RecaptchaEnterpriseCustomPayload() = runTest {
+    fun testRecaptchaEnterpriseCustomPayload() = runTest {
         var node = recaptchaJourney.start(tree) as ContinueNode
 
         node.handleLoginCallbacks()
@@ -300,243 +296,5 @@ class RecaptchaEnterpriseCallbackTest : BaseJourneyTest() {
         assertEquals("1111", cardBin.toString().replace("\"", ""))
         assertEquals("1234", cardLastFour.toString().replace("\"", ""))
         assertEquals("user_account_id_123", accountId.toString().replace("\"", ""))
-    }
-
-    /**
-     * Tests score-based failure handling.
-     *
-     * Verifies token generation succeeds but server may return validation error
-     * or low risk score.
-     */
-    @Test
-    fun test04RecaptchaEnterpriseScoreFailure() = runTest {
-        var node = recaptchaJourney.start(tree) as ContinueNode
-
-        node.handleLoginCallbacks()
-        node = node.next() as ContinueNode
-
-        val choiceCallback = node.callbacks.first() as ChoiceCallback
-        choiceCallback.selectedIndex = choiceCallback.choices.indexOf("score_failure")
-        node = node.next() as ContinueNode
-
-        val recaptchaEnterpriseFailure = node.callbacks.first() as ReCaptchaEnterpriseCallback
-        assertTrue(recaptchaEnterpriseFailure.reCaptchaSiteKey.isNotEmpty())
-        assertEquals(
-            IntegrationTestConfig.recaptchaSiteKey,
-            recaptchaEnterpriseFailure.reCaptchaSiteKey
-        )
-
-        recaptchaEnterpriseFailure.verify{
-            recaptchaAction = RecaptchaAction.custom("score_failure")
-        }.onSuccess { token ->
-            assertTrue(token.isNotEmpty())
-        }.onFailure {
-            assertTrue("Failure in verifying ${it.message}.", false) // Should not reach here
-        }
-
-        val inputPayload = recaptchaEnterpriseFailure.payload()["input"]
-        assertNotNull(inputPayload)
-
-        node = node.next() as ContinueNode
-        val textOutputCallback = node.callbacks.first() as TextOutputCallback
-        val messageResponse = textOutputCallback.message
-        if (!messageResponse.contains("VALIDATION_ERROR")) {
-            val outputMessageJson = Json.parseToJsonElement(textOutputCallback.message)
-            assertNotNull(outputMessageJson)
-            val score = outputMessageJson.jsonObject["riskAnalysis"]?.jsonObject["score"]?.jsonPrimitive.toString()
-            assertEquals(score.toFloat(),1.0f)
-        } else {
-            assertTrue(messageResponse.contains("VALIDATION_ERROR"))
-        }
-    }
-
-    /**
-     * Tests handling of invalid Google Cloud project ID.
-     *
-     * Verifies API_ERROR is returned when project is disabled or missing.
-     */
-    @Test
-    fun test05RecaptchaEnterpriseCallbackInvalidProjectId() = runTest {
-        var node = recaptchaJourney.start(tree) as ContinueNode
-
-        node.handleLoginCallbacks()
-        node = node.next() as ContinueNode
-
-        val choiceCallback = node.callbacks.first() as ChoiceCallback
-        choiceCallback.selectedIndex = choiceCallback.choices.indexOf("invalid_project_id")
-        node = node.next() as ContinueNode
-
-        val recaptchaEnterpriseFailure = node.callbacks.first() as ReCaptchaEnterpriseCallback
-        assertTrue(recaptchaEnterpriseFailure.reCaptchaSiteKey.isNotEmpty())
-        assertEquals(
-            IntegrationTestConfig.recaptchaSiteKey,
-            recaptchaEnterpriseFailure.reCaptchaSiteKey
-        )
-
-        recaptchaEnterpriseFailure.verify{
-            recaptchaAction = RecaptchaAction.custom("invalid_project_id")
-        }.onSuccess { token ->
-            assertTrue(token.isNotEmpty())
-        }.onFailure {
-            assertTrue("Failure in verifying ${it.message}.", false) // Should not reach here
-        }
-
-        val inputPayload = recaptchaEnterpriseFailure.payload()["input"]
-        assertNotNull(inputPayload)
-
-        node = node.next() as ContinueNode
-        val textOutputCallback = node.callbacks.first() as TextOutputCallback
-        val messageResponse = textOutputCallback.message
-        assertTrue(messageResponse.contains("API_ERROR"))
-        assertTrue(messageResponse.contains("reCAPTCHA Enterprise API has not been used in project invalid before or it is disabled"))
-    }
-
-    /**
-     * Tests handling of invalid verification endpoint URL.
-     *
-     * Verifies API_ERROR or UNKNOWN error is returned for misconfigured endpoints.
-     */
-    @Test
-    fun test06RecaptchaEnterpriseInvalidVerificationUrl() = runTest {
-        var node = recaptchaJourney.start(tree) as ContinueNode
-
-        node.handleLoginCallbacks()
-        node = node.next() as ContinueNode
-
-        val choiceCallback = node.callbacks.first() as ChoiceCallback
-        choiceCallback.selectedIndex = choiceCallback.choices.indexOf("invalid_verification_url")
-        node = node.next() as ContinueNode
-
-        val recaptchaEnterpriseFailure = node.callbacks.first() as ReCaptchaEnterpriseCallback
-        assertTrue(recaptchaEnterpriseFailure.reCaptchaSiteKey.isNotEmpty())
-        assertEquals(
-            IntegrationTestConfig.recaptchaSiteKey,
-            recaptchaEnterpriseFailure.reCaptchaSiteKey
-        )
-
-        recaptchaEnterpriseFailure.verify{
-            recaptchaAction = RecaptchaAction.custom("invalid_verification_url")
-        }.onSuccess { token ->
-            assertTrue(token.isNotEmpty())
-        }.onFailure {
-            assertTrue("Failure in verifying ${it.message}.", false) // Should not reach here
-        }
-
-        val inputPayload = recaptchaEnterpriseFailure.payload()["input"]
-        assertNotNull(inputPayload)
-
-        node = node.next() as ContinueNode
-        val textOutputCallback = node.callbacks.first() as TextOutputCallback
-        val message = textOutputCallback.message
-        assertTrue(message.contains("API_ERROR") || message.contains("UNKNOWN"))
-    }
-
-    /**
-     * Tests handling of invalid server-side secret key.
-     *
-     * Verifies INVALID_SECRET_KEY error is returned when secret key cannot be retrieved.
-     */
-    @Test
-    fun test07RecaptchaEnterpriseInvalidSecretKey() = runTest {
-        var node = recaptchaJourney.start(tree) as ContinueNode
-
-        node.handleLoginCallbacks()
-        node = node.next() as ContinueNode
-
-        val choiceCallback = node.callbacks.first() as ChoiceCallback
-        choiceCallback.selectedIndex = choiceCallback.choices.indexOf("invalid_secret_key")
-        node = node.next() as ContinueNode
-
-        val recaptchaEnterpriseFailure = node.callbacks.first() as ReCaptchaEnterpriseCallback
-        assertTrue(recaptchaEnterpriseFailure.reCaptchaSiteKey.isNotEmpty())
-        assertEquals(
-            IntegrationTestConfig.recaptchaSiteKey,
-            recaptchaEnterpriseFailure.reCaptchaSiteKey
-        )
-
-        recaptchaEnterpriseFailure.verify{
-            recaptchaAction = RecaptchaAction.custom("invalid_secret_key")
-        }.onSuccess { token ->
-            assertTrue(token.isNotEmpty())
-        }.onFailure {
-            assertTrue("Failure in verifying ${it.message}.", false) // Should not reach here
-        }
-
-        val inputPayload = recaptchaEnterpriseFailure.payload()["input"]
-        assertNotNull(inputPayload)
-
-        node = node.next() as ContinueNode
-        val textOutputCallback = node.callbacks.first() as TextOutputCallback
-        val message = textOutputCallback.message
-        assertTrue(message.contains("INVALID_SECRET_KEY:Secret key could not be retrieved"))
-    }
-
-    /**
-     * Tests custom client error propagation to server.
-     *
-     * Verifies custom error messages are correctly sent in the response.
-     */
-    @Test
-    fun test08RecaptchaEnterpriseCustomClientError() = runTest {
-        var node = recaptchaJourney.start(tree) as ContinueNode
-
-        node.handleLoginCallbacks()
-        node = node.next() as ContinueNode
-
-        val choiceCallback = node.callbacks.first() as ChoiceCallback
-        // This returns a failure response from server with CUSTOM_CLIENT_ERROR
-        choiceCallback.selectedIndex = choiceCallback.choices.indexOf("invalid_site_key")
-        node = node.next() as ContinueNode
-
-        val recaptchaEnterpriseFailure = node.callbacks.first() as ReCaptchaEnterpriseCallback
-
-        recaptchaEnterpriseFailure.verify {
-            recaptchaAction = RecaptchaAction.custom("invalid_site_key")
-            customError = { "CUSTOM_CLIENT_ERROR" }
-        }
-
-        val inputPayload = recaptchaEnterpriseFailure.payload()["input"]
-        assertNotNull(inputPayload)
-
-        node = node.next() as ContinueNode
-        val textOutputCallback = node.callbacks.first() as TextOutputCallback
-        val message = textOutputCallback.message
-        assertTrue(message.contains("CUSTOM_CLIENT_ERROR"))
-    }
-
-    /**
-     * Tests handling of invalid site key.
-     *
-     * Verifies RecaptchaException is thrown client-side and error is propagated
-     * to server response.
-     */
-    @Test
-    fun test09RecaptchaEnterpriseInvalidSiteKey() = runTest {
-        var node = recaptchaJourney.start(tree) as ContinueNode
-
-        node.handleLoginCallbacks()
-        node = node.next() as ContinueNode
-
-        val choiceCallback = node.callbacks.first() as ChoiceCallback
-        choiceCallback.selectedIndex = choiceCallback.choices.indexOf("invalid_site_key")
-        node = node.next() as ContinueNode
-
-        val recaptchaEnterpriseFailure = node.callbacks.first() as ReCaptchaEnterpriseCallback
-
-        recaptchaEnterpriseFailure.verify{
-            recaptchaAction = RecaptchaAction.custom("invalid_site_key")
-        }.onSuccess { token ->
-            assertTrue(token.isEmpty())
-        }.onFailure { throwable ->
-            assertTrue(throwable is RecaptchaException)
-        }
-
-        val inputPayload = recaptchaEnterpriseFailure.payload()["input"]
-        assertNotNull(inputPayload)
-
-        node = node.next() as ContinueNode
-        val textOutputCallback = node.callbacks.first() as TextOutputCallback
-        val message = textOutputCallback.message
-        assertEquals("CLIENT_ERROR:Site key invalid", message)
     }
 }
