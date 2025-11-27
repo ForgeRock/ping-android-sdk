@@ -26,11 +26,11 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
-import org.junit.Ignore
 import org.junit.Test
 
 /**
@@ -39,7 +39,7 @@ import org.junit.Test
  * Tests cover success scenarios (default/custom actions, custom payloads) and
  * failure scenarios (invalid config, score failures, client errors).
  */
-@Ignore("Skipped for now - see SDKS-4583.")
+//@Ignore("Skipped for now - see SDKS-4583.")
 class RecaptchaEnterpriseCallbackTest : BaseJourneyTest() {
     private lateinit var recaptchaJourney: Journey
 
@@ -48,13 +48,19 @@ class RecaptchaEnterpriseCallbackTest : BaseJourneyTest() {
      */
     @Before
     fun setupTree() {
+        setup()
         tree = "TEST-e2e-recaptcha-enterprise"
         recaptchaJourney = Journey {
-            logger = Logger.Companion.STANDARD
+            logger = Logger.STANDARD
             serverUrl = "https://openam-sdks2.forgeblocks.com/am"
             realm = REALM
             cookie = COOKIE
         }
+    }
+
+    @After
+    fun tearDown() {
+        cleanup()
     }
 
     /**
