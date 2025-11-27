@@ -94,7 +94,7 @@ class RecaptchaEnterpriseCallbackTest : BaseJourneyTest() {
             assertTrue(token.isNotEmpty())
             tokenFromCallbackResult = token
         }.onFailure {
-            assertTrue("Failure in verifying ${it.message}. ReCaptcha site key: ${recaptchaEnterpriseSuccess.reCaptchaSiteKey}",false) // Should not reach here
+            assertTrue("Failure in verifying ${it.message}.",false) // Should not reach here
         }
 
         val inputPayload = recaptchaEnterpriseSuccess.payload()["input"]
@@ -176,7 +176,7 @@ class RecaptchaEnterpriseCallbackTest : BaseJourneyTest() {
             assertTrue(token.isNotEmpty())
             tokenFromCallbackResult = token
         }.onFailure {
-            assertTrue("Failure in verifying ${it.message}. ReCaptcha site key: ${recaptchaEnterpriseSuccess.reCaptchaSiteKey}", false) // Should not reach here
+            assertTrue("Failure in verifying ${it.message}.", false) // Should not reach here
         }
         val inputPayload = recaptchaEnterpriseSuccess.payload()["input"]
         assertNotNull(inputPayload)
@@ -264,7 +264,7 @@ class RecaptchaEnterpriseCallbackTest : BaseJourneyTest() {
             assertTrue(token.isNotEmpty())
             tokenFromCallbackResult = token
         }.onFailure {
-            assertTrue("Failure in verifying ${it.message}. ReCaptcha site key: ${recaptchaEnterpriseSuccess.reCaptchaSiteKey}", false) // Should not reach here
+            assertTrue("Failure in verifying ${it.message}.", false) // Should not reach here
         }
 
         val inputPayload = recaptchaEnterpriseSuccess.payload()["input"]
@@ -338,7 +338,7 @@ class RecaptchaEnterpriseCallbackTest : BaseJourneyTest() {
         }.onSuccess { token ->
             assertTrue(token.isNotEmpty())
         }.onFailure {
-            assertTrue("Failure in verifying ${it.message}. ReCaptcha site key: ${recaptchaEnterpriseFailure.reCaptchaSiteKey}", false) // Should not reach here
+            assertTrue("Failure in verifying ${it.message}.", false) // Should not reach here
         }
 
         val inputPayload = recaptchaEnterpriseFailure.payload()["input"]
