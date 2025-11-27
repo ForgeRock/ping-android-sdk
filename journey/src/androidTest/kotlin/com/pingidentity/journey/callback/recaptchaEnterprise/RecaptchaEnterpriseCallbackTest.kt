@@ -26,7 +26,6 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
-import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
@@ -50,7 +49,6 @@ class RecaptchaEnterpriseCallbackTest : BaseJourneyTest() {
      */
     @Before
     fun setupTree() {
-        setup()
         tree = "TEST-e2e-recaptcha-enterprise"
         recaptchaJourney = Journey {
             logger = Logger.STANDARD
@@ -58,11 +56,6 @@ class RecaptchaEnterpriseCallbackTest : BaseJourneyTest() {
             realm = REALM
             cookie = COOKIE
         }
-    }
-
-    @After
-    fun tearDown() {
-        cleanup()
     }
 
     /**
