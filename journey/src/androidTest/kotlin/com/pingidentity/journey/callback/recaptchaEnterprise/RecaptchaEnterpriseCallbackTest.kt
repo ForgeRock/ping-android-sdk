@@ -31,7 +31,9 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
+import org.junit.FixMethodOrder
 import org.junit.Test
+import org.junit.runners.MethodSorters
 
 /**
  * Integration tests for ReCaptcha Enterprise callback verification flows.
@@ -40,6 +42,7 @@ import org.junit.Test
  * failure scenarios (invalid config, score failures, client errors).
  */
 //@Ignore("Skipped for now - see SDKS-4583.")
+@FixMethodOrder(MethodSorters.NAME_ASCENDING)
 class RecaptchaEnterpriseCallbackTest : BaseJourneyTest() {
     private lateinit var recaptchaJourney: Journey
 
@@ -70,7 +73,7 @@ class RecaptchaEnterpriseCallbackTest : BaseJourneyTest() {
      * including risk score and token properties.
      */
     @Test
-    fun testRecaptchaEnterpriseSuccess() = runTest {
+    fun test01RecaptchaEnterpriseSuccess() = runTest {
         var node = recaptchaJourney.start(tree) as ContinueNode
 
         node.handleLoginCallbacks()
@@ -150,7 +153,7 @@ class RecaptchaEnterpriseCallbackTest : BaseJourneyTest() {
      * Verifies custom action is correctly mapped in payload and server response.
      */
     @Test
-    fun testRecaptchaEnterpriseCustomAction() = runTest {
+    fun test02RecaptchaEnterpriseCustomAction() = runTest {
         var node = recaptchaJourney.start(tree) as ContinueNode
 
         node.handleLoginCallbacks()
@@ -215,7 +218,7 @@ class RecaptchaEnterpriseCallbackTest : BaseJourneyTest() {
      * serialized and processed by the server.
      */
     @Test
-    fun testRecaptchaEnterpriseCustomPayload() = runTest {
+    fun test03RecaptchaEnterpriseCustomPayload() = runTest {
         var node = recaptchaJourney.start(tree) as ContinueNode
 
         node.handleLoginCallbacks()
@@ -314,7 +317,7 @@ class RecaptchaEnterpriseCallbackTest : BaseJourneyTest() {
      * or low risk score.
      */
     @Test
-    fun testRecaptchaEnterpriseScoreFailure() = runTest {
+    fun test04RecaptchaEnterpriseScoreFailure() = runTest {
         var node = recaptchaJourney.start(tree) as ContinueNode
 
         node.handleLoginCallbacks()
@@ -361,7 +364,7 @@ class RecaptchaEnterpriseCallbackTest : BaseJourneyTest() {
      * Verifies API_ERROR is returned when project is disabled or missing.
      */
     @Test
-    fun testRecaptchaEnterpriseCallbackInvalidProjectId() = runTest {
+    fun test05RecaptchaEnterpriseCallbackInvalidProjectId() = runTest {
         var node = recaptchaJourney.start(tree) as ContinueNode
 
         node.handleLoginCallbacks()
@@ -402,7 +405,7 @@ class RecaptchaEnterpriseCallbackTest : BaseJourneyTest() {
      * Verifies API_ERROR or UNKNOWN error is returned for misconfigured endpoints.
      */
     @Test
-    fun testRecaptchaEnterpriseInvalidVerificationUrl() = runTest {
+    fun test06RecaptchaEnterpriseInvalidVerificationUrl() = runTest {
         var node = recaptchaJourney.start(tree) as ContinueNode
 
         node.handleLoginCallbacks()
@@ -442,7 +445,7 @@ class RecaptchaEnterpriseCallbackTest : BaseJourneyTest() {
      * Verifies INVALID_SECRET_KEY error is returned when secret key cannot be retrieved.
      */
     @Test
-    fun testRecaptchaEnterpriseInvalidSecretKey() = runTest {
+    fun test07RecaptchaEnterpriseInvalidSecretKey() = runTest {
         var node = recaptchaJourney.start(tree) as ContinueNode
 
         node.handleLoginCallbacks()
@@ -482,7 +485,7 @@ class RecaptchaEnterpriseCallbackTest : BaseJourneyTest() {
      * Verifies custom error messages are correctly sent in the response.
      */
     @Test
-    fun testRecaptchaEnterpriseCustomClientError() = runTest {
+    fun test08RecaptchaEnterpriseCustomClientError() = runTest {
         var node = recaptchaJourney.start(tree) as ContinueNode
 
         node.handleLoginCallbacks()
@@ -516,7 +519,7 @@ class RecaptchaEnterpriseCallbackTest : BaseJourneyTest() {
      * to server response.
      */
     @Test
-    fun testRecaptchaEnterpriseInvalidSiteKey() = runTest {
+    fun test09RecaptchaEnterpriseInvalidSiteKey() = runTest {
         var node = recaptchaJourney.start(tree) as ContinueNode
 
         node.handleLoginCallbacks()
