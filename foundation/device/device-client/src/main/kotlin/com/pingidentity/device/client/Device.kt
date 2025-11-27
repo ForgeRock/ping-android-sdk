@@ -6,7 +6,6 @@
 
 package com.pingidentity.device.client
 
-import android.annotation.SuppressLint
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -135,6 +134,10 @@ data class ProfileDevice(
 /**
  * Data class for device location.
  */
-@SuppressLint("UnsafeOptInUsageError")
+@OptIn(ExperimentalSerializationApi::class)
+@JsonIgnoreUnknownKeys
 @Serializable
-data class Location(val latitude: Double, val longitude: Double)
+data class Location(
+    var latitude: Double? = null,
+    var longitude: Double? = null,
+)
