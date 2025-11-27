@@ -41,7 +41,6 @@ import org.junit.runners.MethodSorters
  * Tests cover success scenarios (default/custom actions, custom payloads) and
  * failure scenarios (invalid config, score failures, client errors).
  */
-//@Ignore("Skipped for now - see SDKS-4583.")
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 class RecaptchaEnterpriseCallbackTest : BaseJourneyTest() {
     private lateinit var recaptchaJourney: Journey
