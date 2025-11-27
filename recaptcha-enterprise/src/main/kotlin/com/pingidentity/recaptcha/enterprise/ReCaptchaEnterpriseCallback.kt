@@ -85,6 +85,7 @@ class ReCaptchaEnterpriseCallback : AbstractCallback() {
     override fun init(name: String, value: JsonElement) {
         if ("recaptchaSiteKey" == name) {
             this.reCaptchaSiteKey = value.jsonPrimitive.content
+            println("VIBS - Recaptcha Site Key: $reCaptchaSiteKey")
         }
     }
 
