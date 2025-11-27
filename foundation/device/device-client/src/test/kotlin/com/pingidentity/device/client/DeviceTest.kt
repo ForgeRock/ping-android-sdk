@@ -293,23 +293,23 @@ class DeviceTest {
     }
 
     private class TestDeviceRepository(
-        private val deviceList: MutableList<Device> = mutableListOf<Device>()
+        private val deviceList: MutableList<Device> = mutableListOf()
     ): DeviceRepository<Device> {
         override suspend fun devices(): Result<List<Device>> {
             return Result.success(deviceList)
         }
 
-        override suspend fun delete(device: Device): Result<Boolean> {
+        override suspend fun delete(device: Device): Result<Device> {
             deviceList.remove(device)
-            return Result.success(true)
+            return Result.success(device)
         }
 
-        override suspend fun update(device: Device): Result<Boolean> {
+        override suspend fun update(device: Device): Result<Device> {
             val index = deviceList.indexOfFirst { it.id == device.id }
             if (index != -1) {
                 deviceList[index] = device
             }
-            return Result.success(true)
+            return Result.success(device)
         }
     }
 

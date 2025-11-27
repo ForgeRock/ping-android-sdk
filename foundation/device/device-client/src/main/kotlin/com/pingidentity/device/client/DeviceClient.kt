@@ -86,13 +86,13 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
                 }
             }
 
-            override suspend fun delete(device: OathDevice): Result<Boolean> {
+            override suspend fun delete(device: OathDevice): Result<OathDevice> {
                 return withContext(Dispatchers.IO) {
                     delete<OathDevice>(config, device)
                 }
             }
 
-            override suspend fun update(device: OathDevice): Result<Boolean> {
+            override suspend fun update(device: OathDevice): Result<OathDevice> {
                 return withContext(Dispatchers.IO) {
                     update<OathDevice>(
                         config = config,
@@ -112,13 +112,13 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
                 }
             }
 
-            override suspend fun delete(device: PushDevice): Result<Boolean> {
+            override suspend fun delete(device: PushDevice): Result<PushDevice> {
                 return withContext(Dispatchers.IO) {
                     delete<PushDevice>(config, device)
                 }
             }
 
-            override suspend fun update(device: PushDevice): Result<Boolean> {
+            override suspend fun update(device: PushDevice): Result<PushDevice> {
                 return withContext(Dispatchers.IO) {
                     update<PushDevice>(
                         config = config,
@@ -138,13 +138,13 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
                 }
             }
 
-            override suspend fun delete(device: BoundDevice): Result<Boolean> {
+            override suspend fun delete(device: BoundDevice): Result<BoundDevice> {
                 return withContext(Dispatchers.IO) {
                     delete<BoundDevice>(config, device)
                 }
             }
 
-            override suspend fun update(device: BoundDevice): Result<Boolean> {
+            override suspend fun update(device: BoundDevice): Result<BoundDevice> {
                 return withContext(Dispatchers.IO) {
                     update<BoundDevice>(
                         config = config,
@@ -164,13 +164,13 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
                 }
             }
 
-            override suspend fun delete(device: WebAuthnDevice): Result<Boolean> {
+            override suspend fun delete(device: WebAuthnDevice): Result<WebAuthnDevice> {
                 return withContext(Dispatchers.IO) {
                     delete<WebAuthnDevice>(config, device)
                 }
             }
 
-            override suspend fun update(device: WebAuthnDevice): Result<Boolean> {
+            override suspend fun update(device: WebAuthnDevice): Result<WebAuthnDevice> {
                 return withContext(Dispatchers.IO) {
                     update<WebAuthnDevice>(
                         config = config,
@@ -190,13 +190,13 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
                 }
             }
 
-            override suspend fun delete(device: ProfileDevice): Result<Boolean> {
+            override suspend fun delete(device: ProfileDevice): Result<ProfileDevice> {
                 return withContext(Dispatchers.IO) {
                     delete<ProfileDevice>(config, device)
                 }
             }
 
-            override suspend fun update(device: ProfileDevice): Result<Boolean> {
+            override suspend fun update(device: ProfileDevice): Result<ProfileDevice> {
                 return withContext(Dispatchers.IO) {
                     update<ProfileDevice>(
                         config = config,
@@ -256,7 +256,7 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
     private suspend inline fun <reified T : Device> delete(
         config: DeviceClientConfig,
         device: T,
-    ): Result<Boolean> {
+    ): Result<T> {
         val userId = getCachedUserId()
         if (userId.isBlank()) {
             throw IllegalStateException("User ID cannot be blank.")
@@ -275,7 +275,7 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
         }
         val response = request.execute()
         return if (response.status == HttpStatusCode.OK) {
-            Result.success(true)
+            Result.success(device)
         } else {
             Result.failure(Exception("Failed to delete device: ${response.status} - ${response.bodyAsText()}"))
         }
@@ -291,7 +291,7 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
     private suspend inline fun <reified T : Device> update(
         config: DeviceClientConfig,
         device: T,
-    ): Result<Boolean> {
+    ): Result<T> {
         val userId = getCachedUserId()
         if (userId.isBlank()) {
             throw IllegalStateException("User ID cannot be blank.")
@@ -314,7 +314,7 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
         }
         val response = request.execute()
         return if (response.status == HttpStatusCode.OK) {
-            Result.success(true)
+            Result.success(device)
         } else {
             Result.failure(Exception("Failed to update device: ${response.status} - ${response.bodyAsText()}"))
         }

@@ -36,11 +36,11 @@ interface DeviceRepository<T> {
     /**
      * Delete a device of type [T].
      */
-    suspend fun delete(device: T): Result<Boolean>
+    suspend fun delete(device: T): Result<T>
     /**
      * Update a device of type [T].
      */
-    suspend fun update(device: T): Result<Boolean>
+    suspend fun update(device: T): Result<T>
 }
 
 /**

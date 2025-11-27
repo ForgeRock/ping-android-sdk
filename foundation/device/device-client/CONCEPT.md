@@ -34,11 +34,11 @@ interface DeviceRepository<T> {
     /**
      * Delete a device of type [T].
      */
-    suspend fun delete(device: T): Result<Boolean>
+    suspend fun delete(device: T): Result<T>
     /**
      * Update a device of type [T].
      */
-    suspend fun update(device: T): Result<Boolean>
+    suspend fun update(device: T): Result<T>
 }
 ```
 
@@ -244,7 +244,7 @@ private suspend inline fun <reified T : Device> devices(
 private suspend inline fun <reified T : Device> delete(
     config: DeviceClientConfig,
     device: T,
-): Result<Boolean> { ... }
+): Result<T> { ... }
 ```
 
 ```kotlin
@@ -260,7 +260,7 @@ private suspend inline fun <reified T : Device> delete(
 private suspend inline fun <reified T : Device> update(
     config: DeviceClientConfig,
     device: T,
-): Result<Boolean> { ... }
+): Result<T> { ... }
 ```
 
 ### Lazy Initialization Pattern
@@ -352,27 +352,6 @@ This approach eliminates the need for explicit try-catch blocks while maintainin
 - Use `.onSuccess` and `.onFailure` for functional error handling
 - Access device repositories via simplified property names (`oathDevice`, `pushDevice`, etc.)
 - Only document variables where additional context is needed; skip obvious ones for brevity
-
-## API Design Improvements
-
-### Simplified Property Names
-
-Device repositories use concise, intuitive property names:
-
-| Old Name (< v1.0)      | New Name (v1.0+) |
-|------------------------|------------------|
-| oathDeviceClient       | oathDevice       |
-| pushDeviceClient       | pushDevice       |
-| boundDevice            | boundDevice      |
-| webAuthnDevice         | webAuthnDevice   |
-| profileDevice          | profileDevice    |
-
-### Interface Rename
-
-- **Old**: `DeviceInterface<T>`
-- **New**: `DeviceRepository<T>`
-
-The rename better reflects the repository pattern and aligns with common architectural patterns.
 
 ## Summary
 

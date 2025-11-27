@@ -103,8 +103,8 @@ The Device Client module supports the following device types:
 All device types implement the `DeviceRepository<T>` interface which provides three operations:
 
 - **`devices(): Result<List<T>>`**: Retrieve all devices of the specified type wrapped in a Result
-- **`delete(device: T): Result<Boolean>`**: Delete a specific device and return success/failure
-- **`update(device: T): Result<Boolean>`**: Update device properties (currently only device name)
+- **`delete(device: T): Result<T>`**: Delete a specific device and return success/failure
+- **`update(device: T): Result<T>`**: Update device properties (currently only device name)
 
 **Result-Based API**: All operations return a `Result` type for improved error handling and functional programming support.
 
@@ -465,13 +465,13 @@ DeviceClient(block: DeviceClientConfig.() -> Unit)
 
 #### Properties
 
-| Property          | Type                          | Description                           |
-|-------------------|-------------------------------|---------------------------------------|
-| oathDeviceClient  | DeviceInterface<OathDevice>   | Client for managing OATH devices      |
-| pushDeviceClient  | DeviceInterface<PushDevice>   | Client for managing Push devices      |
-| boundDevice       | DeviceInterface<BoundDevice>    | Client for managing Bound devices     |
-| webAuthnDevice    | DeviceInterface<WebAuthnDevice> | Client for managing WebAuthn devices  |
-| profileDevice     | DeviceInterface<ProfileDevice>  | Client for managing Profile devices   |
+| Property    | Type                          | Description                           |
+|-------------|-------------------------------|---------------------------------------|
+| oathDevice  | DeviceInterface<OathDevice>   | Client for managing OATH devices      |
+| pushDevice  | DeviceInterface<PushDevice>   | Client for managing Push devices      |
+| boundDevice | DeviceInterface<BoundDevice>    | Client for managing Bound devices     |
+| webAuthnDevice | DeviceInterface<WebAuthnDevice> | Client for managing WebAuthn devices  |
+| profileDevice | DeviceInterface<ProfileDevice>  | Client for managing Profile devices   |
 
 ### DeviceInterface<T>
 
@@ -491,7 +491,7 @@ Retrieves all devices of type T for the authenticated user.
 ---
 
 ```kotlin
-suspend fun delete(device: T)
+suspend fun delete(device: T): Result<T>
 ```
 Deletes the specified device.
 
@@ -501,7 +501,7 @@ Deletes the specified device.
 **Throws:** Network or server errors
 
 ```kotlin
-suspend fun update(device: T)
+suspend fun update(device: T): Result<T>
 ```
 Updates the specified device's properties.
 
@@ -610,7 +610,7 @@ fun `Test OathDeviceClient getDevices returns device list`() = runTest {
         httpClient = mockClient
     }
 
-    val devices = deviceClient.oathDeviceClient.devices()
+    val devices = deviceClient.oathDevice.devices()
     assertEquals(1, devices.size)
     assertEquals("OATH Device 1", devices[0].deviceName)
 }
