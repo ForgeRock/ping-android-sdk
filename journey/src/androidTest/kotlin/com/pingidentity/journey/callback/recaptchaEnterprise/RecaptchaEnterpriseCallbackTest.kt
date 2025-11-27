@@ -7,15 +7,11 @@
 package com.pingidentity.journey.callback.recaptchaEnterprise
 
 import com.google.android.recaptcha.RecaptchaAction
-import com.pingidentity.journey.BaseJourneyTest
 import com.pingidentity.journey.IntegrationTestConfig
-import com.pingidentity.journey.Journey
 import com.pingidentity.journey.callback.ChoiceCallback
 import com.pingidentity.journey.callback.TextOutputCallback
 import com.pingidentity.journey.plugin.callbacks
 import com.pingidentity.journey.start
-import com.pingidentity.logger.Logger
-import com.pingidentity.logger.STANDARD
 import com.pingidentity.orchestrate.ContinueNode
 import com.pingidentity.recaptcha.enterprise.ReCaptchaEnterpriseCallback
 import kotlinx.coroutines.test.runTest
@@ -28,7 +24,6 @@ import kotlinx.serialization.json.put
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
-import org.junit.Before
 import org.junit.Test
 
 /**
@@ -37,23 +32,7 @@ import org.junit.Test
  * Tests cover success scenarios (default/custom actions, custom payloads) and
  * failure scenarios (invalid config, score failures, client errors).
  */
-class RecaptchaEnterpriseCallbackTest : BaseJourneyTest() {
-    private lateinit var recaptchaJourney: Journey
-
-    /**
-     * Sets up the journey tree configuration before each test.
-     */
-    @Before
-    fun setupTree() {
-        tree = "TEST-e2e-recaptcha-enterprise"
-        recaptchaJourney = Journey {
-            logger = Logger.STANDARD
-            serverUrl = "https://openam-sdks2.forgeblocks.com/am"
-            realm = REALM
-            cookie = COOKIE
-        }
-    }
-
+class RecaptchaEnterpriseCallbackTest : BaseRecaptchaEnterpriseCallbackTest() {
     /**
      * Tests successful token verification with default LOGIN action.
      *

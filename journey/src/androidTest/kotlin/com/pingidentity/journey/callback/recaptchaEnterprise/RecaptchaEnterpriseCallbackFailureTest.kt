@@ -8,15 +8,11 @@ package com.pingidentity.journey.callback.recaptchaEnterprise
 
 import com.google.android.recaptcha.RecaptchaAction
 import com.google.android.recaptcha.RecaptchaException
-import com.pingidentity.journey.BaseJourneyTest
 import com.pingidentity.journey.IntegrationTestConfig
-import com.pingidentity.journey.Journey
 import com.pingidentity.journey.callback.ChoiceCallback
 import com.pingidentity.journey.callback.TextOutputCallback
 import com.pingidentity.journey.plugin.callbacks
 import com.pingidentity.journey.start
-import com.pingidentity.logger.Logger
-import com.pingidentity.logger.STANDARD
 import com.pingidentity.orchestrate.ContinueNode
 import com.pingidentity.recaptcha.enterprise.ReCaptchaEnterpriseCallback
 import kotlinx.coroutines.test.runTest
@@ -26,29 +22,12 @@ import kotlinx.serialization.json.jsonPrimitive
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
-import org.junit.Before
 import org.junit.FixMethodOrder
 import org.junit.Test
 import org.junit.runners.MethodSorters
 
 @FixMethodOrder(MethodSorters.NAME_ASCENDING) // These tests must run in order
-class RecaptchaEnterpriseCallbackFailureTest : BaseJourneyTest() {
-    private lateinit var recaptchaJourney: Journey
-
-    /**
-     * Sets up the journey tree configuration before each test.
-     */
-    @Before
-    fun setupTree() {
-        tree = "TEST-e2e-recaptcha-enterprise"
-        recaptchaJourney = Journey {
-            logger = Logger.STANDARD
-            serverUrl = "https://openam-sdks2.forgeblocks.com/am"
-            realm = REALM
-            cookie = COOKIE
-        }
-    }
-
+class RecaptchaEnterpriseCallbackFailureTest : BaseRecaptchaEnterpriseCallbackTest() {
     /**
      * Tests score-based failure handling.
      *
