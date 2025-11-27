@@ -16,7 +16,8 @@
         android:icon="@drawable/ping_logo"
         android:label="@string/app_name"
         android:supportsRtl="true"
-        android:theme="@style/Theme.App.Starting">
+        android:theme="@style/Theme.App.Starting"
+        android:usesCleartextTraffic="true"> <!-- usesCleartextTraffic set to true for testing purpose, DO NOT use this for production -->
 
         <activity
             android:name=".MainActivity"
