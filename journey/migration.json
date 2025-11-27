@@ -1,0 +1,718 @@
+{
+  "migration_examples": [
+    {
+      "id": "forgerock_sdk_config_001",
+      "description": "Migration of FROptionsBuilder (legacy) to the modern Journey builder syntax, including the move of OAuth properties into a dedicated Oidc module.",
+      "notes": "The legacy 'timeout' and 'oauthSignOutRedirectUri' properties appear to be optional or handled differently in the new simplified structure. The new structure often includes a 'logger' and may require a 'discoveryEndpoint' for OIDC, which was implicit or inferred in the old SDK.",
+      "legacy_interface": {
+        "language": "Kotlin",
+        "configuration_name": "PingAdvancedIdentityCloud",
+        "snippet": "val PingAdvancedIdentityCloud = FROptionsBuilder.build {\n    server {\n        url = \"https://openam-forgerock-sdks.forgeblocks.com/am\"\n        realm = \"alpha\"\n        cookieName = \"29cd7a346b42b42\"\n        timeout = 50\n    }\n    oauth {\n        oauthClientId = \"sdkPublicClient\"\n        oauthRedirectUri = \"org.forgerock.demo://oauth2redirect\"\n        oauthScope = \"openid profile email address\"\n        oauthSignOutRedirectUri = \"org.forgerock.demo://oauth2redirect\"\n    }\n    service {\n        authServiceName = \"sdkUsernamePasswordJourney\"\n    }\n}"
+      },
+      "new_interface": {
+        "language": "Kotlin",
+        "configuration_name": "forgeblock",
+        "snippet": "val forgeblock = Journey {\n    logger = Logger.STANDARD\n\n    serverUrl = \"https://openam-sdks.forgeblocks.com/am\"\n    realm = \"alpha\"\n    cookie = \"5421aeddf91aa20\"\n\n    // Oidc as module\n    module(Oidc) {\n        clientId = \"AndroidTest\"\n        discoveryEndpoint = \n            \"https://openam-sdks.forgeblocks.com/am/oauth2/alpha/.well-known/openid-configuration\"\n        scopes = mutableSetOf(\"openid\", \"email\", \"address\", \"profile\", \"phone\")\n        redirectUri = \"org.forgerock.demo:/oauth2redirect\"\n    }\n}"
+      },
+      "key_mapping_summary": [
+        {
+          "legacy_key": "server.url",
+          "new_key": "serverUrl",
+          "notes": "Top-level property."
+        },
+        {
+          "legacy_key": "server.realm",
+          "new_key": "realm",
+          "notes": "Top-level property."
+        },
+        {
+          "legacy_key": "server.cookieName",
+          "new_key": "cookie",
+          "notes": "Renamed and moved to top-level."
+        },
+        {
+          "legacy_key": "oauth.oauthClientId",
+          "new_key": "module(Oidc).clientId",
+          "notes": "Moved into the Oidc configuration module."
+        },
+        {
+          "legacy_key": "oauth.oauthRedirectUri",
+          "new_key": "module(Oidc).redirectUri",
+          "notes": "Moved into the Oidc configuration module."
+        },
+        {
+          "legacy_key": "oauth.oauthScope",
+          "new_key": "module(Oidc).scopes",
+          "notes": "Must be converted from a space-separated string to a mutableSetOf strings. New SDK version often defaults to more scopes."
+        },
+        {
+          "legacy_key": "service.authServiceName",
+          "new_key": "serviceName",
+          "notes": "The authServiceName is often used as a separate parameter during the 'authenticate' call, or can be set as a top-level 'serviceName' property."
+        }
+      ]
+    },
+    {
+      "id": "forgerock_sdk_auth_002",
+      "description": "Migration from FRSession.authenticate with NodeListener callbacks to the modern Journey.start() with sealed class pattern for handling different node states.",
+      "notes": "The legacy SDK used callback-based NodeListener pattern with separate methods for success, exception, and callback received events. The new SDK uses a more idiomatic Kotlin approach with sealed classes (ContinueNode, SuccessNode, FailureNode, ErrorNode) that can be handled with when expressions, providing better type safety and flow control.",
+      "legacy_interface": {
+        "language": "Kotlin",
+        "configuration_name": "FRSession Authentication",
+        "snippet": "FRSession.authenticate(context, journeyName as String, nodeListener)\n\nprivate val nodeListener = object : NodeListener<FRSession> {\n    override fun onSuccess(result: FRSession) {\n        // Handle successful authentication\n    }\n\n    override fun onException(e: Exception) {\n        // Handle exceptions\n    }\n\n    override fun onCallbackReceived(node: Node) {\n        // Handle callback node\n    }\n}"
+      },
+      "new_interface": {
+        "language": "Kotlin",
+        "configuration_name": "Journey Start",
+        "snippet": "val node = journey.start(journeyName)\nwhen (node) {\n    is ContinueNode -> {\n        // Handle callback node - process callbacks and continue\n    }\n\n    is FailureNode -> {\n        // Handle authentication failure\n    }\n\n    is ErrorNode -> {\n        // Handle errors/exceptions\n    }\n\n    is SuccessNode -> {\n        // Handle successful authentication\n    }\n}"
+      },
+      "key_mapping_summary": [
+        {
+          "legacy_key": "FRSession.authenticate(context, journeyName, nodeListener)",
+          "new_key": "journey.start(journeyName)",
+          "notes": "Method signature simplified. Context parameter no longer needed. Returns a Node directly instead of using callbacks."
+        },
+        {
+          "legacy_key": "NodeListener.onCallbackReceived(node: Node)",
+          "new_key": "is ContinueNode",
+          "notes": "Callbacks are now represented as ContinueNode in the sealed class hierarchy. Use pattern matching to handle."
+        },
+        {
+          "legacy_key": "NodeListener.onSuccess(result: FRSession)",
+          "new_key": "is SuccessNode",
+          "notes": "Success state is now represented as SuccessNode. Session information available through the node properties."
+        },
+        {
+          "legacy_key": "NodeListener.onException(e: Exception)",
+          "new_key": "is ErrorNode",
+          "notes": "Exceptions are now represented as ErrorNode with error details accessible through node properties."
+        },
+        {
+          "legacy_key": "N/A (implicit in callbacks)",
+          "new_key": "is FailureNode",
+          "notes": "New explicit state for authentication failures (different from errors/exceptions)."
+        }
+      ]
+    },
+    {
+      "id": "forgerock_callback_textinput_003",
+      "description": "Migration of TextInputCallback from legacy ForgeRock SDK to the new Ping Identity SDK, showing how user input is handled and mapped.",
+      "notes": "Legacy SDK used explicit TextInputCallback class and required manual extraction of prompt and input. The new SDK uses a more idiomatic Kotlin sealed class (TextInputCallback) and property access, simplifying usage.",
+      "legacy_interface": {
+        "language": "Kotlin",
+        "configuration_name": "TextInputCallback (Legacy)",
+        "snippet": "val callback = node.getCallback(TextInputCallback::class.java)\nval prompt = callback.getPrompt()\ncallback.setText(\"user input\")"
+      },
+      "new_interface": {
+        "language": "Kotlin",
+        "configuration_name": "TextInputCallback (New)",
+        "snippet": "val callback = node.callback as TextInputCallback\nval prompt = callback.prompt\ncallback.text = \"user input\""
+      },
+      "key_mapping_summary": [
+        {
+          "legacy_key": "getCallback(TextInputCallback::class.java)",
+          "new_key": "callback as TextInputCallback",
+          "notes": "Type casting is more idiomatic in Kotlin."
+        },
+        {
+          "legacy_key": "getPrompt()",
+          "new_key": "prompt",
+          "notes": "Property access instead of getter method."
+        },
+        {
+          "legacy_key": "setText(\"user input\")",
+          "new_key": "text = \"user input\"",
+          "notes": "Property assignment instead of setter method."
+        }
+      ]
+    },
+    {
+      "id": "forgerock_callback_password_004",
+      "description": "Migration of PasswordCallback from legacy SDK to new SDK with property-based access.",
+      "notes": "The new SDK uses property assignment instead of setter methods for password values.",
+      "legacy_interface": {
+        "language": "Kotlin",
+        "configuration_name": "PasswordCallback (Legacy)",
+        "snippet": "val callback = node.getCallback(PasswordCallback::class.java)\nval prompt = callback.getPrompt()\ncallback.setPassword(password.toCharArray())"
+      },
+      "new_interface": {
+        "language": "Kotlin",
+        "configuration_name": "PasswordCallback (New)",
+        "snippet": "val callback = node.callback as PasswordCallback\nval prompt = callback.prompt\ncallback.password = password.toCharArray()"
+      },
+      "key_mapping_summary": [
+        {
+          "legacy_key": "getCallback(PasswordCallback::class.java)",
+          "new_key": "callback as PasswordCallback",
+          "notes": "Type casting is more idiomatic in Kotlin."
+        },
+        {
+          "legacy_key": "getPrompt()",
+          "new_key": "prompt",
+          "notes": "Property access instead of getter method."
+        },
+        {
+          "legacy_key": "setPassword(password.toCharArray())",
+          "new_key": "password = password.toCharArray()",
+          "notes": "Property assignment instead of setter method."
+        }
+      ]
+    },
+    {
+      "id": "forgerock_callback_name_005",
+      "description": "Migration of NameCallback for username/name input from legacy to new SDK.",
+      "notes": "NameCallback follows the same property-based pattern as other text input callbacks.",
+      "legacy_interface": {
+        "language": "Kotlin",
+        "configuration_name": "NameCallback (Legacy)",
+        "snippet": "val callback = node.getCallback(NameCallback::class.java)\nval prompt = callback.getPrompt()\ncallback.setName(\"username\")"
+      },
+      "new_interface": {
+        "language": "Kotlin",
+        "configuration_name": "NameCallback (New)",
+        "snippet": "val callback = node.callback as NameCallback\nval prompt = callback.prompt\ncallback.name = \"username\""
+      },
+      "key_mapping_summary": [
+        {
+          "legacy_key": "getCallback(NameCallback::class.java)",
+          "new_key": "callback as NameCallback",
+          "notes": "Direct type casting."
+        },
+        {
+          "legacy_key": "getPrompt()",
+          "new_key": "prompt",
+          "notes": "Property access."
+        },
+        {
+          "legacy_key": "setName(\"username\")",
+          "new_key": "name = \"username\"",
+          "notes": "Property assignment."
+        }
+      ]
+    },
+    {
+      "id": "forgerock_callback_choice_006",
+      "description": "Migration of ChoiceCallback for single or multiple selection from a list of choices.",
+      "notes": "The new SDK maintains similar structure but uses property access. Choice arrays and default selections are accessed via properties.",
+      "legacy_interface": {
+        "language": "Kotlin",
+        "configuration_name": "ChoiceCallback (Legacy)",
+        "snippet": "val callback = node.getCallback(ChoiceCallback::class.java)\nval choices = callback.getChoices()\nval defaultChoice = callback.getDefaultChoice()\ncallback.setSelectedIndex(0)"
+      },
+      "new_interface": {
+        "language": "Kotlin",
+        "configuration_name": "ChoiceCallback (New)",
+        "snippet": "val callback = node.callback as ChoiceCallback\nval choices = callback.choices\nval defaultChoice = callback.defaultChoice\ncallback.selectedIndex = 0"
+      },
+      "key_mapping_summary": [
+        {
+          "legacy_key": "getChoices()",
+          "new_key": "choices",
+          "notes": "Property access for choices array."
+        },
+        {
+          "legacy_key": "getDefaultChoice()",
+          "new_key": "defaultChoice",
+          "notes": "Property access for default selection."
+        },
+        {
+          "legacy_key": "setSelectedIndex(0)",
+          "new_key": "selectedIndex = 0",
+          "notes": "Property assignment for selected index."
+        }
+      ]
+    },
+    {
+      "id": "forgerock_callback_confirmation_007",
+      "description": "Migration of ConfirmationCallback for user confirmation actions (Yes/No, OK/Cancel, etc.).",
+      "notes": "ConfirmationCallback provides options for user confirmation. The new SDK uses property access for options and selected index.",
+      "legacy_interface": {
+        "language": "Kotlin",
+        "configuration_name": "ConfirmationCallback (Legacy)",
+        "snippet": "val callback = node.getCallback(ConfirmationCallback::class.java)\nval options = callback.getOptions()\ncallback.setSelectedIndex(0)"
+      },
+      "new_interface": {
+        "language": "Kotlin",
+        "configuration_name": "ConfirmationCallback (New)",
+        "snippet": "val callback = node.callback as ConfirmationCallback\nval options = callback.options\ncallback.selectedIndex = 0"
+      },
+      "key_mapping_summary": [
+        {
+          "legacy_key": "getOptions()",
+          "new_key": "options",
+          "notes": "Property access for options array."
+        },
+        {
+          "legacy_key": "setSelectedIndex(0)",
+          "new_key": "selectedIndex = 0",
+          "notes": "Property assignment for selected option."
+        }
+      ]
+    },
+    {
+      "id": "forgerock_callback_textoutput_008",
+      "description": "Migration of TextOutputCallback for displaying information to the user.",
+      "notes": "TextOutputCallback is read-only and displays messages. The new SDK uses property access.",
+      "legacy_interface": {
+        "language": "Kotlin",
+        "configuration_name": "TextOutputCallback (Legacy)",
+        "snippet": "val callback = node.getCallback(TextOutputCallback::class.java)\nval message = callback.getMessage()\nval messageType = callback.getMessageType()"
+      },
+      "new_interface": {
+        "language": "Kotlin",
+        "configuration_name": "TextOutputCallback (New)",
+        "snippet": "val callback = node.callback as TextOutputCallback\nval message = callback.message\nval messageType = callback.messageType"
+      },
+      "key_mapping_summary": [
+        {
+          "legacy_key": "getMessage()",
+          "new_key": "message",
+          "notes": "Property access for message text."
+        },
+        {
+          "legacy_key": "getMessageType()",
+          "new_key": "messageType",
+          "notes": "Property access for message type (INFO, WARNING, ERROR)."
+        }
+      ]
+    },
+    {
+      "id": "forgerock_callback_pollingwait_009",
+      "description": "Migration of PollingWaitCallback for handling asynchronous operations with polling.",
+      "notes": "PollingWaitCallback indicates the client should wait before proceeding. The new SDK uses property access for wait time.",
+      "legacy_interface": {
+        "language": "Kotlin",
+        "configuration_name": "PollingWaitCallback (Legacy)",
+        "snippet": "val callback = node.getCallback(PollingWaitCallback::class.java)\nval waitTime = callback.getWaitTime()\nval message = callback.getMessage()"
+      },
+      "new_interface": {
+        "language": "Kotlin",
+        "configuration_name": "PollingWaitCallback (New)",
+        "snippet": "val callback = node.callback as PollingWaitCallback\nval waitTime = callback.waitTime\nval message = callback.message"
+      },
+      "key_mapping_summary": [
+        {
+          "legacy_key": "getWaitTime()",
+          "new_key": "waitTime",
+          "notes": "Property access for wait time in milliseconds."
+        },
+        {
+          "legacy_key": "getMessage()",
+          "new_key": "message",
+          "notes": "Property access for message text."
+        }
+      ]
+    },
+    {
+      "id": "forgerock_callback_kbacreate_010",
+      "description": "Migration of KbaCreateCallback for creating Knowledge-Based Authentication questions and answers.",
+      "notes": "KbaCreateCallback allows users to create security questions. The new SDK uses property access and simplified question selection.",
+      "legacy_interface": {
+        "language": "Kotlin",
+        "configuration_name": "KbaCreateCallback (Legacy)",
+        "snippet": "val callback = node.getCallback(KbaCreateCallback::class.java)\nval predefinedQuestions = callback.getPredefinedQuestions()\ncallback.setSelectedQuestion(\"What is your favorite color?\")\ncallback.setSelectedAnswer(\"Blue\")"
+      },
+      "new_interface": {
+        "language": "Kotlin",
+        "configuration_name": "KbaCreateCallback (New)",
+        "snippet": "val callback = node.callback as KbaCreateCallback\nval predefinedQuestions = callback.predefinedQuestions\ncallback.selectedQuestion = \"What is your favorite color?\"\ncallback.selectedAnswer = \"Blue\""
+      },
+      "key_mapping_summary": [
+        {
+          "legacy_key": "getPredefinedQuestions()",
+          "new_key": "predefinedQuestions",
+          "notes": "Property access for predefined questions list."
+        },
+        {
+          "legacy_key": "setSelectedQuestion(question)",
+          "new_key": "selectedQuestion = question",
+          "notes": "Property assignment for selected question."
+        },
+        {
+          "legacy_key": "setSelectedAnswer(answer)",
+          "new_key": "selectedAnswer = answer",
+          "notes": "Property assignment for answer."
+        }
+      ]
+    },
+    {
+      "id": "forgerock_callback_termsandconditions_011",
+      "description": "Migration of TermsAndConditionsCallback for accepting terms and conditions.",
+      "notes": "TermsAndConditionsCallback requires user acceptance. The new SDK uses property access for terms text and acceptance status.",
+      "legacy_interface": {
+        "language": "Kotlin",
+        "configuration_name": "TermsAndConditionsCallback (Legacy)",
+        "snippet": "val callback = node.getCallback(TermsAndConditionsCallback::class.java)\nval terms = callback.getTerms()\nval version = callback.getVersion()\ncallback.setAccept(true)"
+      },
+      "new_interface": {
+        "language": "Kotlin",
+        "configuration_name": "TermsAndConditionCallback (New)",
+        "snippet": "val callback = node.callback as TermsAndConditionCallback\nval terms = callback.terms\nval version = callback.version\ncallback.accept = true"
+      },
+      "key_mapping_summary": [
+        {
+          "legacy_key": "getTerms()",
+          "new_key": "terms",
+          "notes": "Property access for terms text."
+        },
+        {
+          "legacy_key": "getVersion()",
+          "new_key": "version",
+          "notes": "Property access for version."
+        },
+        {
+          "legacy_key": "setAccept(true)",
+          "new_key": "accept = true",
+          "notes": "Property assignment for acceptance status."
+        }
+      ]
+    },
+    {
+      "id": "forgerock_callback_booleanattribute_012",
+      "description": "Migration of BooleanAttributeInputCallback for boolean attribute collection.",
+      "notes": "BooleanAttributeInputCallback is used for collecting boolean attributes. The new SDK uses property access.",
+      "legacy_interface": {
+        "language": "Kotlin",
+        "configuration_name": "BooleanAttributeInputCallback (Legacy)",
+        "snippet": "val callback = node.getCallback(BooleanAttributeInputCallback::class.java)\nval name = callback.getName()\nval value = callback.getValue()\ncallback.setValue(true)"
+      },
+      "new_interface": {
+        "language": "Kotlin",
+        "configuration_name": "BooleanAttributeInputCallback (New)",
+        "snippet": "val callback = node.callback as BooleanAttributeInputCallback\nval name = callback.name\nval value = callback.value\ncallback.value = true"
+      },
+      "key_mapping_summary": [
+        {
+          "legacy_key": "getName()",
+          "new_key": "name",
+          "notes": "Property access for attribute name."
+        },
+        {
+          "legacy_key": "getValue()",
+          "new_key": "value",
+          "notes": "Property access for current value."
+        },
+        {
+          "legacy_key": "setValue(true)",
+          "new_key": "value = true",
+          "notes": "Property assignment for boolean value."
+        }
+      ]
+    },
+    {
+      "id": "forgerock_callback_stringattribute_013",
+      "description": "Migration of StringAttributeInputCallback for string attribute collection.",
+      "notes": "StringAttributeInputCallback collects string-based attributes. The new SDK uses property access.",
+      "legacy_interface": {
+        "language": "Kotlin",
+        "configuration_name": "StringAttributeInputCallback (Legacy)",
+        "snippet": "val callback = node.getCallback(StringAttributeInputCallback::class.java)\nval name = callback.getName()\nval prompt = callback.getPrompt()\ncallback.setValue(\"value\")"
+      },
+      "new_interface": {
+        "language": "Kotlin",
+        "configuration_name": "StringAttributeInputCallback (New)",
+        "snippet": "val callback = node.callback as StringAttributeInputCallback\nval name = callback.name\nval prompt = callback.prompt\ncallback.value = \"value\""
+      },
+      "key_mapping_summary": [
+        {
+          "legacy_key": "getName()",
+          "new_key": "name",
+          "notes": "Property access for attribute name."
+        },
+        {
+          "legacy_key": "getPrompt()",
+          "new_key": "prompt",
+          "notes": "Property access for prompt."
+        },
+        {
+          "legacy_key": "setValue(\"value\")",
+          "new_key": "value = \"value\"",
+          "notes": "Property assignment for string value."
+        }
+      ]
+    },
+    {
+      "id": "forgerock_callback_numberattribute_014",
+      "description": "Migration of NumberAttributeInputCallback for numeric attribute collection.",
+      "notes": "NumberAttributeInputCallback collects numeric attributes. The new SDK uses property access.",
+      "legacy_interface": {
+        "language": "Kotlin",
+        "configuration_name": "NumberAttributeInputCallback (Legacy)",
+        "snippet": "val callback = node.getCallback(NumberAttributeInputCallback::class.java)\nval name = callback.getName()\nval prompt = callback.getPrompt()\ncallback.setValue(42.0)"
+      },
+      "new_interface": {
+        "language": "Kotlin",
+        "configuration_name": "NumberAttributeInputCallback (New)",
+        "snippet": "val callback = node.callback as NumberAttributeInputCallback\nval name = callback.name\nval prompt = callback.prompt\ncallback.value = 42.0"
+      },
+      "key_mapping_summary": [
+        {
+          "legacy_key": "getName()",
+          "new_key": "name",
+          "notes": "Property access for attribute name."
+        },
+        {
+          "legacy_key": "getPrompt()",
+          "new_key": "prompt",
+          "notes": "Property access for prompt."
+        },
+        {
+          "legacy_key": "setValue(42.0)",
+          "new_key": "value = 42.0",
+          "notes": "Property assignment for numeric value."
+        }
+      ]
+    },
+    {
+      "id": "forgerock_callback_selectidp_015",
+      "description": "Migration of SelectIdPCallback for selecting an identity provider (social login).",
+      "notes": "SelectIdPCallback allows users to select from multiple identity providers. The new SDK is in the external-idp module with property access.",
+      "legacy_interface": {
+        "language": "Kotlin",
+        "configuration_name": "SelectIdPCallback (Legacy)",
+        "snippet": "val callback = node.getCallback(SelectIdPCallback::class.java)\nval providers = callback.getProviders()\nval provider = providers[0]\ncallback.setValue(provider.provider)"
+      },
+      "new_interface": {
+        "language": "Kotlin",
+        "configuration_name": "SelectIdpCallback (New)",
+        "snippet": "val callback = node.callback as SelectIdpCallback\nval providers = callback.providers\nval provider = providers[0]\ncallback.value = provider"
+      },
+      "key_mapping_summary": [
+        {
+          "legacy_key": "getProviders()",
+          "new_key": "providers",
+          "notes": "Property access for provider list."
+        },
+        {
+          "legacy_key": "setValue(provider.provider)",
+          "new_key": "value = provider",
+          "notes": "Property assignment with IdpValue object."
+        },
+        {
+          "legacy_key": "org.forgerock.android.auth.callback.SelectIdPCallback",
+          "new_key": "com.pingidentity.idp.journey.SelectIdpCallback",
+          "notes": "Callback moved to external-idp module."
+        }
+      ]
+    },
+    {
+      "id": "forgerock_callback_idp_016",
+      "description": "Migration of IdPCallback for external identity provider authentication.",
+      "notes": "IdPCallback handles OAuth/OIDC flows with external providers. The new SDK is in the external-idp module with suspend function support.",
+      "legacy_interface": {
+        "language": "Kotlin",
+        "configuration_name": "IdPCallback (Legacy)",
+        "snippet": "val callback = node.getCallback(IdPCallback::class.java)\nval provider = callback.getProvider()\nval tokenType = callback.getTokenType()\ncallback.setToken(token)\ncallback.setTokenType(\"id_token\")"
+      },
+      "new_interface": {
+        "language": "Kotlin",
+        "configuration_name": "IdpCallback (New)",
+        "snippet": "val callback = node.callback as IdpCallback\nval provider = callback.provider\nval tokenType = callback.tokenType\ncallback.signIn(context, idpHandler)"
+      },
+      "key_mapping_summary": [
+        {
+          "legacy_key": "getProvider()",
+          "new_key": "provider",
+          "notes": "Property access for provider info."
+        },
+        {
+          "legacy_key": "getTokenType()",
+          "new_key": "tokenType",
+          "notes": "Property access for token type."
+        },
+        {
+          "legacy_key": "setToken(token) / setTokenType(type)",
+          "new_key": "signIn(context, idpHandler)",
+          "notes": "Simplified with signIn suspend function that handles the flow."
+        },
+        {
+          "legacy_key": "org.forgerock.android.auth.callback.IdPCallback",
+          "new_key": "com.pingidentity.idp.journey.IdpCallback",
+          "notes": "Callback moved to external-idp module."
+        }
+      ]
+    },
+    {
+      "id": "forgerock_callback_devicebinding_017",
+      "description": "Migration of DeviceBindingCallback for device binding and authentication.",
+      "notes": "DeviceBindingCallback binds a device for authentication. The new SDK is in the mfa/binding module with suspend function support.",
+      "legacy_interface": {
+        "language": "Kotlin",
+        "configuration_name": "DeviceBindingCallback (Legacy)",
+        "snippet": "val callback = node.getCallback(DeviceBindingCallback::class.java)\nval userId = callback.getUserId()\nval challenge = callback.getChallenge()\ncallback.bind(context, fragmentActivity)"
+      },
+      "new_interface": {
+        "language": "Kotlin",
+        "configuration_name": "DeviceBindingCallback (New)",
+        "snippet": "val callback = node.callback as DeviceBindingCallback\nval userId = callback.userId\nval challenge = callback.challenge\ncallback.bind()"
+      },
+      "key_mapping_summary": [
+        {
+          "legacy_key": "getUserId()",
+          "new_key": "userId",
+          "notes": "Property access for user ID."
+        },
+        {
+          "legacy_key": "getChallenge()",
+          "new_key": "challenge",
+          "notes": "Property access for challenge."
+        },
+        {
+          "legacy_key": "bind(context, fragmentActivity)",
+          "new_key": "bind()",
+          "notes": "Simplified bind() suspend function without context parameter."
+        },
+        {
+          "legacy_key": "org.forgerock.android.auth.callback.DeviceBindingCallback",
+          "new_key": "com.pingidentity.device.binding.journey.DeviceBindingCallback",
+          "notes": "Callback moved to mfa/binding module."
+        }
+      ]
+    },
+    {
+      "id": "forgerock_callback_devicesigning_018",
+      "description": "Migration of DeviceSigningVerifierCallback for verifying device signatures.",
+      "notes": "DeviceSigningVerifierCallback verifies device signatures. The new SDK is in the mfa/binding module with suspend function support.",
+      "legacy_interface": {
+        "language": "Kotlin",
+        "configuration_name": "DeviceSigningVerifierCallback (Legacy)",
+        "snippet": "val callback = node.getCallback(DeviceSigningVerifierCallback::class.java)\nval userId = callback.getUserId()\nval challenge = callback.getChallenge()\ncallback.sign(context, fragmentActivity)"
+      },
+      "new_interface": {
+        "language": "Kotlin",
+        "configuration_name": "DeviceSigningVerifierCallback (New)",
+        "snippet": "val callback = node.callback as DeviceSigningVerifierCallback\nval userId = callback.userId\nval challenge = callback.challenge\ncallback.sign()"
+      },
+      "key_mapping_summary": [
+        {
+          "legacy_key": "getUserId()",
+          "new_key": "userId",
+          "notes": "Property access for user ID."
+        },
+        {
+          "legacy_key": "getChallenge()",
+          "new_key": "challenge",
+          "notes": "Property access for challenge."
+        },
+        {
+          "legacy_key": "sign(context, fragmentActivity)",
+          "new_key": "sign()",
+          "notes": "Simplified sign() suspend function without context parameter."
+        },
+        {
+          "legacy_key": "org.forgerock.android.auth.callback.DeviceSigningVerifierCallback",
+          "new_key": "com.pingidentity.device.binding.journey.DeviceSigningVerifierCallback",
+          "notes": "Callback moved to mfa/binding module."
+        }
+      ]
+    },
+    {
+      "id": "forgerock_callback_webauthnregistration_019",
+      "description": "Migration of WebAuthnRegistrationCallback for FIDO2/WebAuthn registration.",
+      "notes": "WebAuthnRegistrationCallback handles FIDO2 registration. The new SDK is in the mfa/fido module as FidoRegistrationCallback with suspend function support.",
+      "legacy_interface": {
+        "language": "Kotlin",
+        "configuration_name": "WebAuthnRegistrationCallback (Legacy)",
+        "snippet": "val callback = node.getCallback(WebAuthnRegistrationCallback::class.java)\ncallback.register(fragmentActivity, node) { result ->\n    when (result) {\n        is Success -> { }\n        is Failure -> { }\n    }\n}"
+      },
+      "new_interface": {
+        "language": "Kotlin",
+        "configuration_name": "FidoRegistrationCallback (New)",
+        "snippet": "val callback = node.callback as FidoRegistrationCallback\ntry {\n    callback.register(fragmentActivity)\n    // Registration successful\n} catch (e: Exception) {\n    // Handle error\n}"
+      },
+      "key_mapping_summary": [
+        {
+          "legacy_key": "register(activity, node, callback)",
+          "new_key": "register(activity)",
+          "notes": "Simplified register() suspend function with exception handling."
+        },
+        {
+          "legacy_key": "org.forgerock.android.auth.callback.WebAuthnRegistrationCallback",
+          "new_key": "com.pingidentity.fido.journey.FidoRegistrationCallback",
+          "notes": "Callback renamed and moved to mfa/fido module."
+        }
+      ]
+    },
+    {
+      "id": "forgerock_callback_webauthnauth_020",
+      "description": "Migration of WebAuthnAuthenticationCallback for FIDO2/WebAuthn authentication.",
+      "notes": "WebAuthnAuthenticationCallback handles FIDO2 authentication. The new SDK is in the mfa/fido module as FidoAuthenticationCallback with suspend function support.",
+      "legacy_interface": {
+        "language": "Kotlin",
+        "configuration_name": "WebAuthnAuthenticationCallback (Legacy)",
+        "snippet": "val callback = node.getCallback(WebAuthnAuthenticationCallback::class.java)\ncallback.authenticate(fragmentActivity, node) { result ->\n    when (result) {\n        is Success -> { }\n        is Failure -> { }\n    }\n}"
+      },
+      "new_interface": {
+        "language": "Kotlin",
+        "configuration_name": "FidoAuthenticationCallback (New)",
+        "snippet": "val callback = node.callback as FidoAuthenticationCallback\ntry {\n    callback.authenticate(fragmentActivity)\n    // Authentication successful\n} catch (e: Exception) {\n    // Handle error\n}"
+      },
+      "key_mapping_summary": [
+        {
+          "legacy_key": "authenticate(activity, node, callback)",
+          "new_key": "authenticate(activity)",
+          "notes": "Simplified authenticate() suspend function with exception handling."
+        },
+        {
+          "legacy_key": "org.forgerock.android.auth.callback.WebAuthnAuthenticationCallback",
+          "new_key": "com.pingidentity.fido.journey.FidoAuthenticationCallback",
+          "notes": "Callback renamed and moved to mfa/fido module."
+        }
+      ]
+    },
+    {
+      "id": "forgerock_callback_pingoneprotectinit_021",
+      "description": "Migration of PingOneProtectInitializeCallback for initializing PingOne Protect.",
+      "notes": "PingOneProtectInitializeCallback initializes Protect SDK. The new SDK is in the protect module with suspend function support.",
+      "legacy_interface": {
+        "language": "Kotlin",
+        "configuration_name": "PingOneProtectInitializeCallback (Legacy)",
+        "snippet": "val callback = node.getCallback(PingOneProtectInitializeCallback::class.java)\ncallback.start(context) { result ->\n    when (result) {\n        is Success -> { }\n        is Failure -> { }\n    }\n}"
+      },
+      "new_interface": {
+        "language": "Kotlin",
+        "configuration_name": "PingOneProtectInitializeCallback (New)",
+        "snippet": "val callback = node.callback as PingOneProtectInitializeCallback\ntry {\n    callback.initialize(context)\n    // Initialization successful\n} catch (e: Exception) {\n    // Handle error\n}"
+      },
+      "key_mapping_summary": [
+        {
+          "legacy_key": "start(context, callback)",
+          "new_key": "initialize(context)",
+          "notes": "Renamed to initialize() with suspend function."
+        },
+        {
+          "legacy_key": "org.forgerock.android.auth.callback.PingOneProtectInitializeCallback",
+          "new_key": "com.pingidentity.protect.journey.PingOneProtectInitializeCallback",
+          "notes": "Callback moved to protect module."
+        }
+      ]
+    },
+    {
+      "id": "forgerock_callback_pingoneprotecteval_022",
+      "description": "Migration of PingOneProtectEvaluationCallback for evaluating risk with PingOne Protect.",
+      "notes": "PingOneProtectEvaluationCallback evaluates risk signals. The new SDK is in the protect module with suspend function support.",
+      "legacy_interface": {
+        "language": "Kotlin",
+        "configuration_name": "PingOneProtectEvaluationCallback (Legacy)",
+        "snippet": "val callback = node.getCallback(PingOneProtectEvaluationCallback::class.java)\ncallback.getData() { result ->\n    when (result) {\n        is Success -> { }\n        is Failure -> { }\n    }\n}"
+      },
+      "new_interface": {
+        "language": "Kotlin",
+        "configuration_name": "PingOneProtectEvaluationCallback (New)",
+        "snippet": "val callback = node.callback as PingOneProtectEvaluationCallback\ntry {\n    callback.evaluate()\n    // Evaluation successful\n} catch (e: Exception) {\n    // Handle error\n}"
+      },
+      "key_mapping_summary": [
+        {
+          "legacy_key": "getData(callback)",
+          "new_key": "evaluate()",
+          "notes": "Renamed to evaluate() with suspend function."
+        },
+        {
+          "legacy_key": "org.forgerock.android.auth.callback.PingOneProtectEvaluationCallback",
+          "new_key": "com.pingidentity.protect.journey.PingOneProtectEvaluationCallback",
+          "notes": "Callback moved to protect module."
+        }
+      ]
+    }
+  ]
+}
