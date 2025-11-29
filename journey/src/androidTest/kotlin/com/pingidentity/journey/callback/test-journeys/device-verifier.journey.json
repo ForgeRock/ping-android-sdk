@@ -1,0 +1,1087 @@
+{
+  "meta": {
+    "exportDate": "2025-12-05T23:06:55.673Z",
+    "exportTool": "frodo",
+    "exportToolVersion": "v3.3.3 [v20.18.0]",
+    "exportedBy": "stoyan.petrov@forgerock.com",
+    "origin": "https://openam-sdks.forgeblocks.com/am",
+    "originAmVersion": "8.1.0"
+  },
+  "trees": {
+    "device-verifier": {
+      "circlesOfTrust": {},
+      "emailTemplates": {},
+      "innerNodes": {},
+      "nodes": {
+        "0672fdb0-07c6-4f31-b89b-1b4ce68a7a9e": {
+          "_id": "0672fdb0-07c6-4f31-b89b-1b4ce68a7a9e",
+          "_outcomes": [
+            {
+              "displayName": "continue",
+              "id": "continue"
+            }
+          ],
+          "_type": {
+            "_id": "ScriptedDecisionNode",
+            "collection": true,
+            "name": "Scripted Decision",
+            "version": "1.0"
+          },
+          "inputs": [
+            "*"
+          ],
+          "outcomes": [
+            "continue"
+          ],
+          "outputs": [
+            "*"
+          ],
+          "script": "445b2d0c-bc2a-46c1-9443-073c27f6fdd3"
+        },
+        "09e01990-3fe7-499d-bae5-31daf3749c55": {
+          "_id": "09e01990-3fe7-499d-bae5-31daf3749c55",
+          "_outcomes": [
+            {
+              "displayName": "True",
+              "id": "true"
+            },
+            {
+              "displayName": "False",
+              "id": "false"
+            }
+          ],
+          "_type": {
+            "_id": "MessageNode",
+            "collection": true,
+            "name": "Message Node",
+            "version": "1.0"
+          },
+          "message": {
+            "en": "Custom"
+          },
+          "messageNo": {},
+          "messageYes": {}
+        },
+        "0de09070-c2f3-4666-8b00-650b772847a4": {
+          "_id": "0de09070-c2f3-4666-8b00-650b772847a4",
+          "_outcomes": [
+            {
+              "displayName": "Success",
+              "id": "success"
+            },
+            {
+              "displayName": "Failure",
+              "id": "failure"
+            },
+            {
+              "displayName": "Unsupported",
+              "id": "Unsupported"
+            },
+            {
+              "displayName": "Abort",
+              "id": "Abort"
+            },
+            {
+              "displayName": "Timeout",
+              "id": "Timeout"
+            }
+          ],
+          "_type": {
+            "_id": "DeviceBindingNode",
+            "collection": true,
+            "name": "Device Binding",
+            "version": "1.0"
+          },
+          "applicationIds": [
+            "org.forgerock.auth",
+            "org.forgerock.android.auth.test",
+            "com.forgerock.FRTestHost",
+            "com.pingidentity.journey.test"
+          ],
+          "attestation": false,
+          "authenticationType": "NONE",
+          "clientErrorOutcomes": [
+            "Unsupported",
+            "Abort",
+            "Timeout"
+          ],
+          "description": {},
+          "maxSavedDevices": 0,
+          "postponeDeviceProfileStorage": false,
+          "subtitle": {},
+          "timeout": 60,
+          "title": {}
+        },
+        "0f416331-d170-4669-aeb2-6cc237ad028d": {
+          "_id": "0f416331-d170-4669-aeb2-6cc237ad028d",
+          "_outcomes": [
+            {
+              "displayName": "usernameless",
+              "id": "usernameless"
+            },
+            {
+              "displayName": "collectusername",
+              "id": "collectusername"
+            }
+          ],
+          "_type": {
+            "_id": "ChoiceCollectorNode",
+            "collection": true,
+            "name": "Choice Collector",
+            "version": "1.0"
+          },
+          "choices": [
+            "usernameless",
+            "collectusername"
+          ],
+          "defaultChoice": "collectusername",
+          "prompt": "Collect username?"
+        },
+        "1370e181-6449-41ba-b9a0-42e53a9219d7": {
+          "_id": "1370e181-6449-41ba-b9a0-42e53a9219d7",
+          "_outcomes": [
+            {
+              "displayName": "True",
+              "id": "true"
+            },
+            {
+              "displayName": "False",
+              "id": "false"
+            }
+          ],
+          "_type": {
+            "_id": "MessageNode",
+            "collection": true,
+            "name": "Message Node",
+            "version": "1.0"
+          },
+          "message": {
+            "en": "Failure"
+          },
+          "messageNo": {},
+          "messageYes": {}
+        },
+        "1382a24c-0ccc-4c8f-9f72-3ec76214fd05": {
+          "_id": "1382a24c-0ccc-4c8f-9f72-3ec76214fd05",
+          "_outcomes": [
+            {
+              "displayName": "Success",
+              "id": "success"
+            },
+            {
+              "displayName": "Failure",
+              "id": "failure"
+            },
+            {
+              "displayName": "Unsupported",
+              "id": "Unsupported"
+            },
+            {
+              "displayName": "Abort",
+              "id": "Abort"
+            },
+            {
+              "displayName": "Timeout",
+              "id": "Timeout"
+            }
+          ],
+          "_type": {
+            "_id": "DeviceBindingNode",
+            "collection": true,
+            "name": "Device Binding",
+            "version": "1.0"
+          },
+          "applicationIds": [
+            "org.forgerock.auth",
+            "org.forgerock.android.auth.test",
+            "com.forgerock.FRTestHost",
+            "com.pingidentity.journey.test"
+          ],
+          "attestation": false,
+          "authenticationType": "APPLICATION_PIN",
+          "clientErrorOutcomes": [
+            "Unsupported",
+            "Abort",
+            "Timeout"
+          ],
+          "description": {},
+          "maxSavedDevices": 0,
+          "postponeDeviceProfileStorage": false,
+          "subtitle": {},
+          "timeout": 60,
+          "title": {}
+        },
+        "21e7476e-4694-401f-8b64-3f9e79f2c419": {
+          "_id": "21e7476e-4694-401f-8b64-3f9e79f2c419",
+          "_outcomes": [
+            {
+              "displayName": "True",
+              "id": "true"
+            },
+            {
+              "displayName": "False",
+              "id": "false"
+            }
+          ],
+          "_type": {
+            "_id": "MessageNode",
+            "collection": true,
+            "name": "Message Node",
+            "version": "1.0"
+          },
+          "message": {
+            "en": "Success"
+          },
+          "messageNo": {},
+          "messageYes": {}
+        },
+        "28f19efc-97d7-4121-ac36-6417bb608ab2": {
+          "_id": "28f19efc-97d7-4121-ac36-6417bb608ab2",
+          "_outcomes": [
+            {
+              "displayName": "True",
+              "id": "true"
+            },
+            {
+              "displayName": "False",
+              "id": "false"
+            }
+          ],
+          "_type": {
+            "_id": "MessageNode",
+            "collection": true,
+            "name": "Message Node",
+            "version": "1.0"
+          },
+          "message": {
+            "en": "Custom claims exist"
+          },
+          "messageNo": {},
+          "messageYes": {}
+        },
+        "2d5393e8-804b-46aa-a399-cf36ddc92342": {
+          "_id": "2d5393e8-804b-46aa-a399-cf36ddc92342",
+          "_outcomes": [
+            {
+              "displayName": "Success",
+              "id": "success"
+            },
+            {
+              "displayName": "Failure",
+              "id": "failure"
+            },
+            {
+              "displayName": "No Registered Device",
+              "id": "noDeviceRegistered"
+            },
+            {
+              "displayName": "Key not found",
+              "id": "keyNotFound"
+            },
+            {
+              "displayName": "Unsupported",
+              "id": "Unsupported"
+            },
+            {
+              "displayName": "Abort",
+              "id": "Abort"
+            },
+            {
+              "displayName": "Timeout",
+              "id": "Timeout"
+            },
+            {
+              "displayName": "ClientNotRegistered",
+              "id": "ClientNotRegistered"
+            }
+          ],
+          "_type": {
+            "_id": "DeviceSigningVerifierNode",
+            "collection": true,
+            "name": "Device Signing Verifier",
+            "version": "1.0"
+          },
+          "applicationIds": [
+            "org.forgerock.android.auth.test",
+            "org.forgerock.auth",
+            "com.forgerock.FRTestHost",
+            "com.pingidentity.journey.test"
+          ],
+          "captureFailure": false,
+          "challenge": true,
+          "clientErrorOutcomes": [
+            "Unsupported",
+            "Abort",
+            "Timeout",
+            "ClientNotRegistered"
+          ],
+          "description": {},
+          "subtitle": {},
+          "timeout": 60,
+          "title": {}
+        },
+        "33c62d8a-145c-4571-b754-b0950e753671": {
+          "_id": "33c62d8a-145c-4571-b754-b0950e753671",
+          "_outcomes": [
+            {
+              "displayName": "True",
+              "id": "true"
+            },
+            {
+              "displayName": "False",
+              "id": "false"
+            }
+          ],
+          "_type": {
+            "_id": "MessageNode",
+            "collection": true,
+            "name": "Message Node",
+            "version": "1.0"
+          },
+          "message": {
+            "en": "No Registered Device"
+          },
+          "messageNo": {},
+          "messageYes": {}
+        },
+        "4660b6ea-685a-4a3a-954d-6e41e6bcabc7": {
+          "_id": "4660b6ea-685a-4a3a-954d-6e41e6bcabc7",
+          "_outcomes": [
+            {
+              "displayName": "True",
+              "id": "true"
+            },
+            {
+              "displayName": "False",
+              "id": "false"
+            }
+          ],
+          "_type": {
+            "_id": "MessageNode",
+            "collection": true,
+            "name": "Message Node",
+            "version": "1.0"
+          },
+          "message": {
+            "en": "Key Not Found"
+          },
+          "messageNo": {},
+          "messageYes": {}
+        },
+        "522acb7c-e09b-46db-866b-d004477f21b0": {
+          "_id": "522acb7c-e09b-46db-866b-d004477f21b0",
+          "_outcomes": [
+            {
+              "displayName": "True",
+              "id": "true"
+            },
+            {
+              "displayName": "False",
+              "id": "false"
+            }
+          ],
+          "_type": {
+            "_id": "MessageNode",
+            "collection": true,
+            "name": "Message Node",
+            "version": "1.0"
+          },
+          "message": {
+            "en": "ClientNotRegistered"
+          },
+          "messageNo": {},
+          "messageYes": {}
+        },
+        "53ad9902-7875-41eb-a980-fd8fffa4e188": {
+          "_id": "53ad9902-7875-41eb-a980-fd8fffa4e188",
+          "_outcomes": [
+            {
+              "displayName": "True",
+              "id": "true"
+            },
+            {
+              "displayName": "False",
+              "id": "false"
+            }
+          ],
+          "_type": {
+            "_id": "MessageNode",
+            "collection": true,
+            "name": "Message Node",
+            "version": "1.0"
+          },
+          "message": {
+            "en": "Custom Claims DO NOT Exist"
+          },
+          "messageNo": {},
+          "messageYes": {}
+        },
+        "6397407b-f9ce-4161-9e83-f13cebc2a8ba": {
+          "_id": "6397407b-f9ce-4161-9e83-f13cebc2a8ba",
+          "_outcomes": [
+            {
+              "displayName": "True",
+              "id": "true"
+            },
+            {
+              "displayName": "False",
+              "id": "false"
+            }
+          ],
+          "_type": {
+            "_id": "MessageNode",
+            "collection": true,
+            "name": "Message Node",
+            "version": "1.0"
+          },
+          "message": {
+            "en": "Unsupported"
+          },
+          "messageNo": {},
+          "messageYes": {}
+        },
+        "80908c32-d843-42be-8aa7-e7ac8833fbc0": {
+          "_id": "80908c32-d843-42be-8aa7-e7ac8833fbc0",
+          "_outcomes": [
+            {
+              "displayName": "Success",
+              "id": "success"
+            },
+            {
+              "displayName": "Failure",
+              "id": "failure"
+            },
+            {
+              "displayName": "No Registered Device",
+              "id": "noDeviceRegistered"
+            },
+            {
+              "displayName": "Key not found",
+              "id": "keyNotFound"
+            },
+            {
+              "displayName": "Unsupported",
+              "id": "Unsupported"
+            },
+            {
+              "displayName": "Abort",
+              "id": "Abort"
+            },
+            {
+              "displayName": "Timeout",
+              "id": "Timeout"
+            },
+            {
+              "displayName": "ClientNotRegistered",
+              "id": "ClientNotRegistered"
+            }
+          ],
+          "_type": {
+            "_id": "DeviceSigningVerifierNode",
+            "collection": true,
+            "name": "Device Signing Verifier",
+            "version": "1.0"
+          },
+          "applicationIds": [
+            "wrong-app-id"
+          ],
+          "captureFailure": false,
+          "challenge": true,
+          "clientErrorOutcomes": [
+            "Unsupported",
+            "Abort",
+            "Timeout",
+            "ClientNotRegistered"
+          ],
+          "description": {},
+          "subtitle": {},
+          "timeout": 60,
+          "title": {}
+        },
+        "8ef63750-fe7f-47a7-a205-8f5b21a5c076": {
+          "_id": "8ef63750-fe7f-47a7-a205-8f5b21a5c076",
+          "_outcomes": [
+            {
+              "displayName": "True",
+              "id": "true"
+            },
+            {
+              "displayName": "False",
+              "id": "false"
+            }
+          ],
+          "_type": {
+            "_id": "MessageNode",
+            "collection": true,
+            "name": "Message Node",
+            "version": "1.0"
+          },
+          "message": {
+            "en": "Abort"
+          },
+          "messageNo": {},
+          "messageYes": {}
+        },
+        "b04f3c64-f14e-4c56-b6e8-2fcdcc45f3b7": {
+          "_id": "b04f3c64-f14e-4c56-b6e8-2fcdcc45f3b7",
+          "_outcomes": [
+            {
+              "displayName": "Success",
+              "id": "success"
+            },
+            {
+              "displayName": "Failure",
+              "id": "failure"
+            },
+            {
+              "displayName": "No Registered Device",
+              "id": "noDeviceRegistered"
+            },
+            {
+              "displayName": "Key not found",
+              "id": "keyNotFound"
+            },
+            {
+              "displayName": "Unsupported",
+              "id": "Unsupported"
+            },
+            {
+              "displayName": "Abort",
+              "id": "Abort"
+            },
+            {
+              "displayName": "Timeout",
+              "id": "Timeout"
+            },
+            {
+              "displayName": "Custom",
+              "id": "Custom"
+            }
+          ],
+          "_type": {
+            "_id": "DeviceSigningVerifierNode",
+            "collection": true,
+            "name": "Device Signing Verifier",
+            "version": "1.0"
+          },
+          "applicationIds": [
+            "org.forgerock.auth",
+            "org.forgerock.android.auth.test",
+            "com.forgerock.FRTestHost",
+            "com.pingidentity.journey.test"
+          ],
+          "captureFailure": false,
+          "challenge": false,
+          "clientErrorOutcomes": [
+            "Unsupported",
+            "Abort",
+            "Timeout",
+            "Custom"
+          ],
+          "description": {
+            "en": "Custom Description"
+          },
+          "sharedStateAttribute": "challenge",
+          "subtitle": {
+            "en": "Custom Subtitle"
+          },
+          "timeout": 0,
+          "title": {
+            "en": "Custom Title"
+          }
+        },
+        "b1138b92-568c-4a7e-b25d-4e90ae8680d4": {
+          "_id": "b1138b92-568c-4a7e-b25d-4e90ae8680d4",
+          "_outcomes": [
+            {
+              "displayName": "Success",
+              "id": "success"
+            },
+            {
+              "displayName": "Failure",
+              "id": "failure"
+            },
+            {
+              "displayName": "No Registered Device",
+              "id": "noDeviceRegistered"
+            },
+            {
+              "displayName": "Key not found",
+              "id": "keyNotFound"
+            },
+            {
+              "displayName": "Unsupported",
+              "id": "Unsupported"
+            },
+            {
+              "displayName": "Abort",
+              "id": "Abort"
+            },
+            {
+              "displayName": "Timeout",
+              "id": "Timeout"
+            },
+            {
+              "displayName": "ClientNotRegistered",
+              "id": "ClientNotRegistered"
+            }
+          ],
+          "_type": {
+            "_id": "DeviceSigningVerifierNode",
+            "collection": true,
+            "name": "Device Signing Verifier",
+            "version": "1.0"
+          },
+          "applicationIds": [
+            "org.forgerock.auth",
+            "org.forgerock.android.auth.test",
+            "com.forgerock.FRTestHost",
+            "com.pingidentity.journey.test"
+          ],
+          "captureFailure": true,
+          "challenge": true,
+          "clientErrorOutcomes": [
+            "Unsupported",
+            "Abort",
+            "Timeout",
+            "ClientNotRegistered"
+          ],
+          "description": {},
+          "subtitle": {},
+          "timeout": 60,
+          "title": {}
+        },
+        "c9814680-c3d2-40f3-9c9b-2fab007e8f9d": {
+          "_id": "c9814680-c3d2-40f3-9c9b-2fab007e8f9d",
+          "_outcomes": [
+            {
+              "displayName": "true",
+              "id": "true"
+            },
+            {
+              "displayName": "false",
+              "id": "false"
+            }
+          ],
+          "_type": {
+            "_id": "ScriptedDecisionNode",
+            "collection": true,
+            "name": "Scripted Decision",
+            "version": "1.0"
+          },
+          "inputs": [
+            "*"
+          ],
+          "outcomes": [
+            "true",
+            "false"
+          ],
+          "outputs": [
+            "*"
+          ],
+          "script": "feae6489-c15c-42d7-ab26-f444d2976ffb"
+        },
+        "ce12db79-7a0f-42f7-b7ba-3a387ee037c1": {
+          "_id": "ce12db79-7a0f-42f7-b7ba-3a387ee037c1",
+          "_outcomes": [
+            {
+              "displayName": "True",
+              "id": "true"
+            },
+            {
+              "displayName": "False",
+              "id": "false"
+            }
+          ],
+          "_type": {
+            "_id": "MessageNode",
+            "collection": true,
+            "name": "Message Node",
+            "version": "1.0"
+          },
+          "message": {
+            "en": "Timeout"
+          },
+          "messageNo": {},
+          "messageYes": {}
+        },
+        "e107c55b-ab38-493a-94b0-a98a1e14e678": {
+          "_id": "e107c55b-ab38-493a-94b0-a98a1e14e678",
+          "_outcomes": [
+            {
+              "displayName": "default",
+              "id": "default"
+            },
+            {
+              "displayName": "custom",
+              "id": "custom"
+            },
+            {
+              "displayName": "bind",
+              "id": "bind"
+            },
+            {
+              "displayName": "bind-pin",
+              "id": "bind-pin"
+            },
+            {
+              "displayName": "wrong-app-id",
+              "id": "wrong-app-id"
+            },
+            {
+              "displayName": "custom-claims",
+              "id": "custom-claims"
+            }
+          ],
+          "_type": {
+            "_id": "ChoiceCollectorNode",
+            "collection": true,
+            "name": "Choice Collector",
+            "version": "1.0"
+          },
+          "choices": [
+            "default",
+            "custom",
+            "bind",
+            "bind-pin",
+            "wrong-app-id",
+            "custom-claims"
+          ],
+          "defaultChoice": "default",
+          "prompt": "Select Test Case"
+        },
+        "f27ba46b-aff9-49f7-8ece-d780b5a48668": {
+          "_id": "f27ba46b-aff9-49f7-8ece-d780b5a48668",
+          "_outcomes": [
+            {
+              "displayName": "Outcome",
+              "id": "outcome"
+            }
+          ],
+          "_type": {
+            "_id": "UsernameCollectorNode",
+            "collection": true,
+            "name": "Username Collector",
+            "version": "1.0"
+          }
+        }
+      },
+      "saml2Entities": {},
+      "scripts": {
+        "445b2d0c-bc2a-46c1-9443-073c27f6fdd3": {
+          "_id": "445b2d0c-bc2a-46c1-9443-073c27f6fdd3",
+          "context": "AUTHENTICATION_TREE_DECISION_NODE",
+          "createdBy": "null",
+          "creationDate": 0,
+          "default": false,
+          "description": "Puts a hard-coded challenge in the shared state object",
+          "evaluatorVersion": "1.0",
+          "language": "JAVASCRIPT",
+          "lastModifiedBy": "null",
+          "lastModifiedDate": 0,
+          "name": "Hardcoded Challenge",
+          "script": "\"/*\\n  - Data made available by nodes that have already executed are available in the sharedState variable.\\n  - The script should set outcome to either \\\"true\\\" or \\\"false\\\".\\n */\\n\\nsharedState.put(\\\"challenge\\\", \\\"my-hardcoded-challenge\\\");\\noutcome = \\\"continue\\\";\""
+        },
+        "feae6489-c15c-42d7-ab26-f444d2976ffb": {
+          "_id": "feae6489-c15c-42d7-ab26-f444d2976ffb",
+          "context": "AUTHENTICATION_TREE_DECISION_NODE",
+          "createdBy": "null",
+          "creationDate": 0,
+          "default": false,
+          "description": "null",
+          "evaluatorVersion": "1.0",
+          "language": "JAVASCRIPT",
+          "lastModifiedBy": "null",
+          "lastModifiedDate": 0,
+          "name": "Device Signing JWT",
+          "script": "\"var signJWT = nodeState.get(\\\"DeviceSigningVerifierNode.JWT\\\")\\n\\nif (signJWT) {\\n  logger.error(\\\"DeviceSigningVerifierNode.JWT: \\\" + signJWT);\\n  outcome = \\\"true\\\";\\n} else {\\n  logger.error(\\\"DeviceSigningVerifierNode.JWT is null!\\\");\\n  outcome = \\\"false\\\";\\n}\\n\""
+        }
+      },
+      "socialIdentityProviders": {},
+      "themes": [],
+      "tree": {
+        "_id": "device-verifier",
+        "enabled": true,
+        "entryNodeId": "0f416331-d170-4669-aeb2-6cc237ad028d",
+        "identityResource": "managed/alpha_user",
+        "innerTreeOnly": false,
+        "mustRun": false,
+        "noSession": false,
+        "nodes": {
+          "0672fdb0-07c6-4f31-b89b-1b4ce68a7a9e": {
+            "connections": {
+              "continue": "b04f3c64-f14e-4c56-b6e8-2fcdcc45f3b7"
+            },
+            "displayName": "Scripted Decision",
+            "nodeType": "ScriptedDecisionNode",
+            "x": 96,
+            "y": 538.015625
+          },
+          "09e01990-3fe7-499d-bae5-31daf3749c55": {
+            "connections": {
+              "false": "70e691a5-1e33-4ac3-a356-e7b6d60d92e0",
+              "true": "70e691a5-1e33-4ac3-a356-e7b6d60d92e0"
+            },
+            "displayName": "Custom",
+            "nodeType": "MessageNode",
+            "x": 969,
+            "y": 512.015625
+          },
+          "0de09070-c2f3-4666-8b00-650b772847a4": {
+            "connections": {
+              "Abort": "e301438c-0bd0-429c-ab0c-66126501069a",
+              "Timeout": "e301438c-0bd0-429c-ab0c-66126501069a",
+              "Unsupported": "e301438c-0bd0-429c-ab0c-66126501069a",
+              "failure": "e301438c-0bd0-429c-ab0c-66126501069a",
+              "success": "70e691a5-1e33-4ac3-a356-e7b6d60d92e0"
+            },
+            "displayName": "Device Binding (NONE)",
+            "nodeType": "DeviceBindingNode",
+            "x": 55,
+            "y": 603.015625
+          },
+          "0f416331-d170-4669-aeb2-6cc237ad028d": {
+            "connections": {
+              "collectusername": "f27ba46b-aff9-49f7-8ece-d780b5a48668",
+              "usernameless": "b1138b92-568c-4a7e-b25d-4e90ae8680d4"
+            },
+            "displayName": "Usernameless Flow?",
+            "nodeType": "ChoiceCollectorNode",
+            "x": 67,
+            "y": 72.3680419921875
+          },
+          "1370e181-6449-41ba-b9a0-42e53a9219d7": {
+            "connections": {
+              "false": "70e691a5-1e33-4ac3-a356-e7b6d60d92e0",
+              "true": "70e691a5-1e33-4ac3-a356-e7b6d60d92e0"
+            },
+            "displayName": "Failure",
+            "nodeType": "MessageNode",
+            "x": 755,
+            "y": 181.015625
+          },
+          "1382a24c-0ccc-4c8f-9f72-3ec76214fd05": {
+            "connections": {
+              "Abort": "e301438c-0bd0-429c-ab0c-66126501069a",
+              "Timeout": "e301438c-0bd0-429c-ab0c-66126501069a",
+              "Unsupported": "e301438c-0bd0-429c-ab0c-66126501069a",
+              "failure": "e301438c-0bd0-429c-ab0c-66126501069a",
+              "success": "70e691a5-1e33-4ac3-a356-e7b6d60d92e0"
+            },
+            "displayName": "Device Binding (PIN)",
+            "nodeType": "DeviceBindingNode",
+            "x": 70,
+            "y": 788.3680419921875
+          },
+          "21e7476e-4694-401f-8b64-3f9e79f2c419": {
+            "connections": {
+              "false": "70e691a5-1e33-4ac3-a356-e7b6d60d92e0",
+              "true": "70e691a5-1e33-4ac3-a356-e7b6d60d92e0"
+            },
+            "displayName": "Success",
+            "nodeType": "MessageNode",
+            "x": 752,
+            "y": 67
+          },
+          "28f19efc-97d7-4121-ac36-6417bb608ab2": {
+            "connections": {
+              "false": "70e691a5-1e33-4ac3-a356-e7b6d60d92e0",
+              "true": "70e691a5-1e33-4ac3-a356-e7b6d60d92e0"
+            },
+            "displayName": "Custom Claims Exist",
+            "nodeType": "MessageNode",
+            "x": 1020.00390625,
+            "y": 791.01953125
+          },
+          "2d5393e8-804b-46aa-a399-cf36ddc92342": {
+            "connections": {
+              "Abort": "8ef63750-fe7f-47a7-a205-8f5b21a5c076",
+              "ClientNotRegistered": "522acb7c-e09b-46db-866b-d004477f21b0",
+              "Timeout": "ce12db79-7a0f-42f7-b7ba-3a387ee037c1",
+              "Unsupported": "6397407b-f9ce-4161-9e83-f13cebc2a8ba",
+              "failure": "1370e181-6449-41ba-b9a0-42e53a9219d7",
+              "keyNotFound": "4660b6ea-685a-4a3a-954d-6e41e6bcabc7",
+              "noDeviceRegistered": "33c62d8a-145c-4571-b754-b0950e753671",
+              "success": "c9814680-c3d2-40f3-9c9b-2fab007e8f9d"
+            },
+            "displayName": "Device Signing Verifier (claims)",
+            "nodeType": "DeviceSigningVerifierNode",
+            "x": 331.859375,
+            "y": 871.01953125
+          },
+          "33c62d8a-145c-4571-b754-b0950e753671": {
+            "connections": {
+              "false": "70e691a5-1e33-4ac3-a356-e7b6d60d92e0",
+              "true": "70e691a5-1e33-4ac3-a356-e7b6d60d92e0"
+            },
+            "displayName": "No Registered Device",
+            "nodeType": "MessageNode",
+            "x": 756,
+            "y": 297.015625
+          },
+          "4660b6ea-685a-4a3a-954d-6e41e6bcabc7": {
+            "connections": {
+              "false": "70e691a5-1e33-4ac3-a356-e7b6d60d92e0",
+              "true": "70e691a5-1e33-4ac3-a356-e7b6d60d92e0"
+            },
+            "displayName": "Key Not Found",
+            "nodeType": "MessageNode",
+            "x": 759,
+            "y": 411.015625
+          },
+          "522acb7c-e09b-46db-866b-d004477f21b0": {
+            "connections": {
+              "false": "e301438c-0bd0-429c-ab0c-66126501069a",
+              "true": "e301438c-0bd0-429c-ab0c-66126501069a"
+            },
+            "displayName": "ClientNotRegistered",
+            "nodeType": "MessageNode",
+            "x": 757,
+            "y": 758.515625
+          },
+          "53ad9902-7875-41eb-a980-fd8fffa4e188": {
+            "connections": {
+              "false": "70e691a5-1e33-4ac3-a356-e7b6d60d92e0",
+              "true": "70e691a5-1e33-4ac3-a356-e7b6d60d92e0"
+            },
+            "displayName": "Custom Claims DO NOT Exist",
+            "nodeType": "MessageNode",
+            "x": 990.00390625,
+            "y": 945.01953125
+          },
+          "6397407b-f9ce-4161-9e83-f13cebc2a8ba": {
+            "connections": {
+              "false": "e301438c-0bd0-429c-ab0c-66126501069a",
+              "true": "e301438c-0bd0-429c-ab0c-66126501069a"
+            },
+            "displayName": "Unsupported",
+            "nodeType": "MessageNode",
+            "x": 760,
+            "y": 527.015625
+          },
+          "80908c32-d843-42be-8aa7-e7ac8833fbc0": {
+            "connections": {
+              "Abort": "8ef63750-fe7f-47a7-a205-8f5b21a5c076",
+              "ClientNotRegistered": "522acb7c-e09b-46db-866b-d004477f21b0",
+              "Timeout": "ce12db79-7a0f-42f7-b7ba-3a387ee037c1",
+              "Unsupported": "6397407b-f9ce-4161-9e83-f13cebc2a8ba",
+              "failure": "e301438c-0bd0-429c-ab0c-66126501069a",
+              "keyNotFound": "4660b6ea-685a-4a3a-954d-6e41e6bcabc7",
+              "noDeviceRegistered": "33c62d8a-145c-4571-b754-b0950e753671",
+              "success": "70e691a5-1e33-4ac3-a356-e7b6d60d92e0"
+            },
+            "displayName": "Device Signing Verifier (wrong-app-id)",
+            "nodeType": "DeviceSigningVerifierNode",
+            "x": 323.1484375,
+            "y": 595.935546875
+          },
+          "8ef63750-fe7f-47a7-a205-8f5b21a5c076": {
+            "connections": {
+              "false": "70e691a5-1e33-4ac3-a356-e7b6d60d92e0",
+              "true": "70e691a5-1e33-4ac3-a356-e7b6d60d92e0"
+            },
+            "displayName": "Abort",
+            "nodeType": "MessageNode",
+            "x": 762,
+            "y": 644.015625
+          },
+          "b04f3c64-f14e-4c56-b6e8-2fcdcc45f3b7": {
+            "connections": {
+              "Abort": "8ef63750-fe7f-47a7-a205-8f5b21a5c076",
+              "Custom": "09e01990-3fe7-499d-bae5-31daf3749c55",
+              "Timeout": "ce12db79-7a0f-42f7-b7ba-3a387ee037c1",
+              "Unsupported": "6397407b-f9ce-4161-9e83-f13cebc2a8ba",
+              "failure": "1370e181-6449-41ba-b9a0-42e53a9219d7",
+              "keyNotFound": "4660b6ea-685a-4a3a-954d-6e41e6bcabc7",
+              "noDeviceRegistered": "33c62d8a-145c-4571-b754-b0950e753671",
+              "success": "21e7476e-4694-401f-8b64-3f9e79f2c419"
+            },
+            "displayName": "Device Signing Verifier (custom)",
+            "nodeType": "DeviceSigningVerifierNode",
+            "x": 326.4296875,
+            "y": 324.015625
+          },
+          "b1138b92-568c-4a7e-b25d-4e90ae8680d4": {
+            "connections": {
+              "Abort": "8ef63750-fe7f-47a7-a205-8f5b21a5c076",
+              "ClientNotRegistered": "522acb7c-e09b-46db-866b-d004477f21b0",
+              "Timeout": "ce12db79-7a0f-42f7-b7ba-3a387ee037c1",
+              "Unsupported": "6397407b-f9ce-4161-9e83-f13cebc2a8ba",
+              "failure": "1370e181-6449-41ba-b9a0-42e53a9219d7",
+              "keyNotFound": "4660b6ea-685a-4a3a-954d-6e41e6bcabc7",
+              "noDeviceRegistered": "33c62d8a-145c-4571-b754-b0950e753671",
+              "success": "21e7476e-4694-401f-8b64-3f9e79f2c419"
+            },
+            "displayName": "Device Signing Verifier (default)",
+            "nodeType": "DeviceSigningVerifierNode",
+            "x": 426,
+            "y": 32.015625
+          },
+          "c9814680-c3d2-40f3-9c9b-2fab007e8f9d": {
+            "connections": {
+              "false": "53ad9902-7875-41eb-a980-fd8fffa4e188",
+              "true": "28f19efc-97d7-4121-ac36-6417bb608ab2"
+            },
+            "displayName": "Scripted Decision",
+            "nodeType": "ScriptedDecisionNode",
+            "x": 737.00390625,
+            "y": 944.01953125
+          },
+          "ce12db79-7a0f-42f7-b7ba-3a387ee037c1": {
+            "connections": {
+              "false": "70e691a5-1e33-4ac3-a356-e7b6d60d92e0",
+              "true": "70e691a5-1e33-4ac3-a356-e7b6d60d92e0"
+            },
+            "displayName": "Timeout",
+            "nodeType": "MessageNode",
+            "x": 970,
+            "y": 644.015625
+          },
+          "e107c55b-ab38-493a-94b0-a98a1e14e678": {
+            "connections": {
+              "bind": "0de09070-c2f3-4666-8b00-650b772847a4",
+              "bind-pin": "1382a24c-0ccc-4c8f-9f72-3ec76214fd05",
+              "custom": "0672fdb0-07c6-4f31-b89b-1b4ce68a7a9e",
+              "custom-claims": "2d5393e8-804b-46aa-a399-cf36ddc92342",
+              "default": "b1138b92-568c-4a7e-b25d-4e90ae8680d4",
+              "wrong-app-id": "80908c32-d843-42be-8aa7-e7ac8833fbc0"
+            },
+            "displayName": "Select Node Configuration",
+            "nodeType": "ChoiceCollectorNode",
+            "x": 35,
+            "y": 326.015625
+          },
+          "f27ba46b-aff9-49f7-8ece-d780b5a48668": {
+            "connections": {
+              "outcome": "e107c55b-ab38-493a-94b0-a98a1e14e678"
+            },
+            "displayName": "Username Collector",
+            "nodeType": "UsernameCollectorNode",
+            "x": 75,
+            "y": 231.015625
+          }
+        },
+        "staticNodes": {
+          "70e691a5-1e33-4ac3-a356-e7b6d60d92e0": {
+            "x": 1130,
+            "y": 28
+          },
+          "e301438c-0bd0-429c-ab0c-66126501069a": {
+            "x": 1364,
+            "y": 380
+          },
+          "startNode": {
+            "x": 0,
+            "y": 9
+          }
+        },
+        "transactionalOnly": false,
+        "uiConfig": {
+          "annotations": "{\"forNodes\":{},\"structural\":[]}",
+          "categories": "[]"
+        }
+      },
+      "variable": {}
+    }
+  }
+}

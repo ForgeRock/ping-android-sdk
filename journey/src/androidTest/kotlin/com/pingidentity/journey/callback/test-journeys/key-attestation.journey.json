@@ -1,0 +1,769 @@
+{
+  "meta": {
+    "exportDate": "2025-12-05T23:07:45.718Z",
+    "exportTool": "frodo",
+    "exportToolVersion": "v3.3.3 [v20.18.0]",
+    "exportedBy": "stoyan.petrov@forgerock.com",
+    "origin": "https://openam-sdks.forgeblocks.com/am",
+    "originAmVersion": "8.1.0"
+  },
+  "trees": {
+    "key-attestation": {
+      "circlesOfTrust": {},
+      "emailTemplates": {},
+      "innerNodes": {},
+      "nodes": {
+        "0413b458-55a7-4734-8fe6-1bdd89cc6307": {
+          "_id": "0413b458-55a7-4734-8fe6-1bdd89cc6307",
+          "_outcomes": [
+            {
+              "displayName": "Success",
+              "id": "success"
+            },
+            {
+              "displayName": "Failure",
+              "id": "failure"
+            },
+            {
+              "displayName": "Unsupported",
+              "id": "Unsupported"
+            },
+            {
+              "displayName": "Abort",
+              "id": "Abort"
+            },
+            {
+              "displayName": "Timeout",
+              "id": "Timeout"
+            }
+          ],
+          "_type": {
+            "_id": "DeviceBindingNode",
+            "collection": true,
+            "name": "Device Binding",
+            "version": "1.0"
+          },
+          "applicationIds": [
+            "org.forgerock.android.auth.test",
+            "org.forgerock.auth",
+            "org.forgerock.android.integration.test",
+            "com.pingidentity.journey.test"
+          ],
+          "attestation": true,
+          "authenticationType": "APPLICATION_PIN",
+          "clientErrorOutcomes": [
+            "Unsupported",
+            "Abort",
+            "Timeout"
+          ],
+          "description": {},
+          "maxSavedDevices": 0,
+          "postponeDeviceProfileStorage": false,
+          "subtitle": {},
+          "timeout": 60,
+          "title": {}
+        },
+        "21362525-8fe0-4708-9b75-293badc6bbf3": {
+          "_id": "21362525-8fe0-4708-9b75-293badc6bbf3",
+          "_outcomes": [
+            {
+              "displayName": "Success",
+              "id": "success"
+            },
+            {
+              "displayName": "Failure",
+              "id": "failure"
+            },
+            {
+              "displayName": "Unsupported",
+              "id": "Unsupported"
+            },
+            {
+              "displayName": "Abort",
+              "id": "Abort"
+            },
+            {
+              "displayName": "Timeout",
+              "id": "Timeout"
+            }
+          ],
+          "_type": {
+            "_id": "DeviceBindingNode",
+            "collection": true,
+            "name": "Device Binding",
+            "version": "1.0"
+          },
+          "applicationIds": [
+            "org.forgerock.android.auth.test",
+            "org.forgerock.auth",
+            "org.forgerock.android.integration.test",
+            "com.pingidentity.journey.test"
+          ],
+          "attestation": true,
+          "authenticationType": "NONE",
+          "clientErrorOutcomes": [
+            "Unsupported",
+            "Abort",
+            "Timeout"
+          ],
+          "description": {},
+          "maxSavedDevices": 0,
+          "postponeDeviceProfileStorage": true,
+          "subtitle": {},
+          "timeout": 60,
+          "title": {}
+        },
+        "286375b5-430d-41d4-8082-bfc1ee60ccb5": {
+          "_id": "286375b5-430d-41d4-8082-bfc1ee60ccb5",
+          "_outcomes": [
+            {
+              "displayName": "True",
+              "id": "true"
+            },
+            {
+              "displayName": "False",
+              "id": "false"
+            }
+          ],
+          "_type": {
+            "_id": "MessageNode",
+            "collection": true,
+            "name": "Message Node",
+            "version": "1.0"
+          },
+          "message": {
+            "en": "Unsupported"
+          },
+          "messageNo": {},
+          "messageYes": {}
+        },
+        "2f48418f-c618-43d1-abac-d13fe2df1b76": {
+          "_id": "2f48418f-c618-43d1-abac-d13fe2df1b76",
+          "_outcomes": [
+            {
+              "displayName": "Success",
+              "id": "success"
+            },
+            {
+              "displayName": "Failure",
+              "id": "failure"
+            },
+            {
+              "displayName": "Unsupported",
+              "id": "Unsupported"
+            },
+            {
+              "displayName": "Abort",
+              "id": "Abort"
+            },
+            {
+              "displayName": "Timeout",
+              "id": "Timeout"
+            }
+          ],
+          "_type": {
+            "_id": "DeviceBindingNode",
+            "collection": true,
+            "name": "Device Binding",
+            "version": "1.0"
+          },
+          "applicationIds": [
+            "org.forgerock.android.auth.test",
+            "org.forgerock.auth",
+            "org.forgerock.android.integration.test",
+            "com.pingidentity.journey.test"
+          ],
+          "attestation": false,
+          "authenticationType": "APPLICATION_PIN",
+          "clientErrorOutcomes": [
+            "Unsupported",
+            "Abort",
+            "Timeout"
+          ],
+          "description": {},
+          "maxSavedDevices": 0,
+          "postponeDeviceProfileStorage": false,
+          "subtitle": {},
+          "timeout": 60,
+          "title": {}
+        },
+        "3746c0c6-3c6f-4ba8-acb2-eab8326edf43": {
+          "_id": "3746c0c6-3c6f-4ba8-acb2-eab8326edf43",
+          "_outcomes": [
+            {
+              "displayName": "attestation-var-set",
+              "id": "attestation-var-set"
+            },
+            {
+              "displayName": "attestation-var-null",
+              "id": "attestation-var-null"
+            },
+            {
+              "displayName": "pin-attestation-off",
+              "id": "pin-attestation-off"
+            },
+            {
+              "displayName": "pin-attestation-on",
+              "id": "pin-attestation-on"
+            },
+            {
+              "displayName": "none-attestation-on",
+              "id": "none-attestation-on"
+            },
+            {
+              "displayName": "none-attestation-off",
+              "id": "none-attestation-off"
+            }
+          ],
+          "_type": {
+            "_id": "ChoiceCollectorNode",
+            "collection": true,
+            "name": "Choice Collector",
+            "version": "1.0"
+          },
+          "choices": [
+            "attestation-var-set",
+            "attestation-var-null",
+            "pin-attestation-off",
+            "pin-attestation-on",
+            "none-attestation-on",
+            "none-attestation-off"
+          ],
+          "defaultChoice": "none-none",
+          "prompt": "Select Test Case"
+        },
+        "3fb38cc1-ed93-48bc-a303-7bdc8f253c73": {
+          "_id": "3fb38cc1-ed93-48bc-a303-7bdc8f253c73",
+          "_outcomes": [
+            {
+              "displayName": "True",
+              "id": "true"
+            },
+            {
+              "displayName": "False",
+              "id": "false"
+            }
+          ],
+          "_type": {
+            "_id": "MessageNode",
+            "collection": true,
+            "name": "Message Node",
+            "version": "1.0"
+          },
+          "message": {
+            "en": "Attestation var DOES NOT exist"
+          },
+          "messageNo": {},
+          "messageYes": {}
+        },
+        "48b4cfdb-01b7-4089-b299-3e5b626b16e6": {
+          "_id": "48b4cfdb-01b7-4089-b299-3e5b626b16e6",
+          "_outcomes": [
+            {
+              "displayName": "Outcome",
+              "id": "outcome"
+            }
+          ],
+          "_type": {
+            "_id": "UsernameCollectorNode",
+            "collection": true,
+            "name": "Username Collector",
+            "version": "1.0"
+          }
+        },
+        "55a2d97a-0a8c-49b9-b36d-17145ebcf7c7": {
+          "_id": "55a2d97a-0a8c-49b9-b36d-17145ebcf7c7",
+          "_outcomes": [
+            {
+              "displayName": "True",
+              "id": "true"
+            },
+            {
+              "displayName": "False",
+              "id": "false"
+            }
+          ],
+          "_type": {
+            "_id": "MessageNode",
+            "collection": true,
+            "name": "Message Node",
+            "version": "1.0"
+          },
+          "message": {
+            "en": "Attestation var exists"
+          },
+          "messageNo": {},
+          "messageYes": {}
+        },
+        "563923c7-06ac-4241-8f75-839eaac500ce": {
+          "_id": "563923c7-06ac-4241-8f75-839eaac500ce",
+          "_outcomes": [
+            {
+              "displayName": "True",
+              "id": "true"
+            },
+            {
+              "displayName": "False",
+              "id": "false"
+            }
+          ],
+          "_type": {
+            "_id": "MessageNode",
+            "collection": true,
+            "name": "Message Node",
+            "version": "1.0"
+          },
+          "message": {
+            "en": "Failure"
+          },
+          "messageNo": {},
+          "messageYes": {}
+        },
+        "681c38ef-0a9a-46d3-aff8-3e0243e8a630": {
+          "_id": "681c38ef-0a9a-46d3-aff8-3e0243e8a630",
+          "_outcomes": [
+            {
+              "displayName": "Success",
+              "id": "success"
+            },
+            {
+              "displayName": "Failure",
+              "id": "failure"
+            },
+            {
+              "displayName": "Unsupported",
+              "id": "Unsupported"
+            },
+            {
+              "displayName": "Abort",
+              "id": "Abort"
+            },
+            {
+              "displayName": "Timeout",
+              "id": "Timeout"
+            }
+          ],
+          "_type": {
+            "_id": "DeviceBindingNode",
+            "collection": true,
+            "name": "Device Binding",
+            "version": "1.0"
+          },
+          "applicationIds": [
+            "org.forgerock.android.integration.test",
+            "com.pingidentity.journey.test"
+          ],
+          "attestation": false,
+          "authenticationType": "NONE",
+          "clientErrorOutcomes": [
+            "Unsupported",
+            "Abort",
+            "Timeout"
+          ],
+          "description": {},
+          "maxSavedDevices": 0,
+          "postponeDeviceProfileStorage": false,
+          "subtitle": {},
+          "timeout": 60,
+          "title": {}
+        },
+        "8408d580-6c94-4d96-bf05-3beff973ebdb": {
+          "_id": "8408d580-6c94-4d96-bf05-3beff973ebdb",
+          "_outcomes": [
+            {
+              "displayName": "True",
+              "id": "true"
+            },
+            {
+              "displayName": "False",
+              "id": "false"
+            }
+          ],
+          "_type": {
+            "_id": "MessageNode",
+            "collection": true,
+            "name": "Message Node",
+            "version": "1.0"
+          },
+          "message": {
+            "en": "Timout"
+          },
+          "messageNo": {},
+          "messageYes": {}
+        },
+        "a12f3594-2578-49e2-936e-bc8f2d2336e0": {
+          "_id": "a12f3594-2578-49e2-936e-bc8f2d2336e0",
+          "_outcomes": [
+            {
+              "displayName": "True",
+              "id": "true"
+            },
+            {
+              "displayName": "False",
+              "id": "false"
+            }
+          ],
+          "_type": {
+            "_id": "MessageNode",
+            "collection": true,
+            "name": "Message Node",
+            "version": "1.0"
+          },
+          "message": {
+            "en": "Abort"
+          },
+          "messageNo": {},
+          "messageYes": {}
+        },
+        "bb64ec18-79d1-43cc-a07d-81b7f71f788a": {
+          "_id": "bb64ec18-79d1-43cc-a07d-81b7f71f788a",
+          "_outcomes": [
+            {
+              "displayName": "Success",
+              "id": "success"
+            },
+            {
+              "displayName": "Failure",
+              "id": "failure"
+            },
+            {
+              "displayName": "Unsupported",
+              "id": "Unsupported"
+            },
+            {
+              "displayName": "Abort",
+              "id": "Abort"
+            },
+            {
+              "displayName": "Timeout",
+              "id": "Timeout"
+            }
+          ],
+          "_type": {
+            "_id": "DeviceBindingNode",
+            "collection": true,
+            "name": "Device Binding",
+            "version": "1.0"
+          },
+          "applicationIds": [
+            "org.forgerock.android.integration.test",
+            "com.pingidentity.journey.test"
+          ],
+          "attestation": true,
+          "authenticationType": "NONE",
+          "clientErrorOutcomes": [
+            "Unsupported",
+            "Abort",
+            "Timeout"
+          ],
+          "description": {},
+          "maxSavedDevices": 0,
+          "postponeDeviceProfileStorage": true,
+          "subtitle": {},
+          "timeout": 60,
+          "title": {}
+        },
+        "be0978ec-a776-4559-9617-923489ec30f7": {
+          "_id": "be0978ec-a776-4559-9617-923489ec30f7",
+          "_outcomes": [
+            {
+              "displayName": "Success",
+              "id": "success"
+            },
+            {
+              "displayName": "Failure",
+              "id": "failure"
+            },
+            {
+              "displayName": "Unsupported",
+              "id": "Unsupported"
+            },
+            {
+              "displayName": "Abort",
+              "id": "Abort"
+            },
+            {
+              "displayName": "Timeout",
+              "id": "Timeout"
+            }
+          ],
+          "_type": {
+            "_id": "DeviceBindingNode",
+            "collection": true,
+            "name": "Device Binding",
+            "version": "1.0"
+          },
+          "applicationIds": [
+            "org.forgerock.android.auth.test",
+            "org.forgerock.auth",
+            "org.forgerock.android.integration.test",
+            "com.pingidentity.journey.test"
+          ],
+          "attestation": false,
+          "authenticationType": "NONE",
+          "clientErrorOutcomes": [
+            "Unsupported",
+            "Abort",
+            "Timeout"
+          ],
+          "description": {},
+          "maxSavedDevices": 0,
+          "postponeDeviceProfileStorage": true,
+          "subtitle": {},
+          "timeout": 60,
+          "title": {}
+        },
+        "c1d3b035-7c33-4f2e-8110-3cfaedfb7153": {
+          "_id": "c1d3b035-7c33-4f2e-8110-3cfaedfb7153",
+          "_outcomes": [
+            {
+              "displayName": "true",
+              "id": "true"
+            },
+            {
+              "displayName": "false",
+              "id": "false"
+            }
+          ],
+          "_type": {
+            "_id": "ScriptedDecisionNode",
+            "collection": true,
+            "name": "Scripted Decision",
+            "version": "1.0"
+          },
+          "inputs": [
+            "*"
+          ],
+          "outcomes": [
+            "true",
+            "false"
+          ],
+          "outputs": [
+            "*"
+          ],
+          "script": "300d5e9c-2578-4a2c-9a94-f18659a644c3"
+        }
+      },
+      "saml2Entities": {},
+      "scripts": {
+        "300d5e9c-2578-4a2c-9a94-f18659a644c3": {
+          "_id": "300d5e9c-2578-4a2c-9a94-f18659a644c3",
+          "context": "AUTHENTICATION_TREE_DECISION_NODE",
+          "createdBy": "null",
+          "creationDate": 0,
+          "default": false,
+          "description": "This script is used by the Android e2e test cases. It checks if the Device Binding node has included the DeviceBindingCallback.ATTESTATION variable in transient state.",
+          "evaluatorVersion": "1.0",
+          "language": "JAVASCRIPT",
+          "lastModifiedBy": "id=9efa21ef-61ea-4ca9-b0fa-6fbfde82dd8e,ou=user,ou=am-config",
+          "lastModifiedDate": 1764618744708,
+          "name": "Key Attestation Logger",
+          "script": "\"var attestationData = nodeState.get(\\\"DeviceBindingNode.ATTESTATION\\\")\\n\\nif (attestationData) {\\n  logger.message(\\\"DeviceBindingNode.ATTESTATION: \\\" + attestationData);\\n  outcome = \\\"true\\\";\\n} else {\\n  logger.message(\\\"DeviceBindingNode.ATTESTATION is null!\\\");\\n  outcome = \\\"false\\\";\\n}\\n\\n\\n\""
+        }
+      },
+      "socialIdentityProviders": {},
+      "themes": [],
+      "tree": {
+        "_id": "key-attestation",
+        "enabled": true,
+        "entryNodeId": "48b4cfdb-01b7-4089-b299-3e5b626b16e6",
+        "identityResource": "managed/alpha_user",
+        "innerTreeOnly": false,
+        "mustRun": false,
+        "noSession": false,
+        "nodes": {
+          "0413b458-55a7-4734-8fe6-1bdd89cc6307": {
+            "connections": {
+              "Abort": "a12f3594-2578-49e2-936e-bc8f2d2336e0",
+              "Timeout": "8408d580-6c94-4d96-bf05-3beff973ebdb",
+              "Unsupported": "286375b5-430d-41d4-8082-bfc1ee60ccb5",
+              "failure": "563923c7-06ac-4241-8f75-839eaac500ce",
+              "success": "70e691a5-1e33-4ac3-a356-e7b6d60d92e0"
+            },
+            "displayName": "Device Binding (APPLICATION-PIN-ON)",
+            "nodeType": "DeviceBindingNode",
+            "x": 54,
+            "y": 592.935546875
+          },
+          "21362525-8fe0-4708-9b75-293badc6bbf3": {
+            "connections": {
+              "Abort": "a12f3594-2578-49e2-936e-bc8f2d2336e0",
+              "Unsupported": "286375b5-430d-41d4-8082-bfc1ee60ccb5",
+              "failure": "563923c7-06ac-4241-8f75-839eaac500ce",
+              "success": "c1d3b035-7c33-4f2e-8110-3cfaedfb7153"
+            },
+            "displayName": "Device Binding (with attestation)",
+            "nodeType": "DeviceBindingNode",
+            "x": 387,
+            "y": 413.015625
+          },
+          "286375b5-430d-41d4-8082-bfc1ee60ccb5": {
+            "connections": {
+              "false": "e301438c-0bd0-429c-ab0c-66126501069a",
+              "true": "e301438c-0bd0-429c-ab0c-66126501069a"
+            },
+            "displayName": "Report Unsupported",
+            "nodeType": "MessageNode",
+            "x": 724,
+            "y": 233.935546875
+          },
+          "2f48418f-c618-43d1-abac-d13fe2df1b76": {
+            "connections": {
+              "Abort": "a12f3594-2578-49e2-936e-bc8f2d2336e0",
+              "Timeout": "8408d580-6c94-4d96-bf05-3beff973ebdb",
+              "Unsupported": "286375b5-430d-41d4-8082-bfc1ee60ccb5",
+              "failure": "563923c7-06ac-4241-8f75-839eaac500ce",
+              "success": "70e691a5-1e33-4ac3-a356-e7b6d60d92e0"
+            },
+            "displayName": "Device Binding (APPLICATION-PIN-OFF)",
+            "nodeType": "DeviceBindingNode",
+            "x": 58,
+            "y": 391.935546875
+          },
+          "3746c0c6-3c6f-4ba8-acb2-eab8326edf43": {
+            "connections": {
+              "attestation-var-null": "be0978ec-a776-4559-9617-923489ec30f7",
+              "attestation-var-set": "21362525-8fe0-4708-9b75-293badc6bbf3",
+              "none-attestation-off": "681c38ef-0a9a-46d3-aff8-3e0243e8a630",
+              "none-attestation-on": "bb64ec18-79d1-43cc-a07d-81b7f71f788a",
+              "pin-attestation-off": "2f48418f-c618-43d1-abac-d13fe2df1b76",
+              "pin-attestation-on": "0413b458-55a7-4734-8fe6-1bdd89cc6307"
+            },
+            "displayName": "Choice Collector",
+            "nodeType": "ChoiceCollectorNode",
+            "x": 143,
+            "y": 147.015625
+          },
+          "3fb38cc1-ed93-48bc-a303-7bdc8f253c73": {
+            "connections": {
+              "false": "70e691a5-1e33-4ac3-a356-e7b6d60d92e0",
+              "true": "70e691a5-1e33-4ac3-a356-e7b6d60d92e0"
+            },
+            "displayName": "Attestation var DOES NOT exist",
+            "nodeType": "MessageNode",
+            "x": 996.8888854980469,
+            "y": 707.1423530578613
+          },
+          "48b4cfdb-01b7-4089-b299-3e5b626b16e6": {
+            "connections": {
+              "outcome": "3746c0c6-3c6f-4ba8-acb2-eab8326edf43"
+            },
+            "displayName": "Username Collector",
+            "nodeType": "UsernameCollectorNode",
+            "x": 144,
+            "y": 77.015625
+          },
+          "55a2d97a-0a8c-49b9-b36d-17145ebcf7c7": {
+            "connections": {
+              "false": "70e691a5-1e33-4ac3-a356-e7b6d60d92e0",
+              "true": "70e691a5-1e33-4ac3-a356-e7b6d60d92e0"
+            },
+            "displayName": "Attestation var exists",
+            "nodeType": "MessageNode",
+            "x": 998.8888854980469,
+            "y": 595.1423530578613
+          },
+          "563923c7-06ac-4241-8f75-839eaac500ce": {
+            "connections": {
+              "false": "e301438c-0bd0-429c-ab0c-66126501069a",
+              "true": "e301438c-0bd0-429c-ab0c-66126501069a"
+            },
+            "displayName": "Report Failure",
+            "nodeType": "MessageNode",
+            "x": 724,
+            "y": 99.935546875
+          },
+          "681c38ef-0a9a-46d3-aff8-3e0243e8a630": {
+            "connections": {
+              "Abort": "a12f3594-2578-49e2-936e-bc8f2d2336e0",
+              "Timeout": "8408d580-6c94-4d96-bf05-3beff973ebdb",
+              "Unsupported": "286375b5-430d-41d4-8082-bfc1ee60ccb5",
+              "failure": "563923c7-06ac-4241-8f75-839eaac500ce",
+              "success": "70e691a5-1e33-4ac3-a356-e7b6d60d92e0"
+            },
+            "displayName": "Device Binding (NONE-OFF)",
+            "nodeType": "DeviceBindingNode",
+            "x": 394,
+            "y": 28.80555558204651
+          },
+          "8408d580-6c94-4d96-bf05-3beff973ebdb": {
+            "connections": {
+              "false": "e301438c-0bd0-429c-ab0c-66126501069a",
+              "true": "e301438c-0bd0-429c-ab0c-66126501069a"
+            },
+            "displayName": "Report Timeout",
+            "nodeType": "MessageNode",
+            "x": 739,
+            "y": 512.935546875
+          },
+          "a12f3594-2578-49e2-936e-bc8f2d2336e0": {
+            "connections": {
+              "false": "e301438c-0bd0-429c-ab0c-66126501069a",
+              "true": "e301438c-0bd0-429c-ab0c-66126501069a"
+            },
+            "displayName": "Report Abort Error",
+            "nodeType": "MessageNode",
+            "x": 732,
+            "y": 375.935546875
+          },
+          "bb64ec18-79d1-43cc-a07d-81b7f71f788a": {
+            "connections": {
+              "Abort": "a12f3594-2578-49e2-936e-bc8f2d2336e0",
+              "Timeout": "8408d580-6c94-4d96-bf05-3beff973ebdb",
+              "Unsupported": "286375b5-430d-41d4-8082-bfc1ee60ccb5",
+              "failure": "563923c7-06ac-4241-8f75-839eaac500ce",
+              "success": "70e691a5-1e33-4ac3-a356-e7b6d60d92e0"
+            },
+            "displayName": "Device Binding (NONE-ON)",
+            "nodeType": "DeviceBindingNode",
+            "x": 402,
+            "y": 220.8055555820465
+          },
+          "be0978ec-a776-4559-9617-923489ec30f7": {
+            "connections": {
+              "Abort": "a12f3594-2578-49e2-936e-bc8f2d2336e0",
+              "Timeout": "8408d580-6c94-4d96-bf05-3beff973ebdb",
+              "Unsupported": "286375b5-430d-41d4-8082-bfc1ee60ccb5",
+              "failure": "563923c7-06ac-4241-8f75-839eaac500ce",
+              "success": "c1d3b035-7c33-4f2e-8110-3cfaedfb7153"
+            },
+            "displayName": "Device Binding (without attestation)",
+            "nodeType": "DeviceBindingNode",
+            "x": 391,
+            "y": 610.935546875
+          },
+          "c1d3b035-7c33-4f2e-8110-3cfaedfb7153": {
+            "connections": {
+              "false": "3fb38cc1-ed93-48bc-a303-7bdc8f253c73",
+              "true": "55a2d97a-0a8c-49b9-b36d-17145ebcf7c7"
+            },
+            "displayName": "Attestation variable exists?",
+            "nodeType": "ScriptedDecisionNode",
+            "x": 740,
+            "y": 637.935546875
+          }
+        },
+        "staticNodes": {
+          "70e691a5-1e33-4ac3-a356-e7b6d60d92e0": {
+            "x": 1425,
+            "y": 23
+          },
+          "e301438c-0bd0-429c-ab0c-66126501069a": {
+            "x": 1442,
+            "y": 475
+          },
+          "startNode": {
+            "x": 31,
+            "y": 33
+          }
+        },
+        "transactionalOnly": false,
+        "uiConfig": {
+          "annotations": "{\"forNodes\":{},\"structural\":[]}",
+          "categories": "[]"
+        }
+      },
+      "variable": {}
+    }
+  }
+}
