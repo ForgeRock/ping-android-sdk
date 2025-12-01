@@ -11,6 +11,7 @@ import android.content.Context
 import com.pingidentity.logger.Logger
 import com.pingidentity.mfa.commons.exception.MfaException
 import com.pingidentity.mfa.push.storage.PushStorage
+import com.pingidentity.network.ktor.KtorHttpClient
 import io.ktor.client.HttpClient
 import io.mockk.clearMocks
 import io.mockk.coEvery
@@ -90,8 +91,8 @@ class PushServiceTest {
         mockkObject(PushUriParser)
 
         // Initialize service variants with mock storage, HTTP client, and policy evaluator
-        pushServiceWithCache = PushService(mockStorage, configWithCache, mockHttpClient, mockPolicyEvaluator)
-        pushServiceWithoutCache = PushService(mockStorage, configWithoutCache, mockHttpClient, mockPolicyEvaluator)
+        pushServiceWithCache = PushService(mockStorage, configWithCache, KtorHttpClient(mockHttpClient), mockPolicyEvaluator)
+        pushServiceWithoutCache = PushService(mockStorage, configWithoutCache, KtorHttpClient(mockHttpClient), mockPolicyEvaluator)
 
         // Create test credential
         testCredentialId = UUID.randomUUID().toString()
@@ -246,7 +247,7 @@ class PushServiceTest {
         val pushService = PushService(
             storage = mockStorage,
             configuration = configWithCache,
-            httpClient = mockHttpClient,
+            httpClient = KtorHttpClient(mockHttpClient),
             policyEvaluator = mockPolicyEvaluator,
             handlers = mapOf(PushPlatform.PING_AM.name to mockHandler)
         )
@@ -283,7 +284,7 @@ class PushServiceTest {
         val pushService = PushService(
             storage = mockStorage,
             configuration = configWithCache,
-            httpClient = mockHttpClient,
+            httpClient = KtorHttpClient(mockHttpClient),
             policyEvaluator = mockPolicyEvaluator,
             handlers = mapOf(PushPlatform.PING_AM.name to mockHandler)
         )
@@ -313,7 +314,7 @@ class PushServiceTest {
         val pushService = PushService(
             storage = mockStorage,
             configuration = configWithCache,
-            httpClient = mockHttpClient,
+            httpClient = KtorHttpClient(mockHttpClient),
             policyEvaluator = mockPolicyEvaluator,
             handlers = mapOf(PushPlatform.PING_AM.name to mockHandler)
         )
@@ -342,7 +343,7 @@ class PushServiceTest {
         val pushService = PushService(
             storage = mockStorage,
             configuration = configWithCache,
-            httpClient = mockHttpClient,
+            httpClient = KtorHttpClient(mockHttpClient),
             policyEvaluator = mockPolicyEvaluator,
             handlers = mapOf(PushPlatform.PING_AM.name to mockHandler)
         )
@@ -396,7 +397,7 @@ class PushServiceTest {
             PushService(
                 storage = mockStorage,
                 configuration = configWithCache,
-                httpClient = mockHttpClient,
+                httpClient = KtorHttpClient(mockHttpClient),
                 policyEvaluator = mockPolicyEvaluator,
                 tokenManager = mockDeviceTokenManager,
                 handlers = mapOf(PushPlatform.PING_AM.name to mockHandler)
@@ -426,7 +427,7 @@ class PushServiceTest {
             PushService(
                 storage = mockStorage,
                 configuration = configWithCache,
-                httpClient = mockHttpClient,
+                httpClient = KtorHttpClient(mockHttpClient),
                 policyEvaluator = mockPolicyEvaluator,
                 tokenManager = mockDeviceTokenManager
             )
@@ -455,7 +456,7 @@ class PushServiceTest {
         val pushService = PushService(
             storage = mockStorage,
             configuration = configWithCache,
-            httpClient = mockHttpClient,
+            httpClient = KtorHttpClient(mockHttpClient),
             policyEvaluator = mockPolicyEvaluator,
             tokenManager = mockDeviceTokenManager,
             handlers = mapOf(PushPlatform.PING_AM.name to mockHandler)
@@ -489,7 +490,7 @@ class PushServiceTest {
         val pushService = PushService(
             storage = mockStorage,
             configuration = configWithCache,
-            httpClient = mockHttpClient,
+            httpClient = KtorHttpClient(mockHttpClient),
             policyEvaluator = mockPolicyEvaluator,
             tokenManager = mockDeviceTokenManager,
             handlers = mapOf(PushPlatform.PING_AM.name to mockHandler)
@@ -522,7 +523,7 @@ class PushServiceTest {
         val pushService = PushService(
             storage = mockStorage,
             configuration = configWithCache,
-            httpClient = mockHttpClient,
+            httpClient = KtorHttpClient(mockHttpClient),
             policyEvaluator = mockPolicyEvaluator,
             tokenManager = mockDeviceTokenManager
         )

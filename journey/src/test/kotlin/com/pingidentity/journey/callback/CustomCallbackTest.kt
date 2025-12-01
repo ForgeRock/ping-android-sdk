@@ -20,9 +20,9 @@ import com.pingidentity.journey.plugin.callbacks
 import com.pingidentity.journey.sessionResponse
 import com.pingidentity.logger.CONSOLE
 import com.pingidentity.logger.Logger
+import com.pingidentity.network.ktor.KtorHttpClient
 import com.pingidentity.orchestrate.ContinueNode
 import com.pingidentity.orchestrate.FlowContext
-import com.pingidentity.orchestrate.Request
 import com.pingidentity.orchestrate.RequestInterceptor
 import com.pingidentity.storage.MemoryStorage
 import io.ktor.client.HttpClient
@@ -45,6 +45,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
+import com.pingidentity.network.HttpRequest as Request
 
 @RunWith(RobolectricTestRunner::class)
 class CustomCallbackTest {
@@ -108,9 +109,9 @@ class CustomCallbackTest {
             Journey {
                 serverUrl = "http://localhost/am"
                 logger = Logger.CONSOLE
-                httpClient = HttpClient(mockEngine) {
+                httpClient = KtorHttpClient(HttpClient(mockEngine) {
                     followRedirects = false
-                }
+                })
                 module(Session) {
                     tokenStorage = sessionStorage
                 }

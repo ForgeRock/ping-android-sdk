@@ -9,7 +9,6 @@ package com.pingidentity.orchestrate.module
 
 import com.pingidentity.logger.Logger
 import com.pingidentity.orchestrate.Module
-import com.pingidentity.orchestrate.Request
 import com.pingidentity.orchestrate.SharedContext
 import com.pingidentity.orchestrate.Workflow
 import com.pingidentity.storage.EncryptedDataStoreStorage
@@ -26,6 +25,7 @@ import io.ktor.http.parseServerSetCookieHeader
 import io.ktor.http.renderCookieHeader
 import io.ktor.http.renderSetCookieHeader
 import io.ktor.util.date.GMTDate
+import com.pingidentity.network.HttpRequest as Request
 
 internal const val TEMP_COOKIE = "TEMP_COOKIE"
 internal const val COOKIE_STORAGE = "COOKIE_STORAGE"
@@ -134,14 +134,14 @@ val Cookie =
                 storage.addCookie(url, cookie)
             }
             storage.get(url).forEach { cookie ->
-                request.cookie(cookie)
+                request.cookie(renderSetCookieHeader(cookie))
             }
         }
 
         suspend fun inject(flowContext: SharedContext, url: Url, request: Request) {
             cookieStorage(flowContext).let { cookiesStorage ->
                 cookiesStorage.get(url).forEach { cookie ->
-                    request.cookie(cookie)
+                    request.cookie(renderSetCookieHeader(cookie))
                 }
             }
         }
@@ -153,7 +153,7 @@ val Cookie =
         }
 
         start {
-            val url = it.builder.url.build()
+            val url = Url(it.url)
             config.cookieStorage.get()?.let { cookies ->
                 inject(url, cookies, it)
             }
@@ -161,7 +161,7 @@ val Cookie =
         }
 
         next { _, request ->
-            val url = request.builder.url.build()
+            val url = Url(request.url)
             inject(flowContext, url, request)
             config.cookieStorage.get()?.let { cookies ->
                 inject(url, cookies, request)
@@ -179,7 +179,7 @@ val Cookie =
                     cookie.name in config.persist
                 }
 
-            val url = response.request.builder.url.build()
+            val url = Url(response.request.url)
             // Persist cookies
             if (persistCookies.isNotEmpty()) {
                 val storage = AcceptAllCookiesStorage()

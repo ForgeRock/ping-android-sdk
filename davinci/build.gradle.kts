@@ -44,8 +44,7 @@ dependencies {
     implementation(project(":foundation:android"))
     api(project(":foundation:storage"))
 
-    //Access HttpClient object
-    implementation(libs.ktor.client.core)
+    implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.serialization.json)
 
     testImplementation(project(":foundation:testrail"))

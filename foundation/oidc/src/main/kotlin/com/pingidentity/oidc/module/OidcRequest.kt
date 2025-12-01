@@ -23,14 +23,14 @@ import com.pingidentity.oidc.Constants.STATE
 import com.pingidentity.oidc.Constants.UI_LOCATES
 import com.pingidentity.oidc.OidcClientConfig
 import com.pingidentity.oidc.Pkce
-import com.pingidentity.orchestrate.Request
+import com.pingidentity.network.HttpRequest as Request
 
 /**
  * Function to populate an OIDC request with the necessary parameters.
  */
 internal val populateRequest: OidcClientConfig.(Request, Map<String, String>, Pkce) -> Request = { request, parameters, pkce ->
 
-    request.url(openId.authorizationEndpoint)
+    request.url = openId.authorizationEndpoint
     request.parameter(CLIENT_ID, clientId)
     request.parameter(RESPONSE_TYPE, CODE)
     request.parameter(SCOPE, scopes.joinToString(" "))

@@ -8,6 +8,7 @@
 package com.pingidentity.oidc
 
 import com.pingidentity.exception.ApiException
+import com.pingidentity.network.isSuccess
 import com.pingidentity.oidc.Constants.AUTHORIZATION_CODE
 import com.pingidentity.oidc.Constants.CLIENT_ID
 import com.pingidentity.oidc.Constants.CODE
@@ -18,13 +19,6 @@ import com.pingidentity.oidc.Constants.REFRESH_TOKEN
 import com.pingidentity.oidc.Constants.RESPONSE_TYPE
 import com.pingidentity.oidc.Constants.TOKEN
 import com.pingidentity.utils.Result
-import io.ktor.client.call.body
-import io.ktor.client.request.forms.submitForm
-import io.ktor.client.request.get
-import io.ktor.client.request.header
-import io.ktor.http.HttpHeaders
-import io.ktor.http.isSuccess
-import io.ktor.http.parameters
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
@@ -33,7 +27,6 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
-import java.lang.IllegalStateException
 import kotlin.coroutines.coroutineContext
 
 /**
@@ -129,23 +122,24 @@ open class OidcClient(private val config: OidcClientConfig) {
     private suspend fun refreshToken(refreshToken: String): Token {
         config.init()
         logger.i("Refreshing token")
-        val params =
-            parameters {
-                append(GRANT_TYPE, REFRESH_TOKEN)
-                append(REFRESH_TOKEN, refreshToken)
-                append(CLIENT_ID, config.clientId)
-                append(RESPONSE_TYPE, CODE)
-            }
 
-        val response = config.httpClient.submitForm(config.openId.tokenEndpoint, params)
+        val response = config.httpClient.request {
+            url = config.openId.tokenEndpoint
+            form {
+                put(GRANT_TYPE, REFRESH_TOKEN)
+                put(REFRESH_TOKEN, refreshToken)
+                put(CLIENT_ID, config.clientId)
+                put(RESPONSE_TYPE, CODE)
+            }
+        }
         if (response.status.isSuccess()) {
             val token = with(response) {
-                json.decodeFromString<Token>(call.body())
+                json.decodeFromString<Token>(this.body())
             }
             config.tokenStorage.save(token)
             return token
         } else {
-            throw ApiException(response.status.value, response.body())
+            throw ApiException(response.status, response.body())
         }
     }
 
@@ -178,14 +172,15 @@ open class OidcClient(private val config: OidcClientConfig) {
 
     private suspend fun revoke(token: String) {
         coroutineScope {
-            val params =
-                parameters {
-                    append(CLIENT_ID, config.clientId)
-                    append(TOKEN, token)
-                }
             // Run in the background, and we don't care about the result
             launch {
-                config.httpClient.submitForm(config.openId.revocationEndpoint, params)
+                config.httpClient.request {
+                    url = config.openId.revocationEndpoint
+                    form {
+                        put(CLIENT_ID, config.clientId)
+                        put(TOKEN, token)
+                    }
+                }
             }
         }
     }
@@ -241,16 +236,17 @@ open class OidcClient(private val config: OidcClientConfig) {
 
                 is Result.Success -> {
                     val response =
-                        config.httpClient.get(config.openId.userinfoEndpoint) {
+                        config.httpClient.request {
+                            url = config.openId.userinfoEndpoint
                             header(
-                                HttpHeaders.Authorization,
+                                "Authorization",
                                 "Bearer ${result.value.accessToken}"
                             )
                         }
                     if (response.status.isSuccess()) {
                         return Result.Success(Json.parseToJsonElement(response.body()).jsonObject)
                     } else {
-                        throw ApiException(response.status.value, response.body())
+                        throw ApiException(response.status, response.body())
                     }
                 }
             }
@@ -265,22 +261,23 @@ open class OidcClient(private val config: OidcClientConfig) {
     private suspend fun exchangeToken(authCode: AuthCode): Token {
         config.init()
         logger.i("Exchanging token")
-        val params =
-            parameters {
-                append(GRANT_TYPE, AUTHORIZATION_CODE)
-                append(CODE, authCode.code)
-                append(REDIRECT_URI, config.redirectUri)
-                append(CLIENT_ID, config.clientId)
+        val response = config.httpClient.request {
+            url = config.openId.tokenEndpoint
+            form {
+                put(GRANT_TYPE, AUTHORIZATION_CODE)
+                put(CODE, authCode.code)
+                put(REDIRECT_URI, config.redirectUri)
+                put(CLIENT_ID, config.clientId)
                 authCode.codeVerifier?.let {
-                    append(CODE_VERIFIER, it)
+                    put(CODE_VERIFIER, it)
                 }
             }
-        val response = config.httpClient.submitForm(config.openId.tokenEndpoint, params)
+        }
         if (response.status.isSuccess()) {
             return with(response) {
-                json.decodeFromString<Token>(call.body())
+                json.decodeFromString<Token>(this.body())
             }
         }
-        throw ApiException(response.status.value, response.body())
+        throw ApiException(response.status, response.body())
     }
 }

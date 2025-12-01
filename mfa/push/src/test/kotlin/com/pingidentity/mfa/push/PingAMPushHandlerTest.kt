@@ -8,6 +8,7 @@
 package com.pingidentity.mfa.push
 
 import com.pingidentity.logger.Logger
+import com.pingidentity.network.ktor.KtorHttpClient
 import io.ktor.client.HttpClient
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -79,7 +80,7 @@ class PingAMPushHandlerTest {
         )
         
         // Create PushHandler with mocked responder
-        pushHandler = PingAMPushHandler(mockHttpClient, mockLogger, mockPushResponder)
+        pushHandler = PingAMPushHandler(KtorHttpClient(mockHttpClient), mockLogger, mockPushResponder)
     }
 
     @Test

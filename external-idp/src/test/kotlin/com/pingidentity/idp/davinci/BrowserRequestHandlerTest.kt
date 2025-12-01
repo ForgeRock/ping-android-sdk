@@ -10,7 +10,11 @@ package com.pingidentity.idp.davinci
 import android.net.Uri
 import androidx.core.net.toUri
 import com.pingidentity.browser.BrowserLauncher
+import com.pingidentity.network.HttpClient
+import com.pingidentity.network.ktor.KtorHttpRequest
 import com.pingidentity.orchestrate.ContinueNode
+import com.pingidentity.orchestrate.Workflow
+import com.pingidentity.orchestrate.WorkflowConfig
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.coVerifyAll
@@ -39,7 +43,16 @@ class BrowserRequestHandlerTest {
 
     @BeforeTest
     fun setup() {
-        continueNode = mockk()
+        continueNode = mockk(relaxed = true)
+        val workFlow = mockk<Workflow>(relaxed = true)
+        val workflowConfig = mockk<WorkflowConfig>(relaxed = true)
+        val httpclient = mockk<HttpClient>(relaxed = true)
+        every { continueNode.workflow } returns workFlow
+        every { workFlow.config } returns workflowConfig
+        every { workflowConfig.httpClient } returns httpclient
+        every { httpclient.request() } returns KtorHttpRequest()
+
+
         browserRequestHandler = BrowserRequestHandler(continueNode, "https://example.com/callback".toUri())
 
         mockkObject(BrowserLauncher)
@@ -64,13 +77,14 @@ class BrowserRequestHandlerTest {
         mockBrowserLaunch(authUrl, successResult)
 
         // Act
-        val request = browserRequestHandler.authorize(authUrl)
+        val request = browserRequestHandler.authorize(authUrl) as KtorHttpRequest
 
         // Assert
-        assertEquals(continueUrl, request.builder.url.toString())
+        assertEquals(continueUrl, request.url)
         assertEquals("Bearer $continueToken", request.builder.headers["Authorization"])
         coVerifyAll {
             continueNode.input
+            continueNode.workflow
             BrowserLauncher.launch(URL(authUrl), any())
         }
     }

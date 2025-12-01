@@ -29,7 +29,7 @@ import com.pingidentity.mfa.push.PushConstants.KEY_TIME_INTERVAL
 import com.pingidentity.mfa.push.PushConstants.KEY_TTL
 import com.pingidentity.mfa.push.PushConstants.KEY_USER_ID
 import com.pingidentity.mfa.push.storage.PushStorage
-import io.ktor.client.HttpClient
+import com.pingidentity.network.HttpClient
 import kotlinx.coroutines.ensureActive
 import java.util.Date
 import java.util.UUID

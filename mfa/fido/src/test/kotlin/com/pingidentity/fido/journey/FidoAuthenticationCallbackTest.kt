@@ -14,9 +14,9 @@ import com.pingidentity.journey.plugin.Callback
 import com.pingidentity.journey.plugin.ValueCallback
 import com.pingidentity.logger.CONSOLE
 import com.pingidentity.logger.Logger
+import com.pingidentity.network.ktor.KtorHttpRequest
 import com.pingidentity.orchestrate.ContinueNode
 import com.pingidentity.orchestrate.FlowContext
-import com.pingidentity.orchestrate.Request
 import com.pingidentity.orchestrate.SharedContext
 import com.pingidentity.orchestrate.Workflow
 import com.pingidentity.orchestrate.WorkflowConfig
@@ -43,6 +43,7 @@ import org.junit.Assert.assertTrue
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
+import com.pingidentity.network.HttpRequest as Request
 
 class FidoAuthenticationCallbackTest {
 
@@ -76,7 +77,7 @@ class FidoAuthenticationCallbackTest {
             listOf(valueCallback)
         ) {
             override fun asRequest(): Request {
-                return Request()
+                return KtorHttpRequest()
             }
         }
 

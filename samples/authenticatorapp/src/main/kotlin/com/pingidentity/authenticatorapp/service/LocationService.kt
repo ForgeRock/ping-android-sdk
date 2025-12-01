@@ -9,12 +9,15 @@ package com.pingidentity.authenticatorapp.service
 
 import com.pingidentity.authenticatorapp.data.LocationAddress
 import com.pingidentity.authenticatorapp.data.NominatimResponse
-import io.ktor.client.*
+import io.ktor.client.HttpClient
 import io.ktor.client.call.body
-import io.ktor.client.engine.okhttp.*
-import io.ktor.client.plugins.contentnegotiation.*
-import io.ktor.client.request.*
-import io.ktor.serialization.kotlinx.json.*
+import io.ktor.client.engine.cio.CIO
+import io.ktor.client.plugins.HttpTimeout
+import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.client.request.get
+import io.ktor.client.request.header
+import io.ktor.client.request.parameter
+import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
@@ -32,20 +35,17 @@ class LocationService {
         private const val USER_AGENT = "PingAuthenticatorSampleApp/1.0"
     }
     
-    private val httpClient = HttpClient(OkHttp) {
+    private val httpClient = HttpClient(CIO) {
         install(ContentNegotiation) {
             json(Json {
                 ignoreUnknownKeys = true
                 coerceInputValues = true
             })
         }
-        
         // Configure timeout
-        engine {
-            config {
-                connectTimeout(TIMEOUT_SECONDS, java.util.concurrent.TimeUnit.MILLISECONDS)
-                readTimeout(TIMEOUT_SECONDS, java.util.concurrent.TimeUnit.MILLISECONDS)
-            }
+        install(HttpTimeout) {
+            connectTimeoutMillis = TIMEOUT_SECONDS / 1000
+            requestTimeoutMillis = TIMEOUT_SECONDS / 1000
         }
     }
     

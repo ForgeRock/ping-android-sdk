@@ -9,6 +9,7 @@ package com.pingidentity.idp.davinci
 
 import com.pingidentity.exception.ApiException
 import com.pingidentity.idp.IdpClient
+import com.pingidentity.network.ktor.KtorHttpClient
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
@@ -30,7 +31,7 @@ class IdpRequestHandlerTest {
     @Test
     fun `fetch with valid response returns IdpClient`() = runTest {
         val handler = mockk<IdpRequestHandler>()
-        val httpClient = HttpClient(MockEngine) {
+        val httpClient = KtorHttpClient(HttpClient(MockEngine) {
             engine {
                 addHandler { _ ->
                     respond(
@@ -54,7 +55,7 @@ class IdpRequestHandlerTest {
                     )
                 }
             }
-        }
+        })
         val url = "http://valid-url.com"
         val expectedClient = IdpClient(
             "testClientId",
@@ -74,7 +75,7 @@ class IdpRequestHandlerTest {
     @Test
     fun `fetch with error response throws ApiException`() = runTest {
         val handler = mockk<IdpRequestHandler>()
-        val httpClient = HttpClient(MockEngine) {
+        val httpClient = KtorHttpClient(HttpClient(MockEngine) {
             engine {
                 addHandler { request ->
                     respond(
@@ -84,7 +85,7 @@ class IdpRequestHandlerTest {
                     )
                 }
             }
-        }
+        })
         val url = "http://invalid-url.com"
 
         coEvery { handler.fetch(httpClient, url) } throws ApiException(400, "Error")

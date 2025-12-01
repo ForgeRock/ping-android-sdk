@@ -20,6 +20,7 @@ import org.junit.rules.TestWatcher
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
+import com.pingidentity.network.HttpRequest as Request
 
 class NodeTest {
     @JvmField

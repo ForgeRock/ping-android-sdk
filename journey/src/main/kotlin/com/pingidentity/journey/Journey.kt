@@ -17,25 +17,21 @@ import com.pingidentity.journey.Constants.COOKIE
 import com.pingidentity.journey.Constants.FORCE_AUTH
 import com.pingidentity.journey.Constants.NO_SESSION
 import com.pingidentity.journey.Constants.REALM
-import com.pingidentity.journey.Constants.REQUESTED_PLATFORM_KEY
-import com.pingidentity.journey.Constants.REQUESTED_PLATFORM_VALUE
-import com.pingidentity.journey.Constants.REQUESTED_WITH_KEY
-import com.pingidentity.journey.Constants.REQUESTED_WITH_VALUE
 import com.pingidentity.journey.Constants.RESOURCE_2_1_PROTOCOL_1_0
 import com.pingidentity.journey.Constants.SERVICE
 import com.pingidentity.journey.Constants.START_REQUEST
 import com.pingidentity.journey.Constants.SUSPENDED_ID
 import com.pingidentity.journey.module.NodeTransform
-import com.pingidentity.journey.module.Session
 import com.pingidentity.journey.module.RequestUrl
+import com.pingidentity.journey.module.Session
 import com.pingidentity.orchestrate.Node
-import com.pingidentity.orchestrate.Request
 import com.pingidentity.orchestrate.Setup
 import com.pingidentity.orchestrate.SharedContext
 import com.pingidentity.orchestrate.Workflow
 import com.pingidentity.orchestrate.WorkflowConfig
 import com.pingidentity.orchestrate.module.CustomHeader
 import com.pingidentity.utils.toAcceptLanguage
+import com.pingidentity.network.HttpRequest as Request
 
 typealias Journey = Workflow
 
@@ -119,8 +115,6 @@ fun Journey(block: JourneyConfig.() -> Unit = {}): Journey {
     config.apply {
         module(CustomHeader) {
             header(ACCEPT_API_VERSION, RESOURCE_2_1_PROTOCOL_1_0)
-            header(REQUESTED_WITH_KEY, REQUESTED_WITH_VALUE)
-            header(REQUESTED_PLATFORM_KEY, REQUESTED_PLATFORM_VALUE)
             header(ACCEPT_LANGUAGE, LocaleList.getDefault().toAcceptLanguage())
         }
         module(RequestUrl)

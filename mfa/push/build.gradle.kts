@@ -32,6 +32,7 @@ dependencies {
     implementation(project(":foundation:logger"))
     implementation(project(":foundation:android"))
     implementation(project(":foundation:utils"))
+    implementation(project(":foundation:network"))
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
@@ -46,12 +47,6 @@ dependencies {
 
     // SQL Cipher for encrypted database
     implementation(libs.sqlcipher)
-
-    // HTTP Client
-    implementation(libs.ktor.client.core)
-    implementation(libs.ktor.client.okhttp)
-    implementation(libs.ktor.client.logging)
-    implementation(libs.ktor.client.cio)
 
     // Firebase Cloud Messaging for push notifications
     implementation(libs.firebase.messaging)

@@ -28,6 +28,8 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import kotlin.time.Duration.Companion.minutes
+import kotlin.time.DurationUnit
+import kotlin.time.toDuration
 
 /**
  * Instrumented test for the OathClient class to verify its
@@ -115,7 +117,7 @@ class OathClientAndroidTest {
         // Create an OathClient with a OathConfiguration object
         val config = OathConfiguration {
             enableCredentialCache = true
-            timeoutMs = 60_000L
+            timeout = 60.toDuration(DurationUnit.SECONDS)
             encryptionEnabled = false
             storage = SQLOathStorage {
                 context = appContext
@@ -410,7 +412,7 @@ class OathClientAndroidTest {
         // Create an OathClient with default configuration
         val config = OathConfiguration {
             enableCredentialCache = true
-            timeoutMs = 60_000L
+            timeout = 60.toDuration(DurationUnit.SECONDS)
             encryptionEnabled = false
         }
 

@@ -8,7 +8,9 @@
 package com.pingidentity.orchestrate
 
 import com.pingidentity.logger.Logger
-import io.ktor.client.HttpClient
+import com.pingidentity.network.HttpClient
+import com.pingidentity.network.HttpRequest as Request
+import com.pingidentity.network.HttpResponse as Response
 
 /**
  * Class for a Setup. A Setup represents the setup of a module in the application.

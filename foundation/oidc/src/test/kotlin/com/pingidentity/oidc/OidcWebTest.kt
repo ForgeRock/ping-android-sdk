@@ -1,3 +1,10 @@
+/*
+ * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ *
+ * This software may be modified and distributed under the terms
+ * of the MIT license. See the LICENSE file for details.
+ */
+
 package com.pingidentity.oidc
 
 import android.net.Uri
@@ -5,6 +12,7 @@ import com.pingidentity.browser.BrowserCanceledException
 import com.pingidentity.browser.BrowserLauncher
 import com.pingidentity.logger.CONSOLE
 import com.pingidentity.logger.Logger
+import com.pingidentity.network.ktor.KtorHttpClient
 import com.pingidentity.oidc.module.Oidc
 import com.pingidentity.storage.MemoryStorage
 import com.pingidentity.utils.Result.Success
@@ -87,7 +95,7 @@ class OidcWebTest {
         every { mockUri.getQueryParameter(Constants.CODE) } returns "test-code"
 
         val web = OidcWeb {
-            httpClient = HttpClient(mockEngine)
+            httpClient = KtorHttpClient(HttpClient(mockEngine))
             logger = Logger.CONSOLE
             module(Oidc) {
                 clientId = "test-client"
@@ -129,7 +137,7 @@ class OidcWebTest {
         )
 
         val web = OidcWeb {
-            httpClient = HttpClient(mockEngine)
+            httpClient = KtorHttpClient(HttpClient(mockEngine))
             logger = Logger.CONSOLE
             module(Oidc) {
                 clientId = "test-client"
@@ -153,7 +161,7 @@ class OidcWebTest {
         every { mockUri.getQueryParameter(Constants.CODE) } returns null
 
         val web = OidcWeb {
-            httpClient = HttpClient(mockEngine)
+            httpClient = KtorHttpClient(HttpClient(mockEngine))
             logger = Logger.CONSOLE
             module(Oidc) {
                 clientId = "test-client"
@@ -177,7 +185,7 @@ class OidcWebTest {
         every { mockUri.getQueryParameter(Constants.CODE) } returns "test-code"
 
         val web = OidcWeb {
-            httpClient = HttpClient(mockEngine)
+            httpClient = KtorHttpClient(HttpClient(mockEngine))
             logger = Logger.CONSOLE
             module(Oidc) {
                 clientId = "test-client"

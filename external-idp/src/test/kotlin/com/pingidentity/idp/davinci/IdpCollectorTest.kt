@@ -9,7 +9,7 @@ package com.pingidentity.idp.davinci
 import com.pingidentity.davinci.plugin.DaVinci
 import com.pingidentity.exception.ApiException
 import com.pingidentity.logger.Logger
-import com.pingidentity.orchestrate.Request
+import com.pingidentity.network.ktor.KtorHttpRequest
 import com.pingidentity.orchestrate.WorkflowConfig
 import io.mockk.coEvery
 import io.mockk.every
@@ -102,7 +102,7 @@ class IdpCollectorTest {
 
         idpCollector.davinci = daVinci
 
-        coEvery { idpRequestHandler.authorize("http://test.com") } returns Request()
+        coEvery { idpRequestHandler.authorize("http://test.com") } returns KtorHttpRequest()
         val result = idpCollector.authorize(idpRequestHandler = idpRequestHandler)
         assertTrue(result.isSuccess)
     }

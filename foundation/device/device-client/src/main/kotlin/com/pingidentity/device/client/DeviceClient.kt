@@ -1,5 +1,6 @@
 /*
- * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2025 - 2025 Ping Identity Corporation. All rights reserved.
+ *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
  */
@@ -7,28 +8,18 @@
 package com.pingidentity.device.client
 
 import android.net.Uri
+import com.pingidentity.logger.Logger
+import com.pingidentity.logger.WARN
+import com.pingidentity.network.HttpClient
+import com.pingidentity.network.ktor.HttpClient
 import com.pingidentity.utils.PingDsl
-import io.ktor.client.HttpClient
-import io.ktor.client.request.header
-import io.ktor.client.request.prepareRequest
-import io.ktor.client.statement.bodyAsText
-import io.ktor.http.HttpMethod.Companion.Delete
-import io.ktor.http.HttpMethod.Companion.Get
-import io.ktor.http.HttpMethod.Companion.Put
-import io.ktor.client.request.setBody
-import io.ktor.client.request.url
-import io.ktor.http.ContentType
-import io.ktor.http.HttpMethod.Companion.Post
-import io.ktor.http.HttpStatusCode
-import io.ktor.http.contentType
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
+import java.net.HttpURLConnection
 import java.net.URL
-import kotlin.collections.emptyList
-import kotlin.collections.map
 
 /**
  * Configuration builder for DeviceClient.
@@ -39,8 +30,10 @@ import kotlin.collections.map
 class DeviceClientConfig {
     /** SSO token string for authentication. */
     var ssoTokenString: String = ""
+
     /** Server URL. */
     lateinit var serverUrl: URL
+
     /** Realm name. */
     var realm: String = "root"
         get() {
@@ -50,10 +43,23 @@ class DeviceClientConfig {
                 field
             }
         }
+
     /** Cookie name for authentication. */
     var cookieName: String = "iPlanetDirectoryPro"
+
+    /** Logger instance. */
+    var logger: Logger = Logger.WARN
+
     /** HTTP client instance. */
-    var httpClient: HttpClient = HttpClient()
+    lateinit var httpClient: HttpClient
+
+    fun initialize() {
+        if (!::httpClient.isInitialized) {
+            httpClient = HttpClient {
+                logger = this@DeviceClientConfig.logger
+            }
+        }
+    }
 }
 
 /**
@@ -62,7 +68,9 @@ class DeviceClientConfig {
  * Provides access to device operations for different device types (OATH, Push, Bound, WebAuthn, Profile).
  */
 class DeviceClient(block: DeviceClientConfig.() -> Unit) {
-    private val config: DeviceClientConfig = DeviceClientConfig().apply(block)
+    private val config: DeviceClientConfig = DeviceClientConfig().apply(block).also {
+        it.initialize()
+    }
     private val httpClient: HttpClient = config.httpClient
 
     private var cachedUserId: String? = null
@@ -222,20 +230,18 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
         if (userId.isBlank()) {
             return Result.failure(Exception("User ID cannot be blank."))
         }
-        val request = httpClient.prepareRequest {
-            url(
+        val response = httpClient.request {
+            url =
                 composeUrlForDeviceList(
                     config = config,
                     path = path,
                     userId = userId,
                 )
-            )
             header(config.cookieName, config.ssoTokenString)
             header(CONTENT_TYPE_KEY, CONTENT_TYPE_JSON)
             header(ACCEPT_API_VERSION_KEY, ACCEPT_API_VERSION_VALUE)
-            method = Get
         }
-        val body = request.execute().bodyAsText()
+        val body = response.body()
         val jsonObject = Json.parseToJsonElement(body).jsonObject
         val result = jsonObject["result"]?.jsonArray
         return Result.success(
@@ -266,18 +272,17 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
             device = device,
             userId = userId,
         )
-        val request = httpClient.prepareRequest {
-            url(urlString)
+        val response = httpClient.request {
+            url = urlString
             header(config.cookieName, config.ssoTokenString)
             header(CONTENT_TYPE_KEY, CONTENT_TYPE_JSON)
             header(ACCEPT_API_VERSION_KEY, ACCEPT_API_VERSION_VALUE)
-            method = Delete
+            delete()
         }
-        val response = request.execute()
-        return if (response.status == HttpStatusCode.OK) {
+        return if (response.status == HttpURLConnection.HTTP_OK) {
             Result.success(device)
         } else {
-            Result.failure(Exception("Failed to delete device: ${response.status} - ${response.bodyAsText()}"))
+            Result.failure(Exception("Failed to delete device: ${response.status} - ${response.body()}"))
         }
     }
 
@@ -296,27 +301,22 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
         if (userId.isBlank()) {
             throw IllegalStateException("User ID cannot be blank.")
         }
-        val request = httpClient.prepareRequest {
-            url(
-                composeUrlForDevice(
-                    config = config,
-                    device = device,
-                    userId = userId,
-                )
+        val response = httpClient.request {
+            url = composeUrlForDevice(
+                config = config,
+                device = device,
+                userId = userId,
             )
             header(config.cookieName, config.ssoTokenString)
             header(CONTENT_TYPE_KEY, CONTENT_TYPE_JSON)
             header(ACCEPT_API_VERSION_KEY, ACCEPT_API_VERSION_VALUE)
             header("If-Match", "*")
-            method = Put
-            setBody(Json.encodeToString(device))
-            contentType(ContentType.Application.Json)
+            put(body = Json.encodeToString(device))
         }
-        val response = request.execute()
-        return if (response.status == HttpStatusCode.OK) {
+        return if (response.status == HttpURLConnection.HTTP_OK) {
             Result.success(device)
         } else {
-            Result.failure(Exception("Failed to update device: ${response.status} - ${response.bodyAsText()}"))
+            Result.failure(Exception("Failed to update device: ${response.status} - ${response.body()}"))
         }
     }
 
@@ -332,15 +332,14 @@ class DeviceClient(block: DeviceClientConfig.() -> Unit) {
             .appendPath("sessions")
             .appendQueryParameter("_action", "getSessionInfo")
             .build().toString()
-        val request = httpClient.prepareRequest {
-            url(uri)
+        val response = httpClient.request {
+            url = uri
             header(CONTENT_TYPE_KEY, CONTENT_TYPE_JSON)
             header(ACCEPT_API_VERSION_KEY, API_VERSION_2_1)
             header(config.cookieName, config.ssoTokenString)
-            method = Post
+            post()
         }
-        val response = request.execute()
-        val body = response.bodyAsText()
+        val body = response.body()
         val jsonObject = Json.parseToJsonElement(body).jsonObject
         return jsonObject["username"]?.toString()?.replace("\"", "") ?: ""
     }

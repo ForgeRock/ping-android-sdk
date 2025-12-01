@@ -7,7 +7,6 @@
 
 package com.pingidentity.orchestrate
 
-import io.ktor.client.request.request
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -21,6 +20,8 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.coroutines.coroutineContext
+import com.pingidentity.network.HttpRequest as Request
+import com.pingidentity.network.HttpResponse as Response
 
 /**
  * Creates a new Workflow instance with the provided configuration block.
@@ -103,7 +104,7 @@ class Workflow(val config: WorkflowConfig) {
      * @return The resulting Node after processing the workflow.
      */
     suspend fun start(): Node {
-        return start(Request())
+        return start(config.httpClient.request())
     }
 
     /**
@@ -114,7 +115,7 @@ class Workflow(val config: WorkflowConfig) {
     suspend fun start(block: SharedContext.() -> Unit): Node {
         val map = SharedContext(mutableMapOf())
         block(map)
-        return start(Request(), map)
+        return start(config.httpClient.request(), map)
     }
 
     /**
@@ -125,7 +126,7 @@ class Workflow(val config: WorkflowConfig) {
         config.logger.i("SignOff...")
         try {
             init()
-            signOff.asFlow().scan(Request()) { result, value -> value(result) }.last()
+            signOff.asFlow().scan(config.httpClient.request()) { result, value -> value(result) }.last()
                 .also { send(it) }
             return Result.success(Unit)
         } catch (e: Throwable) {
@@ -203,7 +204,7 @@ class Workflow(val config: WorkflowConfig) {
         context: FlowContext,
         request: Request,
     ): Response {
-        val resp = HttpResponse(request, config.httpClient.request(request.builder))
+        val resp = config.httpClient.request(request)
         response(context, resp)
         return resp
     }
@@ -214,7 +215,7 @@ class Workflow(val config: WorkflowConfig) {
      * @return The response received.
      */
     suspend fun send(request: Request): Response {
-        return HttpResponse(request, config.httpClient.request(request.builder))
+        return config.httpClient.request(request)
     }
 
     /**

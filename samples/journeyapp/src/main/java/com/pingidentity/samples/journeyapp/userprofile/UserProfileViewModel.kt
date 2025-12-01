@@ -12,6 +12,8 @@ import androidx.lifecycle.viewModelScope
 import com.pingidentity.device.client.DeviceClient
 import com.pingidentity.journey.session
 import com.pingidentity.journey.user
+import com.pingidentity.logger.Logger
+import com.pingidentity.logger.STANDARD
 import com.pingidentity.samples.journeyapp.env.journey
 import com.pingidentity.utils.Result
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -333,6 +335,7 @@ class UserProfileViewModel : ViewModel() {
             serverUrl = URL("https://openam-sdks.forgeblocks.com/am")
             realm = user.session().realm
             cookieName = "5421aeddf91aa20"
+            logger = Logger.STANDARD
         }
     }
 }

@@ -7,8 +7,6 @@
 
 package com.pingidentity.davinci
 
-import com.pingidentity.testrail.TestRailCase
-import com.pingidentity.exception.ApiException
 import com.pingidentity.davinci.collector.PasswordCollector
 import com.pingidentity.davinci.collector.SubmitCollector
 import com.pingidentity.davinci.collector.TextCollector
@@ -16,34 +14,37 @@ import com.pingidentity.davinci.module.Oidc
 import com.pingidentity.davinci.module.continueNode
 import com.pingidentity.davinci.module.details
 import com.pingidentity.davinci.plugin.collectors
+import com.pingidentity.exception.ApiException
 import com.pingidentity.logger.CONSOLE
 import com.pingidentity.logger.Logger
 import com.pingidentity.logger.STANDARD
+import com.pingidentity.network.ktor.KtorHttpClient
 import com.pingidentity.orchestrate.ContinueNode
+import com.pingidentity.orchestrate.ErrorNode
+import com.pingidentity.orchestrate.FailureNode
 import com.pingidentity.orchestrate.module.Cookie
 import com.pingidentity.storage.MemoryStorage
+import com.pingidentity.test.readFile
+import com.pingidentity.testrail.TestRailCase
+import com.pingidentity.testrail.TestRailWatcher
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
 import io.ktor.http.HttpStatusCode
+import io.ktor.http.headers
 import io.ktor.utils.io.ByteReadChannel
 import kotlinx.coroutines.test.runTest
-import kotlin.test.AfterTest
-import kotlin.test.Test
-import kotlin.test.assertTrue
-import com.pingidentity.orchestrate.ErrorNode
-import com.pingidentity.orchestrate.FailureNode
-import com.pingidentity.test.readFile
-import com.pingidentity.testrail.TestRailWatcher
-import io.ktor.http.headers
 import org.junit.Rule
 import org.junit.rules.TestWatcher
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
+import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 @RunWith(RobolectricTestRunner::class)
 class DaVinciErrorTest {
@@ -91,7 +92,7 @@ class DaVinciErrorTest {
 
             val daVinci =
                 DaVinci {
-                    httpClient = HttpClient(mockEngine)
+                    httpClient = KtorHttpClient(HttpClient(mockEngine))
                     // Oidc as module
                     module(Oidc) {
                         clientId = "test"
@@ -153,7 +154,7 @@ class DaVinciErrorTest {
 
             val daVinci =
                 DaVinci {
-                    httpClient = HttpClient(mockEngine)
+                    httpClient = KtorHttpClient(HttpClient(mockEngine))
                     // Oidc as module
                     module(Oidc) {
                         clientId = "test"
@@ -216,7 +217,7 @@ class DaVinciErrorTest {
 
             val daVinci =
                 DaVinci {
-                    httpClient = HttpClient(mockEngine)
+                    httpClient = KtorHttpClient(HttpClient(mockEngine))
                     // Oidc as module
                     module(Oidc) {
                         clientId = "test"
@@ -272,7 +273,7 @@ class DaVinciErrorTest {
 
             val daVinci =
                 DaVinci {
-                    httpClient = HttpClient(mockEngine)
+                    httpClient = KtorHttpClient(HttpClient(mockEngine))
                     // Oidc as module
                     module(Oidc) {
                         clientId = "test"
@@ -334,7 +335,7 @@ class DaVinciErrorTest {
 
             val daVinci =
                 DaVinci {
-                    httpClient = HttpClient(mockEngine)
+                    httpClient = KtorHttpClient(HttpClient(mockEngine))
                     // Oidc as module
                     module(Oidc) {
                         clientId = "test"
@@ -411,7 +412,7 @@ class DaVinciErrorTest {
 
             val daVinci =
                 DaVinci {
-                    httpClient = HttpClient(mockEngine)
+                    httpClient = KtorHttpClient(HttpClient(mockEngine))
                     // Oidc as module
                     module(Oidc) {
                         clientId = "test"
@@ -478,7 +479,7 @@ class DaVinciErrorTest {
 
             val daVinci =
                 DaVinci {
-                    httpClient = HttpClient(mockEngine)
+                    httpClient = KtorHttpClient(HttpClient(mockEngine))
                     // Oidc as module
                     module(Oidc) {
                         clientId = "test"
@@ -547,7 +548,7 @@ class DaVinciErrorTest {
 
             val daVinci =
                 DaVinci {
-                    httpClient = HttpClient(mockEngine)
+                    httpClient = KtorHttpClient(HttpClient(mockEngine))
                     // Oidc as module
                     module(Oidc) {
                         clientId = "test"
@@ -619,7 +620,7 @@ class DaVinciErrorTest {
 
             val daVinci =
                 DaVinci {
-                    httpClient = HttpClient(mockEngine)
+                    httpClient = KtorHttpClient(HttpClient(mockEngine))
                     // Oidc as module
                     module(Oidc) {
                         clientId = "test"
@@ -684,7 +685,7 @@ class DaVinciErrorTest {
 
             val daVinci =
                 DaVinci {
-                    httpClient = HttpClient(mockEngine)
+                    httpClient = KtorHttpClient(HttpClient(mockEngine))
                     // Oidc as module
                     module(Oidc) {
                         clientId = "test"
@@ -743,9 +744,9 @@ class DaVinciErrorTest {
 
             val daVinci =
                 DaVinci {
-                    httpClient = HttpClient(mockEngine) {
+                    httpClient = KtorHttpClient(HttpClient(mockEngine) {
                         followRedirects = false
-                    }
+                    })
                     logger = Logger.CONSOLE
                     // Oidc as module
                     module(Oidc) {
@@ -804,7 +805,7 @@ class DaVinciErrorTest {
 
             val daVinci =
                 DaVinci {
-                    httpClient = HttpClient(mockEngine)
+                    httpClient = KtorHttpClient(HttpClient(mockEngine))
                     // Oidc as module
                     module(Oidc) {
                         clientId = "test"

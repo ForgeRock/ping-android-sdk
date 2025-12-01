@@ -10,6 +10,7 @@ package com.pingidentity.orchestrate
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlin.coroutines.cancellation.CancellationException
+import com.pingidentity.network.HttpRequest as Request
 
 /**
  * Sealed interface for Node. Represents a node in the workflow.

@@ -7,10 +7,10 @@
 
 package com.pingidentity.oidc.agent
 
+import com.pingidentity.network.ktor.KtorHttpClient
 import com.pingidentity.oidc.OidcClientConfig
 import com.pingidentity.oidc.OidcConfig
 import com.pingidentity.oidc.OpenIdConfiguration
-import com.pingidentity.oidc.Token
 import com.pingidentity.storage.MemoryStorage
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
@@ -37,7 +37,7 @@ class BrowserTest {
                 )
             }
 
-        val mock = HttpClient(mockEngine)
+        val mock = KtorHttpClient(HttpClient(mockEngine))
 
         val oidcClientConfig = OidcClientConfig().apply {
             httpClient = mock
@@ -73,7 +73,7 @@ class BrowserTest {
                 )
             }
 
-        val mock = HttpClient(mockEngine)
+        val mock = KtorHttpClient(HttpClient(mockEngine))
 
         // The pingone custom end session endpoint is not defined, e.g AIC server
         val oidcClientConfig = OidcClientConfig().apply {

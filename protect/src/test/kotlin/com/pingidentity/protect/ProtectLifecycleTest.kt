@@ -9,6 +9,7 @@ package com.pingidentity.protect
 
 import android.content.Context
 import com.pingidentity.android.ContextProvider
+import com.pingidentity.network.ktor.KtorHttpClient
 import com.pingidentity.orchestrate.EmptySession
 import com.pingidentity.orchestrate.Module
 import com.pingidentity.orchestrate.SuccessNode
@@ -124,7 +125,7 @@ class ProtectLifecycleTest {
             }
         }
         val workflow = Workflow() {
-            httpClient = HttpClient(mockEngine)
+            httpClient = KtorHttpClient(HttpClient(mockEngine))
             module(ProtectLifecycle) {
                 pauseBehavioralDataOnSuccess = true
             }
@@ -144,7 +145,7 @@ class ProtectLifecycleTest {
             }
         }
         val workflow = Workflow() {
-            httpClient = HttpClient(mockEngine)
+            httpClient = KtorHttpClient(HttpClient(mockEngine))
             module(ProtectLifecycle) {
                 pauseBehavioralDataOnSuccess = false
             }
