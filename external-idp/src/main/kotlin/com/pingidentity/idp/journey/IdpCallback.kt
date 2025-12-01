@@ -17,9 +17,9 @@ import com.pingidentity.idp.IdpResult
 import com.pingidentity.journey.plugin.AbstractCallback
 import com.pingidentity.journey.plugin.Journey
 import com.pingidentity.journey.plugin.JourneyAware
-import com.pingidentity.journey.plugin.RequestInterceptor
 import com.pingidentity.orchestrate.FlowContext
 import com.pingidentity.orchestrate.Request
+import com.pingidentity.orchestrate.RequestInterceptor
 import kotlinx.coroutines.yield
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.jsonArray

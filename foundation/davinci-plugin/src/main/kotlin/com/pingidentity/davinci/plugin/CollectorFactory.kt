@@ -8,6 +8,7 @@
 package com.pingidentity.davinci.plugin
 
 import com.pingidentity.orchestrate.ContinueNode
+import com.pingidentity.orchestrate.ContinueNodeAware
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive

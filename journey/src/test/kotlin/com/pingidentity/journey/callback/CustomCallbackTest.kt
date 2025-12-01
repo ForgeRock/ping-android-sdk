@@ -16,7 +16,6 @@ import com.pingidentity.journey.authenticateHeader
 import com.pingidentity.journey.module.Session
 import com.pingidentity.journey.plugin.Callback
 import com.pingidentity.journey.plugin.JourneyAware
-import com.pingidentity.journey.plugin.RequestInterceptor
 import com.pingidentity.journey.plugin.callbacks
 import com.pingidentity.journey.sessionResponse
 import com.pingidentity.logger.CONSOLE
@@ -24,6 +23,7 @@ import com.pingidentity.logger.Logger
 import com.pingidentity.orchestrate.ContinueNode
 import com.pingidentity.orchestrate.FlowContext
 import com.pingidentity.orchestrate.Request
+import com.pingidentity.orchestrate.RequestInterceptor
 import com.pingidentity.storage.MemoryStorage
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine

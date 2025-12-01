@@ -7,6 +7,10 @@
 
 package com.pingidentity.journey.plugin
 
+import com.pingidentity.orchestrate.Workflow
+
+typealias Journey = Workflow
+
 /**
  * An interface that should be implemented by classes that need to be aware of the Journey workflow.
  * The Journey will be injected to the classes that implement this interface.

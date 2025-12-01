@@ -9,10 +9,10 @@ package com.pingidentity.protect.journey
 
 import com.pingidentity.journey.plugin.AbstractCallback
 import com.pingidentity.journey.plugin.Callback
-import com.pingidentity.journey.plugin.ContinueNodeAware
 import com.pingidentity.journey.plugin.ValueCallback
 import com.pingidentity.journey.plugin.callbacks
 import com.pingidentity.orchestrate.ContinueNode
+import com.pingidentity.orchestrate.ContinueNodeAware
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonArray
