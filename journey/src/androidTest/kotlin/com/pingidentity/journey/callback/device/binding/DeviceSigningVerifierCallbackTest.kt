@@ -49,11 +49,9 @@ class DeviceSigningVerifierCallbackTest : BaseDeviceBindingTest() {
     @Before
     fun setupTree() = runTest {
         tree = "device-verifier"
-        // ...add more mocks as needed...
         if (!setupBindingDevice) {
             println("Setting up a device binding")
             bindDevice()
-            setupBindingDevice = true
         } else {
             println("Device binding already set up")
         }
@@ -494,6 +492,7 @@ class DeviceSigningVerifierCallbackTest : BaseDeviceBindingTest() {
                 val jwtToken = JWTParser.parse(token)
                 kid = jwtToken.header.toJSONObject()["kid"].toString()
                 userId = deviceBindingCallback.userId
+                setupBindingDevice = true
             }.onFailure { error ->
                 assertTrue("bindDevice failed with ${error.message}", false)
             }
