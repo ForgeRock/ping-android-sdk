@@ -14,6 +14,7 @@ import com.pingidentity.device.binding.journey.DeviceSigningVerifierCallback
 import com.pingidentity.journey.callback.ChoiceCallback
 import com.pingidentity.journey.callback.NameCallback
 import com.pingidentity.journey.callback.TextOutputCallback
+import com.pingidentity.journey.module.session
 import com.pingidentity.journey.plugin.callbacks
 import com.pingidentity.journey.start
 import com.pingidentity.journey.utils.DeviceSkipRule
@@ -22,6 +23,8 @@ import com.pingidentity.orchestrate.ContinueNode
 import com.pingidentity.orchestrate.ErrorNode
 import junit.framework.TestCase.assertTrue
 import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.fail
@@ -53,6 +56,7 @@ class DeviceSigningVerifierCallbackTest : BaseDeviceBindingTest() {
         if (!setupBindingDevice) {
             println("Setting up a device binding")
             bindDevice()
+            setupBindingDevice = true
         } else {
             println("Device binding already set up")
         }
@@ -193,8 +197,8 @@ class DeviceSigningVerifierCallbackTest : BaseDeviceBindingTest() {
                 val jwtChallenge = jwtToken.jwtClaimsSet.getClaim("challenge")
                 val jwtSub = jwtToken.jwtClaimsSet.subject
 
-                assertTrue("kid not found", kid.contains(jwtKid))
-                assertTrue("User ID not equal", userId.contains(jwtSub))
+                assertEquals("kid not found", kid, jwtKid)
+                assertEquals("User ID not equal", userId, jwtSub)
                 assertTrue(jwtExpiry.after(expMin.time) && jwtExpiry.before(expMax.time))
                 assertTrue(jwtIat.after(nowMinus5.time) && jwtIat.before(nowPlus5.time))
                 assertTrue(jwtNbf.after(nowMinus5.time) && jwtNbf.before(nowPlus5.time))
@@ -249,8 +253,8 @@ class DeviceSigningVerifierCallbackTest : BaseDeviceBindingTest() {
                 val jwtChallenge = jwtToken.jwtClaimsSet.getClaim("challenge")
                 val jwtSub = jwtToken.jwtClaimsSet.subject
 
-                assertTrue("kid not found", kid.contains(jwtKid))
-                assertTrue("User ID not equal", userId.contains(jwtSub))
+                assertEquals("kid not found", kid, jwtKid)
+                assertEquals("User ID not equal", userId, jwtSub)
                 assertTrue(jwtExpiry.after(expMin.time) && jwtExpiry.before(expMax.time))
                 assertTrue(jwtIat.after(nowMinus5.time) && jwtIat.before(nowPlus5.time))
                 assertTrue(jwtNbf.after(nowMinus5.time) && jwtNbf.before(nowPlus5.time))
@@ -295,8 +299,8 @@ class DeviceSigningVerifierCallbackTest : BaseDeviceBindingTest() {
             val jwtChallenge = jwtToken.jwtClaimsSet.getClaim("challenge")
             val jwtSub = jwtToken.jwtClaimsSet.subject
 
-            assertTrue("kid not found", kid.contains(jwtKid))
-            assertTrue("User ID not equal", userId.contains(jwtSub))
+            assertEquals("kid not found", kid, jwtKid)
+            assertEquals("User ID not equal", userId, jwtSub)
             assertEquals("Challenge not matched", customDeviceSigningVerifierCallback.challenge, jwtChallenge)
             assertTrue("Expiration time not matched", jwtExpiry.after(expMin.time) && jwtExpiry.before(expMax.time))
         }.onFailure { error ->
@@ -493,8 +497,12 @@ class DeviceSigningVerifierCallbackTest : BaseDeviceBindingTest() {
         deviceBindingCallback.bind()
             .onSuccess { token ->
                 val jwtToken = JWTParser.parse(token)
-                kid.add(jwtToken.header.toJSONObject()["kid"].toString())
-                userId.add(deviceBindingCallback.userId)
+                kid = jwtToken.header.toJSONObject()["kid"].toString()
+                userId = deviceBindingCallback.userId
+
+                defaultJourney.session()?.let {
+                    defaultJourney.signOff()
+                }
             }.onFailure { error ->
                 assertTrue("bindDevice failed with ${error.message}", false)
             }
@@ -503,5 +511,10 @@ class DeviceSigningVerifierCallbackTest : BaseDeviceBindingTest() {
 
     companion object {
         private var setupBindingDevice = false
+
+        /** The key identifier (KID) from the bound device */
+        private var kid: String = ""
+        /** The user identifier associated with the bound device */
+        private var userId: String = ""
     }
 }

@@ -159,11 +159,4 @@ open class BaseDeviceBindingTest : BaseJourneyTest() {
         val username: String,
         val password: String,
     )
-
-    companion object {
-        /** The key identifier (KID) from the bound device */
-        internal var kid: MutableList<String> = mutableListOf()
-        /** The user identifier associated with the bound device */
-        internal var userId: MutableList<String> = mutableListOf()
-    }
 }
