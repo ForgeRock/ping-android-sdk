@@ -56,6 +56,11 @@ class DeviceBindingListAndUnbindTest : BaseDeviceBindingTest() {
     fun testBindDeviceFlow() = runTest {
         withContext(Dispatchers.Default.limitedParallelism(1)) {
             withTimeout(30000) {
+                if (userStorage.findAll().isNotEmpty()) {
+                    userStorage.findAll().forEach {
+                        userStorage.delete(it)
+                    }
+                }
                 bindDevice(
                     configType = ConfigType.BIND_PIN,
                     storage = userStorage,
