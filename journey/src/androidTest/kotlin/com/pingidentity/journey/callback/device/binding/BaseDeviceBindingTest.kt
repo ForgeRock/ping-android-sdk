@@ -162,8 +162,8 @@ open class BaseDeviceBindingTest : BaseJourneyTest() {
 
     companion object {
         /** The key identifier (KID) from the bound device */
-        internal var kid: String = ""
+        internal var kid: MutableList<String> = mutableListOf()
         /** The user identifier associated with the bound device */
-        internal var userId: String = ""
+        internal var userId: MutableList<String> = mutableListOf()
     }
 }
