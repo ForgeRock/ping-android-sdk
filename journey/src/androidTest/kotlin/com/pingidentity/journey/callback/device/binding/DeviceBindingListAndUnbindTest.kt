@@ -20,6 +20,7 @@ import junit.framework.TestCase.assertTrue
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.fail
@@ -34,6 +35,8 @@ import org.junit.Test
 class DeviceBindingListAndUnbindTest : BaseDeviceBindingTest() {
     @get:Rule
     val deviceSkipRule = DeviceSkipRule()
+
+    private val userStorage = UserKeysStorage()
     /**
      * Initializes the journey tree and configures the test server before each test.
      */
@@ -52,42 +55,43 @@ class DeviceBindingListAndUnbindTest : BaseDeviceBindingTest() {
     @RequiresDevice
     fun testBindDeviceFlow() = runTest {
         withContext(Dispatchers.Default.limitedParallelism(1)) {
-            val userStorage = UserKeysStorage()
-            bindDevice(
-                configType = ConfigType.BIND_PIN,
-                storage = userStorage,
-            )
-            bindDevice(
-                configType = ConfigType.BIND,
-                storage = userStorage,
-            )
+            withTimeout(30000) {
+                bindDevice(
+                    configType = ConfigType.BIND_PIN,
+                    storage = userStorage,
+                )
+                bindDevice(
+                    configType = ConfigType.BIND,
+                    storage = userStorage,
+                )
 
-            assertTrue(userStorage.findAll().isNotEmpty())
-            assertEquals(1, userStorage.findAll().size)
+                assertTrue(userStorage.findAll().isNotEmpty())
+                assertEquals(1, userStorage.findAll().size)
 
-            var node = defaultJourney.start(tree) as ContinueNode
-            node.handleLoginCallbacks()
-            node = node.next() as ContinueNode
+                var node = defaultJourney.start(tree) as ContinueNode
+                node.handleLoginCallbacks()
+                node = node.next() as ContinueNode
 
-            val nameCallback = node.callbacks.first() as NameCallback
-            nameCallback.name = USERNAME
-            node = node.next() as ContinueNode
+                val nameCallback = node.callbacks.first() as NameCallback
+                nameCallback.name = USERNAME
+                node = node.next() as ContinueNode
 
-            val choiceCallback = node.callbacks.first() as ChoiceCallback
-            choiceCallback.selectedIndex = choiceCallback.choices.indexOf("default")
-            node = node.next() as ContinueNode
+                val choiceCallback = node.callbacks.first() as ChoiceCallback
+                choiceCallback.selectedIndex = choiceCallback.choices.indexOf("default")
+                node = node.next() as ContinueNode
 
-            val deviceSigningVerifierCallback = node.callbacks.first() as DeviceSigningVerifierCallback
-            deviceSigningVerifierCallback.sign()
-                .onSuccess { node = node.next() as ContinueNode }
-                .onFailure { fail("testBindDeviceFlow failed with ${it.message}") }
+                val deviceSigningVerifierCallback = node.callbacks.first() as DeviceSigningVerifierCallback
+                deviceSigningVerifierCallback.sign()
+                    .onSuccess { node = node.next() as ContinueNode }
+                    .onFailure { fail("testBindDeviceFlow failed with ${it.message}") }
 
-            val userKeyList = userStorage.findAll()
-            val userKeyNone: UserKey? = userKeyList.find { it.authType.name == "NONE" }
-            assertNotNull(userKeyNone)
+                val userKeyList = userStorage.findAll()
+                val userKeyNone: UserKey? = userKeyList.find { it.authType.name == "NONE" }
+                assertNotNull(userKeyNone)
 
-            userStorage.delete(userKeyNone!!)
-            assertEquals(0, userStorage.findAll().size)
+                userStorage.delete(userKeyNone!!)
+                assertEquals(0, userStorage.findAll().size)
+            }
         }
     }
 }

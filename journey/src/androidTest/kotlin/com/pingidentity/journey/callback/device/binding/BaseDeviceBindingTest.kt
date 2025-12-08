@@ -79,10 +79,11 @@ open class BaseDeviceBindingTest : BaseJourneyTest() {
      * and device binding with either biometric or PIN authentication.
      *
      * @param configType The type of binding configuration (BIND or BIND_PIN)
+     * @param storage The user key storage for device binding
      */
     internal suspend fun bindDevice(
         configType: ConfigType,
-        storage: UserKeysStorage = UserKeysStorage()
+        storage: UserKeysStorage,
     ) {
         // Logout if not already done so.
         if (defaultJourney.session() != null) {
