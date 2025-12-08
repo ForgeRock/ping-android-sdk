@@ -264,6 +264,7 @@ class DeviceSigningVerifierCallbackTest : BaseDeviceBindingTest() {
      * Verifies that the exp claim in the JWT matches the custom expiration time provided.
      */
     @Test
+    @RequiresDevice
     fun testDeviceVerificationSuccessCustomExp() = runTest {
         var node = defaultJourney.start(tree) as ContinueNode
         node.handleLoginCallbacks()
@@ -293,10 +294,10 @@ class DeviceSigningVerifierCallbackTest : BaseDeviceBindingTest() {
             val jwtChallenge = jwtToken.jwtClaimsSet.getClaim("challenge")
             val jwtSub = jwtToken.jwtClaimsSet.subject
 
-            assertEquals(kid, jwtKid)
-            assertEquals(customDeviceSigningVerifierCallback.challenge, jwtChallenge)
-            assertEquals(userId, jwtSub)
-            assertTrue(jwtExpiry.after(expMin.time) && jwtExpiry.before(expMax.time))
+            assertEquals("kid not equal", kid, jwtKid)
+            assertEquals("Challenge not matched", customDeviceSigningVerifierCallback.challenge, jwtChallenge)
+            assertEquals("User ID not equal", userId, jwtSub)
+            assertTrue("Expiration time not matched", jwtExpiry.after(expMin.time) && jwtExpiry.before(expMax.time))
         }.onFailure { error ->
             fail("testDeviceVerificationSuccessCustomExp failed with ${error.message}")
         }
