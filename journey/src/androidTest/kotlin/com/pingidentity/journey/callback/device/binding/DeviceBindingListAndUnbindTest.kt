@@ -13,6 +13,8 @@ import com.pingidentity.journey.callback.ChoiceCallback
 import com.pingidentity.journey.callback.NameCallback
 import com.pingidentity.journey.plugin.callbacks
 import com.pingidentity.journey.start
+import com.pingidentity.journey.utils.DeviceSkipRule
+import com.pingidentity.journey.utils.RequiresDevice
 import com.pingidentity.orchestrate.ContinueNode
 import junit.framework.TestCase.assertTrue
 import kotlinx.coroutines.Dispatchers
@@ -22,6 +24,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.fail
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 
 /**
@@ -29,6 +32,8 @@ import org.junit.Test
  * Tests various device binding configurations including biometric and PIN-based authentication.
  */
 class DeviceBindingListAndUnbindTest : BaseDeviceBindingTest() {
+    @get:Rule
+    val deviceSkipRule = DeviceSkipRule()
     /**
      * Initializes the journey tree and configures the test server before each test.
      */
@@ -44,6 +49,7 @@ class DeviceBindingListAndUnbindTest : BaseDeviceBindingTest() {
      * Verifies that a device can be successfully bound using app PIN authentication.
      */
     @Test
+    @RequiresDevice
     fun testBindDeviceFlow() = runTest {
         withContext(Dispatchers.Default.limitedParallelism(1)) {
             val userStorage = UserKeysStorage()

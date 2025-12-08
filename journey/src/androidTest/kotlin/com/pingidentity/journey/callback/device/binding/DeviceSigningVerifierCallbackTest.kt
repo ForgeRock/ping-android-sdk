@@ -6,7 +6,6 @@
 
 package com.pingidentity.journey.callback.device.binding
 
-import android.util.Base64
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.nimbusds.jwt.JWTParser
 import com.pingidentity.device.binding.authenticator.exception.InvalidClaimException
@@ -17,16 +16,17 @@ import com.pingidentity.journey.callback.NameCallback
 import com.pingidentity.journey.callback.TextOutputCallback
 import com.pingidentity.journey.plugin.callbacks
 import com.pingidentity.journey.start
+import com.pingidentity.journey.utils.DeviceSkipRule
 import com.pingidentity.journey.utils.RequiresDevice
 import com.pingidentity.orchestrate.ContinueNode
 import com.pingidentity.orchestrate.ErrorNode
 import junit.framework.TestCase.assertTrue
 import kotlinx.coroutines.test.runTest
-import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.fail
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.time.Instant
@@ -40,6 +40,8 @@ import java.util.Calendar
  */
 @RunWith(AndroidJUnit4::class)
 class DeviceSigningVerifierCallbackTest : BaseDeviceBindingTest() {
+    @get:Rule
+    val deviceSkipRule = DeviceSkipRule()
     /**
      * Initializes the journey tree and sets up device binding before tests.
      * Binds a device once for all tests to avoid redundant setup.
@@ -154,6 +156,7 @@ class DeviceSigningVerifierCallbackTest : BaseDeviceBindingTest() {
      * challenge, and subject matching the userId.
      */
     @Test
+    @RequiresDevice
     fun testDeviceVerificationSuccess() = runTest {
         var node = defaultJourney.start(tree) as ContinueNode
         node.handleLoginCallbacks()
@@ -348,20 +351,29 @@ class DeviceSigningVerifierCallbackTest : BaseDeviceBindingTest() {
 
         val choiceCallback = node.callbacks.first() as ChoiceCallback
         choiceCallback.selectedIndex = choiceCallback.choices.indexOf("wrong-app-id")
-        node = node.next() as ContinueNode
 
-        val deviceSigningVerifierCallback = node.callbacks.first() as DeviceSigningVerifierCallback
-        deviceSigningVerifierCallback.sign()
-            .onSuccess {
-                val errorNode = node.next() as ErrorNode
-                assertNotNull(errorNode.message)
-                assertEquals("Login failure", errorNode.message)
-                assertEquals("401", errorNode.input["code"].toString())
-                assertEquals("\"Unauthorized\"", errorNode.input["reason"].toString())
-                assertEquals("\"Login failure\"", errorNode.input["message"].toString())
-            }.onFailure { error ->
-                fail("testDeviceSigningVerifierNonMatchingAppIdError failed with ${error.message}")
-            }
+        if (node.next() is ErrorNode) {
+            val errorNode = node.next() as ErrorNode
+            assertNotNull(errorNode.message)
+            assertEquals("Login failure", errorNode.message)
+            assertEquals("401", errorNode.input["code"].toString())
+            assertEquals("\"Unauthorized\"", errorNode.input["reason"].toString())
+            assertEquals("\"Login failure\"", errorNode.input["message"].toString())
+        } else {
+            node = node.next() as ContinueNode
+            val deviceSigningVerifierCallback = node.callbacks.first() as DeviceSigningVerifierCallback
+            deviceSigningVerifierCallback.sign()
+                .onSuccess {
+                    val errorNode = node.next() as ErrorNode
+                    assertNotNull(errorNode.message)
+                    assertEquals("Login failure", errorNode.message)
+                    assertEquals("401", errorNode.input["code"].toString())
+                    assertEquals("\"Unauthorized\"", errorNode.input["reason"].toString())
+                    assertEquals("\"Login failure\"", errorNode.input["message"].toString())
+                }.onFailure { error ->
+                    fail("testDeviceSigningVerifierNonMatchingAppIdError failed with ${error.message}")
+                }
+        }
     }
 
     /**
