@@ -63,7 +63,7 @@ class DeviceBindingListAndUnbindTest : BaseDeviceBindingTest() {
             )
 
             assertTrue(userStorage.findAll().isNotEmpty())
-            assertEquals(userStorage.findAll().size, 1)
+            assertEquals(1, userStorage.findAll().size)
 
             var node = defaultJourney.start(tree) as ContinueNode
             node.handleLoginCallbacks()

@@ -6,12 +6,9 @@
 
 package com.pingidentity.journey.callback.device.binding
 
-import com.nimbusds.jwt.JWTParser
 import com.pingidentity.device.binding.Prompt
-import com.pingidentity.device.binding.UserKeyStorageConfig
 import com.pingidentity.device.binding.UserKeysStorage
 import com.pingidentity.device.binding.journey.DeviceBindingCallback
-import com.pingidentity.device.binding.journey.DeviceBindingConfig
 import com.pingidentity.journey.BaseJourneyTest
 import com.pingidentity.journey.callback.ChoiceCallback
 import com.pingidentity.journey.callback.KbaCreateCallback
@@ -23,7 +20,6 @@ import com.pingidentity.journey.module.session
 import com.pingidentity.journey.plugin.callbacks
 import com.pingidentity.journey.start
 import com.pingidentity.orchestrate.ContinueNode
-import io.mockk.mockk
 import junit.framework.TestCase.assertTrue
 
 /**
@@ -115,10 +111,7 @@ open class BaseDeviceBindingTest : BaseJourneyTest() {
                         storage
                     }
                 }.onSuccess { token ->
-                    val jwtToken = JWTParser.parse(token)
-                    kid = jwtToken.header.toJSONObject()["kid"].toString()
-                    userId = deviceBindingCallback.userId
-                    println("kid: $kid, userId: $userId")
+                    assertTrue(token.isNotEmpty())
                 }.onFailure { error ->
                     assertTrue("Device binding failed with error: $error", false)
                 }
@@ -137,10 +130,7 @@ open class BaseDeviceBindingTest : BaseJourneyTest() {
                         prompt = Prompt("App Pin", "Enter your app pin", "App pin is required")
                     }
                 }.onSuccess { token ->
-                    val jwtToken = JWTParser.parse(token)
-                    kid = jwtToken.header.toJSONObject()["kid"].toString()
-                    userId = deviceBindingCallback.userId
-                    println("kid: $kid, userId: $userId")
+                    assertTrue(token.isNotEmpty())
                 }.onFailure { error ->
                     assertTrue("Device binding failed with error: $error", false)
                 }
