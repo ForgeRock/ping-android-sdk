@@ -77,4 +77,5 @@ dependencies {
     androidTestImplementation(libs.nimbus.jose.jwt)
     androidTestImplementation(libs.mockk)
     androidTestImplementation(libs.mockk.android)
+    androidTestImplementation(libs.kotlin.test)
 }
