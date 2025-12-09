@@ -32,7 +32,7 @@ class OidcWebConfig : WorkflowConfig() {
  *
  * @param config The OIDC web configuration.
  */
-class OidcWeb(config: OidcWebConfig) {
+class OidcWeb(val config: OidcWebConfig) {
 
     private var oidcFlow = OidcFlow(config)
 

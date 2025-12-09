@@ -7,6 +7,7 @@
 
 package com.pingidentity.fido
 
+import android.app.Activity
 import android.content.Context
 import androidx.credentials.CreateCredentialResponse
 import androidx.credentials.CreatePublicKeyCredentialRequest
@@ -51,16 +52,19 @@ import com.google.android.gms.fido.fido2.api.common.PublicKeyCredential as GmsPu
 class FidoClientTest {
 
     private lateinit var mockContext: Context
+    private lateinit var mockActivity: Activity
     private lateinit var mockCredentialManager: CredentialManager
     private lateinit var fidoClient: FidoClient
 
     @BeforeTest
     fun setUp() {
         mockContext = mockk<Context>(relaxed = true)
+        mockActivity = mockk<Activity>(relaxed = true)
         mockCredentialManager = mockk<CredentialManager>(relaxed = true)
 
         mockkObject(ContextProvider)
         every { ContextProvider.context } returns mockContext
+        every { ContextProvider.currentActivity } returns mockActivity
 
         mockkObject(CredentialManager.Companion)
         every { CredentialManager.create(any()) } returns mockCredentialManager
@@ -102,7 +106,7 @@ class FidoClientTest {
             val requestSlot = slot<CreatePublicKeyCredentialRequest>()
             coEvery {
                 mockCredentialManager.createCredential(
-                    context = mockContext,
+                    context = mockActivity,
                     request = capture(requestSlot)
                 )
             } returns mockCreateResponse
@@ -118,7 +122,7 @@ class FidoClientTest {
 
             coVerify {
                 mockCredentialManager.createCredential(
-                    context = mockContext,
+                    context = mockActivity,
                     request = any<CreatePublicKeyCredentialRequest>()
                 )
             }
@@ -218,7 +222,7 @@ class FidoClientTest {
         val requestSlot = slot<CreatePublicKeyCredentialRequest>()
         coEvery {
             mockCredentialManager.createCredential(
-                context = mockContext,
+                context = mockActivity,
                 request = capture(requestSlot)
             )
         } returns mockCreateResponse
@@ -246,7 +250,7 @@ class FidoClientTest {
 
         coVerify {
             mockCredentialManager.createCredential(
-                context = mockContext,
+                context = mockActivity,
                 request = any<CreatePublicKeyCredentialRequest>()
             )
         }
@@ -280,7 +284,7 @@ class FidoClientTest {
             val requestSlot = slot<GetCredentialRequest>()
             coEvery {
                 mockCredentialManager.getCredential(
-                    context = mockContext,
+                    context = mockActivity,
                     request = capture(requestSlot)
                 )
             } returns mockGetResponse
@@ -295,7 +299,7 @@ class FidoClientTest {
 
             coVerify {
                 mockCredentialManager.getCredential(
-                    context = mockContext,
+                    context = mockActivity,
                     request = any<GetCredentialRequest>()
                 )
             }
@@ -592,7 +596,7 @@ class FidoClientTest {
         val requestSlot = slot<GetCredentialRequest>()
         coEvery {
             mockCredentialManager.getCredential(
-                context = mockContext,
+                context = mockActivity,
                 request = capture(requestSlot)
             )
         } returns mockGetResponse
@@ -623,7 +627,7 @@ class FidoClientTest {
         // Verify credential manager was called
         coVerify {
             mockCredentialManager.getCredential(
-                context = mockContext,
+                context = mockActivity,
                 request = any()
             )
         }
@@ -1386,7 +1390,7 @@ class FidoClientTest {
         val requestSlot = slot<GetCredentialRequest>()
         coEvery {
             mockCredentialManager.getCredential(
-                context = mockContext,
+                context = mockActivity,
                 request = capture(requestSlot)
             )
         } returns mockGetResponse
@@ -1551,7 +1555,7 @@ class FidoClientTest {
         val credentialManagerRequestSlot = slot<GetCredentialRequest>()
         coEvery {
             mockCredentialManager.getCredential(
-                context = mockContext,
+                context = mockActivity,
                 request = capture(credentialManagerRequestSlot)
             )
         } returns mockGetResponse

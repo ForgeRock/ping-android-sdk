@@ -86,7 +86,8 @@ dependencies {
 
     //To Support nod-discoverable fido2 credential
     implementation(libs.play.services.fido)
-    
+    implementation(libs.play.services.auth)
+
     implementation(project(":foundation:device:device-profile"))
     implementation(project(":foundation:device:device-client"))
     implementation(project(":recaptcha-enterprise"))

@@ -31,6 +31,7 @@ import com.pingidentity.fido.Constants.FIELD_TYPE
 import com.pingidentity.fido.Constants.FIELD_USER_HANDLE
 import com.pingidentity.logger.Logger
 import com.pingidentity.utils.PingDsl
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -41,7 +42,6 @@ import kotlinx.serialization.json.double
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
-import kotlin.coroutines.coroutineContext
 
 /**
  * Core FIDO operations handler for Android applications.
@@ -108,7 +108,7 @@ class FidoClient(private val config: FidoClientConfig) {
             val credentialRequest = customizer.customizer(CreatePublicKeyCredentialRequest(input.toString()))
 
             val result = credentialManager.createCredential(
-                context = ContextProvider.context,
+                context = ContextProvider.currentActivity,
                 request = credentialRequest
             )
             when (result) {
@@ -122,7 +122,7 @@ class FidoClient(private val config: FidoClientConfig) {
                 else -> throw IllegalStateException("Unexpected result type: ${result::class.simpleName}")
             }
         } catch (e: Exception) {
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
             return Result.failure(e)
         }
     }
@@ -155,7 +155,7 @@ class FidoClient(private val config: FidoClientConfig) {
         val credentialRequest = GetCredentialRequest(listOf(credentialOption))
         try {
             val result = credentialManager.getCredential(
-                context = ContextProvider.context,
+                context = ContextProvider.currentActivity,
                 request = credentialRequest
             )
             when (val credential = result.credential) {
@@ -169,7 +169,7 @@ class FidoClient(private val config: FidoClientConfig) {
                 else -> throw IllegalStateException("Unexpected result type: ${result::class.simpleName}")
             }
         } catch (e: Exception) {
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
             return Result.failure(e)
         }
     }
@@ -230,7 +230,7 @@ class FidoClient(private val config: FidoClientConfig) {
 
             return Result.success(assertionValue)
         } catch (e: Exception) {
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
             return Result.failure(e)
         }
     }
@@ -320,7 +320,7 @@ class FidoClient(private val config: FidoClientConfig) {
                 )
             }
         } catch (e: Exception) {
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
             return Result.failure(e)
         }
     }
