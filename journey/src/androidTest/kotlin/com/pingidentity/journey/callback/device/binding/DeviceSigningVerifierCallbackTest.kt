@@ -44,6 +44,12 @@ import java.util.Calendar
 class DeviceSigningVerifierCallbackTest : BaseDeviceBindingTest() {
     @get:Rule
     val deviceSkipRule = DeviceSkipRule()
+
+    /** The key identifier (KID) from the bound device */
+    private var kid: String = ""
+
+    /** The user identifier associated with the bound device */
+    private var userId: String = ""
     /**
      * Initializes the journey tree and sets up device binding before tests.
      * Binds a device once for all tests to avoid redundant setup.
@@ -51,13 +57,7 @@ class DeviceSigningVerifierCallbackTest : BaseDeviceBindingTest() {
     @Before
     fun setupTree() = runTest {
         tree = "device-verifier"
-        if (!setupBindingDevice) {
-            println("Setting up a device binding")
-            bindDevice()
-            setupBindingDevice = true
-        } else {
-            println("Device binding already set up")
-        }
+        bindDevice()
     }
 
     /**
@@ -298,7 +298,7 @@ class DeviceSigningVerifierCallbackTest : BaseDeviceBindingTest() {
             val jwtChallenge = jwtToken.jwtClaimsSet.getClaim("challenge")
             val jwtSub = jwtToken.jwtClaimsSet.subject
 
-            assertEquals("kid not found", kid, jwtKid)
+            assertEquals("kid do not match", kid, jwtKid)
             assertEquals("User ID not equal", userId, jwtSub)
             assertEquals("Challenge not matched", customDeviceSigningVerifierCallback.challenge, jwtChallenge)
             assertTrue("Expiration time not matched", jwtExpiry.after(expMin.time) && jwtExpiry.before(expMax.time))
@@ -501,15 +501,5 @@ class DeviceSigningVerifierCallbackTest : BaseDeviceBindingTest() {
             }.onFailure { error ->
                 assertTrue("bindDevice failed with ${error.message}", false)
             }
-    }
-
-
-    companion object {
-        private var setupBindingDevice = false
-
-        /** The key identifier (KID) from the bound device */
-        private var kid: String = ""
-        /** The user identifier associated with the bound device */
-        private var userId: String = ""
     }
 }
