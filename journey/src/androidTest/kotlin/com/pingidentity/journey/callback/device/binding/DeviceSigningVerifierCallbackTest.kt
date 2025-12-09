@@ -8,13 +8,13 @@ package com.pingidentity.journey.callback.device.binding
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.nimbusds.jwt.JWTParser
+import com.nimbusds.jwt.SignedJWT
 import com.pingidentity.device.binding.authenticator.exception.InvalidClaimException
 import com.pingidentity.device.binding.journey.DeviceBindingCallback
 import com.pingidentity.device.binding.journey.DeviceSigningVerifierCallback
 import com.pingidentity.journey.callback.ChoiceCallback
 import com.pingidentity.journey.callback.NameCallback
 import com.pingidentity.journey.callback.TextOutputCallback
-import com.pingidentity.journey.module.session
 import com.pingidentity.journey.plugin.callbacks
 import com.pingidentity.journey.start
 import com.pingidentity.journey.utils.DeviceSkipRule
@@ -23,8 +23,6 @@ import com.pingidentity.orchestrate.ContinueNode
 import com.pingidentity.orchestrate.ErrorNode
 import junit.framework.TestCase.assertTrue
 import kotlinx.coroutines.test.runTest
-import kotlinx.serialization.json.jsonArray
-import kotlinx.serialization.json.jsonObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.fail
@@ -190,14 +188,15 @@ class DeviceSigningVerifierCallbackTest : BaseDeviceBindingTest() {
                 expMax.add(Calendar.SECOND, 60)
 
                 val jwtToken = JWTParser.parse(token)
-                val jwtKid = jwtToken.header.toJSONObject()["kid"].toString()
                 val jwtExpiry = jwtToken.jwtClaimsSet.expirationTime
                 val jwtIat = jwtToken.jwtClaimsSet.issueTime
                 val jwtNbf = jwtToken.jwtClaimsSet.notBeforeTime
                 val jwtChallenge = jwtToken.jwtClaimsSet.getClaim("challenge")
                 val jwtSub = jwtToken.jwtClaimsSet.subject
 
-                assertEquals("kid not found", kid, jwtKid)
+                val signedJwtToken = jwtToken as SignedJWT
+
+                assertEquals("kid do not match", kid, signedJwtToken.header.keyID)
                 assertEquals("User ID not equal", userId, jwtSub)
                 assertTrue(jwtExpiry.after(expMin.time) && jwtExpiry.before(expMax.time))
                 assertTrue(jwtIat.after(nowMinus5.time) && jwtIat.before(nowPlus5.time))
@@ -499,10 +498,6 @@ class DeviceSigningVerifierCallbackTest : BaseDeviceBindingTest() {
                 val jwtToken = JWTParser.parse(token)
                 kid = jwtToken.header.toJSONObject()["kid"].toString()
                 userId = deviceBindingCallback.userId
-
-                defaultJourney.session()?.let {
-                    defaultJourney.signOff()
-                }
             }.onFailure { error ->
                 assertTrue("bindDevice failed with ${error.message}", false)
             }
