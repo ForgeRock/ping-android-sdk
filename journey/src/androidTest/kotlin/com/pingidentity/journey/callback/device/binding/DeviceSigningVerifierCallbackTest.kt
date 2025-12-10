@@ -17,6 +17,7 @@ import com.pingidentity.journey.callback.NameCallback
 import com.pingidentity.journey.callback.TextOutputCallback
 import com.pingidentity.journey.plugin.callbacks
 import com.pingidentity.journey.start
+import com.pingidentity.journey.user
 import com.pingidentity.orchestrate.ContinueNode
 import com.pingidentity.orchestrate.ErrorNode
 import junit.framework.TestCase.assertTrue
@@ -52,6 +53,7 @@ class DeviceSigningVerifierCallbackTest : BaseDeviceBindingTest() {
         } else {
             println("Device binding already set up")
         }
+        defaultJourney.user()?.logout()
     }
 
     /**
@@ -472,13 +474,13 @@ class DeviceSigningVerifierCallbackTest : BaseDeviceBindingTest() {
      * Binds a device to the user and store the KID.
      */
     private suspend fun bindDevice() {
-        val user  = registerRandomUser()
+        randomUser  = registerRandomUser()
         var node = defaultJourney.start(tree) as ContinueNode
-        node.handleLoginCallbacks(username = user.username, password = user.password)
+        node.handleLoginCallbacks(username = randomUser.username, password = randomUser.password)
         node = node.next() as ContinueNode
 
         val nameCallback = node.callbacks.first() as NameCallback
-        nameCallback.name = user.username
+        nameCallback.name = randomUser.username
         node = node.next() as ContinueNode
 
         val choiceCallback = node.callbacks.first() as ChoiceCallback
@@ -503,5 +505,7 @@ class DeviceSigningVerifierCallbackTest : BaseDeviceBindingTest() {
         private var kid: String = ""
         /** The user identifier associated with the bound device */
         private var userId: String = ""
+
+        private lateinit var randomUser: RandomUser
     }
 }
