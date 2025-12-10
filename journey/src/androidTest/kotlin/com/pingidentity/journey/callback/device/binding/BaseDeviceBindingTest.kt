@@ -19,6 +19,7 @@ import com.pingidentity.journey.callback.TermsAndConditionsCallback
 import com.pingidentity.journey.module.session
 import com.pingidentity.journey.plugin.callbacks
 import com.pingidentity.journey.start
+import com.pingidentity.journey.user
 import com.pingidentity.orchestrate.ContinueNode
 import junit.framework.TestCase.assertTrue
 
@@ -70,6 +71,7 @@ open class BaseDeviceBindingTest : BaseJourneyTest() {
         termsAndConditionsCallback.accepted = true
         node.next()
 
+        defaultJourney.user()?.logout()
         return RandomUser(randomUser, randomUser)
     }
 
@@ -85,10 +87,8 @@ open class BaseDeviceBindingTest : BaseJourneyTest() {
         configType: ConfigType,
         storage: UserKeysStorage,
     ) {
-        // Logout if not already done so.
-        if (defaultJourney.session() != null) {
-            defaultJourney.signOff()
-        }
+        // Logout the current user if not already done so.
+        defaultJourney.user()?.logout()
 
         var node = defaultJourney.start(tree) as ContinueNode
 

@@ -20,6 +20,7 @@ import com.pingidentity.journey.start
 import com.pingidentity.journey.user
 import com.pingidentity.orchestrate.ContinueNode
 import com.pingidentity.orchestrate.ErrorNode
+import com.pingidentity.orchestrate.SuccessNode
 import junit.framework.TestCase.assertTrue
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -46,14 +47,9 @@ class DeviceSigningVerifierCallbackTest : BaseDeviceBindingTest() {
     @Before
     fun setupTree() = runTest {
         tree = "device-verifier"
-        if (!setupBindingDevice) {
-            println("Setting up a device binding")
-            bindDevice()
-            setupBindingDevice = true
-        } else {
-            println("Device binding already set up")
-        }
-        defaultJourney.user()?.logout()
+
+        // Register a new user and bind the device
+        bindDevice()
     }
 
     /**
@@ -213,12 +209,12 @@ class DeviceSigningVerifierCallbackTest : BaseDeviceBindingTest() {
     fun testDeviceVerificationUsernamelessSuccess() = runTest {
         var node = defaultJourney.start(tree) as ContinueNode
         val choiceCallback = node.callbacks.first() as ChoiceCallback
-        println(choiceCallback.choices)
+        logger.d("Choices available: ${choiceCallback.choices}")
         choiceCallback.selectedIndex = choiceCallback.choices.indexOf("usernameless")
         node = node.next() as ContinueNode
 
         if (node.callbacks.first() is TextOutputCallback) {
-            println("usernameless should not show TextOutputCallback before DeviceSigningVerifierCallback")
+            logger.d("usernameless should not show TextOutputCallback before DeviceSigningVerifierCallback")
             node = node.next() as ContinueNode
         }
 
@@ -227,7 +223,12 @@ class DeviceSigningVerifierCallbackTest : BaseDeviceBindingTest() {
         assertTrue(deviceSigningVerifierCallback.userId.isNullOrEmpty())
         assertNotNull(deviceSigningVerifierCallback.challenge)
 
-        deviceSigningVerifierCallback.sign()
+        // Sign with the specific key that was registered for the user
+        deviceSigningVerifierCallback.sign {
+            userKeySelector { keys ->
+                keys.first { it.kid == kid }
+            }
+        }
             .onSuccess { token ->
                 // Verify the JWT attributes
                 val nowMinus5 = Calendar.getInstance()
@@ -475,6 +476,12 @@ class DeviceSigningVerifierCallbackTest : BaseDeviceBindingTest() {
      */
     private suspend fun bindDevice() {
         randomUser  = registerRandomUser()
+        logger.d("Created randomUser: ${randomUser.username}")
+
+        // Update the user to be used
+        USERNAME = randomUser.username
+        PASSWORD = randomUser.password
+
         var node = defaultJourney.start(tree) as ContinueNode
         node.handleLoginCallbacks(username = randomUser.username, password = randomUser.password)
         node = node.next() as ContinueNode
@@ -493,14 +500,17 @@ class DeviceSigningVerifierCallbackTest : BaseDeviceBindingTest() {
                 val jwtToken = JWTParser.parse(token)
                 kid = jwtToken.header.toJSONObject()["kid"].toString()
                 userId = deviceBindingCallback.userId
+                logger.d("Successfully bound device with kid: $kid and userId: $userId")
             }.onFailure { error ->
                 assertTrue("bindDevice failed with ${error.message}", false)
             }
+
+        val result = node.next()
+        assertTrue(result is SuccessNode)   // make sure that the device-binding finished successfully in AIC
+        defaultJourney.user()?.logout() // logout the user
     }
 
-
     companion object {
-        private var setupBindingDevice = false
         /** The key identifier (KID) from the bound device */
         private var kid: String = ""
         /** The user identifier associated with the bound device */
