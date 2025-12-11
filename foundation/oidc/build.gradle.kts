@@ -30,9 +30,9 @@ android {
 dependencies {
     api(project(":foundation:utils"))
     api(project(":foundation:logger"))
+    api(project(":foundation:orchestrate"))
     implementation(project(":foundation:android"))
     implementation(project(":foundation:storage"))
-    implementation(project(":foundation:orchestrate"))
     implementation(project(":foundation:network"))
 
     //Make it optional for using centralize login

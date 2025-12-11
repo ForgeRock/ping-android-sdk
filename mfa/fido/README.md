@@ -57,6 +57,22 @@ dependencies {
 }
 ```
 
+### Additional Dependencies for API 33 and Older
+
+**Important:** For devices running Android API 33 (Android 13) and older, you must add the Credentials Play Services Auth dependency to ensure proper FIDO functionality:
+
+```gradle
+dependencies {
+    implementation("com.pingidentity.sdks:fido:<version>")
+    implementation("androidx.credentials:credentials-play-services-auth:1.5.0")
+    // Add other necessary dependencies here
+}
+```
+
+This dependency is required because:
+- Android Credential Manager requires additional support libraries for API 33 and below
+- It provides backward compatibility for FIDO authentication on older Android versions
+
 ### Additional Dependencies for Non-Discoverable Keys
 
 **Important:** According to the [Android Credential Manager documentation](https://developer.android.com/identity/sign-in/credential-manager), the current Credential Manager does not support non-discoverable keys.

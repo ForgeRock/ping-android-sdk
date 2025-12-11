@@ -1,5 +1,6 @@
 /*
- * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2025 - 2025 Ping Identity Corporation. All rights reserved.
+ *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
  */
@@ -29,6 +30,7 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import java.time.Instant
 
 class DeviceBindingCallbackTest : BaseJourneyTest() {
 
@@ -187,7 +189,7 @@ class DeviceBindingCallbackTest : BaseJourneyTest() {
             val deviceBindingCallback = node.callbacks.first() as DeviceBindingCallback
             assertNotNull(deviceBindingCallback)
             val result = deviceBindingCallback.bind {
-                expirationTime(60)
+                expirationTime = { Instant.now().plusSeconds(60)}
                 appPinConfig {
                     pinCollector { prompt ->
                         "1234".toCharArray()
