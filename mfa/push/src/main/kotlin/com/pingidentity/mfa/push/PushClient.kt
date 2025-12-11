@@ -50,7 +50,6 @@ class PushClient internal constructor(
          * @param block The configuration block to customize the client configuration.
          * @return An initialized PushClient instance.
          * 
-         * @sample
          * ```
          * val pushClient = PushClient {
          *     encryptionEnabled = true

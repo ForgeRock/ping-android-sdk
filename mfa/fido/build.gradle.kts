@@ -8,8 +8,7 @@ description = "Fido library"
 
 plugins {
     id("com.pingidentity.convention.android.library")
-    //TODO uncomment when ready to publish
-    //id("com.pingidentity.convention.centralPublish")
+    id("com.pingidentity.convention.centralPublish")
     id("com.pingidentity.convention.jacoco")
     alias(libs.plugins.androidLibrary)
     alias(libs.plugins.kotlinAndroid)

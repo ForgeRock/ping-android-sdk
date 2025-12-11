@@ -45,7 +45,6 @@ class OathClient internal constructor(
          * @param block The configuration block to customize the client configuration.
          * @return An initialized OathClient instance.
          *
-         * @sample
          * ```
          * val oathClient = OathClient {
          *     enableCredentialCache = true
