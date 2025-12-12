@@ -33,6 +33,12 @@ android {
             enableUnitTestCoverage = true
         }
     }
+
+    packaging {
+        resources {
+            excludes += mutableSetOf("META-INF/LICENSE.md", "META-INF/LICENSE-notice.md")
+        }
+    }
 }
 
 dependencies {
@@ -68,4 +74,7 @@ dependencies {
     androidTestImplementation(project(":mfa:binding"))
     androidTestImplementation(libs.bcpkix.jdk18on)
     androidTestImplementation(libs.ktor.client.core)
+    androidTestImplementation(libs.nimbus.jose.jwt)
+    androidTestImplementation(libs.mockk)
+    androidTestImplementation(libs.mockk.android)
 }
