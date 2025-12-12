@@ -15,6 +15,7 @@ import com.pingidentity.journey.callback.ChoiceCallback
 import com.pingidentity.journey.callback.TextOutputCallback
 import com.pingidentity.journey.plugin.callbacks
 import com.pingidentity.journey.start
+import com.pingidentity.journey.utils.DeviceSkipRule
 import com.pingidentity.journey.utils.RequiresDevice
 import com.pingidentity.orchestrate.ContinueNode
 import com.pingidentity.recaptcha.enterprise.ReCaptchaEnterpriseCallback
@@ -27,6 +28,7 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.FixMethodOrder
+import org.junit.Rule
 import org.junit.runners.MethodSorters
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -38,6 +40,12 @@ import kotlin.test.Test
 @LargeTest
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 class ReCaptchaEnterpriseCallbackFailureTest : BaseJourneyTest() {
+    /**
+     * Rule to skip tests on emulator.
+     */
+    @get:Rule
+    val deviceSkipRule = DeviceSkipRule()
+
     @BeforeTest
     fun setupTree() {
         tree = "TEST-e2e-recaptcha-enterprise"
