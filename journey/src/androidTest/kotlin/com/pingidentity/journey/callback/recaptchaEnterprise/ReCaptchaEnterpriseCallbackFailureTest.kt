@@ -6,6 +6,7 @@
 
 package com.pingidentity.journey.callback.recaptchaEnterprise
 
+import androidx.test.filters.LargeTest
 import com.google.android.recaptcha.RecaptchaAction
 import com.google.android.recaptcha.RecaptchaException
 import com.pingidentity.journey.BaseJourneyTest
@@ -25,14 +26,19 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
-import org.junit.Before
 import org.junit.FixMethodOrder
-import org.junit.Test
 import org.junit.runners.MethodSorters
+import kotlin.test.BeforeTest
+import kotlin.test.Test
 
+/**
+ * Tests for the ReCaptchaEnterpriseCallback. The tests running in order prevents failure on the
+ * BrowserStack.
+ */
+@LargeTest
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 class ReCaptchaEnterpriseCallbackFailureTest : BaseJourneyTest() {
-    @Before
+    @BeforeTest
     fun setupTree() {
         tree = "TEST-e2e-recaptcha-enterprise"
     }
