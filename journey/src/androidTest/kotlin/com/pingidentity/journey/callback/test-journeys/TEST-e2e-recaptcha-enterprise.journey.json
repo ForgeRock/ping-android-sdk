@@ -1,0 +1,692 @@
+{
+  "meta": {
+    "exportDate": "2025-12-05T22:46:18.216Z",
+    "exportTool": "frodo",
+    "exportToolVersion": "v3.3.3 [v20.18.0]",
+    "exportedBy": "stoyan.petrov@forgerock.com",
+    "origin": "https://openam-sdks2.forgeblocks.com/am",
+    "originAmVersion": "8.1.0"
+  },
+  "trees": {
+    "TEST-e2e-recaptcha-enterprise": {
+      "circlesOfTrust": {},
+      "emailTemplates": {},
+      "innerNodes": {},
+      "nodes": {
+        "0906fca1-9390-47b5-ae7b-7e05d798b932": {
+          "_id": "0906fca1-9390-47b5-ae7b-7e05d798b932",
+          "_outcomes": [
+            {
+              "displayName": "True",
+              "id": "true"
+            },
+            {
+              "displayName": "False",
+              "id": "false"
+            }
+          ],
+          "_type": {
+            "_id": "product-CaptchaEnterpriseNode",
+            "collection": true,
+            "name": "reCAPTCHA Enterprise"
+          },
+          "apiUri": "https://www.google.com/recaptcha/enterprise.js",
+          "captchaUri": "https://recaptchaenterprise.googleapis.com/v1",
+          "divClass": "g-recaptcha",
+          "projectId": "sdkss-13249",
+          "scoreThreshold": "1.0",
+          "secretLabelIdentifier": "sdkss13249",
+          "siteKey": "6LfAykUqAAAAAE6aZOg9pNiS3XduyGZ5y-8U-z8B",
+          "storeAssessmentResult": true,
+          "storeErrors": true
+        },
+        "345a053c-39e9-4ab2-bba0-4730046a1bf0": {
+          "_id": "345a053c-39e9-4ab2-bba0-4730046a1bf0",
+          "_outcomes": [
+            {
+              "displayName": "True",
+              "id": "true"
+            },
+            {
+              "displayName": "False",
+              "id": "false"
+            }
+          ],
+          "_type": {
+            "_id": "product-CaptchaEnterpriseNode",
+            "collection": true,
+            "name": "reCAPTCHA Enterprise"
+          },
+          "apiUri": "https://www.google.com/recaptcha/enterprise.js",
+          "captchaUri": "https://recaptchaenterprise.googleapis.com/v1",
+          "divClass": "g-recaptcha",
+          "projectId": "sdkss-13249",
+          "scoreThreshold": "0.0",
+          "secretLabelIdentifier": "sdkss13249",
+          "siteKey": "6Lc0NUIqAAAAALRSrhXb5CWrZPzWkezBFB_0mnqS",
+          "storeAssessmentResult": true,
+          "storeErrors": true
+        },
+        "3cc10610-eb8f-47d2-bf82-3e18be0d9c07": {
+          "_id": "3cc10610-eb8f-47d2-bf82-3e18be0d9c07",
+          "_outcomes": [
+            {
+              "displayName": "true",
+              "id": "true"
+            }
+          ],
+          "_type": {
+            "_id": "ScriptedDecisionNode",
+            "collection": true,
+            "name": "Scripted Decision"
+          },
+          "inputs": [
+            "*"
+          ],
+          "outcomes": [
+            "true"
+          ],
+          "outputs": [
+            "*"
+          ],
+          "script": "4703400d-5b27-4c98-97f8-495b7ae5ca1d"
+        },
+        "54997150-dc0b-456f-b9a2-b94f5e76c468": {
+          "_id": "54997150-dc0b-456f-b9a2-b94f5e76c468",
+          "_outcomes": [
+            {
+              "displayName": "True",
+              "id": "true"
+            },
+            {
+              "displayName": "False",
+              "id": "false"
+            }
+          ],
+          "_type": {
+            "_id": "product-CaptchaEnterpriseNode",
+            "collection": true,
+            "name": "reCAPTCHA Enterprise"
+          },
+          "apiUri": "https://www.google.com/recaptcha/enterprise.js",
+          "captchaUri": "https://recaptchaenterprise.googleapis.com/v1",
+          "divClass": "g-recaptcha",
+          "projectId": "invalid",
+          "scoreThreshold": "0.0",
+          "secretLabelIdentifier": "sdkss13249",
+          "siteKey": "6LfAykUqAAAAAE6aZOg9pNiS3XduyGZ5y-8U-z8B",
+          "storeAssessmentResult": true,
+          "storeErrors": true
+        },
+        "662a9dfa-14aa-4b5f-b100-6af6fbd17485": {
+          "_id": "662a9dfa-14aa-4b5f-b100-6af6fbd17485",
+          "_outcomes": [
+            {
+              "displayName": "True",
+              "id": "true"
+            },
+            {
+              "displayName": "False",
+              "id": "false"
+            }
+          ],
+          "_type": {
+            "_id": "product-CaptchaEnterpriseNode",
+            "collection": true,
+            "name": "reCAPTCHA Enterprise"
+          },
+          "apiUri": "https://www.google.com/recaptcha/enterprise.js",
+          "captchaUri": "https://recaptchaenterprise.googleapis.com/v1",
+          "divClass": "g-recaptcha",
+          "projectId": "sdkss-13249",
+          "scoreThreshold": "0.0",
+          "secretLabelIdentifier": "sdkss13249",
+          "siteKey": "invalid",
+          "storeAssessmentResult": false,
+          "storeErrors": true
+        },
+        "7464f240-ad30-4939-b948-a8d3107d9062": {
+          "_id": "7464f240-ad30-4939-b948-a8d3107d9062",
+          "_outcomes": [
+            {
+              "displayName": "android",
+              "id": "android"
+            },
+            {
+              "displayName": "ios",
+              "id": "ios"
+            },
+            {
+              "displayName": "javascript",
+              "id": "javascript"
+            },
+            {
+              "displayName": "unknown",
+              "id": "unknown"
+            }
+          ],
+          "_type": {
+            "_id": "ScriptedDecisionNode",
+            "collection": true,
+            "name": "Scripted Decision"
+          },
+          "inputs": [
+            "*"
+          ],
+          "outcomes": [
+            "android",
+            "ios",
+            "javascript",
+            "unknown"
+          ],
+          "outputs": [
+            "*"
+          ],
+          "script": "e73fcd84-dd57-4efc-8830-768738a4d1d3"
+        },
+        "83c1310c-6efa-4eec-8d3c-b6f7c31ce769": {
+          "_id": "83c1310c-6efa-4eec-8d3c-b6f7c31ce769",
+          "_outcomes": [
+            {
+              "displayName": "Outcome",
+              "id": "outcome"
+            }
+          ],
+          "_type": {
+            "_id": "UsernameCollectorNode",
+            "collection": true,
+            "name": "Username Collector"
+          }
+        },
+        "88d395e1-f19b-444e-b9fc-897a87d67e40": {
+          "_id": "88d395e1-f19b-444e-b9fc-897a87d67e40",
+          "_outcomes": [
+            {
+              "displayName": "success",
+              "id": "success"
+            },
+            {
+              "displayName": "score_failure",
+              "id": "score_failure"
+            },
+            {
+              "displayName": "custom_client_error",
+              "id": "custom_client_error"
+            }
+          ],
+          "_type": {
+            "_id": "ChoiceCollectorNode",
+            "collection": true,
+            "name": "Choice Collector"
+          },
+          "choices": [
+            "success",
+            "score_failure",
+            "custom_client_error"
+          ],
+          "defaultChoice": "success",
+          "prompt": "Choose test case"
+        },
+        "af2e31a9-3570-41ed-84fb-9e863e110821": {
+          "_id": "af2e31a9-3570-41ed-84fb-9e863e110821",
+          "_outcomes": [
+            {
+              "displayName": "True",
+              "id": "true"
+            },
+            {
+              "displayName": "False",
+              "id": "false"
+            }
+          ],
+          "_type": {
+            "_id": "product-CaptchaEnterpriseNode",
+            "collection": true,
+            "name": "reCAPTCHA Enterprise"
+          },
+          "apiUri": "https://www.google.com/recaptcha/enterprise.js",
+          "captchaUri": "https://recaptchaenterprise.googleapis.com/v1",
+          "divClass": "g-recaptcha",
+          "projectId": "sdkss-13249",
+          "scoreThreshold": "1.0",
+          "secretLabelIdentifier": "sdkss13249",
+          "siteKey": "6Lc0NUIqAAAAALRSrhXb5CWrZPzWkezBFB_0mnqS",
+          "storeAssessmentResult": true,
+          "storeErrors": true
+        },
+        "c9bd0943-9e73-4950-89d2-7a77920f782f": {
+          "_id": "c9bd0943-9e73-4950-89d2-7a77920f782f",
+          "_outcomes": [
+            {
+              "displayName": "success",
+              "id": "success"
+            },
+            {
+              "displayName": "custom_action",
+              "id": "custom_action"
+            },
+            {
+              "displayName": "custom_payload",
+              "id": "custom_payload"
+            },
+            {
+              "displayName": "custom_client_error",
+              "id": "custom_client_error"
+            },
+            {
+              "displayName": "score_failure",
+              "id": "score_failure"
+            },
+            {
+              "displayName": "invalid_site_key",
+              "id": "invalid_site_key"
+            },
+            {
+              "displayName": "invalid_project_id",
+              "id": "invalid_project_id"
+            },
+            {
+              "displayName": "invalid_secret_key",
+              "id": "invalid_secret_key"
+            },
+            {
+              "displayName": "invalid_verification_url",
+              "id": "invalid_verification_url"
+            }
+          ],
+          "_type": {
+            "_id": "ChoiceCollectorNode",
+            "collection": true,
+            "name": "Choice Collector"
+          },
+          "choices": [
+            "success",
+            "custom_action",
+            "custom_payload",
+            "custom_client_error",
+            "score_failure",
+            "invalid_site_key",
+            "invalid_project_id",
+            "invalid_secret_key",
+            "invalid_verification_url"
+          ],
+          "defaultChoice": "success",
+          "prompt": "Choose test case"
+        },
+        "cb61b90b-fcb0-4ba4-b0f2-368efc2d392c": {
+          "_id": "cb61b90b-fcb0-4ba4-b0f2-368efc2d392c",
+          "_outcomes": [
+            {
+              "displayName": "True",
+              "id": "true"
+            },
+            {
+              "displayName": "False",
+              "id": "false"
+            }
+          ],
+          "_type": {
+            "_id": "product-CaptchaEnterpriseNode",
+            "collection": true,
+            "name": "reCAPTCHA Enterprise"
+          },
+          "apiUri": "https://www.google.com/recaptcha/enterprise.js",
+          "captchaUri": "https://recaptchaenterprise.googleapis.com/v1",
+          "divClass": "g-recaptcha",
+          "projectId": "sdkss-13249",
+          "scoreThreshold": "0.0",
+          "secretLabelIdentifier": "invalid",
+          "siteKey": "6LfAykUqAAAAAE6aZOg9pNiS3XduyGZ5y-8U-z8B",
+          "storeAssessmentResult": true,
+          "storeErrors": true
+        },
+        "d0eb6c35-06aa-4ec6-9e44-7011812abe90": {
+          "_id": "d0eb6c35-06aa-4ec6-9e44-7011812abe90",
+          "_outcomes": [
+            {
+              "displayName": "True",
+              "id": "true"
+            },
+            {
+              "displayName": "False",
+              "id": "false"
+            }
+          ],
+          "_type": {
+            "_id": "product-CaptchaEnterpriseNode",
+            "collection": true,
+            "name": "reCAPTCHA Enterprise"
+          },
+          "apiUri": "https://www.google.com/recaptcha/enterprise.js",
+          "captchaUri": "https://invalid.com/v1",
+          "divClass": "g-recaptcha",
+          "projectId": "sdkss-13249",
+          "scoreThreshold": "0.0",
+          "secretLabelIdentifier": "sdkss13249",
+          "siteKey": "6LfAykUqAAAAAE6aZOg9pNiS3XduyGZ5y-8U-z8B",
+          "storeAssessmentResult": true,
+          "storeErrors": true
+        },
+        "d8860b32-7b9a-4dce-a450-76e607150806": {
+          "_id": "d8860b32-7b9a-4dce-a450-76e607150806",
+          "_outcomes": [
+            {
+              "displayName": "true",
+              "id": "true"
+            }
+          ],
+          "_type": {
+            "_id": "ScriptedDecisionNode",
+            "collection": true,
+            "name": "Scripted Decision"
+          },
+          "inputs": [
+            "*"
+          ],
+          "outcomes": [
+            "true"
+          ],
+          "outputs": [
+            "*"
+          ],
+          "script": "a642ad67-43e4-4504-8d0e-b61938197bdc"
+        },
+        "fecfc794-f77d-46f2-b00e-95933b91b6fb": {
+          "_id": "fecfc794-f77d-46f2-b00e-95933b91b6fb",
+          "_outcomes": [
+            {
+              "displayName": "true",
+              "id": "true"
+            }
+          ],
+          "_type": {
+            "_id": "ScriptedDecisionNode",
+            "collection": true,
+            "name": "Scripted Decision"
+          },
+          "inputs": [
+            "*"
+          ],
+          "outcomes": [
+            "true"
+          ],
+          "outputs": [
+            "*"
+          ],
+          "script": "ad63e311-7e85-4ade-b8d7-71a4554ec11d"
+        },
+        "ffba4955-0bf1-4bb8-9787-9f2255c74c33": {
+          "_id": "ffba4955-0bf1-4bb8-9787-9f2255c74c33",
+          "_outcomes": [
+            {
+              "displayName": "True",
+              "id": "true"
+            },
+            {
+              "displayName": "False",
+              "id": "false"
+            }
+          ],
+          "_type": {
+            "_id": "product-CaptchaEnterpriseNode",
+            "collection": true,
+            "name": "reCAPTCHA Enterprise"
+          },
+          "apiUri": "https://www.google.com/recaptcha/enterprise.jsa",
+          "captchaUri": "https://recaptchaenterprise.googleapis.com/v1",
+          "divClass": "g-recaptcha",
+          "projectId": "sdkss-13249",
+          "scoreThreshold": "0.0",
+          "secretLabelIdentifier": "sdkss13249",
+          "siteKey": "6LfAykUqAAAAAE6aZOg9pNiS3XduyGZ5y-8U-z8B",
+          "storeAssessmentResult": true,
+          "storeErrors": true
+        }
+      },
+      "saml2Entities": {},
+      "scripts": {
+        "4703400d-5b27-4c98-97f8-495b7ae5ca1d": {
+          "_id": "4703400d-5b27-4c98-97f8-495b7ae5ca1d",
+          "context": "AUTHENTICATION_TREE_DECISION_NODE",
+          "createdBy": "id=38622431-993f-4f4f-b21a-0bf5a1bc647d,ou=user,ou=am-config",
+          "creationDate": 1731544114915,
+          "default": false,
+          "description": "null",
+          "evaluatorVersion": "1.0",
+          "language": "JAVASCRIPT",
+          "lastModifiedBy": "id=38622431-993f-4f4f-b21a-0bf5a1bc647d,ou=user,ou=am-config",
+          "lastModifiedDate": 1731546490713,
+          "name": "captcha_failure",
+          "script": "\"/*\\n  - This script shared state for CaptchaEnterpriseNode.FAILURE \\n  - and returns it to the caller in a TextOutputCallback\\n */\\n\\nvar fr = JavaImporter(\\n     org.forgerock.openam.auth.node.api.Action, \\n     javax.security.auth.callback.TextOutputCallback\\n )\\n\\nlogger.error(\\\"captcha_failure: start script...\\\");\\n\\n if (callbacks.isEmpty()) {\\n   if (transientState.get(\\\"CaptchaEnterpriseNode.FAILURE\\\")) {\\n     var captchaFailure = transientState.get(\\\"CaptchaEnterpriseNode.FAILURE\\\")\\n     logger.error(captchaFailure)\\n     action = fr.Action.send(\\n       new fr.TextOutputCallback(\\n         fr.TextOutputCallback.ERROR, \\n         captchaFailure\\n       )\\n     ).build()\\n   }\\n\\n  } else {\\n    action = fr.Action.goTo(\\\"true\\\").build()\\n  }\\n  \\n  outcome = \\\"true\\\";\\n\""
+        },
+        "a642ad67-43e4-4504-8d0e-b61938197bdc": {
+          "_id": "a642ad67-43e4-4504-8d0e-b61938197bdc",
+          "context": "AUTHENTICATION_TREE_DECISION_NODE",
+          "createdBy": "id=38622431-993f-4f4f-b21a-0bf5a1bc647d,ou=user,ou=am-config",
+          "creationDate": 1731544114918,
+          "default": false,
+          "description": "null",
+          "evaluatorVersion": "1.0",
+          "language": "JAVASCRIPT",
+          "lastModifiedBy": "id=38622431-993f-4f4f-b21a-0bf5a1bc647d,ou=user,ou=am-config",
+          "lastModifiedDate": 1731544114918,
+          "name": "captcha_custom_payload",
+          "script": "\"/*\\n  - Data made available by nodes that have already executed are available in the sharedState variable.\\n  - The script should set outcome to either \\\"true\\\" or \\\"false\\\".\\n */\\n\\nlogger.error(\\\"captcha_custom_payload: start script...\\\");\\nvar customPayload = JSON.parse(\\\"{\\\\\\\"userInfo\\\\\\\": {\\\\\\\"accountId\\\\\\\": \\\\\\\"user_account_id_123\\\\\\\"}}\\\");\\nsharedState.put(\\\"CaptchaEnterpriseNode.PAYLOAD\\\", customPayload);\\noutcome = \\\"true\\\";\""
+        },
+        "ad63e311-7e85-4ade-b8d7-71a4554ec11d": {
+          "_id": "ad63e311-7e85-4ade-b8d7-71a4554ec11d",
+          "context": "AUTHENTICATION_TREE_DECISION_NODE",
+          "createdBy": "id=38622431-993f-4f4f-b21a-0bf5a1bc647d,ou=user,ou=am-config",
+          "creationDate": 1731544114916,
+          "default": false,
+          "description": "null",
+          "evaluatorVersion": "1.0",
+          "language": "JAVASCRIPT",
+          "lastModifiedBy": "id=38622431-993f-4f4f-b21a-0bf5a1bc647d,ou=user,ou=am-config",
+          "lastModifiedDate": 1731544114916,
+          "name": "captcha_assessment_result",
+          "script": "\"/*\\n  - This script checks transientState for CaptchaEnterpriseNode.ASSESSMENT_RESULT \\n  - and returns them to the caller in a TextOutputCallback\\n */\\n\\nvar fr = JavaImporter(\\n     org.forgerock.openam.auth.node.api.Action, \\n     javax.security.auth.callback.TextOutputCallback\\n)\\n\\nlogger.error(\\\"captcha_assessment_result: start script...\\\");\\n\\nif (callbacks.isEmpty()) {\\n   if (transientState.get(\\\"CaptchaEnterpriseNode.ASSESSMENT_RESULT\\\")) {\\n     logger.message(\\\"captcha_assessment_result: \\\" + transientState.get(\\\"CaptchaEnterpriseNode.ASSESSMENT_RESULT\\\"))\\n     var captchaAssessment = transientState.get(\\\"CaptchaEnterpriseNode.ASSESSMENT_RESULT\\\")\\n     action = fr.Action.send(\\n        new fr.TextOutputCallback(\\n          fr.TextOutputCallback.INFORMATION, \\n          JSON.stringify(captchaAssessment)\\n        )\\n     ).build()\\n   }\\n} else {\\n  action = fr.Action.goTo(\\\"true\\\").build()\\n}\\n  \\noutcome = \\\"true\\\";\\n\""
+        },
+        "e73fcd84-dd57-4efc-8830-768738a4d1d3": {
+          "_id": "e73fcd84-dd57-4efc-8830-768738a4d1d3",
+          "context": "AUTHENTICATION_TREE_DECISION_NODE",
+          "createdBy": "id=38622431-993f-4f4f-b21a-0bf5a1bc647d,ou=user,ou=am-config",
+          "creationDate": 1731544114915,
+          "default": false,
+          "description": "null",
+          "evaluatorVersion": "2.0",
+          "language": "JAVASCRIPT",
+          "lastModifiedBy": "id=38622431-993f-4f4f-b21a-0bf5a1bc647d,ou=user,ou=am-config",
+          "lastModifiedDate": 1731544114915,
+          "name": "request-platform-decision",
+          "script": "\"if (requestHeaders.get(\\\"x-requested-platform\\\")) {\\n  if (requestHeaders.get(\\\"x-requested-platform\\\").get(0).indexOf(\\\"android\\\") !== -1) {\\n      action.goTo(\\\"android\\\");\\n  } else if(requestHeaders.get(\\\"x-requested-platform\\\").get(0).indexOf(\\\"ios\\\") !== -1) {\\n      action.goTo(\\\"ios\\\");\\n  } else if(requestHeaders.get(\\\"x-requested-platform\\\").get(0).indexOf(\\\"javascript\\\") !== -1) {\\n      action.goTo(\\\"js\\\");\\n  } else {\\n      action.goTo(\\\"unknown\\\");\\n  }\\n}\\nelse {\\n  action.goTo(\\\"unknown\\\");\\n}\\n\""
+        }
+      },
+      "socialIdentityProviders": {},
+      "themes": [],
+      "tree": {
+        "_id": "TEST-e2e-recaptcha-enterprise",
+        "enabled": true,
+        "entryNodeId": "83c1310c-6efa-4eec-8d3c-b6f7c31ce769",
+        "identityResource": "managed/alpha_user",
+        "innerTreeOnly": false,
+        "mustRun": false,
+        "noSession": false,
+        "nodes": {
+          "0906fca1-9390-47b5-ae7b-7e05d798b932": {
+            "connections": {
+              "false": "3cc10610-eb8f-47d2-bf82-3e18be0d9c07",
+              "true": "e301438c-0bd0-429c-ab0c-66126501069a"
+            },
+            "displayName": "reCAPTCHA Enterprise (score fail)",
+            "nodeType": "product-CaptchaEnterpriseNode",
+            "x": 678,
+            "y": 123
+          },
+          "345a053c-39e9-4ab2-bba0-4730046a1bf0": {
+            "connections": {
+              "false": "3cc10610-eb8f-47d2-bf82-3e18be0d9c07",
+              "true": "fecfc794-f77d-46f2-b00e-95933b91b6fb"
+            },
+            "displayName": "reCAPTCHA Enterprise (success)",
+            "nodeType": "product-CaptchaEnterpriseNode",
+            "x": 339,
+            "y": 438
+          },
+          "3cc10610-eb8f-47d2-bf82-3e18be0d9c07": {
+            "connections": {
+              "true": "70e691a5-1e33-4ac3-a356-e7b6d60d92e0"
+            },
+            "displayName": "Report Failure",
+            "nodeType": "ScriptedDecisionNode",
+            "x": 1059,
+            "y": 144
+          },
+          "54997150-dc0b-456f-b9a2-b94f5e76c468": {
+            "connections": {
+              "false": "3cc10610-eb8f-47d2-bf82-3e18be0d9c07",
+              "true": "e301438c-0bd0-429c-ab0c-66126501069a"
+            },
+            "displayName": "reCAPTCHA Enterprise (invalid project id)",
+            "nodeType": "product-CaptchaEnterpriseNode",
+            "x": 681,
+            "y": 341
+          },
+          "662a9dfa-14aa-4b5f-b100-6af6fbd17485": {
+            "connections": {
+              "false": "3cc10610-eb8f-47d2-bf82-3e18be0d9c07",
+              "true": "e301438c-0bd0-429c-ab0c-66126501069a"
+            },
+            "displayName": "reCAPTCHA Enterprise (invalid key)",
+            "nodeType": "product-CaptchaEnterpriseNode",
+            "x": 679,
+            "y": 231
+          },
+          "7464f240-ad30-4939-b948-a8d3107d9062": {
+            "connections": {
+              "android": "c9bd0943-9e73-4950-89d2-7a77920f782f",
+              "ios": "88d395e1-f19b-444e-b9fc-897a87d67e40",
+              "javascript": "e301438c-0bd0-429c-ab0c-66126501069a",
+              "unknown": "e301438c-0bd0-429c-ab0c-66126501069a"
+            },
+            "displayName": "Plateform Decision",
+            "nodeType": "ScriptedDecisionNode",
+            "x": 107,
+            "y": 86
+          },
+          "83c1310c-6efa-4eec-8d3c-b6f7c31ce769": {
+            "connections": {
+              "outcome": "7464f240-ad30-4939-b948-a8d3107d9062"
+            },
+            "displayName": "Username Collector",
+            "nodeType": "UsernameCollectorNode",
+            "x": 104,
+            "y": 20
+          },
+          "88d395e1-f19b-444e-b9fc-897a87d67e40": {
+            "connections": {
+              "custom_client_error": "345a053c-39e9-4ab2-bba0-4730046a1bf0",
+              "score_failure": "af2e31a9-3570-41ed-84fb-9e863e110821",
+              "success": "345a053c-39e9-4ab2-bba0-4730046a1bf0"
+            },
+            "displayName": "Testcase Selector (iOS)",
+            "nodeType": "ChoiceCollectorNode",
+            "x": 83,
+            "y": 544
+          },
+          "af2e31a9-3570-41ed-84fb-9e863e110821": {
+            "connections": {
+              "false": "3cc10610-eb8f-47d2-bf82-3e18be0d9c07",
+              "true": "e301438c-0bd0-429c-ab0c-66126501069a"
+            },
+            "displayName": "reCAPTCHA Enterprise (score fail)",
+            "nodeType": "product-CaptchaEnterpriseNode",
+            "x": 336,
+            "y": 552
+          },
+          "c9bd0943-9e73-4950-89d2-7a77920f782f": {
+            "connections": {
+              "custom_action": "ffba4955-0bf1-4bb8-9787-9f2255c74c33",
+              "custom_client_error": "ffba4955-0bf1-4bb8-9787-9f2255c74c33",
+              "custom_payload": "d8860b32-7b9a-4dce-a450-76e607150806",
+              "invalid_project_id": "54997150-dc0b-456f-b9a2-b94f5e76c468",
+              "invalid_secret_key": "cb61b90b-fcb0-4ba4-b0f2-368efc2d392c",
+              "invalid_site_key": "662a9dfa-14aa-4b5f-b100-6af6fbd17485",
+              "invalid_verification_url": "d0eb6c35-06aa-4ec6-9e44-7011812abe90",
+              "score_failure": "0906fca1-9390-47b5-ae7b-7e05d798b932",
+              "success": "ffba4955-0bf1-4bb8-9787-9f2255c74c33"
+            },
+            "displayName": "Testcase Selector (Android)",
+            "nodeType": "ChoiceCollectorNode",
+            "x": 52,
+            "y": 252
+          },
+          "cb61b90b-fcb0-4ba4-b0f2-368efc2d392c": {
+            "connections": {
+              "false": "3cc10610-eb8f-47d2-bf82-3e18be0d9c07",
+              "true": "e301438c-0bd0-429c-ab0c-66126501069a"
+            },
+            "displayName": "reCAPTCHA Enterprise (invalid secret key)",
+            "nodeType": "product-CaptchaEnterpriseNode",
+            "x": 682,
+            "y": 452
+          },
+          "d0eb6c35-06aa-4ec6-9e44-7011812abe90": {
+            "connections": {
+              "false": "3cc10610-eb8f-47d2-bf82-3e18be0d9c07",
+              "true": "e301438c-0bd0-429c-ab0c-66126501069a"
+            },
+            "displayName": "reCAPTCHA Enterprise (invalid verification url)",
+            "nodeType": "product-CaptchaEnterpriseNode",
+            "x": 685,
+            "y": 564
+          },
+          "d8860b32-7b9a-4dce-a450-76e607150806": {
+            "connections": {
+              "true": "ffba4955-0bf1-4bb8-9787-9f2255c74c33"
+            },
+            "displayName": "Set CaptchaEnterpriseNode. PAYLOAD",
+            "nodeType": "ScriptedDecisionNode",
+            "x": 322,
+            "y": 21
+          },
+          "fecfc794-f77d-46f2-b00e-95933b91b6fb": {
+            "connections": {
+              "true": "70e691a5-1e33-4ac3-a356-e7b6d60d92e0"
+            },
+            "displayName": "Report success",
+            "nodeType": "ScriptedDecisionNode",
+            "x": 998,
+            "y": 23
+          },
+          "ffba4955-0bf1-4bb8-9787-9f2255c74c33": {
+            "connections": {
+              "false": "3cc10610-eb8f-47d2-bf82-3e18be0d9c07",
+              "true": "fecfc794-f77d-46f2-b00e-95933b91b6fb"
+            },
+            "displayName": "reCAPTCHA Enterprise (success)",
+            "nodeType": "product-CaptchaEnterpriseNode",
+            "x": 677,
+            "y": 14
+          }
+        },
+        "staticNodes": {
+          "70e691a5-1e33-4ac3-a356-e7b6d60d92e0": {
+            "x": 1254,
+            "y": 99
+          },
+          "e301438c-0bd0-429c-ab0c-66126501069a": {
+            "x": 1258,
+            "y": 279
+          },
+          "startNode": {
+            "x": 23,
+            "y": 20
+          }
+        },
+        "uiConfig": {}
+      },
+      "variable": {}
+    }
+  }
+}
