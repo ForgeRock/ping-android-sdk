@@ -50,10 +50,10 @@ allprojects {
             // Force secure version of netty-codec to address security vulnerabilities
             // Used transitively by com.android.tools.emulator:proto
             // Updated to 4.1.125.Final per Mend SCA recommendation (Nov 2025)
-            force("io.netty:netty-codec:4.1.125.Final")
-            force("io.netty:netty-codec-http:4.1.125.Final")
-            force("io.netty:netty-codec-http2:4.1.125.Final")
-            force("io.netty:netty-all:4.1.125.Final")
+            force("io.netty:netty-codec:4.2.9.Final")
+            force("io.netty:netty-codec-http:4.2.9.Final")
+            force("io.netty:netty-codec-http2:4.2.9.Final")
+            force("io.netty:netty-all:4.2.9.Final")
 
             // Force secure version of protobuf to address security vulnerabilities
             // Used transitively by various Google dependencies
