@@ -627,13 +627,15 @@ class SQLPushStorage private constructor(
     /**
      * Retrieve all pending push notifications.
      *
-     * @return A list of pending Push notifications.
+     * @return A list of pending Push notifications that have not expired.
      * @throws MfaStorageException if the notifications cannot be retrieved.
      */
     override suspend fun getPendingPushNotifications(): List<PushNotification> {
         try {
             val dataList = retrievePendingPushNotificationsData()
-            return dataList.mapNotNull { createPushNotificationFromData(it) }
+            return dataList
+                .mapNotNull { createPushNotificationFromData(it) }
+                .filterNot { it.expired }
         } catch (e: Exception) {
             coroutineContext.ensureActive()
             throw MfaStorageException("Failed to retrieve pending Push notifications", e)

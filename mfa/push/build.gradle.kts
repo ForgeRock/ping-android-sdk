@@ -49,6 +49,7 @@ dependencies {
     implementation(libs.sqlcipher)
 
     // Firebase Cloud Messaging for push notifications
+    implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.messaging)
 
     // Testing dependencies

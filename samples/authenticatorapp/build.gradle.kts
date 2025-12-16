@@ -28,6 +28,11 @@ android {
         vectorDrawables {
             useSupportLibrary = true
         }
+
+        // Enable 16 KB page size support for Android 15+
+        ndk {
+            abiFilters.addAll(listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64"))
+        }
     }
 
     buildTypes {
@@ -63,6 +68,14 @@ android {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
+    }
+}
+
+configurations.all {
+    resolutionStrategy {
+        force("com.google.android.gms:play-services-basement:18.4.0")
+        force("com.google.android.gms:play-services-tasks:18.2.0")
+        force("com.google.android.gms:play-services-base:18.5.0")
     }
 }
 

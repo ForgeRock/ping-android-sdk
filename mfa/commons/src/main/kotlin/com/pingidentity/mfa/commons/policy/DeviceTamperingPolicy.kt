@@ -11,13 +11,13 @@ import android.content.Context
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.jsonPrimitive
+import com.pingidentity.device.analyze
 
 /**
  * Policy that checks for device tampering indicators.
- * 
- * This is currently a placeholder implementation that always returns true.
- * In the future, this will be updated to use actual device tampering detection
- * library similar to the legacy FRRootDetector with threshold scoring.
+ *
+ * Uses the TamperDetector module to analyze the device for signs of rooting or tampering
+ * and compares the result against a configurable threshold.
  * 
  * JSON format: {"deviceTampering": {"score": 0.8}}
  * 
@@ -27,27 +27,18 @@ import kotlinx.serialization.json.jsonPrimitive
 object DeviceTamperingPolicy : MfaPolicy() {
     
     const val POLICY_NAME = "deviceTampering"
-    private const val DEFAULT_THRESHOLD = 0.5
+    private const val DEFAULT_THRESHOLD = 0.8
     
     override fun getName(): String {
         return POLICY_NAME
     }
     
     override suspend fun evaluate(context: Context, data: JsonObject?): Boolean {
-        // TODO: Replace with actual device tampering detection
-        // This is a placeholder implementation that always returns true
-        
         // Get the threshold from policy configuration data
         val threshold = data?.get("score")?.jsonPrimitive?.doubleOrNull ?: DEFAULT_THRESHOLD
         
-        // Placeholder: simulate device tampering score calculation
-        // In real implementation, this would check for:
-        // - Root detection
-        // - Debug mode detection
-        // - Emulator detection
-        // - Hook framework detection
-        // - Other tampering indicators
-        val deviceTamperingScore = 0.0 // Always safe for now
+        // Use a device tampering detection library to get the score
+        val deviceTamperingScore = analyze()
         
         // Return true if device tampering score is below threshold
         return deviceTamperingScore < threshold
