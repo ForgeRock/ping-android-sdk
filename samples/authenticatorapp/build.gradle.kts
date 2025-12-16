@@ -28,6 +28,11 @@ android {
         vectorDrawables {
             useSupportLibrary = true
         }
+
+        // Enable 16 KB page size support for Android 15+
+        ndk {
+            abiFilters.addAll(listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64"))
+        }
     }
 
     buildTypes {
