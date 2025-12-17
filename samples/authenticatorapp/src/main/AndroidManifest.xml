@@ -26,11 +26,6 @@
             android:supportsRtl="true"
             android:theme="@style/Theme.PingIdentityAuthenticator"
             android:name="com.pingidentity.authenticatorapp.AuthenticatorApp">
-
-        <!-- 16KB page size support for Android 15+ -->
-        <property
-            android:name="android.app.16kb_page_support"
-            android:value="true" />
         <activity
             android:name=".MainActivity"
             android:exported="true"
