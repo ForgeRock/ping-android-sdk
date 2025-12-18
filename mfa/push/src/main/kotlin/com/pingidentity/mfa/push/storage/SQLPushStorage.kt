@@ -9,25 +9,23 @@ package com.pingidentity.mfa.push.storage
 
 import android.content.ContentValues
 import android.content.Context
+import android.database.Cursor
 import com.pingidentity.android.ContextProvider
 import com.pingidentity.logger.Logger
 import com.pingidentity.mfa.commons.exception.MfaStorageException
 import com.pingidentity.mfa.push.PushCredential
 import com.pingidentity.mfa.push.PushDeviceToken
 import com.pingidentity.mfa.push.PushNotification
-import com.pingidentity.mfa.push.PushPlatform
-import com.pingidentity.mfa.push.storage.PushStorage
 import com.pingidentity.mfa.push.PushType
 import com.pingidentity.storage.sqlite.passphrase.KeyStorePassphraseProvider
 import com.pingidentity.storage.sqlite.passphrase.PassphraseProvider
 import com.pingidentity.storage.sqlite.SQLiteStorage
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
-import net.sqlcipher.Cursor
 import java.util.Date
-import kotlin.coroutines.coroutineContext
 
 /**
  * SQLite-based implementation of [PushStorage].
@@ -216,7 +214,7 @@ class SQLPushStorage private constructor(
             initializeDatabase()
             logger.d("Push storage initialized")
         } catch (e: Exception) {
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
             throw MfaStorageException("Failed to initialize Push storage", e)
         }
     }
@@ -234,7 +232,7 @@ class SQLPushStorage private constructor(
             clearPushDeviceTokens()
             logger.d("Cleared all data from Push storage")
         } catch (e: Exception) {
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
             logger.e("Failed to clear Push storage: ${e.message}", e)
             throw MfaStorageException("Failed to clear Push storage", e)
         }
@@ -249,7 +247,7 @@ class SQLPushStorage private constructor(
             closeDatabase() 
             logger.d("Push SQL storage closed")
         } catch (e: Exception) {
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
             logger.e("Error closing Push storage: ${e.message}", e)
         }
     }
@@ -286,7 +284,7 @@ class SQLPushStorage private constructor(
 
             storePushCredentialData(credential.id, data)
         } catch (e: Exception) {
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
             throw MfaStorageException("Failed to store Push credential with ID ${credential.id}", e)
         }
     }
@@ -329,7 +327,7 @@ class SQLPushStorage private constructor(
             
             logger.d("Stored Push credential with ID: $credentialId")
         } catch (e: Exception) {
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
             logger.e("Failed to store Push credential with ID $credentialId: ${e.message}", e)
             throw MfaStorageException("Failed to store Push credential with ID $credentialId", e)
         }
@@ -346,7 +344,7 @@ class SQLPushStorage private constructor(
             val dataList = retrieveAllPushCredentialsData()
             return dataList.mapNotNull { createPushCredentialFromData(it) }
         } catch (e: Exception) {
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
             throw MfaStorageException("Failed to retrieve all Push credentials", e)
         }
     }
@@ -367,7 +365,7 @@ class SQLPushStorage private constructor(
                 extractDataFromCursor(cursor)
             }
         } catch (e: Exception) {
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
             logger.e("Failed to retrieve all Push credentials: ${e.message}", e)
             throw MfaStorageException("Failed to retrieve all Push credentials", e)
         }
@@ -385,7 +383,7 @@ class SQLPushStorage private constructor(
             val data = retrievePushCredentialData(credentialId) ?: return null
             return createPushCredentialFromData(data)
         } catch (e: Exception) {
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
             throw MfaStorageException("Failed to retrieve Push credential with ID $credentialId", e)
         }
     }
@@ -410,7 +408,7 @@ class SQLPushStorage private constructor(
             
             return@withContext results.firstOrNull()
         } catch (e: Exception) {
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
             logger.e("Failed to retrieve Push credential with ID $credentialId: ${e.message}", e)
             throw MfaStorageException("Failed to retrieve Push credential with ID $credentialId", e)
         }
@@ -427,7 +425,7 @@ class SQLPushStorage private constructor(
         try {
             return deletePushCredential(credentialId)
         } catch (e: Exception) {
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
             throw MfaStorageException("Failed to remove Push credential with ID $credentialId", e)
         }
     }
@@ -465,7 +463,7 @@ class SQLPushStorage private constructor(
             
             return@withContext wasDeleted
         } catch (e: Exception) {
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
             logger.e("Failed to delete Push credential with ID $credentialId: ${e.message}", e)
             throw MfaStorageException("Failed to delete Push credential with ID $credentialId", e)
         }
@@ -480,7 +478,7 @@ class SQLPushStorage private constructor(
         try {
             clearAllPushCredentials()
         } catch (e: Exception) {
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
             throw MfaStorageException("Failed to clear Push credentials", e)
         }
     }
@@ -501,7 +499,7 @@ class SQLPushStorage private constructor(
             database.delete(PUSH_TABLE, null, null)
             logger.d("Cleared all Push credentials")
         } catch (e: Exception) {
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
             logger.e("Failed to clear Push credentials: ${e.message}", e)
             throw MfaStorageException("Failed to clear Push credentials", e)
         }
@@ -537,7 +535,7 @@ class SQLPushStorage private constructor(
 
             storePushNotificationData(notification.id, data)
         } catch (e: Exception) {
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
             throw MfaStorageException("Failed to store Push notification with ID ${notification.id}", e)
         }
     }
@@ -580,7 +578,7 @@ class SQLPushStorage private constructor(
 
             logger.d("Stored Push notification with ID: $notificationId")
         } catch (e: Exception) {
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
             logger.e("Failed to store Push notification with ID $notificationId: ${e.message}", e)
             throw MfaStorageException("Failed to store Push notification with ID $notificationId", e)
         }
@@ -597,7 +595,7 @@ class SQLPushStorage private constructor(
             val dataList = retrieveAllPushNotificationsData()
             return dataList.mapNotNull { createPushNotificationFromData(it) }
         } catch (e: Exception) {
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
             throw MfaStorageException("Failed to retrieve all Push notifications", e)
         }
     }
@@ -618,7 +616,7 @@ class SQLPushStorage private constructor(
                 extractDataFromCursor(cursor)
             }
         } catch (e: Exception) {
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
             logger.e("Failed to retrieve all Push notifications: ${e.message}", e)
             throw MfaStorageException("Failed to retrieve all Push notifications", e)
         }
@@ -637,7 +635,7 @@ class SQLPushStorage private constructor(
                 .mapNotNull { createPushNotificationFromData(it) }
                 .filterNot { it.expired }
         } catch (e: Exception) {
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
             throw MfaStorageException("Failed to retrieve pending Push notifications", e)
         }
     }
@@ -659,7 +657,7 @@ class SQLPushStorage private constructor(
                 extractDataFromCursor(cursor)
             }
         } catch (e: Exception) {
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
             logger.e("Failed to retrieve pending Push notifications: ${e.message}", e)
             throw MfaStorageException("Failed to retrieve pending Push notifications", e)
         }
@@ -677,7 +675,7 @@ class SQLPushStorage private constructor(
             val data = retrievePushNotificationData(notificationId) ?: return null
             return createPushNotificationFromData(data)
         } catch (e: Exception) {
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
             throw MfaStorageException("Failed to retrieve Push notification with ID $notificationId", e)
         }
     }
@@ -702,7 +700,7 @@ class SQLPushStorage private constructor(
             
             return@withContext results.firstOrNull()
         } catch (e: Exception) {
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
             logger.e("Failed to retrieve Push notification with ID $notificationId: ${e.message}", e)
             throw MfaStorageException("Failed to retrieve Push notification with ID $notificationId", e)
         }
@@ -720,7 +718,7 @@ class SQLPushStorage private constructor(
             val data = retrievePushNotificationByMessageId(messageId) ?: return null
             return createPushNotificationFromData(data)
         } catch (e: Exception) {
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
             throw MfaStorageException("Failed to retrieve Push notification with message ID $messageId", e)
         }
     }
@@ -750,7 +748,7 @@ class SQLPushStorage private constructor(
 
             return@withContext results.firstOrNull()
         } catch (e: Exception) {
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
             logger.e("Failed to retrieve Push notification with message ID $messageId: ${e.message}", e)
             throw MfaStorageException("Failed to retrieve Push notification with message ID $messageId", e)
         }
@@ -766,7 +764,7 @@ class SQLPushStorage private constructor(
         try {
             storePushNotification(notification)
         } catch (e: Exception) {
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
             throw MfaStorageException("Failed to update Push notification with ID ${notification.id}", e)
         }
     }
@@ -782,7 +780,7 @@ class SQLPushStorage private constructor(
         try {
             return deletePushNotification(notificationId)
         } catch (e: Exception) {
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
             throw MfaStorageException("Failed to remove Push notification with ID $notificationId", e)
         }
     }
@@ -816,7 +814,7 @@ class SQLPushStorage private constructor(
             
             return@withContext wasDeleted
         } catch (e: Exception) {
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
             logger.e("Failed to delete Push notification with ID $notificationId: ${e.message}", e)
             throw MfaStorageException("Failed to delete Push notification with ID $notificationId", e)
         }
@@ -833,7 +831,7 @@ class SQLPushStorage private constructor(
         try {
             return deletePushNotificationsForCredential(credentialId)
         } catch (e: Exception) {
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
             throw MfaStorageException("Failed to remove Push notifications for credential ID $credentialId", e)
         }
     }
@@ -862,7 +860,7 @@ class SQLPushStorage private constructor(
             
             return@withContext deletedRows
         } catch (e: Exception) {
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
             logger.e("Failed to delete Push notifications for credential ID $credentialId: ${e.message}", e)
             throw MfaStorageException("Failed to delete Push notifications for credential ID $credentialId", e)
         }
@@ -877,7 +875,7 @@ class SQLPushStorage private constructor(
         try {
             clearAllPushNotifications()
         } catch (e: Exception) {
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
             throw MfaStorageException("Failed to clear Push notifications", e)
         }
     }
@@ -894,7 +892,7 @@ class SQLPushStorage private constructor(
             database.delete(NOTIFICATION_TABLE, null, null)
             logger.d("Cleared all Push notifications")
         } catch (e: Exception) {
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
             logger.e("Failed to clear Push notifications: ${e.message}", e)
             throw MfaStorageException("Failed to clear Push notifications", e)
         }
@@ -929,7 +927,7 @@ class SQLPushStorage private constructor(
             logger.d("Counted $count push notifications${if (credentialId != null) " for credential $credentialId" else ""}")
             return@withContext count
         } catch (e: Exception) {
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
             logger.e("Failed to count push notifications: ${e.message}", e)
             throw MfaStorageException("Failed to count push notifications", e)
         }
@@ -966,7 +964,7 @@ class SQLPushStorage private constructor(
             logger.d("Retrieved ${notifications.size} oldest push notifications${if (credentialId != null) " for credential $credentialId" else ""}")
             return@withContext notifications
         } catch (e: Exception) {
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
             logger.e("Failed to retrieve oldest push notifications: ${e.message}", e)
             throw MfaStorageException("Failed to retrieve oldest push notifications", e)
         }
@@ -1007,7 +1005,7 @@ class SQLPushStorage private constructor(
             logger.d("Purged $deletedRows push notifications older than $maxAgeDays days${if (credentialId != null) " for credential $credentialId" else ""}")
             return@withContext deletedRows
         } catch (e: Exception) {
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
             logger.e("Failed to purge push notifications by age: ${e.message}", e)
             throw MfaStorageException("Failed to purge push notifications by age", e)
         }
@@ -1094,7 +1092,7 @@ class SQLPushStorage private constructor(
             logger.d("Purged $deletedRows push notifications to maintain max count of $maxCount${if (credentialId != null) " for credential $credentialId" else ""}")
             return@withContext deletedRows
         } catch (e: Exception) {
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
             logger.e("Failed to purge push notifications by count: ${e.message}", e)
             throw MfaStorageException("Failed to purge push notifications by count", e)
         }
@@ -1304,7 +1302,7 @@ class SQLPushStorage private constructor(
             storeDeviceTokenData(token.id, data)
             logger.d("Push device token stored: ${token.tokenId}")
         } catch (e: Exception) {
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
             throw MfaStorageException("Failed to store push device token", e)
         }
     }
@@ -1337,7 +1335,7 @@ class SQLPushStorage private constructor(
 
             logger.d("Updated device token status")
         } catch (e: Exception) {
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
             logger.e("Failed to update device token status: ${e.message}", e)
             throw MfaStorageException("Failed to update device token status", e)
         }
@@ -1354,7 +1352,7 @@ class SQLPushStorage private constructor(
             val data = retrieveCurrentDeviceTokenData() ?: return null
             return createDeviceTokenFromData(data)
         } catch (e: Exception) {
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
             throw MfaStorageException("Failed to retrieve current push device token", e)
         }
     }
@@ -1378,7 +1376,7 @@ class SQLPushStorage private constructor(
 
             return@withContext results.firstOrNull()
         } catch (e: Exception) {
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
             logger.e("Failed to retrieve current device token: ${e.message}", e)
             throw MfaStorageException("Failed to retrieve current device token", e)
         }
@@ -1395,7 +1393,7 @@ class SQLPushStorage private constructor(
             val dataList = retrieveAllDeviceTokensData()
             return dataList.mapNotNull { createDeviceTokenFromData(it) }
         } catch (e: Exception) {
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
             throw MfaStorageException("Failed to retrieve all push device tokens", e)
         }
     }
@@ -1416,7 +1414,7 @@ class SQLPushStorage private constructor(
                 extractDataFromCursor(cursor)
             }
         } catch (e: Exception) {
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
             logger.e("Failed to retrieve all device tokens: ${e.message}", e)
             throw MfaStorageException("Failed to retrieve all device tokens", e)
         }
@@ -1431,7 +1429,7 @@ class SQLPushStorage private constructor(
         try {
             clearAllDeviceTokens()
         } catch (e: Exception) {
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
             throw MfaStorageException("Failed to clear push device tokens", e)
         }
     }
@@ -1448,7 +1446,7 @@ class SQLPushStorage private constructor(
             database.delete(DEVICE_TOKEN_TABLE, null, null)
             logger.d("Cleared all push device tokens")
         } catch (e: Exception) {
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
             logger.e("Failed to clear push device tokens: ${e.message}", e)
             throw MfaStorageException("Failed to clear push device tokens", e)
         }
@@ -1492,7 +1490,7 @@ class SQLPushStorage private constructor(
 
             logger.d("Stored push device token with ID: $tokenId")
         } catch (e: Exception) {
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
             logger.e("Failed to store push device token with ID $tokenId: ${e.message}", e)
             throw MfaStorageException("Failed to store push device token with ID $tokenId", e)
         }
@@ -1518,7 +1516,7 @@ class SQLPushStorage private constructor(
 
             return@withContext results.firstOrNull()
         } catch (e: Exception) {
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
             logger.e("Failed to retrieve push device token with ID $tokenId: ${e.message}", e)
             throw MfaStorageException("Failed to retrieve push device token with ID $tokenId", e)
         }

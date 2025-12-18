@@ -144,7 +144,7 @@ androidx-lifecycle-runtime-ktx = { module = "androidx.lifecycle:lifecycle-runtim
 androidx-lifecycle-viewmodel-compose = { module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycleRuntimeKtx" }
 androidx-ui-graphics = { module = "androidx.compose.ui:ui-graphics" }
 androidx-sqlite = { group = "androidx.sqlite", name = "sqlite", version = "2.5.2" }
-sqlcipher = { group = "net.zetetic", name = "android-database-sqlcipher", version = "4.5.4" }
+sqlcipher = { group = "net.zetetic", name = "sqlcipher-android", version = "4.12.0" }
 commons-codec = { group = "commons-codec", name = "commons-codec", version = "1.15" }
 barcode-scanning = { module = "com.google.mlkit:barcode-scanning", version.ref = "barcodeScanning" }
 play-services-auth-blockstore = { module = "com.google.android.gms:play-services-auth-blockstore", version.ref = "playServicesAuthBlockstore" }

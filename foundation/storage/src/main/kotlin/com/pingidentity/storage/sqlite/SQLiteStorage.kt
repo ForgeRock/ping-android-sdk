@@ -8,17 +8,17 @@
 package com.pingidentity.storage.sqlite
 
 import android.content.Context
+import android.database.Cursor
 import com.pingidentity.logger.Logger
 import com.pingidentity.storage.exception.StorageException
 import com.pingidentity.storage.sqlite.passphrase.KeyStorePassphraseProvider
 import com.pingidentity.storage.sqlite.passphrase.PassphraseProvider
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
-import net.sqlcipher.Cursor
-import net.sqlcipher.database.SQLiteDatabase
-import net.sqlcipher.database.SQLiteOpenHelper
-import kotlin.coroutines.coroutineContext
+import net.zetetic.database.sqlcipher.SQLiteDatabase
+import net.zetetic.database.sqlcipher.SQLiteOpenHelper
 
 /**
  * Base implementation for SQLite storage that uses SQLCipher for encrypted storage.
@@ -63,7 +63,7 @@ open class SQLiteStorage(
     suspend fun initializeDatabase() = executeOnIO {
         try {
             // Load SQLCipher libraries
-            SQLiteDatabase.loadLibs(context)
+            System.loadLibrary("sqlcipher")
 
             // Create database helper
             dbHelper = createDatabaseHelper(context, databaseName, databaseVersion)
@@ -74,9 +74,14 @@ open class SQLiteStorage(
 
             try {
                 // Open or create the database
-                internalDatabase = dbHelper.getWritableDatabase(passphrase)
+                internalDatabase = SQLiteDatabase.openOrCreateDatabase(
+                    context.getDatabasePath(databaseName).absolutePath,
+                    passphrase,
+                    null,
+                    null,
+                )
             } catch (e: Exception) {
-                coroutineContext.ensureActive()
+                currentCoroutineContext().ensureActive()
                 
                 // If opening fails, try to recover
                 logger.e("Database initialization failed: ${e.message}", e)
@@ -84,7 +89,7 @@ open class SQLiteStorage(
                 
                 // Create a new helper and try again
                 dbHelper = createDatabaseHelper(context, databaseName, databaseVersion)
-                internalDatabase = dbHelper.getWritableDatabase(passphrase)
+                internalDatabase = dbHelper.writableDatabase
             }
 
             logger.d("SQL storage initialized successfully")
@@ -97,12 +102,12 @@ open class SQLiteStorage(
                 try {
                     creator(internalDatabase)
                 } catch (e: Exception) {
-                    coroutineContext.ensureActive()
+                    currentCoroutineContext().ensureActive()
                     logger.e("Failed to create table: ${e.message}", e)
                 }
             }
         } catch (e: Exception) {
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
             logger.e("Failed to initialize database: ${e.message}", e)
             throw StorageException("Failed to initialize database", e)
         }
@@ -143,7 +148,7 @@ open class SQLiteStorage(
                     }
                 }
             } catch (e: Exception) {
-                coroutineContext.ensureActive()
+                currentCoroutineContext().ensureActive()
                 logger.e("Database validation query failed: ${e.message}", e)
                 closeAndCleanupDatabase()
                 throw e
@@ -162,7 +167,7 @@ open class SQLiteStorage(
                     internalDatabase.use { /* it.close() is called automatically */ }
                 }
             } catch (e: Exception) {
-                coroutineContext.ensureActive()
+                currentCoroutineContext().ensureActive()
                 logger.e("Error during internalDatabase.close(): ${e.message}", e)
             }
 
@@ -172,7 +177,7 @@ open class SQLiteStorage(
                     dbHelper.close()
                 }
             } catch (e: Exception) {
-                coroutineContext.ensureActive()
+                currentCoroutineContext().ensureActive()
                 logger.e("Error during dbHelper.close(): ${e.message}", e)
             }
 
@@ -181,7 +186,7 @@ open class SQLiteStorage(
                 context.deleteDatabase(databaseName)
                 logger.d("Database file deleted successfully")
             } catch (e: Exception) {
-                coroutineContext.ensureActive()
+                currentCoroutineContext().ensureActive()
                 logger.e("Failed to delete database file: ${e.message}", e)
             }
 
@@ -200,10 +205,10 @@ open class SQLiteStorage(
             // Create temporary instances to satisfy lateinit requirements
             dbHelper = createDatabaseHelper(context, databaseName, databaseVersion)
             try {
-                internalDatabase = dbHelper.getReadableDatabase("")
+                internalDatabase = dbHelper.readableDatabase
                 internalDatabase.close()
             } catch (e: Exception) {
-                coroutineContext.ensureActive()
+                currentCoroutineContext().ensureActive()
                 logger.e("Failed to create temporary database instance: ${e.message}", e)
             }
         }
