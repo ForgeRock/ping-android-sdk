@@ -28,6 +28,7 @@ dependencies {
     implementation(project(":foundation:android"))
     implementation(project(":foundation:storage"))
     implementation(project(":foundation:network"))
+    implementation(project(":foundation:device:device-root"))
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)

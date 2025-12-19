@@ -66,6 +66,14 @@ android {
     }
 }
 
+configurations.all {
+    resolutionStrategy {
+        force("com.google.android.gms:play-services-basement:18.4.0")
+        force("com.google.android.gms:play-services-tasks:18.2.0")
+        force("com.google.android.gms:play-services-base:18.5.0")
+    }
+}
+
 dependencies {
     // Ping SDK dependencies
     implementation(project(":mfa:oath"))
