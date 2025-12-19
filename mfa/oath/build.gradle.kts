@@ -24,6 +24,12 @@ android {
             enableUnitTestCoverage = true
         }
     }
+
+    packaging {
+        jniLibs {
+            pickFirsts.add("**/*.so")
+        }
+    }
 }
 
 dependencies {
