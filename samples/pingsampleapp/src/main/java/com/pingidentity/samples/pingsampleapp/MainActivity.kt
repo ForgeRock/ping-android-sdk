@@ -1,0 +1,35 @@
+/*
+ * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ * This software may be modified and distributed under the terms
+ * of the MIT license. See the LICENSE file for details.
+ */
+
+package com.pingidentity.samples.pingsampleapp
+
+import android.os.Bundle
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.activity.viewModels
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import com.pingidentity.samples.pingsampleapp.navigation.AppNavigation
+import com.pingidentity.samples.pingsampleapp.theme.AppTheme
+
+class MainActivity : ComponentActivity() {
+    private val viewModel: MainViewModel by viewModels()
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        installSplashScreen().apply {
+            setKeepOnScreenCondition {
+                viewModel.isLoading.value
+            }
+        }
+
+        // Show the home screen
+        setContent {
+            AppTheme() {
+                AppNavigation()
+            }
+        }
+    }
+}

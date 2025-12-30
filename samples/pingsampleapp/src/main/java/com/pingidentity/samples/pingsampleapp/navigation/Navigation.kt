@@ -1,0 +1,483 @@
+/*
+ * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ * This software may be modified and distributed under the terms
+ * of the MIT license. See the LICENSE file for details.
+ */
+
+package com.pingidentity.samples.pingsampleapp.navigation
+
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextAlign
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavHostController
+import androidx.navigation.NavType
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
+import com.pingidentity.samples.pingsampleapp.PingSampleApplication
+import com.pingidentity.samples.pingsampleapp.authenticator.data.AuthenticatorViewModel
+import com.pingidentity.samples.pingsampleapp.authenticator.ui.AboutScreen
+import com.pingidentity.samples.pingsampleapp.authenticator.ui.AccountDetailScreen
+import com.pingidentity.samples.pingsampleapp.authenticator.ui.AccountsScreen
+import com.pingidentity.samples.pingsampleapp.authenticator.ui.EditAccountsScreen
+import com.pingidentity.samples.pingsampleapp.authenticator.ui.ManualEntryScreen
+import com.pingidentity.samples.pingsampleapp.authenticator.ui.PushNotificationsScreen
+import com.pingidentity.samples.pingsampleapp.authenticator.ui.QrScannerScreen
+import com.pingidentity.samples.pingsampleapp.authenticator.ui.SettingsScreen
+import com.pingidentity.samples.pingsampleapp.config.Env
+import com.pingidentity.samples.pingsampleapp.davinci.DaVinci
+import com.pingidentity.samples.pingsampleapp.devicemanagement.DeviceManagement
+import com.pingidentity.samples.pingsampleapp.devicemanagement.DeviceManagementViewModel
+import com.pingidentity.samples.pingsampleapp.devtools.DeviceInfo
+import com.pingidentity.samples.pingsampleapp.home.HomeApp
+import com.pingidentity.samples.pingsampleapp.journey.JourneyScreen
+import com.pingidentity.samples.pingsampleapp.journey.JourneyRoute
+import com.pingidentity.samples.pingsampleapp.journey.JourneyViewModel
+import com.pingidentity.samples.pingsampleapp.journey.PreferenceViewModel
+import com.pingidentity.samples.pingsampleapp.keystore.KeyStoreScreen
+import com.pingidentity.samples.pingsampleapp.logout.Logout
+import com.pingidentity.samples.pingsampleapp.oidc.Centralize
+import com.pingidentity.samples.pingsampleapp.token.TokenScreen
+import com.pingidentity.samples.pingsampleapp.token.TokenViewModel
+import com.pingidentity.samples.pingsampleapp.userprofile.UserProfile
+import com.pingidentity.samples.pingsampleapp.userprofile.UserProfileViewModel
+
+/**
+ * Sealed class representing all possible navigation destinations in the app
+ */
+object Route {
+    const val HOME = "home"
+    const val DAVINCI = "davinci"
+    const val JOURNEY_ROUTE = "journey_route"
+    const val JOURNEY = "journey"
+    const val OIDC = "oidc"
+    const val ACCESS_TOKEN = "access_token"
+    const val USER_PROFILE = "user_profile"
+    const val DEVICE_MANAGEMENT = "device_management"
+    const val LOGOUT = "logout"
+    const val DEVICE_INFO = "device_info"
+    const val LOGGER = "logger"
+    const val STORAGE = "storage"
+    const val BINDING_KEYS = "binding_keys"
+    const val CONFIGURATION = "configuration"
+    const val QR_SCANNER = "qr_scanner"
+    const val OATH = "oath"
+    const val PUSH = "push"
+    const val PUSH_NOTIFICATION = "push_notification"
+    const val ROUTE_AUTH_APP_MANUAL_ENTRY = "route_auth_app_manual_entry"
+    const val ROUTE_AUTH_APP_EDIT_ACCOUNTS = "route_auth_app_edit_accounts"
+    const val ROUTE_AUTH_APP_SETTINGS = "route_auth_app_settings"
+    const val ROUTE_AUTH_APP_ABOUT = "route_auth_app_about"
+    const val ROUTE_AUTH_APP_ACCOUNT = "account/{issuer}/{accountName}"
+    fun routeForAuthAppAccount(accountName: String) = "account/$accountName"
+
+}
+
+/**
+ * Main navigation host for the app
+ */
+@Composable
+fun AppNavigation(
+    navController: NavHostController = rememberNavController(),
+    startDestination: String = Route.HOME
+) {
+    var authenticatorViewModel by remember { mutableStateOf<AuthenticatorViewModel?>(null) }
+
+    LaunchedEffect(Unit) {
+        authenticatorViewModel = PingSampleApplication.getAuthenticatorViewModel()
+    }
+
+    NavHost(
+        navController = navController,
+        startDestination = startDestination
+    ) {
+        composable(Route.HOME) {
+            HomeApp(
+                onDaVinciFlowClick = {
+                    navController.navigate(Route.DAVINCI)
+                },
+                onJourneyFlowClick = {
+                    navController.navigate(Route.JOURNEY_ROUTE)
+                },
+                onOIDCLoginClick = {
+                    navController.navigate(Route.OIDC)
+                },
+                onAccessTokenClick = {
+                    navController.navigate(Route.ACCESS_TOKEN)
+                },
+                onUserProfileClick = {
+                    navController.navigate(Route.USER_PROFILE)
+                },
+                onDeviceManagementClick = {
+                    navController.navigate(Route.DEVICE_MANAGEMENT)
+                },
+                onLogoutClick = {
+                    navController.navigate(Route.LOGOUT)
+                },
+                onDeviceInfoClick = {
+                    navController.navigate(Route.DEVICE_INFO)
+                },
+                onLoggerClick = {
+                    navController.navigate(Route.LOGGER)
+                },
+                onStorageClick = {
+                    navController.navigate(Route.STORAGE)
+                },
+                onBindingKeysClick = {
+                    navController.navigate(Route.BINDING_KEYS)
+                },
+                onConfigurationClick = {
+                    navController.navigate(Route.CONFIGURATION)
+                },
+                onQrScannerClick = {
+                    navController.navigate(Route.QR_SCANNER)
+                },
+                onOathClick = {
+                    navController.navigate(Route.OATH)
+                },
+                onPushClick = {
+                    navController.navigate(Route.PUSH)
+                },
+                onPushNotificationClick = {
+                    navController.navigate(Route.PUSH_NOTIFICATION)
+                },
+            )
+        }
+        
+        composable(Route.DAVINCI) {
+            DaVinci(
+                onSuccess = {
+                    navController.navigate(Route.USER_PROFILE) {
+                        popUpTo(Route.HOME) {
+                            inclusive = false
+                        }
+                    }
+                },
+                onLogoClick = {
+                    navController.navigateUp()
+                }
+            )
+        }
+
+        composable(Route.JOURNEY_ROUTE) {
+            val preferenceViewModel = viewModel<PreferenceViewModel>(
+                factory = PreferenceViewModel.factory(LocalContext.current)
+            )
+            JourneyRoute(
+                preferenceViewModel = preferenceViewModel,
+                onSubmit = { journeyName ->
+                    navController.navigate(Route.JOURNEY + "/$journeyName")
+                }
+            )
+        }
+        
+        composable(Route.JOURNEY +  "/{name}", arguments = listOf(
+            navArgument("name") { type = NavType.StringType }
+        )) {
+            it.arguments?.getString("name")?.apply {
+                val journeyViewModel = viewModel<JourneyViewModel>(
+                    factory = JourneyViewModel.factory(this)
+                )
+                JourneyScreen(
+                    journeyViewModel,
+                    onSuccess = {
+                        navController.navigate(Route.USER_PROFILE) {
+                            popUpTo(Route.HOME) {
+                                inclusive = false
+                            }
+                        }
+                    },
+                    onLogoClick = {
+                        navController.navigateUp()
+                    }
+                )
+            }
+        }
+
+        
+        composable(Route.OIDC) {
+            Centralize() {
+                navController.navigate(Route.USER_PROFILE)
+            }
+        }
+        
+        composable(Route.ACCESS_TOKEN) {
+            val tokenViewModel = viewModel<TokenViewModel>(
+                factory = TokenViewModel.factory()
+            )
+            TokenScreen(tokenViewModel)
+        }
+        
+        composable(Route.USER_PROFILE) {
+            val userProfileViewModel = viewModel<UserProfileViewModel>(
+                factory = UserProfileViewModel.factory()
+            )
+            UserProfile(userProfileViewModel)
+        }
+        
+        composable(Route.DEVICE_MANAGEMENT) {
+            val deviceManagementViewModel = viewModel<DeviceManagementViewModel>(
+                factory = DeviceManagementViewModel.factory()
+            )
+            DeviceManagement(deviceManagementViewModel)
+        }
+        
+        composable(Route.LOGOUT) {
+            Logout()
+        }
+        
+        composable(Route.DEVICE_INFO) {
+            DeviceInfo()
+        }
+        
+        composable(Route.LOGGER) {
+            PlaceholderScreen(title = "Logger", navController = navController)
+        }
+        
+        composable(Route.STORAGE) {
+            PlaceholderScreen(title = "Storage", navController = navController)
+        }
+        
+        composable(Route.BINDING_KEYS) {
+            KeyStoreScreen()
+        }
+        
+        composable(Route.CONFIGURATION) {
+            Env()
+        }
+
+        composable(Route.QR_SCANNER) {
+            authenticatorViewModel?.let { viewModel ->
+                QrScannerScreen(
+                    viewModel = viewModel,
+                    onScanComplete = {
+                        navController.popBackStack()
+                    },
+                    onDismiss = {
+                        navController.popBackStack()
+                    }
+                )
+            }
+        }
+
+        composable(Route.OATH) {
+            authenticatorViewModel?.let { viewModel ->
+                AccountsScreen(
+                    viewModel = viewModel,
+                    onScanQrCode = {
+                        navController.navigate(Route.QR_SCANNER)
+                    },
+                    onAddManually = {
+                        // Navigate to manual entry screen (to be implemented)
+                        navController.navigate(Route.ROUTE_AUTH_APP_MANUAL_ENTRY)
+                    },
+                    onAccountClick = { accountId ->
+                        // Navigate to account detail screen (to be implemented)
+                        navController.navigate(Route.routeForAuthAppAccount(accountId))
+                    },
+                    onNotificationsClick = {
+                        navController.navigate(Route.PUSH_NOTIFICATION)
+                    },
+                    onSettingsClick = {
+                        // Navigate to settings screen (to be implemented)
+                        navController.navigate(Route.ROUTE_AUTH_APP_SETTINGS)
+                    },
+                    onAboutClick = {
+                        // Navigate to about screen (to be implemented)
+                        navController.navigate(Route.ROUTE_AUTH_APP_ABOUT)
+                    },
+                    onEditAccountsClick = {
+                        // Navigate to edit accounts screen (to be implemented)
+                        // navController.navigate("edit_accounts")
+                    },
+                    onTestModeClick = {
+                        // Test mode functionality (to be implemented)
+                    },
+                    onNavigateToLogin = {
+                        navController.navigate(Route.JOURNEY_ROUTE)
+                    }
+                )
+            }
+        }
+
+        composable(Route.PUSH) {
+            authenticatorViewModel?.let { viewModel ->
+                AccountsScreen(
+                    viewModel = viewModel,
+                    onScanQrCode = {
+                        navController.navigate(Route.QR_SCANNER)
+                    },
+                    onAddManually = {
+                        // Navigate to manual entry screen (to be implemented)
+                        navController.navigate(Route.ROUTE_AUTH_APP_MANUAL_ENTRY)
+                    },
+                    onAccountClick = { accountId ->
+                        // Navigate to account detail screen (to be implemented)
+                        navController.navigate(Route.routeForAuthAppAccount(accountId))
+                    },
+                    onNotificationsClick = {
+                        navController.navigate(Route.PUSH_NOTIFICATION)
+                    },
+                    onSettingsClick = {
+                        // Navigate to settings screen (to be implemented)
+                        navController.navigate(Route.ROUTE_AUTH_APP_SETTINGS)
+                    },
+                    onAboutClick = {
+                        // Navigate to about screen (to be implemented)
+                        navController.navigate(Route.ROUTE_AUTH_APP_ABOUT)
+                    },
+                    onEditAccountsClick = {
+                        // Navigate to edit accounts screen (to be implemented)
+                        // navController.navigate("edit_accounts")
+                    },
+                    onTestModeClick = {
+                        // Test mode functionality (to be implemented)
+                    },
+                    onNavigateToLogin = {
+                        navController.navigate(Route.JOURNEY_ROUTE)
+                    }
+                )
+            }
+        }
+
+        composable(Route.ROUTE_AUTH_APP_MANUAL_ENTRY) {
+            authenticatorViewModel?.let {
+                ManualEntryScreen(
+                    viewModel = it,
+                    onDismiss = {
+                        navController.popBackStack()
+                    },
+                    onEntryComplete = {
+                        navController.popBackStack()
+                    }
+                )
+            }
+        }
+
+        composable(Route.ROUTE_AUTH_APP_SETTINGS) {
+            authenticatorViewModel?.let {
+                SettingsScreen(
+                    viewModel = it,
+                    onDismiss = {
+                        navController.popBackStack()
+                    },
+                    onDiagnosticLogsClick = {
+                        navController.popBackStack()
+                    }
+                )
+            }
+        }
+
+        composable(Route.ROUTE_AUTH_APP_ABOUT) {
+            AboutScreen(
+                onDismiss = {
+                    navController.popBackStack()
+                }
+            )
+        }
+
+        composable(Route.ROUTE_AUTH_APP_EDIT_ACCOUNTS) {
+            authenticatorViewModel?.let {
+                EditAccountsScreen(
+                    viewModel = it,
+                    onDismiss = { navController.popBackStack() }
+                )
+            }
+        }
+
+        composable(Route.ROUTE_AUTH_APP_ACCOUNT) { backStackEntry ->
+            val encodedIssuer = backStackEntry.arguments?.getString("issuer") ?: ""
+            val encodedAccountName = backStackEntry.arguments?.getString("accountName") ?: ""
+            val issuer = java.net.URLDecoder.decode(encodedIssuer, "UTF-8")
+            val accountName = java.net.URLDecoder.decode(encodedAccountName, "UTF-8")
+            authenticatorViewModel?.let {
+                AccountDetailScreen(
+                    issuer = issuer,
+                    accountName = accountName,
+                    viewModel = it,
+                    onDismiss = {
+                        navController.popBackStack()
+                    }
+                )
+            }
+        }
+
+        composable(Route.PUSH_NOTIFICATION) {
+            authenticatorViewModel?.let { viewModel ->
+                PushNotificationsScreen(
+                    viewModel = viewModel,
+                    onNotificationClick = { notificationId ->
+                        // Navigate to notification response screen (to be implemented)
+                        // navController.navigate("notification_response/$notificationId")
+                    },
+                    onDismiss = {
+                        navController.popBackStack()
+                    }
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Placeholder screen for unimplemented screens
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun PlaceholderScreen(
+    title: String,
+    navController: NavHostController
+) {
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(title) },
+                navigationIcon = {
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back"
+                        )
+                    }
+                }
+            )
+        }
+    ) { paddingValues ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .statusBarsPadding(),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = "$title Screen\n\nComing Soon...",
+                style = MaterialTheme.typography.headlineMedium,
+                textAlign = TextAlign.Center
+            )
+        }
+    }
+}
+

@@ -1,0 +1,98 @@
+/*
+ * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ *
+ * This software may be modified and distributed under the terms
+ * of the MIT license. See the LICENSE file for details.
+ */
+
+package com.pingidentity.samples.pingsampleapp.davinci.collector
+
+import android.util.Log
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.wrapContentWidth
+import androidx.compose.material3.Button
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import com.pingidentity.fido.davinci.FidoRegistrationCollector
+import kotlinx.coroutines.launch
+
+@Composable
+fun FidoRegistration(
+    collector: FidoRegistrationCollector,
+    onStart: () -> Unit,
+    onNext: () -> Unit,
+) {
+    val coroutineScope = rememberCoroutineScope()
+    var showErrorDialog by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf("") }
+
+    // Function to perform registration
+    val performRegistration: () -> Unit = {
+        coroutineScope.launch {
+            val result = collector.register()
+            result.onSuccess {
+                onNext()
+            }
+            result.onFailure {
+                Log.e(
+                    "FidoRegistration",
+                    "Failed to register",
+                    it
+                )
+                errorMessage = it.message ?: "Registration failed"
+                showErrorDialog = true
+            }
+        }
+    }
+
+    // Trigger registration immediately if not BUTTON trigger
+    LaunchedEffect(collector) {
+        if (collector.trigger != "BUTTON") {
+            performRegistration()
+        }
+    }
+
+    if (showErrorDialog) {
+        ErrorDialog(
+            message = errorMessage,
+            onDismiss = { showErrorDialog = false },
+            onRetry = {
+                showErrorDialog = false
+                onStart()
+            }
+        )
+    }
+
+    // Only show button if trigger is BUTTON
+    if (collector.trigger == "BUTTON") {
+        Row(
+            modifier =
+                Modifier
+                    .padding(4.dp)
+                    .fillMaxWidth(),
+        ) {
+            Spacer(modifier = Modifier.weight(1f, true))
+            Button(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .wrapContentWidth(Alignment.CenterHorizontally),
+                onClick = performRegistration,
+            ) {
+                androidx.compose.material3.Text(collector.label)
+            }
+            Spacer(modifier = Modifier.weight(1f, true))
+        }
+    }
+}

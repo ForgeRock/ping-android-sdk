@@ -1,0 +1,147 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
+plugins {
+    alias(libs.plugins.androidApplication)
+    alias(libs.plugins.kotlinAndroid)
+    alias(libs.plugins.compose.compiler)
+}
+
+android {
+    namespace = "com.pingidentity.samples.pingsampleapp"
+    compileSdk = 36
+
+    defaultConfig {
+        applicationId = "com.pingidentity.samples.pingsampleapp"
+        minSdk = 29
+        targetSdk = 36
+        versionCode = 1
+        versionName = "1.0"
+
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        manifestPlaceholders["appRedirectUriScheme"] = "com.pingidentity.demo"
+    }
+
+    buildTypes {
+        release {
+            isMinifyEnabled = false
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
+        }
+    }
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+    kotlin {
+        compilerOptions {
+            jvmTarget.set(JvmTarget.JVM_17)
+        }
+    }
+
+    buildFeatures {
+        compose = true
+    }
+    composeOptions {
+        kotlinCompilerExtensionVersion = "1.5.9"
+    }
+}
+
+dependencies {
+    // Ping
+    implementation(project(":foundation:android"))
+    implementation(project(":foundation:device:device-id"))
+    implementation(project(":foundation:device:device-profile"))
+    implementation(project(":foundation:device:device-client"))
+    implementation(project(":foundation:device:device-root"))
+    val composeBom = platform(libs.androidx.compose.bom)
+    implementation(composeBom)
+
+    implementation(project(":davinci"))
+    implementation(project(":journey"))
+    //Protect
+    implementation(project(":protect"))
+
+    // MFA
+    implementation(project(":mfa:binding"))
+    implementation(project(":mfa:binding-ui"))
+    implementation(project(":mfa:binding-migration"))
+
+    //Application Pin
+    implementation(libs.bcpkix.jdk18on)
+
+    // Recaptcha
+    implementation(project(":recaptcha-enterprise"))
+
+    //implementation("com.pingidentity.sdks:davinci:0.9.0-SNAPSHOT")
+    implementation(libs.androidx.datastore.preferences)
+
+    //To enable Native Google Sign-In and Facebook Login
+    implementation(libs.googleid)
+    implementation(libs.facebook.login)
+
+    // Social Login
+    implementation(project(":external-idp"))
+
+    // FIDO2
+    //To Support nod-discoverable fido2 credential
+    implementation(libs.play.services.fido)
+    implementation(libs.play.services.auth)
+    implementation(project(":mfa:fido"))
+    implementation(project(":mfa:oath"))
+    implementation(project(":mfa:push"))
+
+    //Protect
+    implementation(project(":protect"))
+
+    // Core dependencies
+    implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.appcompat)
+    implementation(libs.compose.material3)
+    implementation(libs.material)
+    implementation(libs.compose.ui)
+    implementation(libs.compose.foundation)
+
+    // Android Studio Preview support
+    implementation(libs.androidx.ui.tooling.preview)
+    implementation(libs.androidx.core.splashscreen)
+    debugImplementation(libs.androidx.ui.tooling)
+    implementation(libs.androidx.activity.compose)
+    implementation(libs.androidx.navigation.compose)
+    implementation(libs.androidx.material.icons.extended)
+
+    implementation(libs.coil.compose)
+    implementation(libs.coil.svg)
+    // For fetching Device location
+    implementation(libs.play.services.location)
+    implementation(libs.kotlinx.coroutines.play.services)
+
+    // CameraX dependencies for QR scanning
+    implementation(libs.androidx.camera.camera2)
+    implementation(libs.androidx.camera.lifecycle)
+    implementation(libs.androidx.camera.view)
+    implementation(libs.barcode.scanning)
+
+    // HTTP client for reverse geocoding API calls
+    implementation(libs.ktor.client.cio)
+    implementation(libs.ktor.client.core)
+    implementation(libs.ktor.client.content.negotiation)
+    implementation(libs.ktor.serialization.kotlinx.json)
+
+    // Firebase Cloud Messaging for push notifications
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.messaging)
+
+    // Maps for location display - using free OpenStreetMap
+    implementation(libs.osmdroid.android)
+
+    // Biometric
+    implementation(libs.androidx.biometric)
+
+    // Testing
+    testImplementation(libs.junit)
+    androidTestImplementation(libs.androidx.junit)
+    androidTestImplementation(libs.androidx.espresso.core)
+}
