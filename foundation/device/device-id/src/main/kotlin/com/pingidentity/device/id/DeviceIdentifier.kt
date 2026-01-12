@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2025 - 2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -7,8 +7,8 @@
 
 package com.pingidentity.device.id
 
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
-import kotlin.coroutines.coroutineContext
 
 /**
  * Interface for obtaining a device-specific identifier.
@@ -73,7 +73,7 @@ suspend inline fun catch(crossinline block: suspend () -> String): String {
     return try {
         block()
     } catch (e: Exception) {
-        coroutineContext.ensureActive()
+        currentCoroutineContext().ensureActive()
         throw DeviceIdentifierException("Failed to retrieve device identifier", e)
     }
 }

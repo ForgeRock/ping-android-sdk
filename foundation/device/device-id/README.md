@@ -60,7 +60,9 @@ val deviceId = DefaultDeviceIdentifier.id
 
 The `DefaultDeviceIdentifier`:
 
-- Creates and stores a key pair in the Android KeyStore
+- First attempts to retrieve a legacy identifier from the KeyStore using the Android ID as the key
+  alias, if a legacy identifier is found, it is used for backward compatibility, if not found,
+  creates and stores a new key pair in the Android KeyStore
 - Uses the public key as the basis for the device identifier
 - Hashes the key data using SHA-256 for added security
 - Caches the result for efficient access
