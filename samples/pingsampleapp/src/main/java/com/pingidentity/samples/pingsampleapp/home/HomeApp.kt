@@ -23,7 +23,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.AccountCircle
-import androidx.compose.material.icons.filled.AccountTree
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.DeviceHub
 import androidx.compose.material.icons.filled.Key
@@ -163,7 +162,8 @@ fun HomeApp(
                     text = stringResource(R.string.text_home_section_authentication),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(vertical = 8.dp)
+                    color = MaterialTheme.colorScheme.onBackground,
+                    modifier = Modifier.padding(vertical = 8.dp),
                 )
                 IconRowItem(
                     icon = Icons.Default.Key,
@@ -191,6 +191,7 @@ fun HomeApp(
                     text = stringResource(R.string.text_home_section_user_management),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onBackground,
                     modifier = Modifier.padding(vertical = 16.dp)
                 )
 
@@ -224,6 +225,7 @@ fun HomeApp(
                     text = stringResource(R.string.text_home_section_mfa),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onBackground,
                     modifier = Modifier.padding(vertical = 16.dp)
                 )
 
@@ -260,6 +262,7 @@ fun HomeApp(
                     text = stringResource(R.string.text_home_section_developer_tools),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onBackground,
                     modifier = Modifier.padding(vertical = 16.dp)
                 )
 
@@ -301,7 +304,7 @@ fun HomeApp(
                     elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
                     shape = MaterialTheme.shapes.medium,
                     colors = CardDefaults.cardColors(
-                        containerColor = Color.White // Change to your desired color
+                        containerColor = MaterialTheme.colorScheme.surface
                     )
                 ) {
                     Row(
@@ -322,7 +325,7 @@ fun HomeApp(
                         Text(
                             text = deviceStatus,
                             style = MaterialTheme.typography.bodyMedium,
-                            modifier = Modifier.padding(8.dp).background(Color.White),
+                            modifier = Modifier.padding(8.dp),
                             color = if (deviceStatus == "✓ Secured") Color.Green else Color.Red,
                             textAlign = TextAlign.End,
                         )
@@ -361,7 +364,7 @@ fun IconRowItem(
             .clickable(onClick = onClick),
         shape = MaterialTheme.shapes.medium,
         colors = CardDefaults.cardColors(
-            containerColor = Color.White
+            containerColor = MaterialTheme.colorScheme.surface
         )
     ) {
         Row(
@@ -390,7 +393,7 @@ fun IconRowItem(
                 Text(
                     text = subtitle,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Color.Gray
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
@@ -399,7 +402,7 @@ fun IconRowItem(
                     imageVector = Icons.Default.ChevronRight,
                     contentDescription = "Navigate",
                     modifier = Modifier.size(24.dp),
-                    tint = Color.Gray
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
