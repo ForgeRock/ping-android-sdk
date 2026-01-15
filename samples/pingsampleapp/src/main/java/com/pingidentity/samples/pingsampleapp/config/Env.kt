@@ -51,14 +51,15 @@ fun Env(envViewModel: EnvViewModel = viewModel<EnvViewModel>()) {
                 text = stringResource(R.string.text_configuration_selected_environment),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(8.dp)
+                modifier = Modifier.padding(8.dp),
+                color = MaterialTheme.colorScheme.surface
             )
             LazyColumn(modifier = Modifier) {
                 envViewModel.oidcConfigs.forEach { config ->
                     item {
                         ServerSetting(
                             option = config,
-                            envViewModel.current.discoveryEndpoint == config.discoveryEndpoint
+                            envViewModel.current.display == config.display
                         ) {
                             envViewModel.select(it)
                         }
@@ -86,7 +87,8 @@ private fun ServerSetting(
                 modifier = Modifier
                     .weight(1f)
                     .wrapContentHeight(),
-                style = MaterialTheme.typography.titleMedium
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.surface
             )
             Spacer(Modifier.width(8.dp))
             SelectServerButton(option, selected, onServerSelected)
@@ -104,7 +106,11 @@ private fun SelectServerButton(
     val icon = if (selected) Icons.Filled.Done else Icons.Filled.CheckBoxOutlineBlank
     IconButton(
         onClick = { onServerSelected(option) }) {
-        Icon(icon, contentDescription = null)
+        Icon(
+            icon,
+            contentDescription = option.display,
+            tint = MaterialTheme.colorScheme.surface
+        )
     }
 }
 
