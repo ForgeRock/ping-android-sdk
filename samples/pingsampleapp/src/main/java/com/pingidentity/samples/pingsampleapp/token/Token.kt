@@ -17,16 +17,22 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -40,11 +46,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.pingidentity.oidc.Token
 
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
-fun TokenScreen(tokenViewModel: TokenViewModel = viewModel<TokenViewModel>()) {
+fun TokenScreen(
+    tokenViewModel: TokenViewModel = viewModel<TokenViewModel>(),
+    onBack: (() -> Unit)? = null,
+) {
     val formattedToken by tokenViewModel.formattedToken.collectAsState(initial = "Loading...")
     val scroll = rememberScrollState(0)
     var expanded by remember { mutableStateOf(false) }
@@ -54,83 +62,101 @@ fun TokenScreen(tokenViewModel: TokenViewModel = viewModel<TokenViewModel>()) {
         tokenViewModel.accessToken()
     }
 
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .statusBarsPadding()
-            .padding(8.dp)
-    ) {
-        Column(
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Card(
-                elevation =
-                CardDefaults.cardElevation(
-                    defaultElevation = 10.dp,
-                ),
-                modifier =
-                Modifier
-                    .height(400.dp)
-                    .fillMaxWidth()
-                    .padding(8.dp)
-                    .combinedClickable(
-                        onClick = { },
-                        onLongClick = {
-                            expanded = !expanded
+    Scaffold(
+        topBar = {
+            if (onBack != null) {
+                TopAppBar(
+                    title = { Text("Token") },
+                    navigationIcon = {
+                        IconButton(onClick = onBack) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Back"
+                            )
                         }
-                    ),
-                border = BorderStroke(2.dp, Color.Black),
-                shape = MaterialTheme.shapes.medium,
-            ) {
-                Text(
-                    modifier =
-                        Modifier
-                            .padding(4.dp)
-                            .verticalScroll(scroll),
-                    text = formattedToken,
+                    }
                 )
             }
-
-            Row(
-                modifier =
-                Modifier
-                    .padding(8.dp)
-                    .fillMaxWidth(),
-                horizontalArrangement = Arrangement.aligned(Alignment.End),
+        }
+    ) { paddingValues ->
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(paddingValues)
+                .padding(8.dp)
+        ) {
+            Column(
+                modifier = Modifier.fillMaxWidth()
             ) {
-                Button(
-                    modifier = Modifier.padding(4.dp),
-                    onClick = { tokenViewModel.accessToken() },
+                Card(
+                    elevation =
+                    CardDefaults.cardElevation(
+                        defaultElevation = 10.dp,
+                    ),
+                    modifier =
+                    Modifier
+                        .height(400.dp)
+                        .fillMaxWidth()
+                        .padding(8.dp)
+                        .combinedClickable(
+                            onClick = { },
+                            onLongClick = {
+                                expanded = !expanded
+                            }
+                        ),
+                    border = BorderStroke(2.dp, Color.Black),
+                    shape = MaterialTheme.shapes.medium,
                 ) {
-                    Text(text = "AccessToken")
+                    Text(
+                        modifier =
+                            Modifier
+                                .padding(4.dp)
+                                .verticalScroll(scroll),
+                        text = formattedToken,
+                    )
                 }
-                Button(
-                    modifier = Modifier.padding(4.dp),
-                    onClick = { tokenViewModel.reset() },
+
+                Row(
+                    modifier =
+                    Modifier
+                        .padding(8.dp)
+                        .fillMaxWidth(),
+                    horizontalArrangement = Arrangement.aligned(Alignment.End),
                 ) {
-                    Text(text = "Clear")
+                    Button(
+                        modifier = Modifier.padding(4.dp),
+                        onClick = { tokenViewModel.accessToken() },
+                    ) {
+                        Text(text = "AccessToken")
+                    }
+                    Button(
+                        modifier = Modifier.padding(4.dp),
+                        onClick = { tokenViewModel.reset() },
+                    ) {
+                        Text(text = "Clear")
+                    }
                 }
             }
-        }
 
-        DropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false }
-        ) {
-            DropdownMenuItem(
-                text = { Text("Refresh") },
-                onClick = {
-                    tokenViewModel.refresh()
-                    expanded = false
-                }
-            )
-            DropdownMenuItem(
-                text = { Text("Revoke") },
-                onClick = {
-                    tokenViewModel.revoke()
-                    expanded = false
-                }
-            )
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false }
+            ) {
+                DropdownMenuItem(
+                    text = { Text("Refresh") },
+                    onClick = {
+                        tokenViewModel.refresh()
+                        expanded = false
+                    }
+                )
+                DropdownMenuItem(
+                    text = { Text("Revoke") },
+                    onClick = {
+                        tokenViewModel.revoke()
+                        expanded = false
+                    }
+                )
+            }
         }
     }
 }

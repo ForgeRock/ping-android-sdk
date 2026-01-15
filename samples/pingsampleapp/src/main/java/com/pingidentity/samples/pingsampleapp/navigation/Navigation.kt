@@ -177,6 +177,9 @@ fun AppNavigation(
                 },
                 onLogoClick = {
                     navController.navigateUp()
+                },
+                onBack = {
+                    navController.navigateUp()
                 }
             )
         }
@@ -189,6 +192,9 @@ fun AppNavigation(
                 preferenceViewModel = preferenceViewModel,
                 onSubmit = { journeyName ->
                     navController.navigate(Route.JOURNEY + "/$journeyName")
+                },
+                onBack = {
+                    navController.navigateUp()
                 }
             )
         }
@@ -209,7 +215,7 @@ fun AppNavigation(
                             }
                         }
                     },
-                    onLogoClick = {
+                    onBack = {
                         navController.navigateUp()
                     }
                 )
@@ -218,23 +224,32 @@ fun AppNavigation(
 
         
         composable(Route.OIDC) {
-            Centralize() {
-                navController.navigate(Route.USER_PROFILE)
-            }
+            Centralize(
+                onSuccess = {
+                    navController.navigate(Route.USER_PROFILE)
+                },
+                onBack = {
+                    navController.navigateUp()
+                }
+            )
         }
         
         composable(Route.ACCESS_TOKEN) {
             val tokenViewModel = viewModel<TokenViewModel>(
                 factory = TokenViewModel.factory()
             )
-            TokenScreen(tokenViewModel)
+            TokenScreen(tokenViewModel) {
+                navController.navigateUp()
+            }
         }
         
         composable(Route.USER_PROFILE) {
             val userProfileViewModel = viewModel<UserProfileViewModel>(
                 factory = UserProfileViewModel.factory()
             )
-            UserProfile(userProfileViewModel)
+            UserProfile(userProfileViewModel) {
+                navController.navigateUp()
+            }
         }
         
         composable(Route.DEVICE_MANAGEMENT) {
@@ -430,7 +445,7 @@ fun AppNavigation(
                     viewModel = viewModel,
                     onNotificationClick = { notificationId ->
                         // Navigate to notification response screen (to be implemented)
-                        // navController.navigate("notification_response/$notificationId")
+                        navController.navigate("notification_response/$notificationId")
                     },
                     onDismiss = {
                         navController.popBackStack()

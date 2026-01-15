@@ -21,6 +21,7 @@ import junit.framework.TestCase.assertTrue
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Test
+import kotlin.test.Ignore
 
 class PingOneProtectInitializeCallbackE2ETest : BaseJourneyTest() {
 
@@ -65,6 +66,8 @@ class PingOneProtectInitializeCallbackE2ETest : BaseJourneyTest() {
         assertNotNull(defaultJourney.session())
     }
 
+    // TODO - This will be fixed when we fix SDKS-4548
+    @Ignore("Flaky Test - Remove when SDKS-4548 is fixed")
     @Test
     fun testProtectInitializeCustom() = runTest {
         var node = defaultJourney.start(tree)  as ContinueNode

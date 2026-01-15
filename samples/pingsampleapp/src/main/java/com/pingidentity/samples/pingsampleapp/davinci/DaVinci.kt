@@ -17,19 +17,25 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -57,6 +63,7 @@ fun DaVinci(
     daVinciViewModel: DaVinciViewModel = viewModel<DaVinciViewModel>(),
     onSuccess: (() -> Unit)? = null,
     onLogoClick: (() -> Unit)? = null,
+    onBack: (() -> Unit)? = null,
 ) {
     BackHandler {
         daVinciViewModel.start()
@@ -80,9 +87,11 @@ fun DaVinci(
         },
         currentOnSuccess,
         onLogoClick,
+        onBack,
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DaVinci(
     state: DaVinciState,
@@ -92,51 +101,73 @@ fun DaVinci(
     onStart: () -> Unit,
     onSuccess: (() -> Unit)?,
     onLogoClick: (() -> Unit)? = null,
+    onBack: (() -> Unit)? = null,
 ) {
     val scroll = rememberScrollState(0)
 
-    Box(
-        contentAlignment = Alignment.Center,
-        modifier = Modifier
-            .fillMaxSize().verticalScroll(scroll)
-   ) {
-        if (loading) {
-            CircularProgressIndicator()
+    Scaffold(
+        topBar = {
+            if (onBack != null) {
+                TopAppBar(
+                    title = { Text("DaVinci Flow") },
+                    navigationIcon = {
+                        IconButton(onClick = onBack) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Back"
+                            )
+                        }
+                    }
+                )
+            }
         }
-
-        Column(
-            modifier =
-            Modifier
-                .padding(8.dp)
+    ) { paddingValues ->
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
                 .fillMaxSize()
+                .navigationBarsPadding()
+                .padding(paddingValues)
+                .verticalScroll(scroll)
         ) {
-            Logo(modifier = Modifier, onLogoClick)
+            if (loading) {
+                CircularProgressIndicator()
+            }
 
-            when (val node = state.node) {
-                is ContinueNode -> {
-                    Render(node = node, onNodeUpdated, onStart) {
-                        onNext(node)
+            Column(
+                modifier =
+                Modifier
+                    .padding(8.dp)
+                    .fillMaxSize()
+            ) {
+                Logo(modifier = Modifier, onLogoClick)
+
+                when (val node = state.node) {
+                    is ContinueNode -> {
+                        Render(node = node, onNodeUpdated, onStart) {
+                            onNext(node)
+                        }
                     }
-                }
 
-                is FailureNode -> {
-                    Log.e("DaVinci", node.cause.message, node.cause)
-                    Render(node = node)
-                }
-
-                is ErrorNode -> {
-                    Render(node)
-                }
-
-                is SuccessNode -> {
-                    LaunchedEffect(true) {
-                        onSuccess?.let { onSuccess() }
+                    is FailureNode -> {
+                        Log.e("DaVinci", node.cause.message, node.cause)
+                        Render(node = node)
                     }
-                }
 
-                else -> {
-                    if (state.error != null) {
-                        Text(state.error, modifier = Modifier.fillMaxWidth())
+                    is ErrorNode -> {
+                        Render(node)
+                    }
+
+                    is SuccessNode -> {
+                        LaunchedEffect(true) {
+                            onSuccess?.let { onSuccess() }
+                        }
+                    }
+
+                    else -> {
+                        if (state.error != null) {
+                            Text(state.error, modifier = Modifier.fillMaxWidth())
+                        }
                     }
                 }
             }
