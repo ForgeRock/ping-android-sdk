@@ -39,7 +39,53 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- Intent filters for OATH and Push authentication schemes -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="otpauth" android:host="totp" />
+                <data android:scheme="otpauth" android:host="hotp" />
+                <data android:scheme="pushauth" android:host="push" />
+                <data android:scheme="mfauth" android:host="totp" />
+                <data android:scheme="mfauth" android:host="hotp" />
+            </intent-filter>
         </activity>
+
+        <!-- Firebase Cloud Messaging Service -->
+        <service
+            android:name=".authenticator.service.PushNotificationService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+
+        <!-- Notification Action Receiver -->
+        <receiver
+            android:name=".authenticator.notification.NotificationActionReceiver"
+            android:exported="false" />
+
+        <!-- Biometric Prompt Activity -->
+        <activity
+            android:name=".authenticator.notification.BiometricPromptActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Ping"
+            android:launchMode="singleTask"
+            android:taskAffinity=""
+            android:showOnLockScreen="true"
+            android:turnScreenOn="true"
+            android:noHistory="true" />
+
+        <!-- Push Notification Activity -->
+        <activity
+            android:name=".authenticator.notification.PushNotificationActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Ping"
+            android:launchMode="singleTask"
+            android:taskAffinity=""
+            android:excludeFromRecents="false" />
+
         <!-- Facebook Login -->
         <meta-data
             android:name="com.facebook.sdk.ApplicationId"
@@ -51,7 +97,7 @@
         <activity
             android:name="com.facebook.FacebookActivity"
             android:configChanges="keyboard|keyboardHidden|screenLayout|screenSize|orientation"
-            android:label="@string/app_name" />
+            />
 
         <activity
             android:name="com.facebook.CustomTabActivity"

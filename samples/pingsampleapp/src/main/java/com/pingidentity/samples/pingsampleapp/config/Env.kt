@@ -52,7 +52,7 @@ fun Env(envViewModel: EnvViewModel = viewModel<EnvViewModel>()) {
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(8.dp),
-                color = MaterialTheme.colorScheme.surface
+                color = MaterialTheme.colorScheme.onSurface
             )
             LazyColumn(modifier = Modifier) {
                 envViewModel.oidcConfigs.forEach { config ->
@@ -88,7 +88,7 @@ private fun ServerSetting(
                     .weight(1f)
                     .wrapContentHeight(),
                 style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.surface
+                color = MaterialTheme.colorScheme.onSurface
             )
             Spacer(Modifier.width(8.dp))
             SelectServerButton(option, selected, onServerSelected)
@@ -109,7 +109,7 @@ private fun SelectServerButton(
         Icon(
             icon,
             contentDescription = option.display,
-            tint = MaterialTheme.colorScheme.surface
+            tint = MaterialTheme.colorScheme.onSurface
         )
     }
 }

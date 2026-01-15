@@ -41,9 +41,9 @@ val testDaVinci by lazy {
         timeout = 30.seconds.inWholeMilliseconds
         logger = Logger.STANDARD
         module(DaVinciOidc) {
-            clientId = "dummy"
+            clientId = "VibhorSdkClient"
             discoveryEndpoint =
-                "https://auth.test-one-pingone.com/dummy/as/.well-known/openid-configuration"
+                "https://openam-sdks.forgeblocks.com/am/oauth2/alpha/.well-known/openid-configuration"
             scopes = mutableSetOf("openid", "email", "address")
             redirectUri = "org.forgerock.demo://oauth2redirect"
             display = "DaVinci Test Config"
