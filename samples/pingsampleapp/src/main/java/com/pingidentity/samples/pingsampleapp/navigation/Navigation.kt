@@ -250,7 +250,13 @@ fun AppNavigation(
                 factory = UserProfileViewModel.factory()
             )
             UserProfile(userProfileViewModel) {
-                navController.navigateUp()
+                // Navigate to home and clear the entire back stack
+                navController.navigate(Route.HOME) {
+                    popUpTo(navController.graph.startDestinationId) {
+                        inclusive = true
+                    }
+                    launchSingleTop = true
+                }
             }
         }
         
@@ -358,11 +364,9 @@ fun AppNavigation(
                         navController.navigate(Route.PUSH_NOTIFICATION)
                     },
                     onSettingsClick = {
-                        // Navigate to settings screen (to be implemented)
                         navController.navigate(Route.ROUTE_AUTH_APP_SETTINGS)
                     },
                     onAboutClick = {
-                        // Navigate to about screen (to be implemented)
                         navController.navigate(Route.ROUTE_AUTH_APP_ABOUT)
                     },
                     onEditAccountsClick = {
