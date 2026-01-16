@@ -121,7 +121,7 @@ fun TokenScreen(
                     Modifier
                         .padding(8.dp)
                         .fillMaxWidth(),
-                    horizontalArrangement = Arrangement.aligned(Alignment.End),
+                    horizontalArrangement = Arrangement.aligned(Alignment.Start),
                 ) {
                     Button(
                         modifier = Modifier.padding(4.dp),
@@ -134,6 +134,24 @@ fun TokenScreen(
                         onClick = { tokenViewModel.reset() },
                     ) {
                         Text(text = "Clear")
+                    }
+                }
+                Row(
+                    modifier = Modifier.padding(8.dp)
+                        .fillMaxWidth(),
+                    horizontalArrangement = Arrangement.aligned(Alignment.Start),
+                ) {
+                    Button(
+                        modifier = Modifier.padding(4.dp),
+                        onClick = { tokenViewModel.refresh() }
+                    ) {
+                        Text(text = "Refresh")
+                    }
+                    Button(
+                        modifier = Modifier.padding(4.dp),
+                        onClick = { tokenViewModel.revoke() }
+                    ) {
+                        Text(text = "Revoke")
                     }
                 }
             }
