@@ -66,8 +66,8 @@ class PingSampleApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
-        instance = this
         FirebaseApp.initializeApp(this)
+        instance = this
 
         // Initialize user preferences
         userPreferences = UserPreferences(this)
@@ -112,7 +112,6 @@ class PingSampleApplication : Application() {
 
             // Obtain the device token from Firebase and set it in the Push client
             try {
-                FirebaseApp.getInstance()
                 pushClient.setDeviceToken(FirebaseMessaging.getInstance().token.await())
                 diagnosticLogger.i("PingSampleApplication: Firebase device token set")
             } catch (e: IllegalStateException) {
