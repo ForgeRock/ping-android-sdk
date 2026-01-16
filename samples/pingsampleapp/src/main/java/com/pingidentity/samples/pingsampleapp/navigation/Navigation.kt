@@ -172,7 +172,7 @@ fun AppNavigation(
                 },
                 onAuthTestScreenClick = {
                     navController.navigate(Route.ROUTE_AUTH_TEST_APP)
-                }
+                },
             )
         }
         
@@ -309,7 +309,11 @@ fun AppNavigation(
                 QrScannerScreen(
                     viewModel = viewModel,
                     onScanComplete = {
-                        navController.popBackStack()
+                        navController.navigate(Route.OATH) {
+                            popUpTo(Route.HOME) {
+                                inclusive = false
+                            }
+                        }
                     },
                     onDismiss = {
                         navController.popBackStack()
@@ -326,30 +330,25 @@ fun AppNavigation(
                         navController.navigate(Route.QR_SCANNER)
                     },
                     onAddManually = {
-                        // Navigate to manual entry screen (to be implemented)
                         navController.navigate(Route.ROUTE_AUTH_APP_MANUAL_ENTRY)
                     },
                     onAccountClick = { accountId ->
-                        // Navigate to account detail screen (to be implemented)
                         navController.navigate(Route.routeForAuthAppAccount(accountId))
                     },
                     onNotificationsClick = {
                         navController.navigate(Route.PUSH_NOTIFICATION)
                     },
                     onSettingsClick = {
-                        // Navigate to settings screen (to be implemented)
                         navController.navigate(Route.ROUTE_AUTH_APP_SETTINGS)
                     },
                     onAboutClick = {
-                        // Navigate to about screen (to be implemented)
                         navController.navigate(Route.ROUTE_AUTH_APP_ABOUT)
                     },
                     onEditAccountsClick = {
-                        // Navigate to edit accounts screen (to be implemented)
-                        // navController.navigate("edit_accounts")
+                        navController.navigate(Route.ROUTE_AUTH_APP_EDIT_ACCOUNTS)
                     },
                     onTestModeClick = {
-                        // Test mode functionality (to be implemented)
+                        navController.navigate(Route.ROUTE_AUTH_TEST_APP)
                     },
                     onNavigateToLogin = {
                         navController.navigate(Route.JOURNEY_ROUTE)
@@ -366,11 +365,9 @@ fun AppNavigation(
                         navController.navigate(Route.QR_SCANNER)
                     },
                     onAddManually = {
-                        // Navigate to manual entry screen (to be implemented)
                         navController.navigate(Route.ROUTE_AUTH_APP_MANUAL_ENTRY)
                     },
                     onAccountClick = { accountId ->
-                        // Navigate to account detail screen (to be implemented)
                         navController.navigate(Route.routeForAuthAppAccount(accountId))
                     },
                     onNotificationsClick = {
@@ -383,11 +380,10 @@ fun AppNavigation(
                         navController.navigate(Route.ROUTE_AUTH_APP_ABOUT)
                     },
                     onEditAccountsClick = {
-                        // Navigate to edit accounts screen (to be implemented)
-                        // navController.navigate("edit_accounts")
+                        navController.navigate(Route.ROUTE_AUTH_APP_EDIT_ACCOUNTS)
                     },
                     onTestModeClick = {
-                        // Test mode functionality (to be implemented)
+                        navController.navigate(Route.ROUTE_AUTH_TEST_APP)
                     },
                     onNavigateToLogin = {
                         navController.navigate(Route.JOURNEY_ROUTE)

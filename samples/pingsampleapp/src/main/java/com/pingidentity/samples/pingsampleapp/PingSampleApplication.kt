@@ -150,7 +150,9 @@ class PingSampleApplication : Application() {
             accountGroupingManager = AccountGroupingManager(userPreferences, diagnosticLogger)
             testAccountFactory = TestAccountFactory()
 
-            // Note: Clients are already set in constructor, no need to call setClient
+            pushManager.setClient(pushClient)
+            oathManager.setClient(oathClient)
+
 
             diagnosticLogger.i("PingSampleApplication: Managers initialized")
         } catch (e: Exception) {
