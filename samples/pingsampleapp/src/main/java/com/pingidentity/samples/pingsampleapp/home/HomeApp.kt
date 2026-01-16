@@ -36,6 +36,7 @@ import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.PhoneAndroid
+import androidx.compose.material.icons.filled.Preview
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Storage
@@ -48,6 +49,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -94,6 +96,8 @@ fun HomeApp(
     onOathClick : () -> Unit,
     onPushClick : () -> Unit,
     onPushNotificationClick : () -> Unit,
+    onDeviceIdClick : () -> Unit,
+    onAuthTestScreenClick : () -> Unit,
 ) {
     var deviceId by remember { mutableStateOf("Loading Device ID...") }
     var deviceStatus by remember { mutableStateOf("Loading device status...") }
@@ -327,6 +331,12 @@ fun HomeApp(
                     subtitle = stringResource(R.string.text_configuration_subtitle),
                     onClick = onConfigurationClick
                 )
+                IconRowItem(
+                    icon = Icons.Default.Preview,
+                    title = "Test Mode",
+                    subtitle = "Authenticator app test mode",
+                    onClick = onAuthTestScreenClick
+                )
 
                 Spacer(modifier = Modifier.padding(8.dp).fillMaxWidth())
 
@@ -366,10 +376,12 @@ fun HomeApp(
                         thickness = 1.dp,
                         color = colorResource(R.color.primary_dark)
                     )
-                    Text(
-                        text = deviceId,
-                        modifier = Modifier.padding(16.dp)
-                    )
+                    TextButton(
+                        onClick = onDeviceIdClick,
+                        modifier = Modifier.fillMaxWidth().padding(8.dp)
+                    ) {
+                        Text(text = deviceId)
+                    }
                 }
 
                 Spacer(modifier = Modifier.padding(24.dp).fillMaxWidth())

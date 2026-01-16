@@ -47,6 +47,7 @@ import com.pingidentity.samples.pingsampleapp.authenticator.ui.NotificationRespo
 import com.pingidentity.samples.pingsampleapp.authenticator.ui.PushNotificationsScreen
 import com.pingidentity.samples.pingsampleapp.authenticator.ui.QrScannerScreen
 import com.pingidentity.samples.pingsampleapp.authenticator.ui.SettingsScreen
+import com.pingidentity.samples.pingsampleapp.authenticator.ui.TestScreen
 import com.pingidentity.samples.pingsampleapp.authenticator.util.NavigationAnimations
 import com.pingidentity.samples.pingsampleapp.config.Env
 import com.pingidentity.samples.pingsampleapp.davinci.DaVinci
@@ -94,6 +95,7 @@ object Route {
     const val ROUTE_AUTH_APP_ABOUT = "route_auth_app_about"
     const val ROUTE_AUTH_APP_ACCOUNT = "account/{issuer}/{accountName}"
     fun routeForAuthAppAccount(accountName: String) = "account/$accountName"
+    const val ROUTE_AUTH_TEST_APP = "route_auth_test_app"
 
 }
 
@@ -165,6 +167,12 @@ fun AppNavigation(
                 onPushNotificationClick = {
                     navController.navigate(Route.PUSH_NOTIFICATION)
                 },
+                onDeviceIdClick = {
+                    navController.navigate(Route.DEVICE_INFO)
+                },
+                onAuthTestScreenClick = {
+                    navController.navigate(Route.ROUTE_AUTH_TEST_APP)
+                }
             )
         }
         
@@ -264,7 +272,10 @@ fun AppNavigation(
             val deviceManagementViewModel = viewModel<DeviceManagementViewModel>(
                 factory = DeviceManagementViewModel.factory()
             )
-            DeviceManagement(deviceManagementViewModel)
+            DeviceManagement(
+                viewModel = deviceManagementViewModel,
+                onBack = { navController.popBackStack() }
+            )
         }
         
         composable(Route.LOGOUT) {
@@ -272,7 +283,9 @@ fun AppNavigation(
         }
         
         composable(Route.DEVICE_INFO) {
-            DeviceInfo()
+            DeviceInfo(
+                onBack = { navController.popBackStack() }
+            )
         }
         
         composable(Route.LOGGER) {
@@ -487,6 +500,16 @@ fun AppNavigation(
                             navController.popBackStack()
                         }
                     )
+                }
+            }
+        }
+
+        composable(Route.ROUTE_AUTH_TEST_APP) {
+            authenticatorViewModel?.let {
+                TestScreen(
+                    viewModel = it,
+                ) {
+                    navController.popBackStack()
                 }
             }
         }
