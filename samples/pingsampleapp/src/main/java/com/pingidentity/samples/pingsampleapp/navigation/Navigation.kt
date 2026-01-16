@@ -43,9 +43,11 @@ import com.pingidentity.samples.pingsampleapp.authenticator.ui.AccountDetailScre
 import com.pingidentity.samples.pingsampleapp.authenticator.ui.AccountsScreen
 import com.pingidentity.samples.pingsampleapp.authenticator.ui.EditAccountsScreen
 import com.pingidentity.samples.pingsampleapp.authenticator.ui.ManualEntryScreen
+import com.pingidentity.samples.pingsampleapp.authenticator.ui.NotificationResponseScreen
 import com.pingidentity.samples.pingsampleapp.authenticator.ui.PushNotificationsScreen
 import com.pingidentity.samples.pingsampleapp.authenticator.ui.QrScannerScreen
 import com.pingidentity.samples.pingsampleapp.authenticator.ui.SettingsScreen
+import com.pingidentity.samples.pingsampleapp.authenticator.util.NavigationAnimations
 import com.pingidentity.samples.pingsampleapp.config.Env
 import com.pingidentity.samples.pingsampleapp.davinci.DaVinci
 import com.pingidentity.samples.pingsampleapp.devicemanagement.DeviceManagement
@@ -451,6 +453,37 @@ fun AppNavigation(
                         navController.popBackStack()
                     }
                 )
+            }
+        }
+
+        // Individual notification screen
+        composable(
+            route = "notification/{notificationId}",
+            enterTransition = NavigationAnimations.enterTransition,
+            exitTransition = NavigationAnimations.exitTransition,
+            popEnterTransition = NavigationAnimations.popEnterTransition,
+            popExitTransition = NavigationAnimations.popExitTransition
+        ) { backStackEntry ->
+            val notificationId = backStackEntry.arguments?.getString("notificationId") ?: ""
+            authenticatorViewModel?.let { viewModel ->
+                viewModel.getNotificationItemById(notificationId)?.let { notificationItem ->
+                    NotificationResponseScreen(
+                        notificationItem = notificationItem,
+                        onDismiss = { navController.popBackStack() },
+                        onApprove = {
+                            viewModel.approveNotification(notificationId)
+                            navController.popBackStack()
+                        },
+                        onDeny = {
+                            viewModel.denyNotification(notificationId)
+                            navController.popBackStack()
+                        },
+                        onChallengeSolution = { solution ->
+                            viewModel.approveChallengeNotification(notificationId, solution)
+                            navController.popBackStack()
+                        }
+                    )
+                }
             }
         }
     }

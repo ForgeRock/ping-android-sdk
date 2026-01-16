@@ -115,7 +115,7 @@ class PingSampleApplication : Application() {
                 pushClient.setDeviceToken(FirebaseMessaging.getInstance().token.await())
                 diagnosticLogger.i("PingSampleApplication: Firebase device token set")
             } catch (e: IllegalStateException) {
-                diagnosticLogger.w("Firebase not configured properly", e)
+                diagnosticLogger.e("Firebase not configured properly", e)
             } catch (e: Exception) {
                 diagnosticLogger.w("Failed to get Firebase token", e)
             }
@@ -186,13 +186,6 @@ class PingSampleApplication : Application() {
         private lateinit var instance: PingSampleApplication
 
         /**
-         * Gets the application instance.
-         */
-        fun getInstance(): PingSampleApplication {
-            return instance
-        }
-
-        /**
          * Gets the Push client. Suspends until initialization is complete.
          */
         suspend fun getPushClient(): PushClient {
@@ -220,34 +213,6 @@ class PingSampleApplication : Application() {
                 return instance.viewModelDeferred.getCompleted()
             }
             return instance.viewModelDeferred.await()
-        }
-
-        /**
-         * Gets the Journey manager.
-         */
-        fun getJourneyManager(): JourneyManager {
-            return instance.journeyManager
-        }
-
-        /**
-         * Gets the OATH manager.
-         */
-        fun getOathManager(): OathManager {
-            return instance.oathManager
-        }
-
-        /**
-         * Gets the Push manager.
-         */
-        fun getPushManager(): PushManager {
-            return instance.pushManager
-        }
-
-        /**
-         * Gets the UserPreferences.
-         */
-        fun getUserPreferences(): UserPreferences {
-            return instance.userPreferences
         }
     }
 }
