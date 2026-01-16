@@ -7,6 +7,8 @@
 package com.pingidentity.samples.pingsampleapp.home
 
 import android.util.Log
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -49,12 +51,15 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
@@ -68,6 +73,7 @@ import com.pingidentity.device.analyze
 import com.pingidentity.device.id.DefaultDeviceIdentifier
 import com.pingidentity.samples.pingsampleapp.R
 import com.pingidentity.samples.pingsampleapp.theme.AppTheme
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -91,6 +97,10 @@ fun HomeApp(
 ) {
     var deviceId by remember { mutableStateOf("Loading Device ID...") }
     var deviceStatus by remember { mutableStateOf("Loading device status...") }
+    var clickCount by remember { mutableIntStateOf(0) }
+    val rotation = remember { Animatable(0f) }
+    val coroutineScope = rememberCoroutineScope()
+
     LaunchedEffect(Unit) {
         deviceId = try {
             DefaultDeviceIdentifier.id()
@@ -134,7 +144,26 @@ fun HomeApp(
                     Image(
                         painter = painterResource(id = R.drawable.ping_logo),
                         contentDescription = "Ping Logo",
-                        modifier = Modifier.size(80.dp)
+                        modifier = Modifier
+                            .size(80.dp)
+                            .graphicsLayer {
+                                rotationZ = rotation.value
+                            }
+                            .clickable {
+                                clickCount++
+                                if (clickCount >= 3) {
+                                    clickCount = 0
+                                    coroutineScope.launch {
+                                        // Rotate 3 times (360 degrees * 3 = 1080 degrees)
+                                        rotation.animateTo(
+                                            targetValue = rotation.value + 1080f,
+                                            animationSpec = tween(durationMillis = 1500)
+                                        )
+                                        // Reset rotation to 0 to avoid overflow
+                                        rotation.snapTo(0f)
+                                    }
+                                }
+                            }
                     )
                     Text(
                         text = stringResource(R.string.app_name),
