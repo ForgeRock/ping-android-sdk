@@ -46,7 +46,7 @@
 
     <!-- Device Information -->
     <string name="text_device_information_title">Device Information</string>
-    <string name="text_device_info_title">Device Info</string>
+    <string name="text_device_info_title">Device ID</string>
     <string name="text_device_info_subtitle">Collect device data</string>
     <string name="text_logger_title">Logger</string>
     <string name="text_logger_subtitle">Test logging</string>

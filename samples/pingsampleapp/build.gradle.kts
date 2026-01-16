@@ -47,6 +47,19 @@ android {
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.9"
     }
+    packaging {
+        resources {
+            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+        }
+    }
+}
+
+configurations.all {
+    resolutionStrategy {
+        force("com.google.android.gms:play-services-basement:18.4.0")
+        force("com.google.android.gms:play-services-tasks:18.2.0")
+        force("com.google.android.gms:play-services-base:18.5.0")
+    }
 }
 
 dependencies {
@@ -68,14 +81,15 @@ dependencies {
     implementation(project(":mfa:binding"))
     implementation(project(":mfa:binding-ui"))
     implementation(project(":mfa:binding-migration"))
+    implementation(project(":mfa:fido"))
+    implementation(project(":mfa:oath"))
+    implementation(project(":mfa:push"))
 
     //Application Pin
     implementation(libs.bcpkix.jdk18on)
 
     // Recaptcha
     implementation(project(":recaptcha-enterprise"))
-
-    //implementation("com.pingidentity.sdks:davinci:0.9.0-SNAPSHOT")
     implementation(libs.androidx.datastore.preferences)
 
     //To enable Native Google Sign-In and Facebook Login
@@ -89,9 +103,6 @@ dependencies {
     //To Support nod-discoverable fido2 credential
     implementation(libs.play.services.fido)
     implementation(libs.play.services.auth)
-    implementation(project(":mfa:fido"))
-    implementation(project(":mfa:oath"))
-    implementation(project(":mfa:push"))
 
     //Protect
     implementation(project(":protect"))
