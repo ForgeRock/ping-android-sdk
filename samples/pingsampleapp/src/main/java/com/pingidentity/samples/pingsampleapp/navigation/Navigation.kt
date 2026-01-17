@@ -65,6 +65,7 @@ import com.pingidentity.samples.pingsampleapp.oidc.Centralize
 import com.pingidentity.samples.pingsampleapp.token.TokenScreen
 import com.pingidentity.samples.pingsampleapp.token.TokenViewModel
 import com.pingidentity.samples.pingsampleapp.userprofile.UserProfile
+import com.pingidentity.samples.pingsampleapp.userprofile.UserProfileType
 import com.pingidentity.samples.pingsampleapp.userprofile.UserProfileViewModel
 
 /**
@@ -257,15 +258,31 @@ fun AppNavigation(
             val userProfileViewModel = viewModel<UserProfileViewModel>(
                 factory = UserProfileViewModel.factory()
             )
-            UserProfile(userProfileViewModel) {
-                // Navigate to home and clear the entire back stack
-                navController.navigate(Route.HOME) {
-                    popUpTo(navController.graph.startDestinationId) {
-                        inclusive = true
+            UserProfile(
+                userProfileViewModel = userProfileViewModel,
+                onBack = {
+                    // Navigate to home and clear the entire back stack
+                    navController.navigate(Route.HOME) {
+                        popUpTo(navController.graph.startDestinationId) {
+                            inclusive = true
+                        }
+                        launchSingleTop = true
                     }
-                    launchSingleTop = true
+                },
+                onAction = { userProfileType ->
+                    when (userProfileType) {
+                        UserProfileType.JOURNEY -> {
+                            navController.navigate(Route.JOURNEY_ROUTE)
+                        }
+                        UserProfileType.DAVINCI -> {
+                            navController.navigate(Route.DAVINCI)
+                        }
+                        UserProfileType.OIDC -> {
+                            navController.navigate(Route.OIDC)
+                        }
+                    }
                 }
-            }
+            )
         }
         
         composable(Route.DEVICE_MANAGEMENT) {

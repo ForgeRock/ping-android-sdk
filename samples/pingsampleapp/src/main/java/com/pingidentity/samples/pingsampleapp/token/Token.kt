@@ -31,6 +31,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -54,6 +56,7 @@ fun TokenScreen(
     onBack: (() -> Unit)? = null,
 ) {
     val formattedToken by tokenViewModel.formattedToken.collectAsState(initial = "Loading...")
+    val tokenState by tokenViewModel.state.collectAsState()
     val scroll = rememberScrollState(0)
     var expanded by remember { mutableStateOf(false) }
 
@@ -79,101 +82,138 @@ fun TokenScreen(
             }
         }
     ) { paddingValues ->
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(paddingValues)
-                .padding(8.dp)
         ) {
-            Column(
+            // Tab Row for Journey, DaVinci, and OIDC
+            TabRow(
+                selectedTabIndex = tokenState.selectedTab.ordinal,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Card(
-                    elevation =
-                    CardDefaults.cardElevation(
-                        defaultElevation = 10.dp,
-                    ),
-                    modifier =
-                    Modifier
-                        .height(400.dp)
-                        .fillMaxWidth()
-                        .padding(8.dp)
-                        .combinedClickable(
-                            onClick = { },
-                            onLongClick = {
-                                expanded = !expanded
-                            }
-                        ),
-                    border = BorderStroke(2.dp, Color.Black),
-                    shape = MaterialTheme.shapes.medium,
-                ) {
-                    Text(
-                        modifier =
-                            Modifier
-                                .padding(4.dp)
-                                .verticalScroll(scroll),
-                        text = formattedToken,
-                    )
-                }
-
-                Row(
-                    modifier =
-                    Modifier
-                        .padding(8.dp)
-                        .fillMaxWidth(),
-                    horizontalArrangement = Arrangement.aligned(Alignment.Start),
-                ) {
-                    Button(
-                        modifier = Modifier.padding(4.dp),
-                        onClick = { tokenViewModel.accessToken() },
-                    ) {
-                        Text(text = "AccessToken")
-                    }
-                    Button(
-                        modifier = Modifier.padding(4.dp),
-                        onClick = { tokenViewModel.reset() },
-                    ) {
-                        Text(text = "Clear")
-                    }
-                }
-                Row(
-                    modifier = Modifier.padding(8.dp)
-                        .fillMaxWidth(),
-                    horizontalArrangement = Arrangement.aligned(Alignment.Start),
-                ) {
-                    Button(
-                        modifier = Modifier.padding(4.dp),
-                        onClick = { tokenViewModel.refresh() }
-                    ) {
-                        Text(text = "Refresh")
-                    }
-                    Button(
-                        modifier = Modifier.padding(4.dp),
-                        onClick = { tokenViewModel.revoke() }
-                    ) {
-                        Text(text = "Revoke")
-                    }
-                }
+                Tab(
+                    selected = tokenState.selectedTab == TokenType.JOURNEY,
+                    onClick = {
+                        tokenViewModel.selectTab(TokenType.JOURNEY)
+                        tokenViewModel.accessToken()
+                    },
+                    text = { Text("Journey") }
+                )
+                Tab(
+                    selected = tokenState.selectedTab == TokenType.DAVINCI,
+                    onClick = {
+                        tokenViewModel.selectTab(TokenType.DAVINCI)
+                        tokenViewModel.accessToken()
+                    },
+                    text = { Text("DaVinci") }
+                )
+                Tab(
+                    selected = tokenState.selectedTab == TokenType.OIDC,
+                    onClick = {
+                        tokenViewModel.selectTab(TokenType.OIDC)
+                        tokenViewModel.accessToken()
+                    },
+                    text = { Text("OIDC") }
+                )
             }
 
-            DropdownMenu(
-                expanded = expanded,
-                onDismissRequest = { expanded = false }
+            // Content
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(8.dp)
             ) {
-                DropdownMenuItem(
-                    text = { Text("Refresh") },
-                    onClick = {
-                        tokenViewModel.refresh()
-                        expanded = false
+                Column(
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Card(
+                        elevation =
+                        CardDefaults.cardElevation(
+                            defaultElevation = 10.dp,
+                        ),
+                        modifier =
+                        Modifier
+                            .height(400.dp)
+                            .fillMaxWidth()
+                            .padding(8.dp)
+                            .combinedClickable(
+                                onClick = { },
+                                onLongClick = {
+                                    expanded = !expanded
+                                }
+                            ),
+                        border = BorderStroke(2.dp, Color.Black),
+                        shape = MaterialTheme.shapes.medium,
+                    ) {
+                        Text(
+                            modifier =
+                                Modifier
+                                    .padding(4.dp)
+                                    .verticalScroll(scroll),
+                            text = formattedToken,
+                        )
                     }
-                )
-                DropdownMenuItem(
-                    text = { Text("Revoke") },
-                    onClick = {
-                        tokenViewModel.revoke()
-                        expanded = false
+
+                    Row(
+                        modifier =
+                        Modifier
+                            .padding(8.dp)
+                            .fillMaxWidth(),
+                        horizontalArrangement = Arrangement.aligned(Alignment.Start),
+                    ) {
+                        Button(
+                            modifier = Modifier.padding(4.dp),
+                            onClick = { tokenViewModel.accessToken() },
+                        ) {
+                            Text(text = "AccessToken")
+                        }
+                        Button(
+                            modifier = Modifier.padding(4.dp),
+                            onClick = { tokenViewModel.reset() },
+                        ) {
+                            Text(text = "Clear")
+                        }
                     }
-                )
+                    Row(
+                        modifier = Modifier.padding(8.dp)
+                            .fillMaxWidth(),
+                        horizontalArrangement = Arrangement.aligned(Alignment.Start),
+                    ) {
+                        Button(
+                            modifier = Modifier.padding(4.dp),
+                            onClick = { tokenViewModel.refresh() }
+                        ) {
+                            Text(text = "Refresh")
+                        }
+                        Button(
+                            modifier = Modifier.padding(4.dp),
+                            onClick = { tokenViewModel.revoke() }
+                        ) {
+                            Text(text = "Revoke")
+                        }
+                    }
+                }
+
+                DropdownMenu(
+                    expanded = expanded,
+                    onDismissRequest = { expanded = false }
+                ) {
+                    DropdownMenuItem(
+                        text = { Text("Refresh") },
+                        onClick = {
+                            tokenViewModel.refresh()
+                            expanded = false
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Revoke") },
+                        onClick = {
+                            tokenViewModel.revoke()
+                            expanded = false
+                        }
+                    )
+                }
             }
         }
     }

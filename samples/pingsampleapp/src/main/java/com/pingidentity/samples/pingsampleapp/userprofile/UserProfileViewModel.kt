@@ -11,7 +11,9 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.pingidentity.journey.user
 import com.pingidentity.oidc.OidcError
+import com.pingidentity.samples.pingsampleapp.config.daVinci
 import com.pingidentity.samples.pingsampleapp.config.journey
+import com.pingidentity.samples.pingsampleapp.config.web
 import com.pingidentity.utils.Result
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
@@ -19,10 +21,23 @@ import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 
+enum class UserProfileType {
+    JOURNEY,
+    DAVINCI,
+    OIDC
+}
+
 data class UserProfileViewState(
-    var user: JsonObject? = null,
-    var error: OidcError? = null,
-    var showRawUserInfo: Boolean = false,
+    var selectedTab: UserProfileType = UserProfileType.JOURNEY,
+    var journeyUser: JsonObject? = null,
+    var journeyError: OidcError? = null,
+    var daVinciUser: JsonObject? = null,
+    var daVinciError: OidcError? = null,
+    var oidcUser: JsonObject? = null,
+    var oidcError: OidcError? = null,
+    var showRawJourneyUserInfo: Boolean = false,
+    var showRawDaVinciUserInfo: Boolean = false,
+    var showRawOidcUserInfo: Boolean = false,
 )
 
 class UserProfileViewModel : ViewModel() {
@@ -36,23 +51,54 @@ class UserProfileViewModel : ViewModel() {
     var state = MutableStateFlow(UserProfileViewState())
         private set
 
-    val formattedUserInfo: String
-        get() = state.value.user?.let {
+    val formattedJourneyUserInfo: String
+        get() = state.value.journeyUser?.let {
             json.encodeToString(JsonObject.serializer(), it)
-        } ?: state.value.error?.toString() ?: "No user information available"
+        } ?: state.value.journeyError?.toString() ?: "No user information available"
+
+    val formattedDaVinciUserInfo: String
+        get() = state.value.daVinciUser?.let {
+            json.encodeToString(JsonObject.serializer(), it)
+        } ?: state.value.daVinciError?.toString() ?: "No user information available"
+
+    val formattedOidcUserInfo: String
+        get() = state.value.oidcUser?.let {
+            json.encodeToString(JsonObject.serializer(), it)
+        } ?: state.value.oidcError?.toString() ?: "No user information available"
+
+    fun selectTab(tabType: UserProfileType) {
+        state.update { it.copy(selectedTab = tabType) }
+    }
 
     fun userinfo() {
+        when (state.value.selectedTab) {
+            UserProfileType.JOURNEY -> journeyUserInfo()
+            UserProfileType.DAVINCI -> daVinciUserInfo()
+            UserProfileType.OIDC -> oidcUserInfo()
+        }
+    }
+
+    fun toggleUserInfo() {
+        when (state.value.selectedTab) {
+            UserProfileType.JOURNEY -> toggleJourneyUserInfo()
+            UserProfileType.DAVINCI -> toggleDaVinciUserInfo()
+            UserProfileType.OIDC -> toggleOidcUserInfo()
+        }
+    }
+
+    // Journey Operations
+    private fun journeyUserInfo() {
         viewModelScope.launch {
             journey.user()?.let { user ->
                 when (val result = user.userinfo(false)) {
                     is Result.Failure ->
                         state.update { s ->
-                            s.copy(user = null, error = result.value)
+                            s.copy(journeyUser = null, journeyError = result.value)
                         }
 
                     is Result.Success -> {
                         state.update { s ->
-                            s.copy(user = result.value, error = null)
+                            s.copy(journeyUser = result.value, journeyError = null)
                         }
                     }
                 }
@@ -60,9 +106,61 @@ class UserProfileViewModel : ViewModel() {
         }
     }
 
-    fun toggleDeviceInfo() {
+    private fun toggleJourneyUserInfo() {
         state.update { s ->
-            s.copy(showRawUserInfo = !s.showRawUserInfo)
+            s.copy(showRawJourneyUserInfo = !s.showRawJourneyUserInfo)
+        }
+    }
+
+    // DaVinci Operations
+    private fun daVinciUserInfo() {
+        viewModelScope.launch {
+            daVinci?.user()?.let { user ->
+                when (val result = user.userinfo(false)) {
+                    is Result.Failure ->
+                        state.update { s ->
+                            s.copy(daVinciUser = null, daVinciError = result.value)
+                        }
+
+                    is Result.Success -> {
+                        state.update { s ->
+                            s.copy(daVinciUser = result.value, daVinciError = null)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private fun toggleDaVinciUserInfo() {
+        state.update { s ->
+            s.copy(showRawDaVinciUserInfo = !s.showRawDaVinciUserInfo)
+        }
+    }
+
+    // OIDC Operations
+    private fun oidcUserInfo() {
+        viewModelScope.launch {
+            web?.user()?.let { user ->
+                when (val result = user.userinfo(false)) {
+                    is Result.Failure ->
+                        state.update { s ->
+                            s.copy(oidcUser = null, oidcError = result.value)
+                        }
+
+                    is Result.Success -> {
+                        state.update { s ->
+                            s.copy(oidcUser = result.value, oidcError = null)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private fun toggleOidcUserInfo() {
+        state.update { s ->
+            s.copy(showRawOidcUserInfo = !s.showRawOidcUserInfo)
         }
     }
 

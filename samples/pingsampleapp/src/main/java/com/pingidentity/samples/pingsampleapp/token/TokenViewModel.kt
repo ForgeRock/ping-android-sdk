@@ -12,7 +12,9 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.pingidentity.journey.user
 import com.pingidentity.oidc.Token
+import com.pingidentity.samples.pingsampleapp.config.daVinci
 import com.pingidentity.samples.pingsampleapp.config.journey
+import com.pingidentity.samples.pingsampleapp.config.web
 import com.pingidentity.utils.Result.Failure
 import com.pingidentity.utils.Result.Success
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -32,71 +34,226 @@ class TokenViewModel : ViewModel() {
         private set
 
     val formattedToken = state.map { tokenState ->
-        tokenState.token?.let {
-            json.encodeToString(Token.serializer(), it)
-        } ?: tokenState.error?.toString() ?: "No token information is available"
+        when (tokenState.selectedTab) {
+            TokenType.JOURNEY -> {
+                tokenState.journeyToken?.let {
+                    json.encodeToString(Token.serializer(), it)
+                } ?: tokenState.journeyError?.toString() ?: "No Journey token information is available"
+            }
+            TokenType.DAVINCI -> {
+                tokenState.daVinciToken?.let {
+                    json.encodeToString(Token.serializer(), it)
+                } ?: tokenState.daVinciError?.toString() ?: "No DaVinci token information is available"
+            }
+            TokenType.OIDC -> {
+                tokenState.oidcToken?.let {
+                    json.encodeToString(Token.serializer(), it)
+                } ?: tokenState.oidcError?.toString() ?: "No OIDC token information is available"
+            }
+        }
+    }
+
+    fun selectTab(tabType: TokenType) {
+        state.update { it.copy(selectedTab = tabType) }
     }
 
     fun accessToken() {
+        when (state.value.selectedTab) {
+            TokenType.JOURNEY -> journeyAccessToken()
+            TokenType.DAVINCI -> daVinciAccessToken()
+            TokenType.OIDC -> oidcAccessToken()
+        }
+    }
+
+    fun refresh() {
+        when (state.value.selectedTab) {
+            TokenType.JOURNEY -> journeyRefresh()
+            TokenType.DAVINCI -> daVinciRefresh()
+            TokenType.OIDC -> oidcRefresh()
+        }
+    }
+
+    fun revoke() {
+        when (state.value.selectedTab) {
+            TokenType.JOURNEY -> journeyRevoke()
+            TokenType.DAVINCI -> daVinciRevoke()
+            TokenType.OIDC -> oidcRevoke()
+        }
+    }
+
+    fun reset() {
+        when (state.value.selectedTab) {
+            TokenType.JOURNEY -> state.update { it.copy(journeyToken = null, journeyError = null) }
+            TokenType.DAVINCI -> state.update { it.copy(daVinciToken = null, daVinciError = null) }
+            TokenType.OIDC -> state.update { it.copy(oidcToken = null, oidcError = null) }
+        }
+    }
+
+    // Journey Token Operations
+    private fun journeyAccessToken() {
         viewModelScope.launch {
             journey.user()?.let {
                 when (val result = it.token()) {
                     is Failure -> {
                         state.update { state ->
-                            state.copy(token = null, error = result.value)
+                            state.copy(journeyToken = null, journeyError = result.value)
                         }
                     }
-
                     is Success -> {
                         state.update { state ->
-                            state.copy(token = result.value, error = null)
+                            state.copy(journeyToken = result.value, journeyError = null)
                         }
                     }
                 }
             } ?: run {
                 state.update {
-                    it.copy(token = null, error = null)
+                    it.copy(journeyToken = null, journeyError = null)
                 }
             }
         }
     }
 
-    fun revoke() {
+    private fun journeyRevoke() {
         viewModelScope.launch {
             journey.user()?.revoke()
             state.update {
-                it.copy(token = null, error = null)
+                it.copy(journeyToken = null, journeyError = null)
             }
         }
     }
 
-    fun refresh() {
+    private fun journeyRefresh() {
         viewModelScope.launch {
             journey.user()?.let {
                 when (val result = it.refresh()) {
                     is Failure -> {
                         state.update { state ->
-                            state.copy(token = null, error = result.value)
+                            state.copy(journeyToken = null, journeyError = result.value)
                         }
                     }
-
                     is Success -> {
                         state.update { state ->
-                            state.copy(token = result.value, error = null)
+                            state.copy(journeyToken = result.value, journeyError = null)
                         }
                     }
                 }
             } ?: run {
                 state.update {
-                    it.copy(token = null, error = null)
+                    it.copy(journeyToken = null, journeyError = null)
                 }
             }
         }
     }
 
-    fun reset() {
-        state.update {
-            it.copy(token = null, error = null)
+    // DaVinci Token Operations
+    private fun daVinciAccessToken() {
+        viewModelScope.launch {
+            daVinci?.user()?.let {
+                when (val result = it.token()) {
+                    is Failure -> {
+                        state.update { state ->
+                            state.copy(daVinciToken = null, daVinciError = result.value)
+                        }
+                    }
+                    is Success -> {
+                        state.update { state ->
+                            state.copy(daVinciToken = result.value, daVinciError = null)
+                        }
+                    }
+                }
+            } ?: run {
+                state.update {
+                    it.copy(daVinciToken = null, daVinciError = null)
+                }
+            }
+        }
+    }
+
+    private fun daVinciRevoke() {
+        viewModelScope.launch {
+            daVinci?.user()?.revoke()
+            state.update {
+                it.copy(daVinciToken = null, daVinciError = null)
+            }
+        }
+    }
+
+    private fun daVinciRefresh() {
+        viewModelScope.launch {
+            daVinci?.user()?.let {
+                when (val result = it.refresh()) {
+                    is Failure -> {
+                        state.update { state ->
+                            state.copy(daVinciToken = null, daVinciError = result.value)
+                        }
+                    }
+                    is Success -> {
+                        state.update { state ->
+                            state.copy(daVinciToken = result.value, daVinciError = null)
+                        }
+                    }
+                }
+            } ?: run {
+                state.update {
+                    it.copy(daVinciToken = null, daVinciError = null)
+                }
+            }
+        }
+    }
+
+    // OIDC Token Operations
+    private fun oidcAccessToken() {
+        viewModelScope.launch {
+            web?.user()?.let {
+                when (val result = it.token()) {
+                    is Failure -> {
+                        state.update { state ->
+                            state.copy(oidcToken = null, oidcError = result.value)
+                        }
+                    }
+                    is Success -> {
+                        state.update { state ->
+                            state.copy(oidcToken = result.value, oidcError = null)
+                        }
+                    }
+                }
+            } ?: run {
+                state.update {
+                    it.copy(oidcToken = null, oidcError = null)
+                }
+            }
+        }
+    }
+
+    private fun oidcRevoke() {
+        viewModelScope.launch {
+            web?.user()?.revoke()
+            state.update {
+                it.copy(oidcToken = null, oidcError = null)
+            }
+        }
+    }
+
+    private fun oidcRefresh() {
+        viewModelScope.launch {
+            web?.user()?.let {
+                when (val result = it.refresh()) {
+                    is Failure -> {
+                        state.update { state ->
+                            state.copy(oidcToken = null, oidcError = result.value)
+                        }
+                    }
+                    is Success -> {
+                        state.update { state ->
+                            state.copy(oidcToken = result.value, oidcError = null)
+                        }
+                    }
+                }
+            } ?: run {
+                state.update {
+                    it.copy(oidcToken = null, oidcError = null)
+                }
+            }
         }
     }
 

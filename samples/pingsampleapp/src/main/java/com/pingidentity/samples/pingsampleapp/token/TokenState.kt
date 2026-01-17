@@ -10,7 +10,18 @@ package com.pingidentity.samples.pingsampleapp.token
 import com.pingidentity.oidc.Token
 import com.pingidentity.oidc.OidcError
 
+enum class TokenType {
+    JOURNEY,
+    DAVINCI,
+    OIDC
+}
+
 data class TokenState(
-    var token: Token? = null,
-    var error: OidcError? = null,
+    var selectedTab: TokenType = TokenType.JOURNEY,
+    var journeyToken: Token? = null,
+    var journeyError: OidcError? = null,
+    var daVinciToken: Token? = null,
+    var daVinciError: OidcError? = null,
+    var oidcToken: Token? = null,
+    var oidcError: OidcError? = null,
 )
