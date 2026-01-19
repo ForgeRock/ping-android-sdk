@@ -18,10 +18,11 @@ import androidx.lifecycle.ViewModel
 import com.pingidentity.android.ContextProvider
 import com.pingidentity.davinci.DaVinci
 import com.pingidentity.davinci.plugin.DaVinci
+import com.pingidentity.davinci.user as daVinciUser
 import com.pingidentity.journey.Journey
 import com.pingidentity.journey.module.Oidc as JourneyOidc
 import com.pingidentity.davinci.module.Oidc as DaVinciOidc
-import com.pingidentity.journey.user
+import com.pingidentity.journey.user as journeyUser
 import com.pingidentity.logger.Logger
 import com.pingidentity.logger.STANDARD
 import com.pingidentity.oidc.OidcClient
@@ -51,38 +52,42 @@ val testDaVinci by lazy {
     }
 }
 
-val forgeblock =  Journey {
-    logger = Logger.STANDARD
+val forgeBlock by lazy {
+    Journey {
+        logger = Logger.STANDARD
 
-    serverUrl = "https://openam-sdks.forgeblocks.com/am"
-    realm = "alpha"
-    cookie = "5421aeddf91aa20"
-    // Oidc as module
-    module(JourneyOidc) {
-        clientId = "AndroidTest"
-        discoveryEndpoint =
-            "https://openam-sdks.forgeblocks.com/am/oauth2/alpha/.well-known/openid-configuration"
-        scopes = mutableSetOf("openid", "email", "address", "profile", "phone")
-        redirectUri = "org.forgerock.demo:/oauth2redirect"
-        display = "Forgeblock Test Config"
-        //storage = dataStore
+        serverUrl = "https://openam-sdks.forgeblocks.com/am"
+        realm = "alpha"
+        cookie = "5421aeddf91aa20"
+        // Oidc as module
+        module(JourneyOidc) {
+            clientId = "AndroidTest"
+            discoveryEndpoint =
+                "https://openam-sdks.forgeblocks.com/am/oauth2/alpha/.well-known/openid-configuration"
+            scopes = mutableSetOf("openid", "email", "address", "profile", "phone")
+            redirectUri = "org.forgerock.demo:/oauth2redirect"
+            display = "Forgeblock Test Config"
+            //storage = dataStore
+        }
     }
 }
 
-val localhost =  Journey {
-    logger = Logger.STANDARD
+val localhost by lazy {
+    Journey {
+        logger = Logger.STANDARD
 
-    serverUrl = "http://192.168.86.32:8080/openam"
-    realm = "root"
-    // Oidc as module
-    module(JourneyOidc) {
-        clientId = "AndroidTest2"
-        discoveryEndpoint =
-            "http://192.168.86.32:8080/openam/oauth2/.well-known/openid-configuration"
-        scopes = mutableSetOf("openid", "email", "address", "profile", "phone")
-        redirectUri = "org.forgerock.demo:/oauth2redirect"
-        display = "Localhost"
-        //storage = dataStore
+        serverUrl = "http://192.168.86.32:8080/openam"
+        realm = "root"
+        // Oidc as module
+        module(JourneyOidc) {
+            clientId = "AndroidTest2"
+            discoveryEndpoint =
+                "http://192.168.86.32:8080/openam/oauth2/.well-known/openid-configuration"
+            scopes = mutableSetOf("openid", "email", "address", "profile", "phone")
+            redirectUri = "org.forgerock.demo:/oauth2redirect"
+            display = "Localhost"
+            //storage = dataStore
+        }
     }
 }
 
@@ -114,7 +119,7 @@ val social by lazy {
     }
 }
 
-var journey = forgeblock
+var journey = forgeBlock
 var oidcClient: OidcClient? = null
 var daVinci: DaVinci? = null
 var web: OidcWeb? = null
@@ -122,18 +127,18 @@ lateinit var redirectUri: Uri //For Social Login redirect parameter using Auth T
 
 
 class EnvViewModel : ViewModel() {
-    private val journeyServers = listOf(forgeblock, localhost)
+    private val journeyServers = listOf(forgeBlock, localhost)
     private val daVinciServers = listOf(testDaVinci, prodDaVinci, social)
 
     val oidcConfigs = listOf(
-        forgeblock.oidcConfig(),
+        forgeBlock.oidcConfig(),
         localhost.oidcConfig(),
         testDaVinci.oidcConfig(),
         prodDaVinci.oidcConfig(),
         social.oidcConfig(),
     )
 
-    var current by mutableStateOf(forgeblock.oidcConfig())
+    var current by mutableStateOf(forgeBlock.oidcConfig())
         private set
 
     init {
@@ -164,7 +169,7 @@ class EnvViewModel : ViewModel() {
 
                 if (current.clientId != config.clientId) {
                     CoroutineScope(Dispatchers.Default).launch {
-                        journey.user()?.logout()
+                        journey.journeyUser()?.logout()
                     }
                 }
             }
@@ -204,14 +209,14 @@ class EnvViewModel : ViewModel() {
 
                 if (current.clientId != config.clientId) {
                     CoroutineScope(Dispatchers.Default).launch {
-                        daVinci?.user()?.logout()
+                        daVinci?.daVinciUser()?.logout()
                     }
                 }
             }
             else -> {
                 // Default to forgeblock
-                journey = forgeblock
-                val oidcConfig = forgeblock.oidcConfig()
+                journey = forgeBlock
+                val oidcConfig = forgeBlock.oidcConfig()
                 redirectUri = oidcConfig.redirectUri.toUri()
 
                 oidcClient = OidcClient {
@@ -255,7 +260,7 @@ class EnvViewModel : ViewModel() {
                 this.display = display
             }
         } else {
-            forgeblock.oidcConfig()
+            forgeBlock.oidcConfig()
         }
     }
 }

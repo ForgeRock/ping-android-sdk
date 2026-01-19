@@ -51,6 +51,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.pingidentity.davinci.plugin.DaVinci
 import com.pingidentity.orchestrate.ContinueNode
 import com.pingidentity.orchestrate.ErrorNode
 import com.pingidentity.orchestrate.FailureNode
@@ -65,8 +66,8 @@ fun DaVinci(
     onLogoClick: (() -> Unit)? = null,
     onBack: (() -> Unit)? = null,
 ) {
-    BackHandler {
-        daVinciViewModel.start()
+    BackHandler(enabled = onBack != null) {
+        onBack?.invoke()
     }
 
     val state by daVinciViewModel.state.collectAsState()
@@ -306,5 +307,7 @@ private fun Logo(modifier: Modifier, onClick: (() -> Unit)? = null) {
 @Preview
 @Composable
 fun DaVinciPreview() {
-    DaVinci()
+    DaVinci(
+        onBack = {}
+    )
 }
