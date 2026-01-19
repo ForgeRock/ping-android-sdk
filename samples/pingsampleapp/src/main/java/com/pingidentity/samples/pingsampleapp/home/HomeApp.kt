@@ -291,6 +291,12 @@ fun HomeApp(
                     subtitle = stringResource(R.string.text_push_notification_subtitle),
                     onClick = onPushNotificationClick
                 )
+                IconRowItem(
+                    icon = Icons.Default.Preview,
+                    title = "MFA Test Mode",
+                    subtitle = "Authenticator app test mode",
+                    onClick = onAuthTestScreenClick
+                )
 
                 // Developer Tools Section
                 Text(
@@ -330,12 +336,6 @@ fun HomeApp(
                     title = stringResource(R.string.text_configuration_title),
                     subtitle = stringResource(R.string.text_configuration_subtitle),
                     onClick = onConfigurationClick
-                )
-                IconRowItem(
-                    icon = Icons.Default.Preview,
-                    title = "Test Mode",
-                    subtitle = "Authenticator app test mode",
-                    onClick = onAuthTestScreenClick
                 )
 
                 Spacer(modifier = Modifier.padding(8.dp).fillMaxWidth())

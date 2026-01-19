@@ -476,8 +476,8 @@ fun AppNavigation(
                 PushNotificationsScreen(
                     viewModel = viewModel,
                     onNotificationClick = { notificationId ->
-                        // Navigate to notification response screen (to be implemented)
-                        navController.navigate("notification_response/$notificationId")
+                        // Navigate to notification response screen
+                        navController.navigate("notification/$notificationId")
                     },
                     onDismiss = {
                         navController.popBackStack()
