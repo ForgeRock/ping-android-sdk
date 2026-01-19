@@ -8,10 +8,12 @@
 package com.pingidentity.protect.journey
 
 import com.pingidentity.protect.Protect
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.boolean
+import kotlinx.serialization.json.int
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonPrimitive
 import java.util.Collections
@@ -25,10 +27,7 @@ import kotlin.coroutines.coroutineContext
  *
  * @property envId The environment ID for the Protect SDK.
  * @property behavioralDataCollection Indicates whether behavioral data collection is enabled.
- * @property consoleLogEnabled Indicates whether console logging is enabled.
- * @property lazyMetadata Indicates whether lazy metadata loading is enabled.
  * @property customHost The custom host for the Protect SDK.
- * @property deviceAttributesToIgnore A list of device attributes to ignore.
  */
 class PingOneProtectInitializeCallback : AbstractProtectCallback() {
 
@@ -36,44 +35,25 @@ class PingOneProtectInitializeCallback : AbstractProtectCallback() {
         private set
     var behavioralDataCollection: Boolean = false
         private set
-
-    var consoleLogEnabled: Boolean = false
-        private set
-
-    var lazyMetadata: Boolean = false
-        private set
-
     var customHost: String = ""
         private set
-    var deviceAttributesToIgnore: List<String> = emptyList()
+    var agentIdentification: Boolean = false
         private set
-
+    var agentTimeout: Int = 0
+        private set
+    var agentPort: Int = 0
+        private set
 
     override fun init(name: String, value: JsonElement) {
         when (name) {
             "envId" -> envId = value.jsonPrimitive.content
             "behavioralDataCollection" -> behavioralDataCollection = value.jsonPrimitive.boolean
-            "consoleLogEnabled" -> consoleLogEnabled = value.jsonPrimitive.boolean
-            "deviceAttributesToIgnore" -> deviceAttributesToIgnore =
-                getDeviceAttributes(value.jsonArray)
-
             "customHost" -> customHost = value.jsonPrimitive.content
-            "lazyMetadata" -> lazyMetadata = value.jsonPrimitive.boolean
+            "agentIdentification" -> agentIdentification = value.jsonPrimitive.boolean
+            "agentTimeout" -> agentTimeout = value.jsonPrimitive.jsonPrimitive.int
+            "agentPort" -> agentPort = value.jsonPrimitive.jsonPrimitive.int
             else -> {}
         }
-    }
-
-    /**
-     * Get the getDeviceAttributes attribute
-     *
-     * @param array The data source
-     */
-    private fun getDeviceAttributes(array: JsonArray): List<String> {
-        val list = mutableListOf<String>()
-        array.forEach {
-            list.add(it.jsonPrimitive.content)
-        }
-        return Collections.unmodifiableList(list)
     }
 
     /**
@@ -85,10 +65,9 @@ class PingOneProtectInitializeCallback : AbstractProtectCallback() {
             Protect.config {
                 envId = this@PingOneProtectInitializeCallback.envId.nullIfEmpty()
                 isBehavioralDataCollection = behavioralDataCollection
-                isLazyMetadata = lazyMetadata
-                isConsoleLogEnabled = consoleLogEnabled
-                deviceAttributesToIgnore =
-                    this@PingOneProtectInitializeCallback.deviceAttributesToIgnore
+                agentIdentification = this@PingOneProtectInitializeCallback.agentIdentification
+                agentTimeout = this@PingOneProtectInitializeCallback.agentTimeout
+                agentPort = this@PingOneProtectInitializeCallback.agentPort
                 customHost = this@PingOneProtectInitializeCallback.customHost.nullIfEmpty()
             }
             if (behavioralDataCollection) {
@@ -99,7 +78,7 @@ class PingOneProtectInitializeCallback : AbstractProtectCallback() {
             Protect.initialize()
             return Result.success(Unit)
         } catch (e: Exception) {
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
             error(e.message ?: CLIENT_ERROR)
             return Result.failure(e)
         }

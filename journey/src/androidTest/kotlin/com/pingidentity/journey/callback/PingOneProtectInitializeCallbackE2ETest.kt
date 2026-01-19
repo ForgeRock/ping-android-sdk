@@ -21,7 +21,7 @@ import junit.framework.TestCase.assertTrue
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Test
-import kotlin.test.Ignore
+import kotlin.test.assertEquals
 
 class PingOneProtectInitializeCallbackE2ETest : BaseJourneyTest() {
 
@@ -44,10 +44,10 @@ class PingOneProtectInitializeCallbackE2ETest : BaseJourneyTest() {
         val pingOneProtectInitializeCallback = node.callbacks.first() as PingOneProtectInitializeCallback
 
         assertTrue(pingOneProtectInitializeCallback.envId != "")
-        assertFalse(pingOneProtectInitializeCallback.consoleLogEnabled)
-        assertTrue(pingOneProtectInitializeCallback.deviceAttributesToIgnore.isEmpty())
+        assertFalse(pingOneProtectInitializeCallback.agentIdentification)
+        assertEquals(0, pingOneProtectInitializeCallback.agentTimeout)
+        assertEquals(0, pingOneProtectInitializeCallback.agentPort)
         assertTrue(pingOneProtectInitializeCallback.customHost == "")
-        assertFalse(pingOneProtectInitializeCallback.lazyMetadata)
         assertTrue(pingOneProtectInitializeCallback.behavioralDataCollection)
 
         val initResult = pingOneProtectInitializeCallback.start()
@@ -66,8 +66,6 @@ class PingOneProtectInitializeCallbackE2ETest : BaseJourneyTest() {
         assertNotNull(defaultJourney.session())
     }
 
-    // TODO - This will be fixed when we fix SDKS-4548
-    @Ignore("Flaky Test - Remove when SDKS-4548 is fixed")
     @Test
     fun testProtectInitializeCustom() = runTest {
         var node = defaultJourney.start(tree)  as ContinueNode
@@ -81,12 +79,10 @@ class PingOneProtectInitializeCallbackE2ETest : BaseJourneyTest() {
         val pingOneProtectInitializeCallback = node.callbacks.first() as PingOneProtectInitializeCallback
 
         assertTrue(pingOneProtectInitializeCallback.envId != "")
-        assertTrue(pingOneProtectInitializeCallback.consoleLogEnabled)
-        assertTrue(pingOneProtectInitializeCallback.deviceAttributesToIgnore.contains("Model"))
-        assertTrue(pingOneProtectInitializeCallback.deviceAttributesToIgnore.contains("Manufacturer"))
-        assertTrue(pingOneProtectInitializeCallback.deviceAttributesToIgnore.contains("Screen size"))
-        assertTrue(pingOneProtectInitializeCallback.customHost == "custom.host.com")
-        assertTrue(pingOneProtectInitializeCallback.lazyMetadata)
+        assertTrue(pingOneProtectInitializeCallback.customHost.isEmpty())
+        assertTrue(pingOneProtectInitializeCallback.agentIdentification)
+        assertEquals(200, pingOneProtectInitializeCallback.agentTimeout)
+        assertEquals(8089, pingOneProtectInitializeCallback.agentPort)
         assertFalse(pingOneProtectInitializeCallback.behavioralDataCollection)
 
         val initResult = pingOneProtectInitializeCallback.start()

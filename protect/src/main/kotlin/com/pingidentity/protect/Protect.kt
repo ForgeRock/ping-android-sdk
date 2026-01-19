@@ -149,6 +149,9 @@ open class ProtectConfig {
      */
     var isBehavioralDataCollection: Boolean = true
 
+    var agentIdentification: Boolean = false
+    var agentTimeout: Int = 0
+    var agentPort: Int = 0
 }
 
 
