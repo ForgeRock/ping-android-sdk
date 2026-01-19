@@ -38,7 +38,9 @@ enum class DeviceType {
     PROFILE
 }
 
-class DeviceManagementViewModel: ViewModel() {
+class DeviceManagementViewModel(
+    private val logger: Logger = Logger.STANDARD
+): ViewModel() {
     var state = MutableStateFlow(DeviceManagementViewState())
         private set
 
@@ -132,7 +134,7 @@ class DeviceManagementViewModel: ViewModel() {
                 state.update { s ->
                     s.copy(deviceList = emptyList(), isLoading = false)
                 }
-                println(exception.message)
+                logger.e(exception.message ?: "Error retrieving devices", exception)
             }
         }
     }
@@ -148,11 +150,11 @@ class DeviceManagementViewModel: ViewModel() {
                         it.deviceName = newDeviceName
                         deviceClient.oathDevice.update(it)
                             .onSuccess {
-                                println("Device updated successfully")
+                                logger.i("Device updated successfully")
                                 setDeviceType(DeviceType.OATH)
                             }
-                            .onFailure {
-                                println("Error editing device: ${it.message}")
+                            .onFailure { exception ->
+                                logger.e("Error editing device: ${exception.message}", exception)
                                 // Optionally refresh the list to ensure consistency
                                 setDeviceType(state.value.selectedDeviceType)
                             }
@@ -165,11 +167,11 @@ class DeviceManagementViewModel: ViewModel() {
                         it.deviceName = newDeviceName
                         deviceClient.pushDevice.update(it)
                             .onSuccess {
-                                println("Device updated successfully")
+                                logger.i("Device updated successfully")
                                 setDeviceType(DeviceType.PUSH)
                             }
-                            .onFailure {
-                                println("Error editing device: ${it.message}")
+                            .onFailure { exception ->
+                                logger.e("Error editing device: ${exception.message}", exception)
                                 // Optionally refresh the list to ensure consistency
                                 setDeviceType(state.value.selectedDeviceType)
                             }
@@ -182,11 +184,11 @@ class DeviceManagementViewModel: ViewModel() {
                         it.deviceName = newDeviceName
                         deviceClient.boundDevice.update(it)
                             .onSuccess {
-                                println("Device updated successfully")
+                                logger.i("Device updated successfully")
                                 setDeviceType(DeviceType.BOUND)
                             }
-                            .onFailure {
-                                println("Error editing device: ${it.message}")
+                            .onFailure { exception ->
+                                logger.e("Error editing device: ${exception.message}")
                                 // Optionally refresh the list to ensure consistency
                                 setDeviceType(state.value.selectedDeviceType)
                             }
@@ -199,11 +201,11 @@ class DeviceManagementViewModel: ViewModel() {
                         it.deviceName = newDeviceName
                         deviceClient.webAuthnDevice.update(it)
                             .onSuccess {
-                                println("Device updated successfully")
+                                logger.i("Device updated successfully")
                                 setDeviceType(DeviceType.WEBAUTHN)
                             }
-                            .onFailure {
-                                println("Error editing device: ${it.message}")
+                            .onFailure { exception ->
+                                logger.e("Error editing device: ${exception.message}", exception)
                                 // Optionally refresh the list to ensure consistency
                                 setDeviceType(state.value.selectedDeviceType)
                             }
@@ -216,11 +218,11 @@ class DeviceManagementViewModel: ViewModel() {
                         it.deviceName = newDeviceName
                         deviceClient.profileDevice.update(it)
                             .onSuccess {
-                                println("Device updated successfully")
+                                logger.i("Device updated successfully")
                                 setDeviceType(DeviceType.PROFILE)
                             }
-                            .onFailure {
-                                println("Error editing device: ${it.message}")
+                            .onFailure { exception ->
+                                logger.e("Error editing device: ${exception.message}", exception)
                                 // Optionally refresh the list to ensure consistency
                                 setDeviceType(state.value.selectedDeviceType)
                             }
@@ -240,12 +242,12 @@ class DeviceManagementViewModel: ViewModel() {
                     deviceToDelete?.let {
                         deviceClient.oathDevice.delete(it)
                             .onSuccess {
-                                println("Device deleted successfully")
+                                logger.i("Device deleted successfully")
                                 // Refresh the device list
                                 setDeviceType(DeviceType.OATH)
                             }
-                            .onFailure {
-                                println("Error deleting device: ${it.message}")
+                            .onFailure { exception ->
+                                logger.e("Error deleting device: ${exception.message}", exception)
                                 // Optionally refresh the list to ensure consistency
                                 setDeviceType(state.value.selectedDeviceType)
                             }
@@ -265,12 +267,12 @@ class DeviceManagementViewModel: ViewModel() {
                     deviceToDelete?.let {
                         deviceClient.boundDevice.delete(it)
                             .onSuccess {
-                                println("Device deleted successfully")
+                                logger.i("Device deleted successfully")
                                 // Refresh the device list
                                 setDeviceType(DeviceType.BOUND)
                             }
-                            .onFailure {
-                                println("Error deleting device: ${it.message}")
+                            .onFailure { exception ->
+                                logger.e("Error deleting device: ${exception.message}", exception)
                                 // Optionally refresh the list to ensure consistency
                                 setDeviceType(state.value.selectedDeviceType)
                             }
@@ -282,12 +284,12 @@ class DeviceManagementViewModel: ViewModel() {
                     deviceToDelete?.let {
                         deviceClient.webAuthnDevice.delete(it)
                             .onSuccess {
-                                println("Device deleted successfully")
+                                logger.i("Device deleted successfully")
                                 // Refresh the device list
                                 setDeviceType(DeviceType.WEBAUTHN)
                             }
-                            .onFailure {
-                                println("Error deleting device: ${it.message}")
+                            .onFailure { exception ->
+                                logger.e("Error deleting device: ${exception.message}", exception)
                                 // Optionally refresh the list to ensure consistency
                                 setDeviceType(state.value.selectedDeviceType)
                             }
@@ -299,12 +301,12 @@ class DeviceManagementViewModel: ViewModel() {
                     deviceToDelete?.let {
                         deviceClient.profileDevice.delete(it)
                             .onSuccess {
-                                println("Device deleted successfully")
+                                logger.i("Device deleted successfully")
                                 // Refresh the device list
                                 setDeviceType(DeviceType.PROFILE)
                             }
-                            .onFailure {
-                                println("Error deleting device: ${it.message}")
+                            .onFailure { exception ->
+                                logger.e("Error deleting device: ${exception.message}", exception)
                                 // Optionally refresh the list to ensure consistency
                                 setDeviceType(state.value.selectedDeviceType)
                             }
@@ -313,7 +315,7 @@ class DeviceManagementViewModel: ViewModel() {
             }
             try {
             } catch (exception: Exception) {
-                println("Error deleting device: ${exception.message}")
+                logger.e("Error deleting device: ${exception.message}", exception)
 
             }
         }

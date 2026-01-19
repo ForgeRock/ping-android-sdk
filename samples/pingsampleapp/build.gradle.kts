@@ -78,7 +78,7 @@ dependencies {
     //Protect
     implementation(project(":protect"))
 
-    // MFA
+    // MFA and Binding
     implementation(project(":mfa:binding"))
     implementation(project(":mfa:binding-ui"))
     implementation(project(":mfa:binding-migration"))
