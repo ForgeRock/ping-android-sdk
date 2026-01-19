@@ -10,7 +10,8 @@ package com.pingidentity.samples.pingsampleapp.token
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.pingidentity.journey.user
+import com.pingidentity.journey.user as journeyUser
+import com.pingidentity.davinci.user as davinciUser
 import com.pingidentity.oidc.Token
 import com.pingidentity.samples.pingsampleapp.config.daVinci
 import com.pingidentity.samples.pingsampleapp.config.journey
@@ -92,7 +93,7 @@ class TokenViewModel : ViewModel() {
     // Journey Token Operations
     private fun journeyAccessToken() {
         viewModelScope.launch {
-            journey.user()?.let {
+            journey.journeyUser()?.let {
                 when (val result = it.token()) {
                     is Failure -> {
                         state.update { state ->
@@ -115,7 +116,7 @@ class TokenViewModel : ViewModel() {
 
     private fun journeyRevoke() {
         viewModelScope.launch {
-            journey.user()?.revoke()
+            journey.journeyUser()?.revoke()
             state.update {
                 it.copy(journeyToken = null, journeyError = null)
             }
@@ -124,7 +125,7 @@ class TokenViewModel : ViewModel() {
 
     private fun journeyRefresh() {
         viewModelScope.launch {
-            journey.user()?.let {
+            journey.journeyUser()?.let {
                 when (val result = it.refresh()) {
                     is Failure -> {
                         state.update { state ->
@@ -148,7 +149,7 @@ class TokenViewModel : ViewModel() {
     // DaVinci Token Operations
     private fun daVinciAccessToken() {
         viewModelScope.launch {
-            daVinci?.user()?.let {
+            daVinci?.davinciUser()?.let {
                 when (val result = it.token()) {
                     is Failure -> {
                         state.update { state ->
@@ -171,7 +172,7 @@ class TokenViewModel : ViewModel() {
 
     private fun daVinciRevoke() {
         viewModelScope.launch {
-            daVinci?.user()?.revoke()
+            daVinci?.davinciUser()?.revoke()
             state.update {
                 it.copy(daVinciToken = null, daVinciError = null)
             }
@@ -180,7 +181,7 @@ class TokenViewModel : ViewModel() {
 
     private fun daVinciRefresh() {
         viewModelScope.launch {
-            daVinci?.user()?.let {
+            daVinci?.davinciUser()?.let {
                 when (val result = it.refresh()) {
                     is Failure -> {
                         state.update { state ->

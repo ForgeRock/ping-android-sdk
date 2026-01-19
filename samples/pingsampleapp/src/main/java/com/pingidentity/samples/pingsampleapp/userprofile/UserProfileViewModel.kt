@@ -9,7 +9,8 @@ package com.pingidentity.samples.pingsampleapp.userprofile
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.pingidentity.journey.user
+import com.pingidentity.journey.user as journeyUser
+import com.pingidentity.davinci.user as davinciUser
 import com.pingidentity.oidc.OidcError
 import com.pingidentity.samples.pingsampleapp.config.daVinci
 import com.pingidentity.samples.pingsampleapp.config.journey
@@ -89,7 +90,7 @@ class UserProfileViewModel : ViewModel() {
     // Journey Operations
     private fun journeyUserInfo() {
         viewModelScope.launch {
-            journey.user()?.let { user ->
+            journey.journeyUser()?.let { user ->
                 when (val result = user.userinfo(false)) {
                     is Result.Failure ->
                         state.update { s ->
@@ -115,7 +116,7 @@ class UserProfileViewModel : ViewModel() {
     // DaVinci Operations
     private fun daVinciUserInfo() {
         viewModelScope.launch {
-            daVinci?.user()?.let { user ->
+            daVinci?.davinciUser()?.let { user ->
                 when (val result = user.userinfo(false)) {
                     is Result.Failure ->
                         state.update { s ->
