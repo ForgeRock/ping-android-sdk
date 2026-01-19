@@ -1,15 +1,20 @@
 /*
- * Copyright (c) 2024 - 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2024 - 2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
  */
 
 import com.pingidentity.davinci.CollectorRegistry
+import com.pingidentity.davinci.collector.DeviceAuthenticationCollector
+import com.pingidentity.davinci.collector.DeviceRegistrationCollector
 import com.pingidentity.davinci.collector.FlowCollector
 import com.pingidentity.davinci.collector.LabelCollector
 import com.pingidentity.davinci.collector.MultiSelectCollector
 import com.pingidentity.davinci.collector.PasswordCollector
+import com.pingidentity.davinci.collector.PhoneNumberCollector
+import com.pingidentity.davinci.collector.PollingCollector
+import com.pingidentity.davinci.collector.QRCodeCollector
 import com.pingidentity.davinci.collector.SingleSelectCollector
 import com.pingidentity.davinci.collector.SubmitCollector
 import com.pingidentity.davinci.collector.TextCollector
@@ -61,9 +66,15 @@ class CollectorRegistryTest {
             add(buildJsonObject { put("inputType", "SINGLE_SELECT") })
             add(buildJsonObject { put("inputType", "MULTI_SELECT") })
             add(buildJsonObject { put("inputType", "MULTI_SELECT") })
+            add(buildJsonObject { put("inputType", "DEVICE_REGISTRATION") })
+            add(buildJsonObject { put("inputType", "DEVICE_AUTHENTICATION") })
+            add(buildJsonObject { put("inputType", "PHONE_NUMBER") })
+            add(buildJsonObject { put("type", "POLLING") })
+            add(buildJsonObject { put("type", "QR_CODE") })
         }
 
         val collectors = CollectorFactory.collector(mockk(), jsonArray)
+        assertEquals(16, collectors.size)
         assertEquals(TextCollector::class.java, collectors[0]::class.java)
         assertEquals(PasswordCollector::class.java, collectors[1]::class.java)
         assertEquals(PasswordCollector::class.java, collectors[2]::class.java)
@@ -75,6 +86,11 @@ class CollectorRegistryTest {
         assertEquals(SingleSelectCollector::class.java, collectors[8]::class.java)
         assertEquals(MultiSelectCollector::class.java, collectors[9]::class.java)
         assertEquals(MultiSelectCollector::class.java, collectors[10]::class.java)
+        assertEquals(DeviceRegistrationCollector::class.java, collectors[11]::class.java)
+        assertEquals(DeviceAuthenticationCollector::class.java, collectors[12]::class.java)
+        assertEquals(PhoneNumberCollector::class.java, collectors[13]::class.java)
+        assertEquals(PollingCollector::class.java, collectors[14]::class.java)
+        assertEquals(QRCodeCollector::class.java, collectors[15]::class.java)
     }
 
     @TestRailCase(21280)
@@ -88,10 +104,11 @@ class CollectorRegistryTest {
             add(buildJsonObject { put("type", "SUBMIT_BUTTON") })
             add(buildJsonObject { put("inputType", "ACTION") })
             add(buildJsonObject { put("type", "UNKNOWN") })
+            add(buildJsonObject { put("type", "QR_CODE") })
         }
 
         val collectors = CollectorFactory.collector(mockk(), jsonArray)
-        assertEquals(4, collectors.size)
+        assertEquals(5, collectors.size)
     }
 
 }

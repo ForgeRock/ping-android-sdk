@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 - 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2024 - 2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -34,6 +34,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -96,24 +97,27 @@ fun DaVinci(
     Box(
         contentAlignment = Alignment.Center,
         modifier = Modifier
-            .fillMaxSize().verticalScroll(scroll)
-   ) {
+            .fillMaxSize()
+            .verticalScroll(scroll)
+    ) {
         if (loading) {
             CircularProgressIndicator()
         }
 
         Column(
             modifier =
-            Modifier
-                .padding(8.dp)
-                .fillMaxSize()
+                Modifier
+                    .padding(8.dp)
+                    .fillMaxSize()
         ) {
             Logo(modifier = Modifier)
 
             when (val node = state.node) {
                 is ContinueNode -> {
-                    Render(node = node, onNodeUpdated, onStart) {
-                        onNext(node)
+                    key(node) {
+                        Render(node = node, onNodeUpdated, onStart) {
+                            onNext(node)
+                        }
                     }
                 }
 
@@ -148,26 +152,26 @@ fun DaVinci(
 fun Render(node: FailureNode) {
     Row(
         modifier =
-        Modifier
-            .padding(16.dp)
-            .fillMaxWidth(),
+            Modifier
+                .padding(16.dp)
+                .fillMaxWidth(),
     ) {
         Card(
             elevation =
-            CardDefaults.cardElevation(
-                defaultElevation = 10.dp,
-            ),
+                CardDefaults.cardElevation(
+                    defaultElevation = 10.dp,
+                ),
             modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(8.dp),
+                Modifier
+                    .fillMaxWidth()
+                    .padding(8.dp),
             shape = MaterialTheme.shapes.medium,
         ) {
             Row(
                 modifier =
-                Modifier
-                    .padding(16.dp)
-                    .fillMaxWidth(),
+                    Modifier
+                        .padding(16.dp)
+                        .fillMaxWidth(),
             ) {
                 Icon(Icons.Filled.Error, null)
                 Spacer(Modifier.width(8.dp))
@@ -194,29 +198,29 @@ fun Render(node: ErrorNode) {
 
     Row(
         modifier =
-        Modifier
-            .padding(16.dp)
-            .fillMaxWidth(),
+            Modifier
+                .padding(16.dp)
+                .fillMaxWidth(),
     ) {
         Card(
             elevation =
-            CardDefaults.cardElevation(
-                defaultElevation = 10.dp,
-            ),
+                CardDefaults.cardElevation(
+                    defaultElevation = 10.dp,
+                ),
             modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(8.dp)
-                .clickable {
-                    showAlert = true
-                },
+                Modifier
+                    .fillMaxWidth()
+                    .padding(8.dp)
+                    .clickable {
+                        showAlert = true
+                    },
             shape = MaterialTheme.shapes.medium,
         ) {
             Row(
                 modifier =
-                Modifier
-                    .padding(16.dp)
-                    .fillMaxWidth(),
+                    Modifier
+                        .padding(16.dp)
+                        .fillMaxWidth(),
             ) {
                 Icon(Icons.Filled.Error, null)
                 Spacer(Modifier.width(8.dp))
@@ -245,20 +249,20 @@ fun Render(
 private fun Logo(modifier: Modifier) {
     Row(
         modifier =
-        Modifier
-            .fillMaxWidth()
-            .then(modifier),
+            Modifier
+                .fillMaxWidth()
+                .then(modifier),
     ) {
         Spacer(modifier = Modifier.weight(1f, true))
         Icon(
             painterResource(R.drawable.ping_logo),
             contentDescription = null,
             modifier =
-            Modifier
-                .height(100.dp)
-                .padding(8.dp)
-                .wrapContentWidth(Alignment.CenterHorizontally)
-                .then(modifier),
+                Modifier
+                    .height(100.dp)
+                    .padding(8.dp)
+                    .wrapContentWidth(Alignment.CenterHorizontally)
+                    .then(modifier),
             tint = Color.Unspecified,
         )
         Spacer(modifier = Modifier.weight(1f, true))

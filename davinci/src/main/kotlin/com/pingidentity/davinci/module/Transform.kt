@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 - 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2024 - 2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -11,8 +11,10 @@ import com.pingidentity.davinci.collector.Form
 import com.pingidentity.davinci.plugin.Collector
 import com.pingidentity.davinci.plugin.CollectorFactory
 import com.pingidentity.davinci.plugin.DaVinci
+import com.pingidentity.davinci.plugin.collectors
 import com.pingidentity.exception.ApiException
 import com.pingidentity.oidc.exception.AuthorizeException
+import com.pingidentity.orchestrate.ContinueNode
 import com.pingidentity.orchestrate.ErrorNode
 import com.pingidentity.orchestrate.FailureNode
 import com.pingidentity.orchestrate.FlowContext
@@ -114,6 +116,22 @@ private fun transform(
                         ?: throw AuthorizeException("Authorization code is missing.")
             },
         )
+    }
+
+    val eventName = json["eventName"]?.jsonPrimitive?.content
+    if (eventName == "rewindStateToLastRenderedUI" || eventName == "rewindStateToSpecificRenderedUI") {
+        val existing = context.flowContext.getValue<ContinueNode>(CONTINUE_NODE)
+            ?: return FailureNode(IllegalStateException("Rewind state to last rendered UI failed."))
+        // Create a new Connector instance with the same so that Jetpack Compose
+        // sees a different object reference and triggers recomposition and its collectors.
+        return Connector(
+            existing.context,
+            (existing as Connector).daVinci,
+            existing.input,
+            existing.collectors,
+        ).apply {
+            CollectorFactory.inject(this)
+        }
     }
 
     val collectors = mutableListOf<Collector<*>>()

@@ -59,6 +59,7 @@ import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
+import kotlin.test.assertNotSame
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -551,4 +552,92 @@ class DaVinciTest {
             "expires_in": 60
         }
         """.trimIndent()
+
+    @Test
+    fun `DaVinci rewindStateToLastRenderedUI returns previous ContinueNode`() = runTest {
+        // Override the mock engine so /customHTMLTemplate returns a rewind event
+        mockEngine = MockEngine { request ->
+            when (request.url.encodedPath) {
+                "/.well-known/openid-configuration" ->
+                    respond(openIdConfigurationResponse(), HttpStatusCode.OK, headers)
+                "/authorize" ->
+                    respond(authorizeResponse(), HttpStatusCode.OK, authorizeResponseHeaders)
+                "/customHTMLTemplate" ->
+                    respond(rewindStateToLastRenderedUIResponse(), HttpStatusCode.OK, customHTMLTemplateHeaders)
+                else ->
+                    respond(ByteReadChannel(""), HttpStatusCode.InternalServerError)
+            }
+        }
+
+        val daVinci = DaVinci {
+            httpClient = KtorHttpClient(HttpClient(mockEngine))
+            module(Oidc) {
+                clientId = "test"
+                discoveryEndpoint = "http://localhost/.well-known/openid-configuration"
+                scopes = mutableSetOf("openid", "email", "address")
+                redirectUri = "http://localhost:8080"
+                storage = { MemoryStorage() }
+            }
+            module(Cookie) {
+                storage = { MemoryStorage() }
+            }
+        }
+
+        // start() stores the returned ContinueNode in FlowContext via the ContinueNode module
+        val firstNode = daVinci.start()
+        assertTrue(firstNode is ContinueNode)
+
+        // next() receives rewindStateToLastRenderedUI → transform retrieves the stored ContinueNode
+        val rewindNode = firstNode.next()
+
+        assertTrue(rewindNode is ContinueNode)
+        // Must be the exact same instance that was stored in FlowContext
+        assertNotSame(firstNode, rewindNode)
+        assertEquals(firstNode.id, rewindNode.id)
+        assertEquals(firstNode.name, rewindNode.name)
+    }
+
+    @Test
+    fun `DaVinci rewindStateToSpecificRenderedUI returns previous ContinueNode`() = runTest {
+        // Override the mock engine so /customHTMLTemplate returns a rewind event
+        mockEngine = MockEngine { request ->
+            when (request.url.encodedPath) {
+                "/.well-known/openid-configuration" ->
+                    respond(openIdConfigurationResponse(), HttpStatusCode.OK, headers)
+                "/authorize" ->
+                    respond(authorizeResponse(), HttpStatusCode.OK, authorizeResponseHeaders)
+                "/customHTMLTemplate" ->
+                    respond(rewindStateToSpecificRenderedUIResponse(), HttpStatusCode.OK, customHTMLTemplateHeaders)
+                else ->
+                    respond(ByteReadChannel(""), HttpStatusCode.InternalServerError)
+            }
+        }
+
+        val daVinci = DaVinci {
+            httpClient = KtorHttpClient(HttpClient(mockEngine))
+            module(Oidc) {
+                clientId = "test"
+                discoveryEndpoint = "http://localhost/.well-known/openid-configuration"
+                scopes = mutableSetOf("openid", "email", "address")
+                redirectUri = "http://localhost:8080"
+                storage = { MemoryStorage() }
+            }
+            module(Cookie) {
+                storage = { MemoryStorage() }
+            }
+        }
+
+        // start() stores the returned ContinueNode in FlowContext via the ContinueNode module
+        val firstNode = daVinci.start()
+        assertTrue(firstNode is ContinueNode)
+
+        // next() receives rewindStateToSpecificRenderedUI → transform retrieves the stored ContinueNode
+        val rewindNode = firstNode.next()
+
+        assertTrue(rewindNode is ContinueNode)
+        // Must be the exact same instance that was stored in FlowContext
+        assertNotSame(firstNode, rewindNode)
+        assertEquals(firstNode.id, rewindNode.id)
+        assertEquals(firstNode.name, rewindNode.name)
+    }
 }

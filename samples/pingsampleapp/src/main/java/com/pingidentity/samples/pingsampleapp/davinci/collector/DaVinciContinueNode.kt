@@ -30,6 +30,8 @@ import com.pingidentity.davinci.collector.LabelCollector
 import com.pingidentity.davinci.collector.MultiSelectCollector
 import com.pingidentity.davinci.collector.PasswordCollector
 import com.pingidentity.davinci.collector.PhoneNumberCollector
+import com.pingidentity.davinci.collector.PollingCollector
+import com.pingidentity.davinci.collector.QRCodeCollector
 import com.pingidentity.davinci.collector.BooleanCollector
 import com.pingidentity.davinci.collector.SingleSelectCollector
 import com.pingidentity.davinci.collector.SubmitCollector
@@ -122,6 +124,9 @@ fun DaVinciContinueNode(
                 is FidoAuthenticationCollector -> FidoAuthentication(it, onStart, onNext)
                 is PhoneNumberCollector -> PhoneNumber(it, onNodeUpdated)
                 is ProtectCollector -> Protect(it, onNodeUpdated)
+                is PollingCollector -> Polling(it, onNext)
+                is QRCodeCollector -> QRCode(it)
+
                 is BooleanCollector -> SingleCheckbox(it, onNodeUpdated)
             }
             if (it is Submittable) {
