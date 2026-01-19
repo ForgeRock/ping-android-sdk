@@ -119,6 +119,50 @@ val social by lazy {
     }
 }
 
+// Standalone OIDC configurations (not tied to Journey or DaVinci)
+val oidcForgeBlock by lazy {
+    OidcWeb {
+        logger = Logger.STANDARD
+        module(com.pingidentity.oidc.module.Oidc) {
+            clientId = "AndroidTest"
+            discoveryEndpoint = "https://openam-sdks.forgeblocks.com/am/oauth2/alpha/.well-known/openid-configuration"
+            scopes = mutableSetOf("openid", "email", "address", "profile", "phone")
+            redirectUri = "org.forgerock.demo:/oauth2redirect"
+            display = "OIDC Forgeblock"
+        }
+        module(Web) {
+            customTabsCustomizer = {
+                setColorScheme(CustomTabsIntent.COLOR_SCHEME_DARK)
+            }
+            authTabCustomizer = {
+                setColorScheme(CustomTabsIntent.COLOR_SCHEME_DARK)
+            }
+        }
+    }
+}
+
+val oidcPingOne by lazy {
+    OidcWeb {
+        logger = Logger.STANDARD
+        module(com.pingidentity.oidc.module.Oidc) {
+            clientId = "dummy"
+            discoveryEndpoint =
+                "https://auth.test-one-pingone.com/dummy/as/.well-known/openid-configuration"
+            scopes = mutableSetOf("openid", "email", "address")
+            redirectUri = "org.forgerock.demo://oauth2redirect"
+            display = "OIDC PingOne"
+        }
+        module(Web) {
+            customTabsCustomizer = {
+                setColorScheme(CustomTabsIntent.COLOR_SCHEME_DARK)
+            }
+            authTabCustomizer = {
+                setColorScheme(CustomTabsIntent.COLOR_SCHEME_DARK)
+            }
+        }
+    }
+}
+
 var journey = forgeBlock
 var oidcClient: OidcClient? = null
 var daVinci: DaVinci? = null
@@ -129,6 +173,7 @@ lateinit var redirectUri: Uri //For Social Login redirect parameter using Auth T
 class EnvViewModel : ViewModel() {
     private val journeyServers = listOf(forgeBlock, localhost)
     private val daVinciServers = listOf(testDaVinci, prodDaVinci, social)
+    private val oidcServers = listOf(oidcForgeBlock, oidcPingOne)
 
     val oidcConfigs = listOf(
         forgeBlock.oidcConfig(),
@@ -136,6 +181,8 @@ class EnvViewModel : ViewModel() {
         testDaVinci.oidcConfig(),
         prodDaVinci.oidcConfig(),
         social.oidcConfig(),
+        oidcForgeBlock.oidcConfig(),
+        oidcPingOne.oidcConfig(),
     )
 
     var current by mutableStateOf(forgeBlock.oidcConfig())
@@ -148,10 +195,45 @@ class EnvViewModel : ViewModel() {
         }
     }
 
+
+    /**
+     * Creates an OidcWeb instance with the provided OIDC configuration.
+     * This is used to initialize centralized OIDC login for all authentication types.
+     */
+    private fun createOidcWeb(oidcConfig: OidcClientConfig): OidcWeb {
+        return OidcWeb {
+            logger = Logger.STANDARD
+            module(com.pingidentity.oidc.module.Oidc) {
+                clientId = oidcConfig.clientId
+                discoveryEndpoint = oidcConfig.discoveryEndpoint
+                scopes = oidcConfig.scopes
+                redirectUri = oidcConfig.redirectUri
+                signOutRedirectUri = oidcConfig.signOutRedirectUri
+                loginHint = oidcConfig.loginHint
+                state = oidcConfig.state
+                nonce = oidcConfig.nonce
+                acrValues = oidcConfig.acrValues
+                prompt = oidcConfig.prompt
+                display = oidcConfig.display
+                uiLocales = oidcConfig.uiLocales
+                additionalParameters = oidcConfig.additionalParameters
+            }
+            module(Web) {
+                customTabsCustomizer = {
+                    setColorScheme(CustomTabsIntent.COLOR_SCHEME_DARK)
+                }
+                authTabCustomizer = {
+                    setColorScheme(CustomTabsIntent.COLOR_SCHEME_DARK)
+                }
+            }
+        }
+    }
+
     fun select(config: OidcClientConfig) {
-        // Determine if this is a Journey or DaVinci server
+        // Determine if this is a Journey, DaVinci, or standalone OIDC server
         val journeyServer = journeyServers.firstOrNull { it.oidcConfig().clientId == config.clientId }
         val daVinciServer = daVinciServers.firstOrNull { it.oidcConfig().clientId == config.clientId }
+        val oidcServer = oidcServers.firstOrNull { it.oidcConfig().clientId == config.clientId }
 
         when {
             journeyServer != null -> {
@@ -167,7 +249,11 @@ class EnvViewModel : ViewModel() {
                     display = oidcConfig.display ?: "Journey"
                 }
 
-                if (current.clientId != config.clientId) {
+                // Also initialize OidcWeb for centralized login compatibility
+                web = createOidcWeb(oidcConfig)
+
+                // Only logout if switching to a different Journey config
+                if (current.clientId != config.clientId && journeyServers.any { it.oidcConfig().clientId == current.clientId }) {
                     CoroutineScope(Dispatchers.Default).launch {
                         journey.journeyUser()?.logout()
                     }
@@ -178,38 +264,26 @@ class EnvViewModel : ViewModel() {
                 val oidcConfig = daVinciServer.oidcConfig()
                 redirectUri = oidcConfig.redirectUri.toUri()
 
-                // Initialize OidcWeb for DaVinci
-                web = OidcWeb {
-                    logger = Logger.STANDARD
-                    module(com.pingidentity.oidc.module.Oidc) {
-                        clientId = oidcConfig.clientId
-                        discoveryEndpoint = oidcConfig.discoveryEndpoint
-                        scopes = oidcConfig.scopes
-                        redirectUri = oidcConfig.redirectUri
-                        signOutRedirectUri = oidcConfig.signOutRedirectUri
-                        loginHint = oidcConfig.loginHint
-                        state = oidcConfig.state
-                        nonce = oidcConfig.nonce
-                        acrValues = oidcConfig.acrValues
-                        prompt = oidcConfig.prompt
-                        display = oidcConfig.display ?: "DaVinci"
-                        uiLocales = oidcConfig.uiLocales
-                        additionalParameters = oidcConfig.additionalParameters
-                    }
-                    module(Web) {
-                        //Showcase Customization
-                        customTabsCustomizer = {
-                            setColorScheme(CustomTabsIntent.COLOR_SCHEME_DARK)
-                        }
-                        authTabCustomizer = {
-                            setColorScheme(CustomTabsIntent.COLOR_SCHEME_DARK)
-                        }
-                    }
-                }
+                // Also initialize OidcWeb for centralized login compatibility
+                web = createOidcWeb(oidcConfig)
 
-                if (current.clientId != config.clientId) {
+                // Only logout if switching to a different DaVinci config
+                if (current.clientId != config.clientId && daVinciServers.any { it.oidcConfig().clientId == current.clientId }) {
                     CoroutineScope(Dispatchers.Default).launch {
                         daVinci?.daVinciUser()?.logout()
+                    }
+                }
+            }
+            oidcServer != null -> {
+                // Initialize standalone OIDC Web
+                web = oidcServer
+                val oidcConfig = oidcServer.oidcConfig()
+                redirectUri = oidcConfig.redirectUri.toUri()
+
+                // Only logout if switching to a different OIDC config
+                if (current.clientId != config.clientId && oidcServers.any { it.oidcConfig().clientId == current.clientId }) {
+                    CoroutineScope(Dispatchers.Default).launch {
+                        web?.user()?.logout()
                     }
                 }
             }
@@ -226,6 +300,9 @@ class EnvViewModel : ViewModel() {
                     redirectUri = oidcConfig.redirectUri
                     display = oidcConfig.display ?: "Forgerock"
                 }
+
+                // Also initialize OidcWeb for centralized login compatibility
+                web = createOidcWeb(oidcConfig)
             }
         }
 
@@ -273,6 +350,14 @@ private fun Workflow.oidcConfig(): OidcClientConfig {
     return config.modules.first { it.config is OidcClientConfig }.config as OidcClientConfig
 }
 
+/**
+ * Get the current [OidcClientConfig] from an OidcWeb instance.
+ */
+private fun OidcWeb.oidcConfig(): OidcClientConfig {
+    return config.modules.first { it.config is OidcClientConfig }.config as OidcClientConfig
+}
+
 private fun config(block: OidcClientConfig.() -> Unit): OidcClientConfig {
     return OidcClientConfig().apply(block)
 }
+

@@ -66,6 +66,16 @@ class TokenViewModel : ViewModel() {
         }
     }
 
+    /**
+     * Load tokens for all authentication types to ensure all sessions are displayed.
+     * This is useful when you want to see all available tokens across different auth types.
+     */
+    fun loadAllTokens() {
+        journeyAccessToken()
+        daVinciAccessToken()
+        oidcAccessToken()
+    }
+
     fun refresh() {
         when (state.value.selectedTab) {
             TokenType.JOURNEY -> journeyRefresh()

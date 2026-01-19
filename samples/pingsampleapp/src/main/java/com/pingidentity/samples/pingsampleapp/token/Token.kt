@@ -62,7 +62,8 @@ fun TokenScreen(
 
     LaunchedEffect(true) {
         // Not relaunch when recomposition
-        tokenViewModel.accessToken()
+        // Load all tokens to display all sessions
+        tokenViewModel.loadAllTokens()
     }
 
     Scaffold(
@@ -96,7 +97,7 @@ fun TokenScreen(
                     selected = tokenState.selectedTab == TokenType.JOURNEY,
                     onClick = {
                         tokenViewModel.selectTab(TokenType.JOURNEY)
-                        tokenViewModel.accessToken()
+                        tokenViewModel.loadAllTokens()
                     },
                     text = { Text("Journey") }
                 )
@@ -104,7 +105,7 @@ fun TokenScreen(
                     selected = tokenState.selectedTab == TokenType.DAVINCI,
                     onClick = {
                         tokenViewModel.selectTab(TokenType.DAVINCI)
-                        tokenViewModel.accessToken()
+                        tokenViewModel.loadAllTokens()
                     },
                     text = { Text("DaVinci") }
                 )
@@ -112,7 +113,7 @@ fun TokenScreen(
                     selected = tokenState.selectedTab == TokenType.OIDC,
                     onClick = {
                         tokenViewModel.selectTab(TokenType.OIDC)
-                        tokenViewModel.accessToken()
+                        tokenViewModel.loadAllTokens()
                     },
                     text = { Text("OIDC") }
                 )

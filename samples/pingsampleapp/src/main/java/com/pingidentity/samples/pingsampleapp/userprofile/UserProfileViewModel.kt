@@ -72,11 +72,10 @@ class UserProfileViewModel : ViewModel() {
     }
 
     fun userinfo() {
-        when (state.value.selectedTab) {
-            UserProfileType.JOURNEY -> journeyUserInfo()
-            UserProfileType.DAVINCI -> daVinciUserInfo()
-            UserProfileType.OIDC -> oidcUserInfo()
-        }
+        // Load user info for ALL authentication types to ensure all sessions are displayed
+        journeyUserInfo()
+        daVinciUserInfo()
+        oidcUserInfo()
     }
 
     fun toggleUserInfo() {
