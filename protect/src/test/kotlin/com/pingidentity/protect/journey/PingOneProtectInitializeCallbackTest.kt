@@ -55,39 +55,31 @@ class PingOneProtectInitializeCallbackTest {
                   "value": "02fb4743-189a-4bc7-9d6c-a919edfe6447"
                 },
                 {
-                  "name": "consoleLogEnabled",
+                  "name": "agentIdentification",
                   "value": true
                 },
                 {
-                  "name": "deviceAttributesToIgnore",
-                  "value": ["attr1", "attr2"]
+                  "name": "agentTimeout",
+                  "value": 200
                 },
                 {
                   "name": "customHost",
                   "value": "host.example.com"
                 },
                 {
-                  "name": "lazyMetadata",
-                  "value": true
+                  "name": "agentPort",
+                  "value": 8089
                 },
                 {
                   "name": "behavioralDataCollection",
                   "value": true
                 },
                 {
-                  "name": "deviceKeyRsyncIntervals",
-                  "value": 14
-                },
-                {
-                  "name": "enableTrust",
+                  "name": "universalDeviceIdentification",
                   "value": false
                 },
                 {
                   "name": "disableTags",
-                  "value": false
-                },
-                {
-                  "name": "disableHub",
                   "value": false
                 }
               ],
@@ -114,16 +106,17 @@ class PingOneProtectInitializeCallbackTest {
 
         assertEquals("02fb4743-189a-4bc7-9d6c-a919edfe6447", callback.envId)
         assertTrue(callback.behavioralDataCollection)
-        assertTrue(callback.consoleLogEnabled)
-        assertTrue(callback.lazyMetadata)
+        assertTrue(callback.agentIdentification)
+        assertEquals(200,callback.agentTimeout)
+        assertEquals(8089, callback.agentPort)
         assertEquals("host.example.com", callback.customHost)
-        assertEquals(listOf("attr1", "attr2"), callback.deviceAttributesToIgnore)
 
         assertTrue(callback.start().isSuccess)
         verify(exactly = 1) { Protect.resumeBehavioralData() }
         val payload = callback.payload()
-        assertTrue(
-            payload["input"]?.jsonArray?.get(0)?.jsonObject?.get("value")?.jsonPrimitive?.content?.isEmpty() == true
+        assertEquals(
+            payload["input"]?.jsonArray?.get(0)?.jsonObject?.get("value")?.jsonPrimitive?.content?.isEmpty(),
+            true
         )
     }
 
@@ -173,10 +166,10 @@ class PingOneProtectInitializeCallbackTest {
 
         assertEquals("02fb4743-189a-4bc7-9d6c-a919edfe6447", callback.envId)
         assertFalse(callback.behavioralDataCollection)
-        assertFalse(callback.consoleLogEnabled)
-        assertFalse(callback.lazyMetadata)
+        assertFalse(callback.agentIdentification)
+        assertEquals(0,callback.agentPort)
         assertEquals("", callback.customHost)
-        assertTrue(callback.deviceAttributesToIgnore.isEmpty())
+        assertEquals(0,callback.agentTimeout)
     }
 
     @Test
@@ -195,11 +188,11 @@ class PingOneProtectInitializeCallbackTest {
                         "consoleLogEnabled" : true,
                         "deviceAttributesToIgnore" : [],
                         "customHost" : "",
-                        "lazyMetadata" : true,
+                        "agentIdentification" : true,
                         "behavioralDataCollection" : true,
-                        "disableHub" : true,
-                        "deviceKeyRsyncIntervals" : 10,
-                        "enableTrust" : true,
+                        "agentTimeout" : 200,
+                        "agentPort" : 8089,
+                        "universalDeviceIdentification" : true,
                         "disableTags" : true
                      }
                 }
@@ -211,12 +204,12 @@ class PingOneProtectInitializeCallbackTest {
         val callback = PingOneProtectInitializeCallback()
         val actualCallback = callback.init(jsonObject)
         assertTrue(actualCallback is PingOneProtectInitializeCallback)
-        assertTrue("02fb4743-189a-4bc7-9d6c-a919edfe6447" == actualCallback.envId)
-        assertTrue(actualCallback.consoleLogEnabled)
-        assertTrue(actualCallback.lazyMetadata)
+        assertEquals("02fb4743-189a-4bc7-9d6c-a919edfe6447", actualCallback.envId)
+        assertTrue(actualCallback.agentIdentification)
+        assertEquals(8089, actualCallback.agentPort)
         assertTrue(actualCallback.behavioralDataCollection)
         assertEquals("", actualCallback.customHost)
-        assertTrue(actualCallback.deviceAttributesToIgnore.isEmpty())
+        assertEquals(200, actualCallback.agentTimeout)
 
         val continueNode = mockk<ContinueNode>()
         val hiddenValueCallback = object : ValueCallback {
