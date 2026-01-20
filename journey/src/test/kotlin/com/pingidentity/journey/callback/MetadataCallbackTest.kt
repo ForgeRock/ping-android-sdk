@@ -209,10 +209,10 @@ class MetadataCallbackTest {
                         "_type": "PingOneProtect",  
                         "_action": "protect_initialize",
                         "envId" : "02fb4743-189a-4bc7-9d6c-a919edfe6447",
-                        "consoleLogEnabled" : true,
-                        "deviceAttributesToIgnore" : [],
+                        "agentIdentification" : true,
+                        "agentTimeout" : 200,
                         "customHost" : "",
-                        "lazyMetadata" : true,
+                        "agentPort" : 8089,
                         "behavioralDataCollection" : true,
                         "disableHub" : true,
                         "deviceKeyRsyncIntervals" : 10,
@@ -229,12 +229,12 @@ class MetadataCallbackTest {
         callback.journey = journey
         val actualCallback = callback.init(jsonObject)
         assertTrue(actualCallback is PingOneProtectInitializeCallback)
-        assertTrue("02fb4743-189a-4bc7-9d6c-a919edfe6447" == actualCallback.envId)
-        assertTrue(actualCallback.consoleLogEnabled)
-        assertTrue(actualCallback.lazyMetadata)
+        assertEquals("02fb4743-189a-4bc7-9d6c-a919edfe6447", actualCallback.envId)
+        assertTrue(actualCallback.agentIdentification)
+        assertEquals(200, actualCallback.agentTimeout)
         assertTrue(actualCallback.behavioralDataCollection)
         assertEquals("", actualCallback.customHost)
-        assertTrue(actualCallback.deviceAttributesToIgnore.isEmpty())
+        assertEquals(8089, actualCallback.agentPort)
     }
 
     @Test
