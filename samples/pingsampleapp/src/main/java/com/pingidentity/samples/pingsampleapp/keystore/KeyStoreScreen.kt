@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.AlertDialog
@@ -51,7 +52,10 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun KeyStoreScreen(keyStoreViewModel: KeyStoreViewModel = viewModel<KeyStoreViewModel>()) {
+fun KeyStoreScreen(
+    keyStoreViewModel: KeyStoreViewModel = viewModel<KeyStoreViewModel>(),
+    onBack: (() -> Unit)? = null,
+) {
     val keyAliases by keyStoreViewModel.keyAliases.collectAsState()
     val isLoading by keyStoreViewModel.isLoading.collectAsState()
     val error by keyStoreViewModel.error.collectAsState()
@@ -104,6 +108,16 @@ fun KeyStoreScreen(keyStoreViewModel: KeyStoreViewModel = viewModel<KeyStoreView
         topBar = {
             TopAppBar(
                 title = { Text("KeyStore Aliases") },
+                navigationIcon = {
+                    if (onBack != null) {
+                        IconButton(onClick = onBack) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Back"
+                            )
+                        }
+                    }
+                },
                 actions = {
                     IconButton(onClick = { keyStoreViewModel.loadKeyAliases() }) {
                         Icon(Icons.Default.Refresh, contentDescription = "Refresh")

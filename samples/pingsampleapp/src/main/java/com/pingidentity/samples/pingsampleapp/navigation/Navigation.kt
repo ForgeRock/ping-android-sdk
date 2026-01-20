@@ -314,7 +314,9 @@ fun AppNavigation(
         }
         
         composable(Route.BINDING_KEYS) {
-            KeyStoreScreen()
+            KeyStoreScreen(
+                onBack = { navController.popBackStack() }
+            )
         }
         
         composable(Route.CONFIGURATION) {
