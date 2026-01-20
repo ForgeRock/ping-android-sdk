@@ -320,7 +320,9 @@ fun AppNavigation(
         }
         
         composable(Route.CONFIGURATION) {
-            Env()
+            Env(
+                onBack = { navController.popBackStack() }
+            )
         }
 
         composable(Route.QR_SCANNER) {

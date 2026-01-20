@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckBoxOutlineBlank
 import androidx.compose.material.icons.filled.Done
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -22,7 +23,9 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -38,36 +41,56 @@ import java.net.URL
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun Env(envViewModel: EnvViewModel = viewModel<EnvViewModel>()) {
+fun Env(
+    envViewModel: EnvViewModel = viewModel<EnvViewModel>(),
+    onBack: (() -> Unit)? = null,
+) {
     AppTheme {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(8.dp)
-        ) {
-            Spacer(modifier = Modifier.padding(24.dp).fillMaxWidth())
-
-            Text(
-                text = stringResource(R.string.text_configuration_selected_environment),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(8.dp),
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            LazyColumn(modifier = Modifier) {
-                envViewModel.oidcConfigs.forEach { config ->
-                    item {
-                        ServerSetting(
-                            option = config,
-                            envViewModel.current.display == config.display
-                        ) {
-                            envViewModel.select(it)
+        Scaffold(
+            topBar = {
+                if (onBack != null) {
+                    TopAppBar(
+                        title = { Text("Configuration") },
+                        navigationIcon = {
+                            IconButton(onClick = onBack) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                    contentDescription = "Back"
+                                )
+                            }
+                        }
+                    )
+                }
+            }
+        ) { paddingValues ->
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(paddingValues)
+                    .padding(8.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.text_configuration_selected_environment),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(8.dp),
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                LazyColumn(modifier = Modifier) {
+                    envViewModel.oidcConfigs.forEach { config ->
+                        item {
+                            ServerSetting(
+                                option = config,
+                                envViewModel.current.display == config.display
+                            ) {
+                                envViewModel.select(it)
+                            }
                         }
                     }
                 }
-            }
 
-            Spacer(modifier = Modifier.padding(12.dp).fillMaxWidth())
+                Spacer(modifier = Modifier.padding(12.dp).fillMaxWidth())
+            }
         }
 
     }
@@ -117,5 +140,7 @@ private fun SelectServerButton(
 @Preview
 @Composable
 fun PreviewEnv() {
-    Env()
+    Env() {
+
+    }
 }
