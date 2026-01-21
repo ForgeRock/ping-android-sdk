@@ -75,6 +75,7 @@
             android:taskAffinity=""
             android:showOnLockScreen="true"
             android:turnScreenOn="true"
+            android:excludeFromRecents="true"
             android:noHistory="true" />
 
         <!-- Push Notification Activity -->
@@ -84,7 +85,7 @@
             android:theme="@style/Theme.Ping"
             android:launchMode="singleTask"
             android:taskAffinity=""
-            android:excludeFromRecents="false"
+            android:excludeFromRecents="true"
             android:noHistory="true" />
 
         <!-- Facebook Login -->
