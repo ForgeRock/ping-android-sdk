@@ -42,11 +42,11 @@ val testDaVinci by lazy {
         timeout = 30.seconds.inWholeMilliseconds
         logger = Logger.STANDARD
         module(DaVinciOidc) {
-            clientId = "021b83ce-a9b1-4ad4-8c1d-79e576eeab76"
-            discoveryEndpoint = "https://auth.pingone.ca/02fb4743-189a-4bc7-9d6c-a919edfe6447/as/.well-known/openid-configuration"
-            scopes = mutableSetOf("openid", "email", "address", "phone", "profile")
+            clientId = "dummy"
+            discoveryEndpoint =
+                "https://auth.test-one-pingone.com/dummy/as/.well-known/openid-configuration"
+            scopes = mutableSetOf("openid", "email", "address")
             redirectUri = "org.forgerock.demo://oauth2redirect"
-            acrValues = "79220c5e3a217a3d9b6739585cb160aa"
             display = "DaVinci Test Config"
             storage {
                 fileName = "daVinci"
