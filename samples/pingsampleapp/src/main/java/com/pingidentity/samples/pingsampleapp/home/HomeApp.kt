@@ -34,7 +34,6 @@ import androidx.compose.material.icons.filled.LockPerson
 import androidx.compose.material.icons.filled.LogoDev
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.Preview
 import androidx.compose.material.icons.filled.QrCodeScanner
@@ -95,7 +94,6 @@ fun HomeApp(
     onConfigurationClick : () -> Unit,
     onQrScannerClick : () -> Unit,
     onOathClick : () -> Unit,
-    onPushClick : () -> Unit,
     onPushNotificationClick : () -> Unit,
     onDeviceIdClick : () -> Unit,
     onAuthTestScreenClick : () -> Unit,
@@ -283,13 +281,6 @@ fun HomeApp(
                 )
 
                 IconRowItem(
-                    icon = Icons.Default.NotificationsActive,
-                    title = stringResource(R.string.text_push_title),
-                    subtitle = stringResource(R.string.text_push_subtitle),
-                    onClick = onPushClick
-                )
-
-                IconRowItem(
                     icon = Icons.Default.Notifications,
                     title = stringResource(R.string.text_push_notification_title),
                     subtitle = stringResource(R.string.text_push_notification_subtitle),
@@ -474,7 +465,6 @@ fun PreviewHomeApp() {
         onConfigurationClick = {},
         onQrScannerClick = {},
         onOathClick = {},
-        onPushClick = {},
         onPushNotificationClick = {},
         onDeviceIdClick = {},
         onAuthTestScreenClick = {}

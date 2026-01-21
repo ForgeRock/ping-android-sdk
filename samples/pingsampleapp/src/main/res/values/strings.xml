@@ -37,10 +37,8 @@
     <!-- MFA section -->
     <string name="text_qr_scanner_title">QR Scanner</string>
     <string name="text_qr_scanner_subtitle">Scan QR for registration</string>
-    <string name="text_oath_title">OATH</string>
-    <string name="text_oath_subtitle">Manage TOPT and HOPT accounts</string>
-    <string name="text_push_title">Push</string>
-    <string name="text_push_subtitle">Manage push authentication accounts</string>
+    <string name="text_oath_title">MFA Accounts</string>
+    <string name="text_oath_subtitle">Manage TOPT, HOPT and push accounts</string>
     <string name="text_push_notification_title">Push Notifications</string>
     <string name="text_push_notification_subtitle">View and respond push requests</string>
 

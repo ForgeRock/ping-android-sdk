@@ -88,7 +88,6 @@ object Route {
     const val CONFIGURATION = "configuration"
     const val QR_SCANNER = "qr_scanner"
     const val OATH = "oath"
-    const val PUSH = "push"
     const val PUSH_NOTIFICATION = "push_notification"
     const val ROUTE_AUTH_APP_MANUAL_ENTRY = "route_auth_app_manual_entry"
     const val ROUTE_AUTH_APP_EDIT_ACCOUNTS = "route_auth_app_edit_accounts"
@@ -161,9 +160,6 @@ fun AppNavigation(
                 },
                 onOathClick = {
                     navController.navigate(Route.OATH)
-                },
-                onPushClick = {
-                    navController.navigate(Route.PUSH)
                 },
                 onPushNotificationClick = {
                     navController.navigate(Route.PUSH_NOTIFICATION)
@@ -346,41 +342,6 @@ fun AppNavigation(
         }
 
         composable(Route.OATH) {
-            authenticatorViewModel?.let { viewModel ->
-                AccountsScreen(
-                    viewModel = viewModel,
-                    onScanQrCode = {
-                        navController.navigate(Route.QR_SCANNER)
-                    },
-                    onAddManually = {
-                        navController.navigate(Route.ROUTE_AUTH_APP_MANUAL_ENTRY)
-                    },
-                    onAccountClick = { accountId ->
-                        navController.navigate(Route.routeForAuthAppAccount(accountId))
-                    },
-                    onNotificationsClick = {
-                        navController.navigate(Route.PUSH_NOTIFICATION)
-                    },
-                    onSettingsClick = {
-                        navController.navigate(Route.ROUTE_AUTH_APP_SETTINGS)
-                    },
-                    onAboutClick = {
-                        navController.navigate(Route.ROUTE_AUTH_APP_ABOUT)
-                    },
-                    onEditAccountsClick = {
-                        navController.navigate(Route.ROUTE_AUTH_APP_EDIT_ACCOUNTS)
-                    },
-                    onTestModeClick = {
-                        navController.navigate(Route.ROUTE_AUTH_TEST_APP)
-                    },
-                    onNavigateToLogin = {
-                        navController.navigate(Route.JOURNEY_ROUTE)
-                    }
-                )
-            }
-        }
-
-        composable(Route.PUSH) {
             authenticatorViewModel?.let { viewModel ->
                 AccountsScreen(
                     viewModel = viewModel,

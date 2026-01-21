@@ -84,7 +84,8 @@
             android:theme="@style/Theme.Ping"
             android:launchMode="singleTask"
             android:taskAffinity=""
-            android:excludeFromRecents="false" />
+            android:excludeFromRecents="false"
+            android:noHistory="true" />
 
         <!-- Facebook Login -->
         <meta-data
