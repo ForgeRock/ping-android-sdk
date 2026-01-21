@@ -42,17 +42,20 @@ val testDaVinci by lazy {
         timeout = 30.seconds.inWholeMilliseconds
         logger = Logger.STANDARD
         module(DaVinciOidc) {
-            clientId = "dummy"
-            discoveryEndpoint =
-                "https://auth.test-one-pingone.com/dummy/as/.well-known/openid-configuration"
-            scopes = mutableSetOf("openid", "email", "address")
+            clientId = "021b83ce-a9b1-4ad4-8c1d-79e576eeab76"
+            discoveryEndpoint = "https://auth.pingone.ca/02fb4743-189a-4bc7-9d6c-a919edfe6447/as/.well-known/openid-configuration"
+            scopes = mutableSetOf("openid", "email", "address", "phone", "profile")
             redirectUri = "org.forgerock.demo://oauth2redirect"
+            acrValues = "79220c5e3a217a3d9b6739585cb160aa"
             display = "DaVinci Test Config"
+            storage {
+                fileName = "daVinci"
+            }
         }
     }
 }
 
-val forgeBlock by lazy {
+val journeyTest by lazy {
     Journey {
         logger = Logger.STANDARD
 
@@ -66,8 +69,10 @@ val forgeBlock by lazy {
                 "https://openam-sdks.forgeblocks.com/am/oauth2/alpha/.well-known/openid-configuration"
             scopes = mutableSetOf("openid", "email", "address", "profile", "phone")
             redirectUri = "org.forgerock.demo:/oauth2redirect"
-            display = "Forgeblock Test Config"
-            //storage = dataStore
+            display = "Journey Test Config"
+            storage {
+                fileName = "journey"
+            }
         }
     }
 }
@@ -86,7 +91,9 @@ val localhost by lazy {
             scopes = mutableSetOf("openid", "email", "address", "profile", "phone")
             redirectUri = "org.forgerock.demo:/oauth2redirect"
             display = "Localhost"
-            //storage = dataStore
+            storage {
+                fileName = "journey"
+            }
         }
     }
 }
@@ -101,6 +108,9 @@ val prodDaVinci by lazy {
             scopes = mutableSetOf("openid", "email", "address", "phone", "profile")
             redirectUri = "org.forgerock.demo://oauth2redirect"
             display = "DaVinci Prod Config"
+            storage {
+                fileName = "daVinci"
+            }
         }
     }
 }
@@ -115,6 +125,9 @@ val social by lazy {
             scopes = mutableSetOf("openid", "email", "address")
             redirectUri = "com.pingidentity.demo://oauth2redirect"
             display = "Social Config"
+            storage {
+                fileName = "daVinci"
+            }
         }
     }
 }
@@ -163,7 +176,7 @@ val oidcPingOne by lazy {
     }
 }
 
-var journey = forgeBlock
+var journey = journeyTest
 var oidcClient: OidcClient? = null
 var daVinci: DaVinci? = null
 var web: OidcWeb? = null
@@ -171,12 +184,12 @@ lateinit var redirectUri: Uri //For Social Login redirect parameter using Auth T
 
 
 class EnvViewModel : ViewModel() {
-    private val journeyServers = listOf(forgeBlock, localhost)
+    private val journeyServers = listOf(journeyTest, localhost)
     private val daVinciServers = listOf(testDaVinci, prodDaVinci, social)
     private val oidcServers = listOf(oidcForgeBlock, oidcPingOne)
 
     val oidcConfigs = listOf(
-        forgeBlock.oidcConfig(),
+        journeyTest.oidcConfig(),
         localhost.oidcConfig(),
         testDaVinci.oidcConfig(),
         prodDaVinci.oidcConfig(),
@@ -185,7 +198,7 @@ class EnvViewModel : ViewModel() {
         oidcPingOne.oidcConfig(),
     )
 
-    var current by mutableStateOf(forgeBlock.oidcConfig())
+    var current by mutableStateOf(journeyTest.oidcConfig())
         private set
 
     init {
@@ -231,9 +244,9 @@ class EnvViewModel : ViewModel() {
 
     fun select(config: OidcClientConfig) {
         // Determine if this is a Journey, DaVinci, or standalone OIDC server
-        val journeyServer = journeyServers.firstOrNull { it.oidcConfig().clientId == config.clientId }
-        val daVinciServer = daVinciServers.firstOrNull { it.oidcConfig().clientId == config.clientId }
-        val oidcServer = oidcServers.firstOrNull { it.oidcConfig().clientId == config.clientId }
+        val journeyServer = journeyServers.firstOrNull { it.oidcConfig().display == config.display }
+        val daVinciServer = daVinciServers.firstOrNull { it.oidcConfig().display == config.display }
+        val oidcServer = oidcServers.firstOrNull { it.oidcConfig().display == config.display }
 
         when {
             journeyServer != null -> {
@@ -249,9 +262,6 @@ class EnvViewModel : ViewModel() {
                     display = oidcConfig.display ?: "Journey"
                 }
 
-                // Also initialize OidcWeb for centralized login compatibility
-                web = createOidcWeb(oidcConfig)
-
                 // Only logout if switching to a different Journey config
                 if (current.clientId != config.clientId && journeyServers.any { it.oidcConfig().clientId == current.clientId }) {
                     CoroutineScope(Dispatchers.Default).launch {
@@ -264,9 +274,6 @@ class EnvViewModel : ViewModel() {
                 val oidcConfig = daVinciServer.oidcConfig()
                 redirectUri = oidcConfig.redirectUri.toUri()
 
-                // Also initialize OidcWeb for centralized login compatibility
-                web = createOidcWeb(oidcConfig)
-
                 // Only logout if switching to a different DaVinci config
                 if (current.clientId != config.clientId && daVinciServers.any { it.oidcConfig().clientId == current.clientId }) {
                     CoroutineScope(Dispatchers.Default).launch {
@@ -276,7 +283,7 @@ class EnvViewModel : ViewModel() {
             }
             oidcServer != null -> {
                 // Initialize standalone OIDC Web
-                web = oidcServer
+                web = createOidcWeb(oidcServer.oidcConfig())
                 val oidcConfig = oidcServer.oidcConfig()
                 redirectUri = oidcConfig.redirectUri.toUri()
 
@@ -289,8 +296,8 @@ class EnvViewModel : ViewModel() {
             }
             else -> {
                 // Default to forgeblock
-                journey = forgeBlock
-                val oidcConfig = forgeBlock.oidcConfig()
+                journey = journeyTest
+                val oidcConfig = journeyTest.oidcConfig()
                 redirectUri = oidcConfig.redirectUri.toUri()
 
                 oidcClient = OidcClient {
@@ -300,9 +307,6 @@ class EnvViewModel : ViewModel() {
                     redirectUri = oidcConfig.redirectUri
                     display = oidcConfig.display ?: "Forgerock"
                 }
-
-                // Also initialize OidcWeb for centralized login compatibility
-                web = createOidcWeb(oidcConfig)
             }
         }
 
@@ -337,7 +341,7 @@ class EnvViewModel : ViewModel() {
                 this.display = display
             }
         } else {
-            forgeBlock.oidcConfig()
+            journeyTest.oidcConfig()
         }
     }
 }

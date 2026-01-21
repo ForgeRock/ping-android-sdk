@@ -296,7 +296,9 @@ fun AppNavigation(
         }
         
         composable(Route.LOGOUT) {
-            Logout()
+            Logout(
+                onBack = { navController.popBackStack() }
+            )
         }
         
         composable(Route.DEVICE_INFO) {

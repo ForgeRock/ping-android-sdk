@@ -9,7 +9,8 @@ package com.pingidentity.samples.pingsampleapp.logout
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.pingidentity.journey.user
+import com.pingidentity.journey.user as journeyUser
+import com.pingidentity.davinci.user as davinciUser
 import com.pingidentity.samples.pingsampleapp.config.daVinci
 import com.pingidentity.samples.pingsampleapp.config.journey
 import com.pingidentity.samples.pingsampleapp.config.web
@@ -27,8 +28,8 @@ class LogoutViewModel: ViewModel() {
     fun listLogoutOptions() {
         viewModelScope.launch {
             state.value = LogoutState(
-                daVinci = daVinci?.user() != null,
-                journey = journey.user() != null,
+                daVinci = daVinci?.davinciUser() != null,
+                journey = journey.journeyUser() != null,
                 oidc = web?.user() != null,
             )
         }
@@ -36,14 +37,14 @@ class LogoutViewModel: ViewModel() {
 
     fun logoutJourney(onCompleted: () -> Unit) {
         viewModelScope.launch {
-            journey.user()?.logout()
+            journey.journeyUser()?.logout()
             onCompleted()
         }
     }
 
     fun logoutDaVinci(onCompleted: () -> Unit) {
         viewModelScope.launch {
-            daVinci?.user()?.logout()
+            daVinci?.davinciUser()?.logout()
             onCompleted()
         }
     }
@@ -58,8 +59,8 @@ class LogoutViewModel: ViewModel() {
     fun logoutAll(onCompleted: () -> Unit) {
         viewModelScope.launch {
             // Logout from all active sessions
-            journey.user()?.logout()
-            daVinci?.user()?.logout()
+            journey.journeyUser()?.logout()
+            daVinci?.davinciUser()?.logout()
             web?.user()?.logout()
             onCompleted()
         }

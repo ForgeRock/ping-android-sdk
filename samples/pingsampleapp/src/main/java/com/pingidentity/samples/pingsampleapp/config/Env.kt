@@ -76,24 +76,92 @@ fun Env(
                     modifier = Modifier.padding(8.dp),
                     color = MaterialTheme.colorScheme.onSurface
                 )
-                LazyColumn(modifier = Modifier) {
-                    envViewModel.oidcConfigs.forEach { config ->
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                ) {
+                    // Journey Configurations
+                    val journeyConfigs = envViewModel.oidcConfigs.filter {
+                        it.display?.contains("Journey", ignoreCase = true) == true ||
+                        it.display?.contains("Forgerock", ignoreCase = true) == true ||
+                        it.display?.contains("Localhost", ignoreCase = true) == true
+                    }
+                    if (journeyConfigs.isNotEmpty()) {
                         item {
-                            ServerSetting(
-                                option = config,
-                                envViewModel.current.display == config.display
-                            ) {
-                                envViewModel.select(it)
+                            ConfigurationSectionHeader("Journey")
+                        }
+                        journeyConfigs.forEach { config ->
+                            item {
+                                ServerSetting(
+                                    option = config,
+                                    envViewModel.current.display == config.display
+                                ) {
+                                    envViewModel.select(it)
+                                }
+                            }
+                        }
+                    }
+
+                    // DaVinci Configurations
+                    val daVinciConfigs = envViewModel.oidcConfigs.filter {
+                        it.display?.contains("DaVinci", ignoreCase = true) == true ||
+                        it.display?.contains("Social", ignoreCase = true) == true
+                    }
+                    if (daVinciConfigs.isNotEmpty()) {
+                        item {
+                            ConfigurationSectionHeader("DaVinci")
+                        }
+                        daVinciConfigs.forEach { config ->
+                            item {
+                                ServerSetting(
+                                    option = config,
+                                    envViewModel.current.display == config.display
+                                ) {
+                                    envViewModel.select(it)
+                                }
+                            }
+                        }
+                    }
+
+                    // OIDC (Web) Configurations
+                    val oidcConfigs = envViewModel.oidcConfigs.filter {
+                        it.display?.contains("OIDC", ignoreCase = true) == true ||
+                        it.display?.contains("PingOne", ignoreCase = true) == true
+                    }
+                    if (oidcConfigs.isNotEmpty()) {
+                        item {
+                            ConfigurationSectionHeader("OIDC (Web)")
+                        }
+                        oidcConfigs.forEach { config ->
+                            item {
+                                ServerSetting(
+                                    option = config,
+                                    envViewModel.current.display == config.display
+                                ) {
+                                    envViewModel.select(it)
+                                }
                             }
                         }
                     }
                 }
-
-                Spacer(modifier = Modifier.padding(12.dp).fillMaxWidth())
             }
         }
 
     }
+}
+
+@Composable
+private fun ConfigurationSectionHeader(title: String) {
+    Text(
+        text = title,
+        style = MaterialTheme.typography.titleLarge,
+        fontWeight = FontWeight.Bold,
+        color = MaterialTheme.colorScheme.primary,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 8.dp, vertical = 12.dp)
+    )
 }
 
 @Composable

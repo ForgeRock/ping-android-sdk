@@ -12,11 +12,18 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -28,8 +35,12 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.pingidentity.samples.pingsampleapp.theme.AppTheme
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun Logout(logoutViewModel: LogoutViewModel = viewModel<LogoutViewModel>()) {
+fun Logout(
+    logoutViewModel: LogoutViewModel = viewModel<LogoutViewModel>(),
+    onBack: (() -> Unit)? = null,
+) {
     val state by logoutViewModel.state.collectAsState()
 
     LaunchedEffect(true) {
@@ -37,118 +48,136 @@ fun Logout(logoutViewModel: LogoutViewModel = viewModel<LogoutViewModel>()) {
     }
 
     AppTheme {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(8.dp)
-        ) {
-            Spacer(modifier = Modifier.padding(24.dp).fillMaxWidth())
-            Text(
-                text = "Active Sessions",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(8.dp)
-            )
-            Text(
-                text = "Select a session to logout",
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-            )
-
-            // Logout All button - enabled only when there are active sessions
-            val hasActiveSessions = state.journey || state.daVinci || state.oidc
-            Button(
-                onClick = {
-                    logoutViewModel.logoutAll {
-                        // Refresh the list after logout
-                        logoutViewModel.listLogoutOptions()
-                    }
-                },
-                enabled = hasActiveSessions,
+        Scaffold(
+            topBar = {
+                if (onBack != null) {
+                    TopAppBar(
+                        title = { Text("Logout") },
+                        navigationIcon = {
+                            IconButton(onClick = onBack) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                    contentDescription = "Back"
+                                )
+                            }
+                        }
+                    )
+                }
+            }
+        ) { paddingValues ->
+            Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 8.dp, vertical = 8.dp)
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .padding(8.dp)
             ) {
                 Text(
-                    text = if (hasActiveSessions) "Logout All Sessions" else "No Active Sessions",
+                    text = "Active Sessions",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(8.dp)
                 )
-            }
+                Text(
+                    text = "Select a session to logout",
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                )
 
-            Spacer(modifier = Modifier.padding(8.dp))
-
-            LazyColumn(
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                // Journey Session
-                if (state.journey) {
-                    item {
-                        LogoutOptionCard(
-                            title = "Journey Session",
-                            description = "Logout from ForgeRock Journey authentication",
-                            onLogout = {
-                                logoutViewModel.logoutJourney {
-                                    // Refresh the list after logout
-                                    logoutViewModel.listLogoutOptions()
-                                }
-                            }
-                        )
-                    }
+                // Logout All button - enabled only when there are active sessions
+                val hasActiveSessions = state.journey || state.daVinci || state.oidc
+                Button(
+                    onClick = {
+                        logoutViewModel.logoutAll {
+                            // Refresh the list after logout
+                            logoutViewModel.listLogoutOptions()
+                        }
+                    },
+                    enabled = hasActiveSessions,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 8.dp, vertical = 8.dp)
+                ) {
+                    Text(
+                        text = if (hasActiveSessions) "Logout All Sessions" else "No Active Sessions",
+                        modifier = Modifier.padding(8.dp)
+                    )
                 }
 
-                // DaVinci Session
-                if (state.daVinci) {
-                    item {
-                        LogoutOptionCard(
-                            title = "DaVinci Session",
-                            description = "Logout from PingOne DaVinci authentication",
-                            onLogout = {
-                                logoutViewModel.logoutDaVinci {
-                                    // Refresh the list after logout
-                                    logoutViewModel.listLogoutOptions()
-                                }
-                            }
-                        )
-                    }
-                }
+                Spacer(modifier = Modifier.padding(8.dp))
 
-                // OIDC Web Session
-                if (state.oidc) {
-                    item {
-                        LogoutOptionCard(
-                            title = "OIDC Web Session",
-                            description = "Logout from OIDC Web authentication",
-                            onLogout = {
-                                logoutViewModel.logoutOidcWeb {
-                                    // Refresh the list after logout
-                                    logoutViewModel.listLogoutOptions()
+                LazyColumn(
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    // Journey Session
+                    if (state.journey) {
+                        item {
+                            LogoutOptionCard(
+                                title = "Journey Session",
+                                description = "Logout from ForgeRock Journey authentication",
+                                onLogout = {
+                                    logoutViewModel.logoutJourney {
+                                        // Refresh the list after logout
+                                        logoutViewModel.listLogoutOptions()
+                                    }
                                 }
-                            }
-                        )
+                            )
+                        }
                     }
-                }
 
-                // No active sessions
-                if (!state.journey && !state.daVinci && !state.oidc) {
-                    item {
-                        Card(
-                            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(8.dp),
-                            shape = MaterialTheme.shapes.medium,
-                        ) {
-                            Column(modifier = Modifier.padding(16.dp)) {
-                                Text(
-                                    text = "No Active Sessions",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Spacer(modifier = Modifier.padding(4.dp))
-                                Text(
-                                    text = "You are not logged in to any session",
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
+                    // DaVinci Session
+                    if (state.daVinci) {
+                        item {
+                            LogoutOptionCard(
+                                title = "DaVinci Session",
+                                description = "Logout from PingOne DaVinci authentication",
+                                onLogout = {
+                                    logoutViewModel.logoutDaVinci {
+                                        // Refresh the list after logout
+                                        logoutViewModel.listLogoutOptions()
+                                    }
+                                }
+                            )
+                        }
+                    }
+
+                    // OIDC Web Session
+                    if (state.oidc) {
+                        item {
+                            LogoutOptionCard(
+                                title = "OIDC Web Session",
+                                description = "Logout from OIDC Web authentication",
+                                onLogout = {
+                                    logoutViewModel.logoutOidcWeb {
+                                        // Refresh the list after logout
+                                        logoutViewModel.listLogoutOptions()
+                                    }
+                                }
+                            )
+                        }
+                    }
+
+                    // No active sessions
+                    if (!state.journey && !state.daVinci && !state.oidc) {
+                        item {
+                            Card(
+                                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(8.dp),
+                                shape = MaterialTheme.shapes.medium,
+                            ) {
+                                Column(modifier = Modifier.padding(16.dp)) {
+                                    Text(
+                                        text = "No Active Sessions",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    Spacer(modifier = Modifier.padding(4.dp))
+                                    Text(
+                                        text = "You are not logged in to any session",
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
+                                }
                             }
                         }
                     }
@@ -196,5 +225,7 @@ fun LogoutOptionCard(
 @Preview
 @Composable
 fun PreviewLogout() {
-    Logout()
+    Logout() {
+
+    }
 }
