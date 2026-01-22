@@ -110,6 +110,7 @@ class PingOneProtectInitializeCallbackTest {
         assertEquals(200,callback.agentTimeout)
         assertEquals(8089, callback.agentPort)
         assertEquals("host.example.com", callback.customHost)
+        assertFalse(callback.universalDeviceIdentification)
 
         assertTrue(callback.start().isSuccess)
         verify(exactly = 1) { Protect.resumeBehavioralData() }
@@ -188,8 +189,8 @@ class PingOneProtectInitializeCallbackTest {
                         "consoleLogEnabled" : true,
                         "deviceAttributesToIgnore" : [],
                         "customHost" : "",
-                        "agentIdentification" : true,
                         "behavioralDataCollection" : true,
+                        "agentIdentification" : true,
                         "agentTimeout" : 200,
                         "agentPort" : 8089,
                         "universalDeviceIdentification" : true,
@@ -210,6 +211,7 @@ class PingOneProtectInitializeCallbackTest {
         assertTrue(actualCallback.behavioralDataCollection)
         assertEquals("", actualCallback.customHost)
         assertEquals(200, actualCallback.agentTimeout)
+        assertTrue(actualCallback.universalDeviceIdentification)
 
         val continueNode = mockk<ContinueNode>()
         val hiddenValueCallback = object : ValueCallback {
@@ -249,7 +251,10 @@ class PingOneProtectInitializeCallbackTest {
                         "behavioralDataCollection" : true,
                         "disableHub" : true,
                         "deviceKeyRsyncIntervals" : 10,
-                        "enableTrust" : true,
+                        "agentIdentification" : true,
+                        "agentTimeout" : 200,
+                        "agentPort" : 8089,
+                        "universalDeviceIdentification" : true,
                         "disableTags" : true
                      }
                 }

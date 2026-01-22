@@ -10,14 +10,10 @@ package com.pingidentity.protect.journey
 import com.pingidentity.protect.Protect
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
-import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.boolean
 import kotlinx.serialization.json.int
-import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonPrimitive
-import java.util.Collections
-import kotlin.coroutines.coroutineContext
 
 /**
  * A callback class for initializing the PingOne Protect SDK.
@@ -43,6 +39,8 @@ class PingOneProtectInitializeCallback : AbstractProtectCallback() {
         private set
     var agentPort: Int = 0
         private set
+    var universalDeviceIdentification: Boolean = false
+        private set
 
     override fun init(name: String, value: JsonElement) {
         when (name) {
@@ -52,6 +50,7 @@ class PingOneProtectInitializeCallback : AbstractProtectCallback() {
             "agentIdentification" -> agentIdentification = value.jsonPrimitive.boolean
             "agentTimeout" -> agentTimeout = value.jsonPrimitive.jsonPrimitive.int
             "agentPort" -> agentPort = value.jsonPrimitive.jsonPrimitive.int
+            "universalDeviceIdentification" -> universalDeviceIdentification = value.jsonPrimitive.boolean
             else -> {}
         }
     }
@@ -69,6 +68,7 @@ class PingOneProtectInitializeCallback : AbstractProtectCallback() {
                 agentTimeout = this@PingOneProtectInitializeCallback.agentTimeout
                 agentPort = this@PingOneProtectInitializeCallback.agentPort
                 customHost = this@PingOneProtectInitializeCallback.customHost.nullIfEmpty()
+                universalDeviceIdentification = this@PingOneProtectInitializeCallback.universalDeviceIdentification
             }
             if (behavioralDataCollection) {
                 Protect.resumeBehavioralData()

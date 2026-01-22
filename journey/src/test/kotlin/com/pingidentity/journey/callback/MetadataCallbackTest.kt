@@ -216,7 +216,7 @@ class MetadataCallbackTest {
                         "behavioralDataCollection" : true,
                         "disableHub" : true,
                         "deviceKeyRsyncIntervals" : 10,
-                        "enableTrust" : true,
+                        "universalDeviceIdentification" : true,
                         "disableTags" : true
                      }
                 }
@@ -235,6 +235,7 @@ class MetadataCallbackTest {
         assertTrue(actualCallback.behavioralDataCollection)
         assertEquals("", actualCallback.customHost)
         assertEquals(8089, actualCallback.agentPort)
+        assertTrue(actualCallback.universalDeviceIdentification)
     }
 
     @Test

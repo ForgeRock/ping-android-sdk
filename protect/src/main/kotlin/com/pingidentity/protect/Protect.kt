@@ -8,7 +8,6 @@
 package com.pingidentity.protect
 
 import com.pingidentity.android.ContextProvider
-import com.pingidentity.orchestrate.Module
 import com.pingidentity.signalssdk.sdk.GetDataCallback
 import com.pingidentity.signalssdk.sdk.InitCallback
 import com.pingidentity.signalssdk.sdk.POInitParams
@@ -152,6 +151,7 @@ open class ProtectConfig {
     var agentIdentification: Boolean = false
     var agentTimeout: Int = 0
     var agentPort: Int = 0
+    var universalDeviceIdentification: Boolean = false
 }
 
 
