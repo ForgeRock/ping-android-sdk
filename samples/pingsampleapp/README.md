@@ -1,0 +1,300 @@
+[![Ping Identity](https://www.pingidentity.com/content/dam/picr/nav/Ping-Logo-2.svg)](https://github.com/ForgeRock/ping-android-sdk)
+
+# Ping Sample App
+
+A comprehensive sample application demonstrating the integration of multiple Ping Identity SDK features in a single, unified application. This app serves as a reference implementation combining authentication flows, MFA capabilities, device management, and developer tools.
+
+## Overview
+
+The Ping Sample App is a consolidated sample that brings together functionality from multiple standalone samples (Journey, DaVinci, OIDC, and Authenticator) into one cohesive application. It demonstrates best practices for building production-ready Android applications with the Ping Identity SDK.
+
+## Key Features
+
+### 🔐 Authentication
+- **Journey Flow**: ForgeRock Journey-based authentication with callback rendering
+- **DaVinci Flow**: PingOne DaVinci authentication flows
+- **OIDC Login**: OpenID Connect web authentication
+
+### 👤 User Management
+- **User Profile**: View and display user information with JSON toggle
+- **Access Token**: View, refresh, and revoke access tokens with formatted JSON display
+- **Device Management**: Register, view, edit, and delete trusted devices
+- **Logout**: Comprehensive logout with session management (Journey, DaVinci, OIDC)
+
+### 🔑 Multi-Factor Authentication (MFA)
+- **OATH (TOTP/HOTP)**: 
+  - QR code scanning for account registration
+  - Manual account entry
+  - Time-based and counter-based OTP generation
+  - Account grouping by issuer
+- **Push Notifications**:
+  - Push authentication registration
+  - Notification history and management
+  - Biometric authentication support
+  - Challenge verification
+- **QR Scanner**: Integrated camera-based QR code scanning
+
+### 🛠️ Developer Tools
+- **Configuration**: Environment selection (Staging/Snapshot) with custom URL support
+- **Device Information**: Comprehensive device data collection and display
+- **Diagnostic Logging**: View application logs for debugging
+
+## Architecture
+
+### Application Structure
+
+The app follows a modular architecture with clear separation of concerns:
+
+```
+PingSampleApp
+├── Authentication Flows (Journey, DaVinci, OIDC)
+├── User Management (Profile, Token, Device, Logout)
+├── MFA Features (OATH, Push, QR Scanner)
+├── Developer Tools (Config, Device Info, Logger)
+└── Shared Components (Navigation, Theme, Config)
+```
+
+### Key Components
+
+#### 1. **PingSampleApplication**
+Application-level initialization and dependency management:
+- Initializes SDK clients (OATH, Push)
+- Creates and manages managers (OathManager, PushManager, JourneyManager)
+- Provides application-scoped AuthenticatorViewModel
+- Handles Firebase Cloud Messaging setup
+
+#### 2. **Navigation System**
+Centralized navigation with proper screen routing:
+- Home screen with categorized feature access
+- Deep linking support for authentication flows
+- Back navigation handling
+- Screen-specific ViewModels
+
+#### 3. **Authenticator Integration**
+Complete MFA functionality integrated from AuthenticatorApp:
+- **Managers**: OathManager, PushManager, JourneyManager, AccountGroupingManager
+- **UI Screens**: AccountsScreen, PushNotificationsScreen, QrScannerScreen, and more
+- **Services**: PushNotificationService, LocationService
+- **Notification Handlers**: BiometricPromptActivity, NotificationActionReceiver
+
+#### 4. **Device Management**
+Comprehensive device registration and management:
+- Device registration with custom names
+- Device list display with platform icons
+- Device editing (rename)
+- Device deletion with confirmation
+- Automatic list refresh
+
+#### 5. **Token Management**
+Access token viewing and manipulation:
+- Pretty-printed JSON display
+- Token refresh functionality
+- Token revocation
+- Scrollable token view with dropdown menu
+
+## Configuration
+
+### Environment Setup
+
+The app supports multiple environments configured via `EnvViewModel`:
+
+1. **Staging Environment** (default)
+2. **Snapshot Environment**
+3. **Custom Configuration** (manual URL entry)
+
+Configuration includes:
+- Discovery endpoint URL
+- Client ID
+- Redirect URI
+- Scopes
+- Cookie name
+
+### Firebase Setup
+
+For Push notifications:
+1. Add `google-services.json` to the app directory
+2. Configure Firebase Cloud Messaging in Firebase Console
+3. Enable push notifications in device settings
+
+## Implementation Highlights
+
+### ViewModel Initialization
+
+The app uses application-level ViewModel initialization for the AuthenticatorViewModel:
+
+```kotlin
+// In PingSampleApplication
+val authenticatorViewModel = AuthenticatorViewModel(
+    application = this,
+    userPreferences = userPreferences,
+    oathManager = oathManager,
+    pushManager = pushManager,
+    accountGroupingManager = accountGroupingManager,
+    testAccountFactory = testAccountFactory
+)
+```
+
+Access pattern in Composables:
+```kotlin
+var authenticatorViewModel by remember { mutableStateOf<AuthenticatorViewModel?>(null) }
+
+LaunchedEffect(Unit) {
+    authenticatorViewModel = PingSampleApplication.getAuthenticatorViewModel()
+}
+
+authenticatorViewModel?.let { viewModel ->
+    // Use ViewModel
+}
+```
+
+### Device Management Pattern
+
+Device operations follow a consistent pattern:
+
+```kotlin
+// Register Device
+deviceClient.register(deviceName, deviceType, pushToken)
+
+// Edit Device
+deviceClient.update(deviceId, newName, ifMatch)
+
+// Delete Device
+deviceClient.delete(deviceId)
+
+// List Devices
+deviceClient.devices()
+```
+
+### Token Display with State Flow
+
+Token formatting uses reactive StateFlow pattern:
+
+```kotlin
+val formattedToken = state.map { tokenState ->
+    tokenState.token?.let {
+        json.encodeToString(Token.serializer(), it)
+    } ?: "No token available"
+}
+```
+
+### Logout Session Management
+
+Supports multiple simultaneous sessions:
+
+```kotlin
+// Check active sessions
+val hasActiveSessions = state.journey || state.daVinci || state.oidc
+
+// Logout all sessions
+fun logoutAll() {
+    journey.user()?.logout()
+    daVinci?.user()?.logout()
+    web?.user()?.logout()
+}
+```
+
+## Screen Organization
+
+### Home Screen Categories
+
+**AUTHENTICATION**
+- DaVinci Flow
+- Journey Flow
+- OIDC Login
+
+**USER MANAGEMENT**
+- User Profile
+- Access Token
+- Device Management
+- Logout
+
+**MFA**
+- QR Scanner
+- OATH
+- Push
+- Push Notifications
+
+**DEVELOPER TOOLS**
+- Configuration
+- Device Information
+- Logger
+
+## Dependencies
+
+Key dependencies include:
+- Ping Identity SDK modules (Journey, DaVinci, OIDC, MFA)
+- Jetpack Compose for UI
+- Navigation Component
+- Firebase Cloud Messaging
+- CameraX for QR scanning
+- Biometric authentication
+- Kotlinx Serialization
+
+## Differences from Standalone Samples
+
+### vs. AuthenticatorApp
+- Integrated into main navigation (not standalone app)
+- Shares application lifecycle with other features
+- Uses PingSampleApplication instead of AuthenticatorApp
+- Consistent theme with rest of the app
+
+### vs. JourneyApp
+- Journey flows accessible from main navigation
+- Integrated with DaVinci and OIDC flows
+- Shared user management features
+- Combined logout functionality
+
+### vs. App Sample
+- Consolidated all features into single app
+- Unified navigation structure
+- Shared configuration system
+- Common theme and styling
+
+## Building and Running
+
+1. Clone the repository
+2. Add `google-services.json` for Firebase (optional, for push notifications)
+3. Configure environment in app (Settings → Configuration)
+4. Build and run:
+   ```bash
+   ./gradlew :samples:pingsampleapp:assembleDebug
+   ```
+
+## Package Structure
+
+```
+com.pingidentity.samples.pingsampleapp
+├── authenticator/              # MFA functionality
+│   ├── managers/              # Business logic managers
+│   ├── ui/                    # Authenticator screens
+│   ├── notification/          # Push notification handlers
+│   └── service/               # Background services
+├── config/                    # Environment configuration
+├── davinci/                   # DaVinci flow screens
+├── devicemanagement/          # Device registration/management
+├── home/                      # Main home screen
+├── journey/                   # Journey flow screens
+├── logout/                    # Logout functionality
+├── navigation/                # App navigation
+├── oidc/                      # OIDC authentication
+├── theme/                     # App theming
+├── token/                     # Token management
+├── userprofile/               # User profile display
+└── PingSampleApplication.kt   # Application entry point
+```
+
+## Known Limitations
+
+- Firebase configuration required for push notifications
+- Some Journey flows may require specific backend configuration
+- Device management requires authenticated session
+- Location services used in push notifications require permissions
+
+## Support
+
+For issues, questions, or contributions, please refer to the main Ping Android SDK repository.
+
+## License
+
+This sample application is licensed under the MIT License. See LICENSE file for details.
+
