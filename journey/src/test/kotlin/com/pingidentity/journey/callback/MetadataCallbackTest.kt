@@ -210,9 +210,7 @@ class MetadataCallbackTest {
                         "_action": "protect_initialize",
                         "envId" : "02fb4743-189a-4bc7-9d6c-a919edfe6447",
                         "agentIdentification" : true,
-                        "agentTimeout" : 200,
                         "customHost" : "",
-                        "agentPort" : 8089,
                         "behavioralDataCollection" : true,
                         "disableHub" : true,
                         "deviceKeyRsyncIntervals" : 10,
@@ -231,10 +229,8 @@ class MetadataCallbackTest {
         assertTrue(actualCallback is PingOneProtectInitializeCallback)
         assertEquals("02fb4743-189a-4bc7-9d6c-a919edfe6447", actualCallback.envId)
         assertTrue(actualCallback.agentIdentification)
-        assertEquals(200, actualCallback.agentTimeout)
         assertTrue(actualCallback.behavioralDataCollection)
         assertEquals("", actualCallback.customHost)
-        assertEquals(8089, actualCallback.agentPort)
         assertTrue(actualCallback.universalDeviceIdentification)
     }
 

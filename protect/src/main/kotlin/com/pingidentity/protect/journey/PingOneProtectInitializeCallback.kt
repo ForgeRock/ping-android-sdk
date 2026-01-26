@@ -12,7 +12,6 @@ import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.boolean
-import kotlinx.serialization.json.int
 import kotlinx.serialization.json.jsonPrimitive
 
 /**
@@ -35,10 +34,6 @@ class PingOneProtectInitializeCallback : AbstractProtectCallback() {
         private set
     var agentIdentification: Boolean = false
         private set
-    var agentTimeout: Int = 0
-        private set
-    var agentPort: Int = 0
-        private set
     var universalDeviceIdentification: Boolean = false
         private set
 
@@ -48,8 +43,6 @@ class PingOneProtectInitializeCallback : AbstractProtectCallback() {
             "behavioralDataCollection" -> behavioralDataCollection = value.jsonPrimitive.boolean
             "customHost" -> customHost = value.jsonPrimitive.content
             "agentIdentification" -> agentIdentification = value.jsonPrimitive.boolean
-            "agentTimeout" -> agentTimeout = value.jsonPrimitive.jsonPrimitive.int
-            "agentPort" -> agentPort = value.jsonPrimitive.jsonPrimitive.int
             "universalDeviceIdentification" -> universalDeviceIdentification = value.jsonPrimitive.boolean
             else -> {}
         }
@@ -65,8 +58,6 @@ class PingOneProtectInitializeCallback : AbstractProtectCallback() {
                 envId = this@PingOneProtectInitializeCallback.envId.nullIfEmpty()
                 isBehavioralDataCollection = behavioralDataCollection
                 agentIdentification = this@PingOneProtectInitializeCallback.agentIdentification
-                agentTimeout = this@PingOneProtectInitializeCallback.agentTimeout
-                agentPort = this@PingOneProtectInitializeCallback.agentPort
                 customHost = this@PingOneProtectInitializeCallback.customHost.nullIfEmpty()
                 universalDeviceIdentification = this@PingOneProtectInitializeCallback.universalDeviceIdentification
             }

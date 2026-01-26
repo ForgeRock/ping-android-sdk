@@ -59,16 +59,8 @@ class PingOneProtectInitializeCallbackTest {
                   "value": true
                 },
                 {
-                  "name": "agentTimeout",
-                  "value": 200
-                },
-                {
                   "name": "customHost",
                   "value": "host.example.com"
-                },
-                {
-                  "name": "agentPort",
-                  "value": 8089
                 },
                 {
                   "name": "behavioralDataCollection",
@@ -107,8 +99,6 @@ class PingOneProtectInitializeCallbackTest {
         assertEquals("02fb4743-189a-4bc7-9d6c-a919edfe6447", callback.envId)
         assertTrue(callback.behavioralDataCollection)
         assertTrue(callback.agentIdentification)
-        assertEquals(200,callback.agentTimeout)
-        assertEquals(8089, callback.agentPort)
         assertEquals("host.example.com", callback.customHost)
         assertFalse(callback.universalDeviceIdentification)
 
@@ -168,9 +158,7 @@ class PingOneProtectInitializeCallbackTest {
         assertEquals("02fb4743-189a-4bc7-9d6c-a919edfe6447", callback.envId)
         assertFalse(callback.behavioralDataCollection)
         assertFalse(callback.agentIdentification)
-        assertEquals(0,callback.agentPort)
         assertEquals("", callback.customHost)
-        assertEquals(0,callback.agentTimeout)
     }
 
     @Test
@@ -189,8 +177,6 @@ class PingOneProtectInitializeCallbackTest {
                         "customHost" : "",
                         "behavioralDataCollection" : true,
                         "agentIdentification" : true,
-                        "agentTimeout" : 200,
-                        "agentPort" : 8089,
                         "universalDeviceIdentification" : true,
                         "disableTags" : true
                      }
@@ -205,10 +191,8 @@ class PingOneProtectInitializeCallbackTest {
         assertTrue(actualCallback is PingOneProtectInitializeCallback)
         assertEquals("02fb4743-189a-4bc7-9d6c-a919edfe6447", actualCallback.envId)
         assertTrue(actualCallback.agentIdentification)
-        assertEquals(8089, actualCallback.agentPort)
         assertTrue(actualCallback.behavioralDataCollection)
         assertEquals("", actualCallback.customHost)
-        assertEquals(200, actualCallback.agentTimeout)
         assertTrue(actualCallback.universalDeviceIdentification)
 
         val continueNode = mockk<ContinueNode>()
@@ -245,8 +229,6 @@ class PingOneProtectInitializeCallbackTest {
                         "customHost" : "",
                         "behavioralDataCollection" : true,
                         "agentIdentification" : true,
-                        "agentTimeout" : 200,
-                        "agentPort" : 8089,
                         "universalDeviceIdentification" : true,
                         "disableTags" : true
                      }

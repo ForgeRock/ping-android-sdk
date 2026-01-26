@@ -21,7 +21,6 @@ import junit.framework.TestCase.assertTrue
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Test
-import kotlin.test.assertEquals
 
 class PingOneProtectInitializeCallbackE2ETest : BaseJourneyTest() {
 
@@ -45,8 +44,6 @@ class PingOneProtectInitializeCallbackE2ETest : BaseJourneyTest() {
 
         assertTrue(pingOneProtectInitializeCallback.envId != "")
         assertFalse(pingOneProtectInitializeCallback.agentIdentification)
-        assertEquals(0, pingOneProtectInitializeCallback.agentTimeout)
-        assertEquals(0, pingOneProtectInitializeCallback.agentPort)
         assertTrue(pingOneProtectInitializeCallback.customHost == "")
         assertTrue(pingOneProtectInitializeCallback.behavioralDataCollection)
 
@@ -81,8 +78,6 @@ class PingOneProtectInitializeCallbackE2ETest : BaseJourneyTest() {
         assertTrue(pingOneProtectInitializeCallback.envId != "")
         assertTrue(pingOneProtectInitializeCallback.customHost.isEmpty())
         assertTrue(pingOneProtectInitializeCallback.agentIdentification)
-        assertEquals(200, pingOneProtectInitializeCallback.agentTimeout)
-        assertEquals(8089, pingOneProtectInitializeCallback.agentPort)
         assertFalse(pingOneProtectInitializeCallback.behavioralDataCollection)
 
         val initResult = pingOneProtectInitializeCallback.start()
