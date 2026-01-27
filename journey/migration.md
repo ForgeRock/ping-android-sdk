@@ -652,26 +652,26 @@ The following libraries are available in the Ping Identity SDK. You can find the
 
 | Library | Description |
 | :--- | :--- |
-| `journey` | Core library for handling authentication journeys. |
-| `orchestrate` | Handles the orchestration of journey nodes. |
-| `oidc` | Provides OpenID Connect (OIDC) functionality. |
-| `device-profile` | Enables device profiling for risk assessment. |
-| `binding` | Used for binding devices to user accounts. |
-| `push` | Manages push notifications for multi-factor authentication. |
-| `protect` | Integrates with PingOne Protect for advanced fraud detection. |
-| `davinci` | Allows integration with PingOne DaVinci orchestration flows. |
-| `browser` | Utilities for handling web-based authentication flows. |
-| `utils` | Common utility classes used across the SDK. |
-| `logger` | A logging library for the SDK. |
-| `storage` | Provides secure storage for SDK data. |
-| `network` | Handles network requests for the SDK. |
-| `device-id` | Provides a unique device identifier. |
-| `device-root` | Detects if the device is rooted or jailbroken. |
-| `migration` | Assists with migrating from older SDK versions. |
-| `oath` | Implements the OATH (Initiative for Open Authentication) standard. |
-| `device-client` | A client for device-related operations. |
-| `binding-ui` | UI components for device binding. |
-| `journey-plugin` | A plugin for extending journey functionality. |
-| `davinci-plugin` | A plugin for extending DaVinci integration. |
-| `commons` | Common classes for multi-factor authentication. |
 | `android` | Core Android components for the SDK. |
+| `binding` | Used for binding devices to user accounts. |
+| `binding-ui` | UI components for device binding. |
+| `browser` | Utilities for handling web-based authentication flows. |
+| `commons` | Common classes for multi-factor authentication. |
+| `davinci` | Allows integration with PingOne DaVinci orchestration flows. |
+| `davinci-plugin` | A plugin for extending DaVinci integration. |
+| `device-client` | A client for device-related operations. |
+| `device-id` | Provides a unique device identifier. |
+| `device-profile` | Enables device profiling for risk assessment. |
+| `device-root` | Detects if the device is rooted or jailbroken. |
+| `journey` | Core library for handling authentication journeys. |
+| `journey-plugin` | A plugin for extending journey functionality. |
+| `logger` | A logging library for the SDK. |
+| `migration` | Assists with migrating from older SDK versions. |
+| `network` | Handles network requests for the SDK. |
+| `oath` | Implements the OATH (Initiative for Open Authentication) standard. |
+| `oidc` | Provides OpenID Connect (OIDC) functionality. |
+| `orchestrate` | Handles the orchestration of journey nodes. |
+| `protect` | Integrates with PingOne Protect for advanced fraud detection. |
+| `push` | Manages push notifications for multi-factor authentication. |
+| `storage` | Provides secure storage for SDK data. |
+| `utils` | Common utility classes used across the SDK. |
