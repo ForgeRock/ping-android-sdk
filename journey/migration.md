@@ -93,7 +93,7 @@ viewModelScope.launch {
 }
 ```
 
-## 12. Method Mapping Table
+## 4. Method Mapping Table
 
 | Legacy Method | New Ping Method | Parameter Changes | Return Type |
 | :--- | :--- | :--- | :--- |
@@ -105,7 +105,7 @@ viewModelScope.launch {
 | `FRUser.getCurrentUser()?.revokeAccessToken(...)` | `journey.user()?.revoke()` | The `FRListener` is replaced by a `suspend` function. | `void` (asynchronous with listener) -> `suspend` function |
 | `FRUser.getCurrentUser()?.refreshAccessToken(...)` | `journey.user()?.refresh()` | The `FRListener` is replaced by a `Result` object. | `void` (asynchronous with listener) -> `Result<Token, OidcError>` |
 
-## 13. Data Model Translation
+## 5. Data Model Translation
 
 | Legacy SDK Class | New Ping SDK Model | Description |
 | :--- | :--- | :--- |
@@ -117,7 +117,7 @@ viewModelScope.launch {
 | `UserInfo` | `UserInfo` | The `UserInfo` model remains, but it is now retrieved synchronously or with coroutines. |
 | `AccessToken` | `Token` | The `AccessToken` model is now named `Token`. |
 
-## 14. Package Name Changes
+## 6. Package Name Changes
 
 The package names for callbacks and other classes have been updated to reflect the new modular structure of the Ping SDK.
 
@@ -139,39 +139,7 @@ import com.pingidentity.fido.journey.FidoRegistrationCallback
 // ... and others, now in more specific modules like 'device.binding', 'device.profile', 'fido', 'idp', 'protect', 'recaptcha'.
 ```
 
-## 7. Context Parameter Removal
-
-### What Changed
-The legacy SDK required passing Android `Context` to most methods. The Ping SDK handles context internally through dependency injection at SDK initialization time.
-
-### Legacy Pattern
-```kotlin
-FRSession.authenticate(context, journeyName, nodeListener)
-node.next(context, nodeListener)
-```
-
-### Modern Pattern
-```kotlin
-var node: Node = journey.start("Login")
-while (node is ContinueNode) {
-    node = node.next()  // No context parameter needed
-}
-```
-
-### Migration Guidance
-- **SDK Initialization**: Context is provided once when the Journey is created
-- **No Parameter Changes**: Methods no longer require context to be passed
-- **Permission Handling**: Use Android's permission APIs within callbacks if needed
-- **Device Operations**: Storage and device context are managed internally by the SDK
-
-### Key Migration Point
-In legacy SDK, context was required for every operation. In the Ping SDK, context is captured during initialization and reused internally.
-
----
-
-## 8. Error Handling Strategy
-
-### Understanding Node Types
+## 7. Understanding Node Types
 
 The Ping SDK uses sealed classes to represent different outcomes of an authentication operation.
 
@@ -232,30 +200,25 @@ is FailureNode -> {
 ### Complete Error Handling Example
 ```kotlin
 viewModelScope.launch {
-    try {
-        var node: Node = journey.start("Login")
-        
-        while (node is ContinueNode) {
-            node = node.next()
+    var node: Node = journey.start("Login")
+
+    while (node is ContinueNode) {
+        node = node.next()
+    }
+
+    when (node) {
+        is SuccessNode -> {
+            logger.info("Login successful")
+            state.update { it.copy(isLoggedIn = true, error = null) }
         }
-        
-        when (node) {
-            is SuccessNode -> {
-                logger.info("Login successful")
-                state.update { it.copy(isLoggedIn = true, error = null) }
-            }
-            is ErrorNode -> {
-                logger.warn("Auth error: ${node.errorMessage}")
-                state.update { it.copy(error = node.errorMessage) }
-            }
-            is FailureNode -> {
-                logger.error("System error", node.exception)
-                state.update { it.copy(error = "System error: ${node.exception.message}") }
-            }
+        is ErrorNode -> {
+            logger.warn("Auth error: ${node.errorMessage}")
+            state.update { it.copy(error = node.errorMessage) }
         }
-    } catch (e: Exception) {
-        logger.error("Unexpected exception", e)
-        state.update { it.copy(error = "Unexpected error: ${e.message}") }
+        is FailureNode -> {
+            logger.error("System error", node.exception)
+            state.update { it.copy(error = "System error: ${node.exception.message}") }
+        }
     }
 }
 ```
@@ -270,94 +233,7 @@ viewModelScope.launch {
 
 ---
 
-## 9. Step-up Authentication with PolicyAdvice
-
-### What is PolicyAdvice?
-PolicyAdvice is used for re-authentication when an existing session doesn't meet current security requirements. This is typically triggered by policy violations or when accessing sensitive resources.
-
-### Use Cases
-1. **MFA Challenge**: User needs to provide additional authentication factor
-2. **Elevated Permissions**: Accessing sensitive data requires re-authentication
-3. **Session Timeout**: Session expired and needs refreshing
-4. **Risk Assessment**: Unusual login pattern requires additional verification
-5. **Policy Violation**: Access attempt violates security policy
-
-### Legacy Pattern
-```kotlin
-val policyAdvice = PolicyAdvice(adviceCode)
-FRSession.getCurrentSession().authenticate(context, policyAdvice, nodeListener)
-```
-
-### Modern Pattern
-```kotlin
-val policyAdvice = PolicyAdvice(adviceCode)
-
-viewModelScope.launch {
-    try {
-        var node: Node = journey.start("Login", advice = policyAdvice)
-        
-        while (node is ContinueNode) {
-            node = node.next()
-        }
-        
-        when (node) {
-            is SuccessNode -> {
-                logger.info("Step-up authentication successful")
-                state.update { it.copy(session = node) }
-            }
-            is ErrorNode -> {
-                logger.warn("Step-up failed: ${node.errorMessage}")
-                state.update { it.copy(error = node.errorMessage) }
-            }
-            is FailureNode -> {
-                logger.error("Step-up error", node.exception)
-                state.update { it.copy(error = "Step-up authentication failed") }
-            }
-        }
-    } catch (e: Exception) {
-        logger.error("Step-up exception", e)
-    }
-}
-```
-
-### Real-World Implementation
-```kotlin
-class AuthViewModel(private val journey: Journey) : ViewModel() {
-    fun startStepUpAuth(adviceCode: String) {
-        val advice = PolicyAdvice(adviceCode)
-        viewModelScope.launch {
-            var node: Node = journey.start("StepUpAuth", advice = advice)
-            processAuthenticationNode(node)
-        }
-    }
-    
-    private suspend fun processAuthenticationNode(initialNode: Node) {
-        var node = initialNode
-        
-        while (node is ContinueNode) {
-            // Display callbacks and process user input
-            node = node.next()
-        }
-        
-        when (node) {
-            is SuccessNode -> handleStepUpSuccess()
-            is ErrorNode -> handleStepUpError(node.errorMessage)
-            is FailureNode -> handleStepUpFailure(node.exception)
-        }
-    }
-}
-```
-
-### Migration Checklist
-- [ ] Identify all places using PolicyAdvice in legacy code
-- [ ] Update to pass advice parameter in journey.start()
-- [ ] Update error handling to use new Node types
-- [ ] Test step-up auth flows end-to-end
-- [ ] Verify session handling after successful step-up
-
----
-
-## 10. WebAuthn Configuration
+## 8. WebAuthn Configuration
 
 ### Resident Key Requirements
 
@@ -429,168 +305,79 @@ The resident key requirement will now be enforced by the server for all WebAuthn
 
 ---
 
-## 11. Implementation Examples
+## 9. Implementation Examples
 
-Here are before-and-after comparisons for common development scenarios.
+Quick reference for common migration patterns:
 
-## 15. User Logout
-**Legacy**
+### User Logout
 ```kotlin
+// Legacy
 FRUser.getCurrentUser()?.logout()
-```
-**Modern**
-```kotlin
+
+// Modern
 journey.user()?.logout()
 ```
 
-## 16. Retrieving User Profile
-**Legacy**
+### Retrieving User Profile
 ```kotlin
- FRUser.getCurrentUser()?.getUserInfo(object : FRListener<UserInfo> {
+// Legacy
+FRUser.getCurrentUser()?.getUserInfo(object : FRListener<UserInfo> {
     override fun onSuccess(result: UserInfo) { /* ... */ }
     override fun onException(e: Exception) { /* ... */ }
 })
-```
-**Modern**
-```kotlin
+
+// Modern
 when (val result = journey.user()?.userinfo(false)) {
-  is Result.Failure -> { /* ... */ }
-  is Result.Success -> { /* ... */ }
+    is Result.Failure -> { /* ... */ }
+    is Result.Success -> { /* ... */ }
 }
 ```
 
-## 17. Access Token Management
-**Legacy**
+### Access Token Management
 ```kotlin
-// Get Access Token
+// Legacy - Get Access Token
 val accessToken = FRUser.getCurrentUser()?.accessToken
 
-// Revoke Access Token
-FRUser.getCurrentUser()?.revokeAccessToken(object : FRListener<Void?> {
-    override fun onSuccess(result: Void?) { /* ... */ }
-    override fun onException(e: Exception) { /* ... */ }
-})
+// Modern - Get Access Token
+val token = journey.user()?.token
 
-// Refresh Access Token
+// Legacy - Refresh Token
 FRUser.getCurrentUser()?.refreshAccessToken(object : FRListener<AccessToken?> {
     override fun onSuccess(result: AccessToken?) { /* ... */ }
     override fun onException(e: Exception) { /* ... */ }
 })
-```
-**Modern**
-```kotlin
-// Get Access Token
-val token = journey.user()?.token
 
-// Revoke Access Token (suspend function)
-journey.user()?.revoke()
-
-// Refresh Access Token
+// Modern - Refresh Token
 val result: Result<Token, OidcError> = journey.user()?.refresh()
 ```
 
-## 18. WebAuthn Registration
-**Legacy**
+### WebAuthn Registration
 ```kotlin
-try {
-    val callback = WebAuthRegistrationCallback()
-    callback.setResidentKeyRequirement(ResidentKeyRequirement.RESIDENT_KEY_DISCOURAGED)
-    callback.register(context, deviceName, node)
-} catch (e: Exception) {
-    // ...
-}
-```
-**Modern**
-```kotlin
+// Modern
 val callback = FidoRegistrationCallback()
-// callback.setResidentKeyRequirement is no longer supported directly in the same way
-callback.register(deviceName).onSuccess {
-    // ...
-}.onFailure {
-    // ...
-}
+callback.register(deviceName)
+    .onSuccess { logger.info("WebAuthn registration successful") }
+    .onFailure { logger.error("WebAuthn registration failed", it) }
 ```
 
-## 19. WebAuthn Authentication
-**Legacy**
+### WebAuthn Authentication
 ```kotlin
-try {
-    val callback = WebAuthAuthenticationCallback()
-    callback.authenticate(context, deviceName, node)
-} catch (e: Exception) {
-    // ...
-}
-```
-**Modern**
-```kotlin
+// Modern
 val callback = FidoAuthenticationCallback()
-callback.authenticate().onSuccess {
-    // ...
-}.onFailure {
-    // ...
-}
+callback.authenticate()
+    .onSuccess { logger.info("WebAuthn authentication successful") }
+    .onFailure { logger.error("WebAuthn authentication failed", it) }
 ```
 
-## 20. Centralize Login
-**Legacy**
-```kotlin
-FRUser.browser().appAuthConfigurer().customTabsIntent {
-    it.setColorScheme(CustomTabsIntent.COLOR_SCHEME_DARK)
-}.appAuthConfiguration { appAuthConfiguration ->
-}
-    .done()
-    .login(fragmentActivity,
-        object : FRListener<FRUser> {
-            override fun onSuccess(result: FRUser) {
-            }
-            override fun onException(e: Exception) {
-            }
-        })
-```
-**Modern**
-```kotlin
-var web = OidcWeb {
-    logger = Logger.WARN
-    module(com.pingidentity.oidc.module.Oidc) {
-        clientId = oidcConfig.clientId
-        discoveryEndpoint = oidcConfig.discoveryEndpoint
-        scopes = mutableSetOf("openid", "email", "address", "profile", "phone")
-        redirectUri = oidcConfig.redirectUri
-        signOutRedirectUri = oidcConfig.signOutRedirectUri
-        loginHint = oidcConfig.loginHint
-        state = oidcConfig.state
-        nonce = oidcConfig.nonce
-        acrValues = oidcConfig.acrValues
-        prompt = oidcConfig.prompt
-        display = oidcConfig.display
-        uiLocales = oidcConfig.uiLocales
-        additionalParameters = oidcConfig.additionalParameters
-    }
-    module(Web) {
-        //Showcase Customization
-        customTabsCustomizer = {
-            setColorScheme(CustomTabsIntent.COLOR_SCHEME_DARK)
-        }
-        authTabCustomizer = {
-            setColorScheme(CustomTabsIntent.COLOR_SCHEME_DARK)
-        }
-    }
-}
-web.authorize {}
-    .onSuccess { user ->
-    }.onFailure { throwable ->
-    }
-```
+---
 
-## 21. Build.gradle and Dependencies
+## 10. Build.gradle and Dependencies
 
-To integrate the new Ping Identity SDK, you will need to update your `build.gradle.kts` file with the following dependencies. The SDK is modular, so you can include only the components you need.
+To integrate the new Ping Identity SDK, update your `build.gradle.kts` with dependencies. The SDK is modular, so include only what you need.
 
-### Example `build.gradle.kts`
-
+### Dependencies
 ```kotlin
 dependencies {
-
     // Core SDK
     implementation(libs.ping.sdk.journey)
     implementation(libs.ping.sdk.orchestrate)
@@ -609,41 +396,7 @@ dependencies {
     implementation(libs.ping.sdk.logger)
     implementation(libs.ping.sdk.storage)
     implementation(libs.ping.sdk.network)
-
 }
-```
-
-### Example `libs.versions.toml`
-
-```toml
-[versions]
-ping-sdk = "2.0.0-beta1"
-
-[libraries]
-ping-sdk-journey = { group = "com.pingidentity.sdks", name = "journey", version.ref = "ping-sdk" }
-ping-sdk-orchestrate = { group = "com.pingidentity.sdks", name = "orchestrate", version.ref = "ping-sdk" }
-ping-sdk-oidc = { group = "com.pingidentity.sdks", name = "oidc", version.ref = "ping-sdk" }
-ping-sdk-device-profile = { group = "com.pingidentity.sdks", name = "device-profile", version.ref = "ping-sdk" }
-ping-sdk-binding = { group = "com.pingidentity.sdks", name = "binding", version.ref = "ping-sdk" }
-ping-sdk-push = { group = "com.pingidentity.sdks", name = "push", version.ref = "ping-sdk" }
-ping-sdk-protect = { group = "com.pingidentity.sdks", name = "protect", version.ref = "ping-sdk" }
-ping-sdk-davinci = { group = "com.pingidentity.sdks", name = "davinci", version.ref = "ping-sdk" }
-ping-sdk-browser = { group = "com.pingidentity.sdks", name = "browser", version.ref = "ping-sdk" }
-ping-sdk-utils = { group = "com.pingidentity.sdks", name = "utils", version.ref = "ping-sdk" }
-ping-sdk-logger = { group = "com.pingidentity.sdks", name = "logger", version.ref = "ping-sdk" }
-ping-sdk-storage = { group = "com.pingidentity.sdks", name = "storage", version.ref = "ping-sdk" }
-ping-sdk-network = { group = "com.pingidentity.sdks", name = "network", version.ref = "ping-sdk" }
-ping-sdk-device-id = { group = "com.pingidentity.sdks", name = "device-id", version.ref = "ping-sdk" }
-ping-sdk-device-root = { group = "com.pingidentity.sdks", name = "device-root", version.ref = "ping-sdk" }
-ping-sdk-device-profile = { group = "com.pingidentity.sdks", name = "device-profile", version.ref = "ping-sdk" }
-ping-sdk-migration = { group = "com.pingidentity.sdks", name = "migration", version.ref = "ping-sdk" }
-ping-sdk-oath = { group = "com.pingidentity.sdks", name = "oath", version.ref = "ping-sdk" }
-ping-sdk-device-client = { group = "com.pingidentity.sdks", name = "device-client", version.ref = "ping-sdk" }
-ping-sdk-binding-ui = { group = "com.pingidentity.sdks", name = "binding-ui", version.ref = "ping-sdk" }
-ping-sdk-journey-plugin = { group = "com.pingidentity.sdks", name = "journey-plugin", version.ref = "ping-sdk" }
-ping-sdk-davinci-plugin = { group = "com.pingidentity.sdks", name = "davinci-plugin", version.ref = "ping-sdk" }
-ping-sdk-commons = { group = "com.pingidentity.sdks", name = "commons", version.ref = "ping-sdk" }
-ping-sdk-android = { group = "com.pingidentity.sdks", name = "android", version.ref = "ping-sdk" }
 ```
 
 ### Available Libraries
