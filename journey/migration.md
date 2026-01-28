@@ -233,32 +233,16 @@ viewModelScope.launch {
 
 ---
 
-## Example: WebAuthn Configuration
+## Example: WebAuthn Registration
 
-### Resident Key Requirements
-
-#### Legacy Approach
-Resident key requirements were set on the callback in code:
+### Legacy
 ```kotlin
 val callback = WebAuthRegistrationCallback()
 callback.setResidentKeyRequirement(ResidentKeyRequirement.RESIDENT_KEY_DISCOURAGED)
 callback.register(context, deviceName, node)
 ```
 
-#### Modern Approach
-Resident key configuration is now managed server-side through AM/Ping policy. The SDK automatically respects the server's requirements without overriding.
-
-### What Changed
-- **Removed**: `setResidentKeyRequirement()` method on callback
-- **Added**: Server-side policy configuration
-- **Benefit**: Centralized security policy, no app redeployment needed for changes
-
-### Migration Path
-1. **Remove** `setResidentKeyRequirement()` calls from your code
-2. **Configure** resident key policy on AM/Ping admin console
-3. **Test** that server policy is applied correctly during WebAuthn registration
-
-### Modern WebAuthn Registration Example
+### Modern
 ```kotlin
 val callback = FidoRegistrationCallback()
 callback.register(deviceName)
@@ -272,7 +256,15 @@ callback.register(deviceName)
     }
 ```
 
-### Modern WebAuthn Authentication Example
+## Example: WebAuthn Authentication
+
+### Legacy
+```kotlin
+val callback = WebAuthAuthenticationCallback()
+callback.authenticate(context, deviceName, node)
+```
+
+### Modern
 ```kotlin
 val callback = FidoAuthenticationCallback()
 callback.authenticate()
@@ -330,6 +322,185 @@ FRUser.getCurrentUser()?.refreshAccessToken(object : FRListener<AccessToken?> {
 
 // Modern - Refresh Token
 val result: Result<Token, OidcError> = journey.user()?.refresh()
+```
+
+---
+
+## Example: Social Login (Google)
+
+### Legacy
+```kotlin
+import org.forgerock.android.auth.idp.GoogleSignInHandler
+
+// First callback: SelectIdPCallback
+if (callback is SelectIdPCallback) {
+    val providersArray = callback.providers
+    // Display providers to user and get selection
+    val googleProvider = providersArray.first { it.provider == "google" }
+    callback.setProvider(googleProvider)
+    
+    node.next(context, nodeListener)
+}
+
+// Second callback: IdPCallback
+if (callback is IdPCallback) {
+    val handler = GoogleSignInHandler()
+    callback.signIn(context, handler, object : FRListener<String> {
+        override fun onSuccess(result: String) {
+            node.next(context, nodeListener)
+        }
+        override fun onException(e: Exception) {
+            logger.error("Google sign-in failed", e)
+        }
+    })
+}
+```
+
+### Modern
+```kotlin
+import com.pingidentity.idp.callback.SelectIdpCallback
+import com.pingidentity.idp.callback.IdpCallback
+
+// First callback: SelectIdpCallback
+if (callback is SelectIdpCallback) {
+    val providersArray = callback.providers
+    // Display providers to user and get selection
+    val googleProvider = providersArray.first { it.provider == "google" }
+    callback.setProvider(googleProvider)
+    
+    node = node.next()
+}
+
+// Second callback: IdpCallback
+if (callback is IdpCallback) {
+    callback.idpSignIn(activity) { result ->
+        when (result) {
+            is Result.Success -> {
+                logger.info("Google sign-in successful")
+                node = node.next()
+            }
+            is Result.Failure -> {
+                logger.error("Google sign-in failed", result.error)
+            }
+        }
+    }
+}
+```
+
+## Example: Social Login (Facebook)
+
+### Legacy
+```kotlin
+import org.forgerock.android.auth.idp.FacebookSignInHandler
+
+// First callback: SelectIdPCallback
+if (callback is SelectIdPCallback) {
+    val providersArray = callback.providers
+    // Display providers to user and get selection
+    val facebookProvider = providersArray.first { it.provider == "facebook" }
+    callback.setProvider(facebookProvider)
+    
+    node.next(context, nodeListener)
+}
+
+// Second callback: IdPCallback
+if (callback is IdPCallback) {
+    val handler = FacebookSignInHandler()
+    callback.signIn(context, handler, object : FRListener<String> {
+        override fun onSuccess(result: String) {
+            node.next(context, nodeListener)
+        }
+        override fun onException(e: Exception) {
+            logger.error("Facebook sign-in failed", e)
+        }
+    })
+}
+```
+
+### Modern
+```kotlin
+import com.pingidentity.idp.callback.SelectIdpCallback
+import com.pingidentity.idp.callback.IdpCallback
+
+// First callback: SelectIdpCallback
+if (callback is SelectIdpCallback) {
+    val providersArray = callback.providers
+    // Display providers to user and get selection
+    val facebookProvider = providersArray.first { it.provider == "facebook" }
+    callback.setProvider(facebookProvider)
+    
+    node = node.next()
+}
+
+// Second callback: IdpCallback
+if (callback is IdpCallback) {
+    callback.idpSignIn(activity) { result ->
+        when (result) {
+            is Result.Success -> {
+                logger.info("Facebook sign-in successful")
+                node = node.next()
+            }
+            is Result.Failure -> {
+                logger.error("Facebook sign-in failed", result.error)
+            }
+        }
+    }
+}
+```
+
+## Example: Social Login (Apple)
+
+### Legacy
+```kotlin
+import androidx.credentials.CredentialManager
+
+// First callback: SelectIdPCallback
+if (callback is SelectIdPCallback) {
+    val providersArray = callback.providers
+    // Display providers to user and get selection
+    val appleProvider = providersArray.first { it.provider == "apple" }
+    callback.setProvider(appleProvider)
+    
+    node.next(context, nodeListener)
+}
+
+// Second callback: IdPCallback
+if (callback is IdPCallback) {
+    // Legacy SDK relies on external Apple Sign In library
+    // Manual implementation needed
+    node.next(context, nodeListener)
+}
+```
+
+### Modern
+```kotlin
+import com.pingidentity.idp.callback.SelectIdpCallback
+import com.pingidentity.idp.callback.IdpCallback
+
+// First callback: SelectIdpCallback
+if (callback is SelectIdpCallback) {
+    val providersArray = callback.providers
+    // Display providers to user and get selection
+    val appleProvider = providersArray.first { it.provider == "apple" }
+    callback.setProvider(appleProvider)
+    
+    node = node.next()
+}
+
+// Second callback: IdpCallback
+if (callback is IdpCallback) {
+    callback.idpSignIn(activity) { result ->
+        when (result) {
+            is Result.Success -> {
+                logger.info("Apple sign-in successful")
+                node = node.next()
+            }
+            is Result.Failure -> {
+                logger.error("Apple sign-in failed", result.error)
+            }
+        }
+    }
+}
 ```
 
 ---
