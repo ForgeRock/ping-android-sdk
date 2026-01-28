@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2025-2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -23,7 +23,7 @@ import com.pingidentity.mfa.push.PushConstants.KEY_JWT
 import com.pingidentity.mfa.push.PushConstants.KEY_MECHANISM_UID
 import com.pingidentity.mfa.push.PushConstants.KEY_MESSAGE_ID
 import com.pingidentity.mfa.push.PushConstants.KEY_RESPONSE
-import com.pingidentity.mfa.push.PushConstants.KEY_USER_ID
+import com.pingidentity.mfa.push.PushConstants.KEY_USERNAME
 import com.pingidentity.network.ktor.KtorHttpClient
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
@@ -375,7 +375,7 @@ class PingAMPushResponderTest {
 
             // Body contains expected keys
             Assert.assertTrue(requestBodyJson.containsKey(KEY_MECHANISM_UID))
-            Assert.assertTrue(requestBodyJson.containsKey(KEY_USER_ID))
+            Assert.assertTrue(requestBodyJson.containsKey(KEY_USERNAME))
 
             // Verify JWT is present and has expected structure
             Assert.assertTrue(requestBodyJson.containsKey(KEY_JWT))

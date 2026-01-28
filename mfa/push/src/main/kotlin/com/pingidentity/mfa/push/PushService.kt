@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2025-2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -27,14 +27,14 @@ import com.pingidentity.mfa.push.PushConstants.KEY_NUMBERS_CHALLENGE
 import com.pingidentity.mfa.push.PushConstants.KEY_PUSH_TYPE
 import com.pingidentity.mfa.push.PushConstants.KEY_TIME_INTERVAL
 import com.pingidentity.mfa.push.PushConstants.KEY_TTL
-import com.pingidentity.mfa.push.PushConstants.KEY_USER_ID
+import com.pingidentity.mfa.push.PushConstants.KEY_USERNAME
 import com.pingidentity.mfa.push.storage.PushStorage
 import com.pingidentity.network.HttpClient
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import java.util.Date
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
-import kotlin.coroutines.coroutineContext
 
 /**
  * Service class for handling push operations with policy enforcement.
@@ -164,7 +164,7 @@ internal class PushService(
                 throw MfaException("Failed to register push credential from URI: $uri")
             }
         } catch (e: Exception) {
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
             logger.e("Failed to add credential from URI: ${e.message}", e)
             throw MfaException("Failed to add credential from URI", e)
         }
@@ -195,7 +195,7 @@ internal class PushService(
             logger.d("Added Push credential with ID: ${credential.id} (locked: ${credential.isLocked})")
             return credential
         } catch (e: Exception) {
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
             logger.e("Failed to add push credential: ${e.message}", e)
             throw MfaException("Failed to add push credential", e)
         }
@@ -230,7 +230,7 @@ internal class PushService(
 
             return credentials
         } catch (e: Exception) {
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
             logger.e("Failed to get push credentials: ${e.message}", e)
             throw MfaException("Failed to get push credentials", e)
         }
@@ -263,7 +263,7 @@ internal class PushService(
 
             return credential
         } catch (e: Exception) {
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
             logger.e("Failed to get push credential with ID $credentialId: ${e.message}", e)
             throw MfaException("Failed to get push credential with ID $credentialId", e)
         }
@@ -285,14 +285,19 @@ internal class PushService(
 
             // Remove from storage
             val removed = storage.removePushCredential(credentialId)
-
             if (removed) {
                 logger.d("Removed push credential with ID: $credentialId")
+
+                // Remove associated push notifications for this credential
+                val notificationsRemoved = storage.removePushNotificationsForCredential(credentialId)
+                if (notificationsRemoved > 0) {
+                    logger.d("Removed $notificationsRemoved associated push notification(s) for credential $credentialId")
+                }
             }
 
             return removed
         } catch (e: Exception) {
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
             logger.e("Failed to remove push credential with ID $credentialId: ${e.message}", e)
             throw MfaException("Failed to remove push credential with ID $credentialId", e)
         }
@@ -323,7 +328,7 @@ internal class PushService(
                 return true
             }
         } catch (e: Exception) {
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
             logger.e("Failed to set device token: ${e.message}", e)
             throw MfaException("Failed to set device token", e)
         }
@@ -406,7 +411,7 @@ internal class PushService(
                 return handler.setDeviceToken(credential, deviceToken, params)
             }
         } catch (e: Exception) {
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
             logger.e("Failed to update device token: ${e.message}", e)
             throw MfaException("Failed to update device token", e)
         }
@@ -421,7 +426,7 @@ internal class PushService(
         try {
             return deviceTokenManager.getDeviceTokenId()
         } catch (e: Exception) {
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
             logger.e("Failed to get device token: ${e.message}", e)
             return null
         }
@@ -454,7 +459,7 @@ internal class PushService(
 
             return processAndStoreParsedData(parsedData)
         } catch (e: Exception) {
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
             logger.e("Failed to process push notification: ${e.message}", e)
             throw MfaException("Failed to process push notification", e)
         }
@@ -487,7 +492,7 @@ internal class PushService(
 
             return processAndStoreParsedData(parsedData)
         } catch (e: Exception) {
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
             logger.e("Failed to process push notification from string: ${e.message}", e)
             throw MfaException("Failed to process push notification from string", e)
         }
@@ -499,7 +504,7 @@ internal class PushService(
      * @return The created PushNotification, or null if it was a duplicate.
      * @throws MfaException if the notification cannot be stored.
      */
-    private suspend fun processAndStoreParsedData(parsedData: Map<String, Any>): PushNotification? {
+    private suspend fun processAndStoreParsedData(parsedData: Map<String, Any>): PushNotification {
         // Get the messageId from parsed data
         val messageId = parsedData[KEY_MESSAGE_ID] as? String
 
@@ -516,8 +521,8 @@ internal class PushService(
         (parsedData[KEY_CREDENTIAL_ID] as? String)?.let { credId ->
             storage.retrievePushCredential(credId)?.let { credential ->
                 if (credential.userId.isNullOrBlank()) { // Only update if existing userId is missing
-                    (parsedData[KEY_USER_ID] as? String)?.takeIf { it.isNotBlank() }?.let { newUserId ->
-                        logger.d("Credential ${credential.id} missing userId. Updating with: $newUserId from push notification.")
+                    (parsedData[KEY_USERNAME] as? String)?.takeIf { it.isNotBlank() }?.let { newUserId ->
+                        logger.d("Credential ${credential.id} missing username. Updating with: $newUserId from push notification.")
                         val updatedCredential = credential.copy(userId = newUserId)
                         storage.storePushCredential(updatedCredential)
                     }
@@ -626,7 +631,7 @@ internal class PushService(
             storage.storePushNotification(notification)
             logger.d("Stored push notification: ${notification.id}")
         } catch (e: Exception) {
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
             logger.e("Failed to store push notification: ${e.message}", e)
             throw MfaException("Failed to store push notification", e)
         }
@@ -679,7 +684,7 @@ internal class PushService(
 
             return result
         } catch (e: Exception) {
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
             logger.e("Failed to approve notification: ${e.message}", e)
             throw MfaException("Failed to approve notification", e)
         }
@@ -731,7 +736,7 @@ internal class PushService(
 
             return result
         } catch (e: Exception) {
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
             logger.e("Failed to deny notification: ${e.message}", e)
             throw MfaException("Failed to deny notification", e)
         }
@@ -747,7 +752,7 @@ internal class PushService(
         try {
             return storage.getPendingPushNotifications()
         } catch (e: Exception) {
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
             logger.e("Failed to get pending notifications: ${e.message}", e)
             throw MfaException("Failed to get pending notifications", e)
         }
@@ -763,7 +768,7 @@ internal class PushService(
         try {
             return storage.getAllPushNotifications()
         } catch (e: Exception) {
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
             logger.e("Failed to get all notifications: ${e.message}", e)
             throw MfaException("Failed to get all notifications", e)
         }
@@ -780,7 +785,7 @@ internal class PushService(
         try {
             return storage.retrievePushNotification(notificationId)
         } catch (e: Exception) {
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
             logger.e("Failed to get notification: ${e.message}", e)
             throw MfaException("Failed to get notification", e)
         }

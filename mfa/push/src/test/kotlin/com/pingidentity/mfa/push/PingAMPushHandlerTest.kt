@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2025-2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -155,6 +155,7 @@ class PingAMPushHandlerTest {
         assertEquals("context-info", result[PushConstants.KEY_CONTEXT_INFO])
         assertEquals("amlbCookie", result[PushConstants.KEY_AMLB_COOKIE])
         assertEquals("user-id", result[PushConstants.KEY_USER_ID])
+        assertEquals("user@example.com", result[PushConstants.KEY_USERNAME])
         assertEquals(TEST_MESSAGE_ID, result[PushConstants.KEY_MESSAGE_ID])
         assertEquals("test-jwt", result[PushConstants.KEY_RAW_JWT])
     }
