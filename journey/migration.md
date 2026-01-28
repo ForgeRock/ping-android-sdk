@@ -117,27 +117,6 @@ viewModelScope.launch {
 | `UserInfo` | `UserInfo` | The `UserInfo` model remains, but it is now retrieved synchronously or with coroutines. |
 | `AccessToken` | `Token` | The `AccessToken` model is now named `Token`. |
 
-## Example: Package Import Changes
-
-The package names for callbacks and other classes have been updated to reflect the new modular structure of the Ping SDK.
-
-### Legacy
-```kotlin
-import org.forgerock.android.auth.callback.NameCallback
-import org.forgerock.android.auth.callback.PasswordCallback
-import org.forgerock.android.auth.callback.WebAuthnAuthenticationCallback
-import org.forgerock.android.auth.callback.WebAuthnRegistrationCallback
-// ... and others
-```
-
-### Modern
-```kotlin
-import com.pingidentity.journey.callback.NameCallback
-import com.pingidentity.journey.callback.PasswordCallback
-import com.pingidentity.fido.journey.FidoAuthenticationCallback
-import com.pingidentity.fido.journey.FidoRegistrationCallback
-// ... and others, now in more specific modules like 'device.binding', 'device.profile', 'fido', 'idp', 'protect', 'recaptcha'.
-```
 
 ## Example: Error Handling with Node Types
 
