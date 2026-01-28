@@ -332,24 +332,6 @@ FRUser.getCurrentUser()?.refreshAccessToken(object : FRListener<AccessToken?> {
 val result: Result<Token, OidcError> = journey.user()?.refresh()
 ```
 
-### WebAuthn Registration
-```kotlin
-// Modern
-val callback = FidoRegistrationCallback()
-callback.register(deviceName)
-    .onSuccess { logger.info("WebAuthn registration successful") }
-    .onFailure { logger.error("WebAuthn registration failed", it) }
-```
-
-### WebAuthn Authentication
-```kotlin
-// Modern
-val callback = FidoAuthenticationCallback()
-callback.authenticate()
-    .onSuccess { logger.info("WebAuthn authentication successful") }
-    .onFailure { logger.error("WebAuthn authentication failed", it) }
-```
-
 ---
 
 ## Configuration: Gradle Dependencies
