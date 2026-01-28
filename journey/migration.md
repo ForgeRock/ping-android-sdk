@@ -2,7 +2,7 @@
 
 This document provides a comprehensive mapping of the Journey module from the legacy Forgerock SDK to the new Ping SDK. It is intended to be used as a reference for refactoring and migration efforts.
 
-## 1. Architectural Shifts
+## Migration Overview
 
 The primary architectural shift is the move from a **callback-based asynchronous model to a modern, coroutine-based approach**.
 
@@ -10,7 +10,7 @@ The primary architectural shift is the move from a **callback-based asynchronous
 
 *   **New (Coroutines):** The new Ping SDK embraces Kotlin Coroutines. Methods like `start` and `next` are `suspend` functions. This allows for writing asynchronous code in a sequential, synchronous-looking manner, which greatly improves readability and maintainability. The different outcomes of an operation are handled by the sealed `Node` class (`ContinueNode`, `SuccessNode`, `ErrorNode`, `FailureNode`), which allows for exhaustive `when` statements.
 
-## 2. SDK Initialization
+## Example: SDK Initialization
 
 ### Legacy
 ```kotlin
@@ -51,7 +51,7 @@ val journey = Journey {
 }
 ```
 
-## 3. Starting Authentication & Handling Nodes
+## Example: Starting Authentication and Handling Nodes
 ### Legacy
 ```kotlin
 private val nodeListener = object : NodeListener<FRSession> {
@@ -93,7 +93,7 @@ viewModelScope.launch {
 }
 ```
 
-## 4. Method Mapping Table
+## Reference: Method Mapping
 
 | Legacy Method | New Ping Method | Parameter Changes | Return Type |
 | :--- | :--- | :--- | :--- |
@@ -105,7 +105,7 @@ viewModelScope.launch {
 | `FRUser.getCurrentUser()?.revokeAccessToken(...)` | `journey.user()?.revoke()` | The `FRListener` is replaced by a `suspend` function. | `void` (asynchronous with listener) -> `suspend` function |
 | `FRUser.getCurrentUser()?.refreshAccessToken(...)` | `journey.user()?.refresh()` | The `FRListener` is replaced by a `Result` object. | `void` (asynchronous with listener) -> `Result<Token, OidcError>` |
 
-## 5. Data Model Translation
+## Reference: Data Model Translation
 
 | Legacy SDK Class | New Ping SDK Model | Description |
 | :--- | :--- | :--- |
@@ -117,7 +117,7 @@ viewModelScope.launch {
 | `UserInfo` | `UserInfo` | The `UserInfo` model remains, but it is now retrieved synchronously or with coroutines. |
 | `AccessToken` | `Token` | The `AccessToken` model is now named `Token`. |
 
-## 6. Package Name Changes
+## Example: Package Import Changes
 
 The package names for callbacks and other classes have been updated to reflect the new modular structure of the Ping SDK.
 
@@ -139,7 +139,7 @@ import com.pingidentity.fido.journey.FidoRegistrationCallback
 // ... and others, now in more specific modules like 'device.binding', 'device.profile', 'fido', 'idp', 'protect', 'recaptcha'.
 ```
 
-## 7. Understanding Node Types
+## Example: Error Handling with Node Types
 
 The Ping SDK uses sealed classes to represent different outcomes of an authentication operation.
 
@@ -233,7 +233,7 @@ viewModelScope.launch {
 
 ---
 
-## 8. WebAuthn Configuration
+## Example: WebAuthn Configuration
 
 ### Resident Key Requirements
 
@@ -257,14 +257,6 @@ Resident key configuration is now managed server-side through AM/Ping policy. Th
 1. **Remove** `setResidentKeyRequirement()` calls from your code
 2. **Configure** resident key policy on AM/Ping admin console
 3. **Test** that server policy is applied correctly during WebAuthn registration
-
-### Resident Key Options & When to Use
-
-| Option | Use Case | Benefit | Limitation |
-|--------|----------|---------|-----------|
-| **REQUIRED** | High-security apps | Faster login experience | Requires device storage |
-| **PREFERRED** | Most applications | Best UX where available | Fallback needed |
-| **DISCOURAGED** | Passwordless-only | Highest security | Credential doesn't persist |
 
 ### Modern WebAuthn Registration Example
 ```kotlin
@@ -294,18 +286,7 @@ callback.authenticate()
     }
 ```
 
-### Server Configuration
-Configure WebAuthn policy in AM/Ping console:
-1. Navigate to Authentication → Policies
-2. Select WebAuthn policy
-3. Set "Resident Key Requirement" to your preferred setting
-4. Save and test with your app
-
-The resident key requirement will now be enforced by the server for all WebAuthn operations without needing code changes.
-
----
-
-## 9. Implementation Examples
+## Example: Common Migration Patterns
 
 Quick reference for common migration patterns:
 
@@ -371,7 +352,7 @@ callback.authenticate()
 
 ---
 
-## 10. Build.gradle and Dependencies
+## Configuration: Gradle Dependencies
 
 To integrate the new Ping Identity SDK, update your `build.gradle.kts` with dependencies. The SDK is modular, so include only what you need.
 
