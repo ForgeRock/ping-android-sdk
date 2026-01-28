@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2025-2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -14,6 +14,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -355,5 +356,110 @@ class OathCredentialTest {
         assertTrue(toString.contains("period=30"))
         assertTrue(toString.contains("counter=0"))
         assertTrue(toString.contains("isLocked=false"))
+    }
+
+    @Test
+    fun `test create credential with invalid digits`() {
+        val invalidDigitsValues = listOf(0, -1, 7, 10)
+        
+        invalidDigitsValues.forEach { invalidDigits ->
+            try {
+                OathCredential(
+                    issuer = testIssuer,
+                    accountName = testAccountName,
+                    oathType = OathType.TOTP,
+                    secret = testSecret,
+                    digits = invalidDigits
+                )
+                fail("Expected IllegalArgumentException for digits=$invalidDigits")
+            } catch (e: IllegalArgumentException) {
+                // Expected - test passes for this value
+                assertTrue(e.message?.contains("digits") == true)
+            }
+        }
+    }
+
+    @Test
+    fun `test create credential with valid digits`() {
+        val validDigitsValues = listOf(6, 8)
+        
+        validDigitsValues.forEach { validDigits ->
+            val credential = OathCredential(
+                issuer = testIssuer,
+                accountName = testAccountName,
+                oathType = OathType.TOTP,
+                secret = testSecret,
+                digits = validDigits
+            )
+            assertEquals(validDigits, credential.digits)
+        }
+    }
+
+    @Test
+    fun `test create TOTP credential with invalid period`() {
+        val invalidPeriodValues = listOf(0, -1)
+        
+        invalidPeriodValues.forEach { invalidPeriod ->
+            try {
+                OathCredential(
+                    issuer = testIssuer,
+                    accountName = testAccountName,
+                    oathType = OathType.TOTP,
+                    secret = testSecret,
+                    period = invalidPeriod
+                )
+                fail("Expected IllegalArgumentException for period=$invalidPeriod")
+            } catch (e: IllegalArgumentException) {
+                // Expected - test passes for this value
+                assertTrue(e.message?.contains("period") == true)
+            }
+        }
+    }
+
+    @Test
+    fun `test create TOTP credential with valid period - minimum`() {
+        val credential = OathCredential(
+            issuer = testIssuer,
+            accountName = testAccountName,
+            oathType = OathType.TOTP,
+            secret = testSecret,
+            period = 1
+        )
+        assertEquals(1, credential.period)
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun `test create HOTP credential with invalid counter - negative`() {
+        OathCredential(
+            issuer = testIssuer,
+            accountName = testAccountName,
+            oathType = OathType.HOTP,
+            secret = testSecret,
+            counter = -1
+        )
+    }
+
+    @Test
+    fun `test create HOTP credential with valid counter - zero`() {
+        val credential = OathCredential(
+            issuer = testIssuer,
+            accountName = testAccountName,
+            oathType = OathType.HOTP,
+            secret = testSecret,
+            counter = 0
+        )
+        assertEquals(0L, credential.counter)
+    }
+
+    @Test
+    fun `test create HOTP credential with valid counter - positive`() {
+        val credential = OathCredential(
+            issuer = testIssuer,
+            accountName = testAccountName,
+            oathType = OathType.HOTP,
+            secret = testSecret,
+            counter = 100
+        )
+        assertEquals(100L, credential.counter)
     }
 }
