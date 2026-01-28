@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2025-2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -25,6 +25,7 @@ import io.mockk.spyk
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -208,6 +209,7 @@ class PushServiceTest {
         // Clear mock and set up remove credential mock
         clearMocks(mockStorage)
         coEvery { mockStorage.removePushCredential(testCredentialId) } returns true
+        coEvery { mockStorage.removePushNotificationsForCredential(testCredentialId) } returns 2
 
         // When
         val result = pushServiceWithCache.removeCredential(testCredentialId)
@@ -536,6 +538,27 @@ class PushServiceTest {
         // Then
         assertEquals(testDeviceToken, result)
     }
+    
+    @Test
+    fun `test get device token returns null on error`() = runTest {
+        // Given
+        val mockDeviceTokenManager = mockk<PushDeviceTokenManager>()
+        val pushService = PushService(
+            storage = mockStorage,
+            configuration = configWithCache,
+            httpClient = KtorHttpClient(mockHttpClient),
+            policyEvaluator = mockPolicyEvaluator,
+            tokenManager = mockDeviceTokenManager
+        )
+
+        coEvery { mockDeviceTokenManager.getDeviceTokenId() } throws RuntimeException("Token error")
+
+        // When
+        val result = pushService.getDeviceToken()
+
+        // Then
+        assertEquals(null, result)
+    }
 
     @Test
     fun `test clear cache empties the credentials cache`() = runTest {
@@ -556,4 +579,520 @@ class PushServiceTest {
 
         coVerify(exactly = 1) { mockStorage.retrievePushCredential(testCredentialId) }
     }
+    
+    @Test
+    fun `test getAllNotifications retrieves all notifications from storage`() = runTest {
+        // Given
+        val notifications = listOf(testNotification)
+        coEvery { mockStorage.getAllPushNotifications() } returns notifications
+
+        // When
+        val result = pushServiceWithCache.getAllNotifications()
+
+        // Then
+        assertEquals(notifications, result)
+        coVerify(exactly = 1) { mockStorage.getAllPushNotifications() }
+    }
+    
+    @Test
+    fun `test setDeviceToken returns false when specific credential not found`() = runTest {
+        // Given
+        val mockDeviceTokenManager = mockk<PushDeviceTokenManager>()
+        val pushService = PushService(
+            storage = mockStorage,
+            configuration = configWithCache,
+            httpClient = KtorHttpClient(mockHttpClient),
+            policyEvaluator = mockPolicyEvaluator,
+            tokenManager = mockDeviceTokenManager
+        )
+
+        coEvery { mockDeviceTokenManager.shouldUpdateToken(testDeviceToken) } returns true
+        coEvery { mockDeviceTokenManager.updateDeviceToken(testDeviceToken) } returns true
+        coEvery { mockDeviceTokenManager.getDeviceTokenId() } returns "old-token"
+        coEvery { mockStorage.retrievePushCredential(testCredentialId) } returns null
+
+        // When
+        val result = pushService.setDeviceToken(testDeviceToken, testCredentialId)
+
+        // Then - should return false when credential not found
+        assertFalse(result)
+    }
+    
+    @Test
+    fun `test storage error throws MfaException`() = runTest {
+        // Given - test one storage error as example (they all follow same pattern)
+        coEvery { mockStorage.getAllPushNotifications() } throws RuntimeException("Storage error")
+
+        // When/Then
+        try {
+            pushServiceWithCache.getAllNotifications()
+            assert(false) { "Expected MfaException" }
+        } catch (e: MfaException) {
+            assert(e.message?.contains("Failed") == true)
+        }
+    }
+    
+    @Test
+    fun `test processNotification returns null for unknown platform`() = runTest {
+        // Given
+        val messageData = mapOf("unknown" to "data")
+
+        // When
+        val result = pushServiceWithCache.processNotification(messageData)
+
+        // Then
+        assertEquals(null, result)
+    }
+    
+    @Test
+    fun `test processNotification throws exception on handler error`() = runTest {
+        // Given
+        val mockHandler = mockk<PushHandler>()
+        val messageData = mapOf("test" to "data")
+
+        every { mockHandler.canHandle(any<Map<String, Any>>()) } returns true
+        every { mockHandler.parseMessage(any<Map<String, Any>>()) } throws RuntimeException("Handler error")
+
+        val pushService = PushService(
+            storage = mockStorage,
+            configuration = configWithCache,
+            httpClient = KtorHttpClient(mockHttpClient),
+            policyEvaluator = mockPolicyEvaluator,
+            handlers = mapOf("test" to mockHandler)
+        )
+
+        // When/Then
+        try {
+            pushService.processNotification(messageData)
+            assert(false) { "Expected MfaException" }
+        } catch (e: MfaException) {
+            assert(e.message?.contains("Failed to process push notification") == true)
+        }
+    }
+    
+    @Test
+    fun `test approveNotification throws exception when notification not found`() = runTest {
+        // Given
+        coEvery { mockStorage.retrievePushNotification(testNotificationId) } returns null
+
+        // When/Then
+        try {
+            pushServiceWithCache.approveNotification(testNotificationId)
+            assert(false) { "Expected MfaException" }
+        } catch (e: MfaException) {
+            assert(e.message?.contains("Failed to approve notification") == true)
+        }
+    }
+    
+    @Test
+    fun `test denyNotification throws exception when credential not found`() = runTest {
+        // Given
+        coEvery { mockStorage.retrievePushNotification(testNotificationId) } returns testNotification
+        coEvery { mockStorage.retrievePushCredential(testCredentialId) } returns null
+
+        // When/Then
+        try {
+            pushServiceWithCache.denyNotification(testNotificationId)
+            assert(false) { "Expected MfaException" }
+        } catch (e: MfaException) {
+            assert(e.message?.contains("Failed to deny notification") == true)
+        }
+    }
+    
+    @Test
+    fun `test setDeviceToken does not update when token is same`() = runTest {
+        // Given
+        val mockDeviceTokenManager = mockk<PushDeviceTokenManager>()
+        val pushService = PushService(
+            storage = mockStorage,
+            configuration = configWithCache,
+            httpClient = KtorHttpClient(mockHttpClient),
+            policyEvaluator = mockPolicyEvaluator,
+            tokenManager = mockDeviceTokenManager
+        )
+
+        coEvery { mockDeviceTokenManager.shouldUpdateToken(testDeviceToken) } returns false
+
+        // When
+        val result = pushService.setDeviceToken(testDeviceToken)
+
+        // Then
+        assertTrue(result)
+        coVerify(exactly = 0) { mockDeviceTokenManager.updateDeviceToken(any()) }
+    }
+    
+    @Test
+    fun `test processNotification does not update credential userId when already set`() = runTest {
+        // Given
+        val mockHandler = mockk<PushHandler>()
+        val messageData = mapOf("test" to "data")
+        val credentialWithUserId = testCredential.copy(userId = "existing-user-id")
+
+        every { mockHandler.canHandle(any<Map<String, Any>>()) } returns true
+        every { mockHandler.parseMessage(any<Map<String, Any>>()) } returns mapOf(
+            "credentialId" to testCredentialId,
+            "messageId" to "test-message-id",
+            "username" to "new-user-id",
+            "messageText" to "Test message"
+        )
+
+        val pushService = PushService(
+            storage = mockStorage,
+            configuration = configWithCache,
+            httpClient = KtorHttpClient(mockHttpClient),
+            policyEvaluator = mockPolicyEvaluator,
+            handlers = mapOf("test" to mockHandler)
+        )
+
+        coEvery { mockStorage.getNotificationByMessageId(any()) } returns null
+        coEvery { mockStorage.retrievePushCredential(testCredentialId) } returns credentialWithUserId
+        coEvery { mockStorage.storePushNotification(any()) } just runs
+
+        // When
+        pushService.processNotification(messageData)
+
+        // Then - should NOT update credential since userId already exists
+        coVerify(exactly = 0) { mockStorage.storePushCredential(any()) }
+    }
+    
+    @Test
+    fun `test setDeviceToken returns false when local update fails`() = runTest {
+        // Given
+        val mockDeviceTokenManager = mockk<PushDeviceTokenManager>()
+        val pushService = PushService(
+            storage = mockStorage,
+            configuration = configWithCache,
+            httpClient = KtorHttpClient(mockHttpClient),
+            policyEvaluator = mockPolicyEvaluator,
+            tokenManager = mockDeviceTokenManager
+        )
+
+        coEvery { mockDeviceTokenManager.shouldUpdateToken(testDeviceToken) } returns true
+        coEvery { mockDeviceTokenManager.updateDeviceToken(testDeviceToken) } returns false
+        coEvery { mockDeviceTokenManager.getDeviceTokenId() } returns "old-token"
+
+        // When
+        val result = pushService.setDeviceToken(testDeviceToken)
+
+        // Then - should return false when local update fails
+        assertFalse(result)
+        coVerify(exactly = 0) { mockStorage.getAllPushCredentials() }
+    }
+    
+    @Test
+    fun `test setDeviceToken succeeds with no credentials registered`() = runTest {
+        // Given
+        val mockDeviceTokenManager = mockk<PushDeviceTokenManager>()
+        val pushService = PushService(
+            storage = mockStorage,
+            configuration = configWithCache,
+            httpClient = KtorHttpClient(mockHttpClient),
+            policyEvaluator = mockPolicyEvaluator,
+            tokenManager = mockDeviceTokenManager
+        )
+
+        coEvery { mockDeviceTokenManager.shouldUpdateToken(testDeviceToken) } returns true
+        coEvery { mockDeviceTokenManager.updateDeviceToken(testDeviceToken) } returns true
+        coEvery { mockDeviceTokenManager.getDeviceTokenId() } returns "old-token"
+        coEvery { mockStorage.getAllPushCredentials() } returns emptyList()
+
+        // When
+        val result = pushService.setDeviceToken(testDeviceToken)
+
+        // Then - should return true even with no credentials
+        assertTrue(result)
+        coVerify(exactly = 1) { mockStorage.getAllPushCredentials() }
+    }
+    
+    @Test
+    fun `test setDeviceToken continues with remaining credentials when one fails`() = runTest {
+        // Given
+        val mockDeviceTokenManager = mockk<PushDeviceTokenManager>()
+        val mockHandler = mockk<PushHandler>()
+        val credential2 = testCredential.copy(id = "credential-2")
+
+        val pushService = PushService(
+            storage = mockStorage,
+            configuration = configWithCache,
+            httpClient = KtorHttpClient(mockHttpClient),
+            policyEvaluator = mockPolicyEvaluator,
+            tokenManager = mockDeviceTokenManager,
+            handlers = mapOf(PushPlatform.PING_AM.name to mockHandler)
+        )
+
+        coEvery { mockDeviceTokenManager.shouldUpdateToken(testDeviceToken) } returns true
+        coEvery { mockDeviceTokenManager.updateDeviceToken(testDeviceToken) } returns true
+        coEvery { mockDeviceTokenManager.getDeviceTokenId() } returns "old-token"
+        coEvery { mockStorage.getAllPushCredentials() } returns listOf(testCredential, credential2)
+        coEvery { mockHandler.setDeviceToken(testCredential, any(), any()) } throws RuntimeException("Network error")
+        coEvery { mockHandler.setDeviceToken(credential2, any(), any()) } returns true
+
+        // When
+        val result = pushService.setDeviceToken(testDeviceToken)
+
+        // Then - should continue and process second credential
+        assertFalse(result) // Returns false because one failed
+        coVerify(exactly = 1) { mockHandler.setDeviceToken(testCredential, testDeviceToken, any()) }
+        coVerify(exactly = 1) { mockHandler.setDeviceToken(credential2, testDeviceToken, any()) }
+    }
+    
+    @Test
+    fun `test processNotification returns existing notification for duplicates`() = runTest {
+        // Given
+        val mockHandler = mockk<PushHandler>()
+        val messageData = mapOf("test" to "data")
+        val messageId = "duplicate-message-id"
+
+        every { mockHandler.canHandle(any<Map<String, Any>>()) } returns true
+        every { mockHandler.parseMessage(any<Map<String, Any>>()) } returns mapOf(
+            "credentialId" to testCredentialId,
+            "messageId" to messageId,
+            "messageText" to "Duplicate message"
+        )
+
+        val pushService = PushService(
+            storage = mockStorage,
+            configuration = configWithCache,
+            httpClient = KtorHttpClient(mockHttpClient),
+            policyEvaluator = mockPolicyEvaluator,
+            handlers = mapOf("test" to mockHandler)
+        )
+
+        // Mock that notification already exists
+        coEvery { mockStorage.getNotificationByMessageId(messageId) } returns testNotification
+
+        // When
+        val result = pushService.processNotification(messageData)
+
+        // Then - should return existing notification for duplicate
+        assertEquals(testNotification, result)
+        coVerify(exactly = 0) { mockStorage.storePushNotification(any()) }
+    }
+    
+    @Test
+    fun `test setDeviceToken returns false when handler fails for all credentials`() = runTest {
+        // Given
+        val mockDeviceTokenManager = mockk<PushDeviceTokenManager>()
+        val mockHandler = mockk<PushHandler>()
+
+        val pushService = PushService(
+            storage = mockStorage,
+            configuration = configWithCache,
+            httpClient = KtorHttpClient(mockHttpClient),
+            policyEvaluator = mockPolicyEvaluator,
+            tokenManager = mockDeviceTokenManager,
+            handlers = mapOf(PushPlatform.PING_AM.name to mockHandler)
+        )
+
+        coEvery { mockDeviceTokenManager.shouldUpdateToken(testDeviceToken) } returns true
+        coEvery { mockDeviceTokenManager.updateDeviceToken(testDeviceToken) } returns true
+        coEvery { mockDeviceTokenManager.getDeviceTokenId() } returns "old-token"
+        coEvery { mockStorage.getAllPushCredentials() } returns listOf(testCredential)
+        coEvery { mockHandler.setDeviceToken(any(), any(), any()) } returns false
+
+        // When
+        val result = pushService.setDeviceToken(testDeviceToken)
+
+        // Then - should return false when handler fails for all credentials
+        assertFalse(result)
+        coVerify(exactly = 1) { mockHandler.setDeviceToken(testCredential, testDeviceToken, any()) }
+    }
+    
+    @Test
+    fun `test approveNotification returns false when notification already responded`() = runTest {
+        // Given
+        val respondedNotification = testNotification.copy().apply { markApproved() }
+        coEvery { mockStorage.retrievePushNotification(testNotificationId) } returns respondedNotification
+
+        // When
+        val result = pushServiceWithCache.approveNotification(testNotificationId)
+
+        // Then
+        assertFalse(result)
+        coVerify(exactly = 0) { mockStorage.updatePushNotification(any()) }
+    }
+    
+    @Test
+    fun `test denyNotification returns false when notification already responded`() = runTest {
+        // Given
+        val respondedNotification = testNotification.copy().apply { markDenied() }
+        coEvery { mockStorage.retrievePushNotification(testNotificationId) } returns respondedNotification
+
+        // When
+        val result = pushServiceWithCache.denyNotification(testNotificationId)
+
+        // Then
+        assertFalse(result)
+        coVerify(exactly = 0) { mockStorage.updatePushNotification(any()) }
+    }
+    
+    @Test
+    fun `test approveNotification throws CredentialLockedException when credential is locked`() = runTest {
+        // Given
+        val lockedCredential = testCredential.copy(isLocked = true, lockingPolicy = "test-policy")
+        coEvery { mockStorage.retrievePushNotification(testNotificationId) } returns testNotification
+        coEvery { mockStorage.retrievePushCredential(testCredentialId) } returns lockedCredential
+
+        // When/Then - CredentialLockedException is wrapped in MfaException by the outer try-catch
+        try {
+            pushServiceWithCache.approveNotification(testNotificationId)
+            assert(false) { "Expected MfaException" }
+        } catch (e: MfaException) {
+            // The CredentialLockedException is the cause
+            assert(e.cause is com.pingidentity.mfa.commons.exception.CredentialLockedException)
+            assert((e.cause as com.pingidentity.mfa.commons.exception.CredentialLockedException).policyName == "test-policy")
+        }
+    }
+    
+    @Test
+    fun `test denyNotification throws CredentialLockedException when credential is locked`() = runTest {
+        // Given
+        val lockedCredential = testCredential.copy(isLocked = true, lockingPolicy = "test-policy")
+        coEvery { mockStorage.retrievePushNotification(testNotificationId) } returns testNotification
+        coEvery { mockStorage.retrievePushCredential(testCredentialId) } returns lockedCredential
+
+        // When/Then - CredentialLockedException is wrapped in MfaException by the outer try-catch
+        try {
+            pushServiceWithCache.denyNotification(testNotificationId)
+            assert(false) { "Expected MfaException" }
+        } catch (e: MfaException) {
+            // The CredentialLockedException is the cause
+            assert(e.cause is com.pingidentity.mfa.commons.exception.CredentialLockedException)
+            assert((e.cause as com.pingidentity.mfa.commons.exception.CredentialLockedException).policyName == "test-policy")
+        }
+    }
+    
+    @Test
+    fun `test removeCredential removes associated notifications`() = runTest {
+        // Given
+        coEvery { mockStorage.removePushCredential(testCredentialId) } returns true
+        coEvery { mockStorage.removePushNotificationsForCredential(testCredentialId) } returns 3
+
+        // When
+        val result = pushServiceWithCache.removeCredential(testCredentialId)
+
+        // Then
+        assertTrue(result)
+        coVerify(exactly = 1) { mockStorage.removePushNotificationsForCredential(testCredentialId) }
+    }
+    
+    @Test
+    fun `test processNotification updates credential userId when missing`() = runTest {
+        // Given
+        val mockHandler = mockk<PushHandler>()
+        val messageData = mapOf("test" to "data")
+        val credentialWithoutUserId = testCredential.copy(userId = "")
+
+        every { mockHandler.canHandle(any<Map<String, Any>>()) } returns true
+        every { mockHandler.parseMessage(any<Map<String, Any>>()) } returns mapOf(
+            "credentialId" to testCredentialId,
+            "messageId" to "test-message-id",
+            "username" to "new-user-id",
+            "messageText" to "Test message"
+        )
+
+        val pushService = PushService(
+            storage = mockStorage,
+            configuration = configWithCache,
+            httpClient = KtorHttpClient(mockHttpClient),
+            policyEvaluator = mockPolicyEvaluator,
+            handlers = mapOf("test" to mockHandler)
+        )
+
+        coEvery { mockStorage.getNotificationByMessageId(any()) } returns null
+        coEvery { mockStorage.retrievePushCredential(testCredentialId) } returns credentialWithoutUserId
+        coEvery { mockStorage.storePushCredential(any()) } just runs
+        coEvery { mockStorage.storePushNotification(any()) } just runs
+
+        // When
+        pushService.processNotification(messageData)
+
+        // Then
+        coVerify(exactly = 1) { 
+            mockStorage.storePushCredential(
+                match { it.id == testCredentialId && it.userId == "new-user-id" }
+            ) 
+        }
+    }
+    
+    @Test
+    fun `test approveNotification throws exception when handler missing for platform`() = runTest {
+        // Given
+        val credentialWithUnknownPlatform = testCredential.copy(platform = "UNKNOWN")
+        coEvery { mockStorage.retrievePushNotification(testNotificationId) } returns testNotification
+        coEvery { mockStorage.retrievePushCredential(testCredentialId) } returns credentialWithUnknownPlatform
+
+        // When/Then
+        try {
+            pushServiceWithCache.approveNotification(testNotificationId)
+            assert(false) { "Expected MfaException" }
+        } catch (e: MfaException) {
+            assert(e.message?.contains("Failed to approve notification") == true)
+        }
+    }
+    
+    @Test
+    fun `test denyNotification throws exception when handler missing for platform`() = runTest {
+        // Given
+        val credentialWithUnknownPlatform = testCredential.copy(platform = "UNKNOWN")
+        coEvery { mockStorage.retrievePushNotification(testNotificationId) } returns testNotification
+        coEvery { mockStorage.retrievePushCredential(testCredentialId) } returns credentialWithUnknownPlatform
+
+        // When/Then
+        try {
+            pushServiceWithCache.denyNotification(testNotificationId)
+            assert(false) { "Expected MfaException" }
+        } catch (e: MfaException) {
+            assert(e.message?.contains("Failed to deny notification") == true)
+        }
+    }
+    
+    @Test
+    fun `test approveNotification returns false when handler sendApproval fails`() = runTest {
+        // Given
+        val mockHandler = mockk<PushHandler>()
+        val pushService = PushService(
+            storage = mockStorage,
+            configuration = configWithCache,
+            httpClient = KtorHttpClient(mockHttpClient),
+            policyEvaluator = mockPolicyEvaluator,
+            handlers = mapOf(PushPlatform.PING_AM.name to mockHandler)
+        )
+
+        coEvery { mockStorage.retrievePushNotification(testNotificationId) } returns testNotification
+        coEvery { mockStorage.retrievePushCredential(testCredentialId) } returns testCredential
+        coEvery { mockHandler.sendApproval(any(), any(), any()) } returns false
+
+        // When
+        val result = pushService.approveNotification(testNotificationId)
+
+        // Then
+        assertFalse(result)
+        coVerify(exactly = 0) { mockStorage.updatePushNotification(any()) }
+    }
+    
+    @Test
+    fun `test denyNotification returns false when handler sendDenial fails`() = runTest {
+        // Given
+        val mockHandler = mockk<PushHandler>()
+        val pushService = PushService(
+            storage = mockStorage,
+            configuration = configWithCache,
+            httpClient = KtorHttpClient(mockHttpClient),
+            policyEvaluator = mockPolicyEvaluator,
+            handlers = mapOf(PushPlatform.PING_AM.name to mockHandler)
+        )
+
+        coEvery { mockStorage.retrievePushNotification(testNotificationId) } returns testNotification
+        coEvery { mockStorage.retrievePushCredential(testCredentialId) } returns testCredential
+        coEvery { mockHandler.sendDenial(any(), any(), any()) } returns false
+
+        // When
+        val result = pushService.denyNotification(testNotificationId)
+
+        // Then
+        assertFalse(result)
+        coVerify(exactly = 0) { mockStorage.updatePushNotification(any()) }
+    }
 }
+
