@@ -114,3 +114,26 @@ class DuplicateCredentialException(
     message = "Credential already exists for issuer '$issuer' and account '$accountName'",
     cause = cause
 )
+
+/**
+ * Exception thrown when attempting to operate on a credential that does not exist.
+ * 
+ * This exception is a cross-module exception that applies to all MFA credential types
+ * (Push, OATH, etc.). It is thrown when a credential cannot be found in storage, which may occur if:
+ * - The credential was deleted or removed
+ * - The credential ID is invalid or corrupted
+ * - There's a data integrity issue between notification and credential storage
+ * 
+ * Applications should handle this by prompting the user to re-register the credential
+ * or navigate to a credential setup flow.
+ * 
+ * @param credentialId The ID of the credential that was not found.
+ * @param cause The underlying cause of the exception.
+ */
+class CredentialNotFoundException(
+    val credentialId: String,
+    cause: Throwable? = null
+) : MfaException(
+    message = "Credential not found: $credentialId",
+    cause = cause
+)

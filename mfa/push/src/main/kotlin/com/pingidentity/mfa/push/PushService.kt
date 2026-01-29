@@ -8,6 +8,7 @@
 package com.pingidentity.mfa.push
 
 import com.pingidentity.mfa.commons.exception.CredentialLockedException
+import com.pingidentity.mfa.commons.exception.CredentialNotFoundException
 import com.pingidentity.mfa.commons.exception.DuplicateCredentialException
 import com.pingidentity.mfa.commons.exception.MfaException
 import com.pingidentity.mfa.commons.exception.MfaPolicyViolationException
@@ -29,6 +30,9 @@ import com.pingidentity.mfa.push.PushConstants.KEY_PUSH_TYPE
 import com.pingidentity.mfa.push.PushConstants.KEY_TIME_INTERVAL
 import com.pingidentity.mfa.push.PushConstants.KEY_TTL
 import com.pingidentity.mfa.push.PushConstants.KEY_USERNAME
+import com.pingidentity.mfa.push.exception.DeviceTokenMissingException
+import com.pingidentity.mfa.push.exception.NotificationExpiredException
+import com.pingidentity.mfa.push.exception.NotificationNotFoundException
 import com.pingidentity.mfa.push.storage.PushStorage
 import com.pingidentity.network.HttpClient
 import kotlinx.coroutines.currentCoroutineContext
@@ -111,6 +115,7 @@ internal class PushService(
      * @throws IllegalArgumentException if the URI is invalid.
      * @throws MfaPolicyViolationException if policies are violated during registration.
      * @throws DuplicateCredentialException if a credential with the same issuer and account name already exists.
+     * @throws DeviceTokenMissingException if device token has not been set via setDeviceToken().
      * @throws MfaException if the credential cannot be created.
      */
     suspend fun addCredentialFromUri(uri: String): PushCredential {
@@ -160,7 +165,7 @@ internal class PushService(
             }
 
             // Get the device token
-            val deviceToken = deviceTokenManager.getDeviceTokenId() ?: throw MfaException("Device token not set")
+            val deviceToken = deviceTokenManager.getDeviceTokenId() ?: throw DeviceTokenMissingException()
 
             // Get registration parameters from URI and add device info
             val registrationParams = PushUriParser.registrationParameters(uri).toMutableMap()
@@ -181,6 +186,12 @@ internal class PushService(
                 logger.w("Failed to register push credential from URI: $uri")
                 throw MfaException("Failed to register push credential from URI: $uri")
             }
+        } catch (e: DeviceTokenMissingException) {
+            throw e // Re-throw specialized exceptions
+        } catch (e: DuplicateCredentialException) {
+            throw e
+        } catch (e: MfaPolicyViolationException) {
+            throw e
         } catch (e: Exception) {
             currentCoroutineContext().ensureActive()
             logger.e("Failed to add credential from URI: ${e.message}", e)
@@ -677,6 +688,10 @@ internal class PushService(
      *
      * @param notificationId The ID of the notification to approve.
      * @return True if the notification was approved successfully.
+     * @throws NotificationNotFoundException if the notification cannot be found.
+     * @throws NotificationExpiredException if the notification has expired.
+     * @throws CredentialNotFoundException if the credential associated with the notification cannot be found.
+     * @throws CredentialLockedException if the credential is locked due to policy violation.
      * @throws MfaException if the notification cannot be approved.
      * @see PushClient.approveNotification which wraps this in a Result
      */
@@ -684,7 +699,7 @@ internal class PushService(
         try {
             // Get the notification
             val notification = storage.retrievePushNotification(notificationId)
-                ?: throw MfaException("Notification not found: $notificationId")
+                ?: throw NotificationNotFoundException(notificationId)
 
             // Check if the notification is pending
             if (!notification.pending) {
@@ -692,9 +707,15 @@ internal class PushService(
                 return false
             }
 
+            // Check if the notification has expired
+            if (notification.expired) {
+                logger.w("Cannot approve notification: ${notification.id}, notification has expired")
+                throw NotificationExpiredException(notification.id, notification.ttl)
+            }
+
             // Get the credential
             val credential = storage.retrievePushCredential(notification.credentialId)
-                ?: throw MfaException("Credential not found: ${notification.credentialId}")
+                ?: throw CredentialNotFoundException(notification.credentialId)
 
             // Check if credential is locked due to policy violation
             if (credential.isLocked) {
@@ -718,6 +739,14 @@ internal class PushService(
             }
 
             return result
+        } catch (e: NotificationExpiredException) {
+            throw e // Re-throw specialized exceptions
+        } catch (e: NotificationNotFoundException) {
+            throw e
+        } catch (e: CredentialNotFoundException) {
+            throw e
+        } catch (e: CredentialLockedException) {
+            throw e
         } catch (e: Exception) {
             currentCoroutineContext().ensureActive()
             logger.e("Failed to approve notification: ${e.message}", e)
@@ -730,13 +759,17 @@ internal class PushService(
      *
      * @param notificationId The ID of the notification to deny.
      * @return True if the notification was denied successfully.
+     * @throws NotificationNotFoundException if the notification cannot be found.
+     * @throws NotificationExpiredException if the notification has expired.
+     * @throws CredentialNotFoundException if the credential associated with the notification cannot be found.
+     * @throws CredentialLockedException if the credential is locked due to policy violation.
      * @throws MfaException if the notification cannot be denied.
      */
     suspend fun denyNotification(notificationId: String, params: Map<String, Any> = emptyMap()): Boolean {
         try {
             // Get the notification
             val notification = storage.retrievePushNotification(notificationId)
-                ?: throw MfaException("Notification not found: $notificationId")
+                ?: throw NotificationNotFoundException(notificationId)
 
             // Check if the notification is pending
             if (!notification.pending) {
@@ -744,9 +777,15 @@ internal class PushService(
                 return false
             }
 
+            // Check if the notification has expired
+            if (notification.expired) {
+                logger.w("Cannot deny notification: ${notification.id}, notification has expired")
+                throw NotificationExpiredException(notification.id, notification.ttl)
+            }
+
             // Get the credential
             val credential = storage.retrievePushCredential(notification.credentialId)
-                ?: throw MfaException("Credential not found: ${notification.credentialId}")
+                ?: throw CredentialNotFoundException(notification.credentialId)
 
             // Check if credential is locked due to policy violation
             if (credential.isLocked) {
@@ -770,6 +809,14 @@ internal class PushService(
             }
 
             return result
+        } catch (e: NotificationExpiredException) {
+            throw e // Re-throw specialized exceptions
+        } catch (e: NotificationNotFoundException) {
+            throw e
+        } catch (e: CredentialNotFoundException) {
+            throw e
+        } catch (e: CredentialLockedException) {
+            throw e
         } catch (e: Exception) {
             currentCoroutineContext().ensureActive()
             logger.e("Failed to deny notification: ${e.message}", e)

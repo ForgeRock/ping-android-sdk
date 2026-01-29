@@ -897,4 +897,93 @@ class PushClientTest {
         // Verify storage was initialized
         coVerify(exactly = 1) { mockStorage.initialize() }
     }
+
+    @Test
+    fun `test approveNotification returns failure with NotificationExpiredException`() = runTest {
+        // Given
+        val expiredException = com.pingidentity.mfa.push.exception.NotificationExpiredException(
+            testNotificationId,
+            60
+        )
+        coEvery { mockPushService.approveNotification(testNotificationId, emptyMap()) } throws expiredException
+
+        // When
+        val result = pushClient.approveNotification(testNotificationId)
+
+        // Then
+        assertTrue(result.isFailure)
+        assertTrue(result.exceptionOrNull() is com.pingidentity.mfa.push.exception.NotificationExpiredException)
+        val exception = result.exceptionOrNull() as com.pingidentity.mfa.push.exception.NotificationExpiredException
+        assertEquals(testNotificationId, exception.notificationId)
+        assertEquals(60, exception.ttlSeconds)
+    }
+
+    @Test
+    fun `test approveNotification returns failure with NotificationNotFoundException`() = runTest {
+        // Given
+        val notFoundException = com.pingidentity.mfa.push.exception.NotificationNotFoundException(
+            testNotificationId
+        )
+        coEvery { mockPushService.approveNotification(testNotificationId, emptyMap()) } throws notFoundException
+
+        // When
+        val result = pushClient.approveNotification(testNotificationId)
+
+        // Then
+        assertTrue(result.isFailure)
+        assertTrue(result.exceptionOrNull() is com.pingidentity.mfa.push.exception.NotificationNotFoundException)
+        val exception = result.exceptionOrNull() as com.pingidentity.mfa.push.exception.NotificationNotFoundException
+        assertEquals(testNotificationId, exception.notificationId)
+    }
+
+    @Test
+    fun `test approveNotification returns failure with CredentialNotFoundException`() = runTest {
+        // Given
+        val credentialNotFoundException = com.pingidentity.mfa.commons.exception.CredentialNotFoundException(
+            "test-credential-id"
+        )
+        coEvery { mockPushService.approveNotification(testNotificationId, emptyMap()) } throws credentialNotFoundException
+
+        // When
+        val result = pushClient.approveNotification(testNotificationId)
+
+        // Then
+        assertTrue(result.isFailure)
+        assertTrue(result.exceptionOrNull() is com.pingidentity.mfa.commons.exception.CredentialNotFoundException)
+        val exception = result.exceptionOrNull() as com.pingidentity.mfa.commons.exception.CredentialNotFoundException
+        assertEquals("test-credential-id", exception.credentialId)
+    }
+
+    @Test
+    fun `test denyNotification returns failure with NotificationExpiredException`() = runTest {
+        // Given
+        val expiredException = com.pingidentity.mfa.push.exception.NotificationExpiredException(
+            testNotificationId,
+            60
+        )
+        coEvery { mockPushService.denyNotification(testNotificationId, emptyMap()) } throws expiredException
+
+        // When
+        val result = pushClient.denyNotification(testNotificationId)
+
+        // Then
+        assertTrue(result.isFailure)
+        assertTrue(result.exceptionOrNull() is com.pingidentity.mfa.push.exception.NotificationExpiredException)
+    }
+
+    @Test
+    fun `test addCredentialFromUri returns failure with DeviceTokenMissingException`() = runTest {
+        // Given
+        val deviceTokenException = com.pingidentity.mfa.push.exception.DeviceTokenMissingException()
+        coEvery { mockPushService.addCredentialFromUri(testUri) } throws deviceTokenException
+
+        // When
+        val result = pushClient.addCredentialFromUri(testUri)
+
+        // Then
+        assertTrue(result.isFailure)
+        assertTrue(result.exceptionOrNull() is com.pingidentity.mfa.push.exception.DeviceTokenMissingException)
+        assertTrue(result.exceptionOrNull()?.message?.contains("Device token not set") == true)
+    }
 }
+

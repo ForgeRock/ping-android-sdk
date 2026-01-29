@@ -9,7 +9,11 @@ package com.pingidentity.mfa.push
 
 import android.content.Context
 import com.pingidentity.logger.Logger
+import com.pingidentity.mfa.commons.exception.CredentialNotFoundException
 import com.pingidentity.mfa.commons.exception.MfaException
+import com.pingidentity.mfa.push.exception.DeviceTokenMissingException
+import com.pingidentity.mfa.push.exception.NotificationExpiredException
+import com.pingidentity.mfa.push.exception.NotificationNotFoundException
 import com.pingidentity.mfa.push.storage.PushStorage
 import com.pingidentity.network.ktor.KtorHttpClient
 import io.ktor.client.HttpClient
@@ -449,18 +453,18 @@ class PushServiceTest {
                 )
             )
 
-            // Make the service throw MfaException directly when called
+            // Make the service throw DeviceTokenMissingException directly when called
             coEvery { pushService.addCredentialFromUri(any()) } throws
-                    MfaException("Failed to add credential: Device token not available")
+                    DeviceTokenMissingException()
 
             try {
                 // When - use any valid string since we're mocking the method
                 pushService.addCredentialFromUri("test-uri")
                 // Should not reach here
-                assert(false) { "Expected MfaException but no exception was thrown" }
-            } catch (e: MfaException) {
-                // Then - we expect an MfaException
-                assert(e.message?.contains("Device token not available") ?: false)
+                assert(false) { "Expected DeviceTokenMissingException but no exception was thrown" }
+            } catch (e: DeviceTokenMissingException) {
+                // Then - we expect a DeviceTokenMissingException
+                assert(e.message?.contains("Device token not set") ?: false)
             }
         }
 
@@ -692,9 +696,10 @@ class PushServiceTest {
         // When/Then
         try {
             pushServiceWithCache.approveNotification(testNotificationId)
-            assert(false) { "Expected MfaException" }
-        } catch (e: MfaException) {
-            assert(e.message?.contains("Failed to approve notification") == true)
+            assert(false) { "Expected NotificationNotFoundException" }
+        } catch (e: NotificationNotFoundException) {
+            assert(e.message?.contains("Notification not found") == true)
+            assert(e.notificationId == testNotificationId)
         }
     }
 
@@ -707,9 +712,10 @@ class PushServiceTest {
         // When/Then
         try {
             pushServiceWithCache.denyNotification(testNotificationId)
-            assert(false) { "Expected MfaException" }
-        } catch (e: MfaException) {
-            assert(e.message?.contains("Failed to deny notification") == true)
+            assert(false) { "Expected CredentialNotFoundException" }
+        } catch (e: CredentialNotFoundException) {
+            assert(e.message?.contains("Credential not found") == true)
+            assert(e.credentialId == testCredentialId)
         }
     }
 
@@ -955,14 +961,13 @@ class PushServiceTest {
             coEvery { mockStorage.retrievePushNotification(testNotificationId) } returns testNotification
             coEvery { mockStorage.retrievePushCredential(testCredentialId) } returns lockedCredential
 
-            // When/Then - CredentialLockedException is wrapped in MfaException by the outer try-catch
+            // When/Then - CredentialLockedException is now re-thrown directly (not wrapped)
             try {
                 pushServiceWithCache.approveNotification(testNotificationId)
-                assert(false) { "Expected MfaException" }
-            } catch (e: MfaException) {
-                // The CredentialLockedException is the cause
-                assert(e.cause is com.pingidentity.mfa.commons.exception.CredentialLockedException)
-                assert((e.cause as com.pingidentity.mfa.commons.exception.CredentialLockedException).policyName == "test-policy")
+                assert(false) { "Expected CredentialLockedException" }
+            } catch (e: com.pingidentity.mfa.commons.exception.CredentialLockedException) {
+                assert(e.policyName == "test-policy")
+                assert(e.message?.contains("Credential is currently locked") == true)
             }
         }
 
@@ -975,14 +980,13 @@ class PushServiceTest {
             coEvery { mockStorage.retrievePushNotification(testNotificationId) } returns testNotification
             coEvery { mockStorage.retrievePushCredential(testCredentialId) } returns lockedCredential
 
-            // When/Then - CredentialLockedException is wrapped in MfaException by the outer try-catch
+            // When/Then - CredentialLockedException is now re-thrown directly (not wrapped)
             try {
                 pushServiceWithCache.denyNotification(testNotificationId)
-                assert(false) { "Expected MfaException" }
-            } catch (e: MfaException) {
-                // The CredentialLockedException is the cause
-                assert(e.cause is com.pingidentity.mfa.commons.exception.CredentialLockedException)
-                assert((e.cause as com.pingidentity.mfa.commons.exception.CredentialLockedException).policyName == "test-policy")
+                assert(false) { "Expected CredentialLockedException" }
+            } catch (e: com.pingidentity.mfa.commons.exception.CredentialLockedException) {
+                assert(e.policyName == "test-policy")
+                assert(e.message?.contains("Credential is currently locked") == true)
             }
         }
 
@@ -1318,6 +1322,137 @@ class PushServiceTest {
         // Verify storage was called
         coVerify(exactly = 1) {
             mockStorage.storePushCredential(any())
+        }
+    }
+
+    @Test
+    fun `test approve expired notification throws NotificationExpiredException`() = runTest {
+        // Given
+        val expiredNotification = testNotification.copy(
+            createdAt = java.util.Date(System.currentTimeMillis() - 120000), // 2 minutes ago
+            ttl = 60 // 60 seconds TTL
+        )
+        coEvery { mockStorage.retrievePushNotification(testNotificationId) } returns expiredNotification
+
+        // When/Then
+        try {
+            pushServiceWithCache.approveNotification(testNotificationId)
+            assert(false) { "Expected NotificationExpiredException" }
+        } catch (e: NotificationExpiredException) {
+            assert(e.message?.contains("has expired") == true)
+            assert(e.notificationId == testNotificationId)
+            assert(e.ttlSeconds == 60)
+        }
+    }
+
+    @Test
+    fun `test deny expired notification throws NotificationExpiredException`() = runTest {
+        // Given
+        val expiredNotification = testNotification.copy(
+            createdAt = java.util.Date(System.currentTimeMillis() - 120000), // 2 minutes ago
+            ttl = 60 // 60 seconds TTL
+        )
+        coEvery { mockStorage.retrievePushNotification(testNotificationId) } returns expiredNotification
+
+        // When/Then
+        try {
+            pushServiceWithCache.denyNotification(testNotificationId)
+            assert(false) { "Expected NotificationExpiredException" }
+        } catch (e: NotificationExpiredException) {
+            assert(e.message?.contains("has expired") == true)
+            assert(e.notificationId == testNotificationId)
+            assert(e.ttlSeconds == 60)
+        }
+    }
+
+    @Test
+    fun `test approve nonexistent notification throws NotificationNotFoundException`() = runTest {
+        // Given
+        coEvery { mockStorage.retrievePushNotification(testNotificationId) } returns null
+
+        // When/Then
+        try {
+            pushServiceWithCache.approveNotification(testNotificationId)
+            assert(false) { "Expected NotificationNotFoundException" }
+        } catch (e: NotificationNotFoundException) {
+            assert(e.message?.contains("Notification not found") == true)
+            assert(e.notificationId == testNotificationId)
+        }
+    }
+
+    @Test
+    fun `test deny nonexistent notification throws NotificationNotFoundException`() = runTest {
+        // Given
+        coEvery { mockStorage.retrievePushNotification(testNotificationId) } returns null
+
+        // When/Then
+        try {
+            pushServiceWithCache.denyNotification(testNotificationId)
+            assert(false) { "Expected NotificationNotFoundException" }
+        } catch (e: NotificationNotFoundException) {
+            assert(e.message?.contains("Notification not found") == true)
+            assert(e.notificationId == testNotificationId)
+        }
+    }
+
+    @Test
+    fun `test approve with missing credential throws CredentialNotFoundException`() = runTest {
+        // Given
+        coEvery { mockStorage.retrievePushNotification(testNotificationId) } returns testNotification
+        coEvery { mockStorage.retrievePushCredential(testCredentialId) } returns null
+
+        // When/Then
+        try {
+            pushServiceWithCache.approveNotification(testNotificationId)
+            assert(false) { "Expected CredentialNotFoundException" }
+        } catch (e: CredentialNotFoundException) {
+            assert(e.message?.contains("Credential not found") == true)
+            assert(e.credentialId == testCredentialId)
+        }
+    }
+
+    @Test
+    fun `test deny with missing credential throws CredentialNotFoundException`() = runTest {
+        // Given
+        coEvery { mockStorage.retrievePushNotification(testNotificationId) } returns testNotification
+        coEvery { mockStorage.retrievePushCredential(testCredentialId) } returns null
+
+        // When/Then
+        try {
+            pushServiceWithCache.denyNotification(testNotificationId)
+            assert(false) { "Expected CredentialNotFoundException" }
+        } catch (e: CredentialNotFoundException) {
+            assert(e.message?.contains("Credential not found") == true)
+            assert(e.credentialId == testCredentialId)
+        }
+    }
+
+    @Test
+    fun `test addCredentialFromUri without device token throws DeviceTokenMissingException`() = runTest {
+        // Given - Use a valid test URI from the test suite
+        val testUri = "pushauth://push/forgerock:user?a=aHR0cDovL2Rldi5vcGVuYW0uZXhhbXBsZS5jb206ODA4MS9vcGVuYW0vanNvbi9kZXYvcHVzaC9zbnMvbWVzc2FnZT9fYWN0aW9uPWF1dGhlbnRpY2F0ZQ&r=aHR0cDovL2Rldi5vcGVuYW0uZXhhbXBsZS5jb206ODA4MS9vcGVuYW0vanNvbi9kZXYvcHVzaC9zbnMvbWVzc2FnZT9fYWN0aW9uPXJlZ2lzdGVy&s=b3uYLkQ7dRPjBaIzV0t_aijoXRgMq-NP5AwVAvRfa_E"
+        val mockDeviceTokenManager = mockk<PushDeviceTokenManager>()
+        val mockHandler = mockk<PushHandler>()
+        
+        coEvery { mockDeviceTokenManager.getDeviceTokenId() } returns null
+        every { mockHandler.canHandle(any<String>()) } returns true
+
+        val pushService = PushService(
+            storage = mockStorage,
+            configuration = configWithCache,
+            httpClient = KtorHttpClient(mockHttpClient),
+            policyEvaluator = mockPolicyEvaluator,
+            tokenManager = mockDeviceTokenManager,
+            handlers = mapOf(PushPlatform.PING_AM.name to mockHandler)
+        )
+
+        // When/Then
+        try {
+            pushService.addCredentialFromUri(testUri)
+            assert(false) { "Expected DeviceTokenMissingException" }
+        } catch (e: DeviceTokenMissingException) {
+            assert(e.message?.contains("Device token not set") == true)
+            assert(e.message?.contains("Call setDeviceToken()") == true)
         }
     }
 }
