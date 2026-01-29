@@ -50,7 +50,6 @@ class PushNotificationActivity : ComponentActivity() {
         val notificationId = intent?.getStringExtra(EXTRA_NOTIFICATION_ID)
 
         val notification = intent?.getParcelableExtra(EXTRA_NOTIFICATION, PushNotification::class.java)
-        println("XXX 1 " + notification?.title)
         // If no notification ID, log and finish
         if (notificationId == null) {
             diagnosticLogger.w("No notification ID provided")
@@ -117,7 +116,6 @@ class PushNotificationActivity : ComponentActivity() {
                                             }
                                             result?.isFailure == true -> {
                                                 diagnosticLogger.e("Error approving with challenge: ${result.exceptionOrNull()?.stackTrace}")
-                                                errorMessage = "Failed to approve: ${result.exceptionOrNull()?.message}"
                                             }
                                         }
                                     }
@@ -134,7 +132,6 @@ class PushNotificationActivity : ComponentActivity() {
                                             }
                                             result?.isFailure == true -> {
                                                 diagnosticLogger.e("Error approving with challenge: ${result.exceptionOrNull()?.stackTrace}")
-                                                errorMessage = "Failed to approve: ${result.exceptionOrNull()?.message}"
                                             }
                                         }
                                     }
@@ -152,7 +149,6 @@ class PushNotificationActivity : ComponentActivity() {
                                             }
                                             result?.isFailure == true -> {
                                                 diagnosticLogger.e("Error approving with challenge: ${result.exceptionOrNull()?.stackTrace}")
-                                                errorMessage = "Failed to approve: ${result.exceptionOrNull()?.message}"
                                             }
                                         }
                                     }

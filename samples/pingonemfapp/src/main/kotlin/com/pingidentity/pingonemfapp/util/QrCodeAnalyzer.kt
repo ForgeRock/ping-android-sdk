@@ -44,15 +44,7 @@ class QrCodeAnalyzer(private val onQrCodeDetected: (String) -> Unit) : ImageAnal
                     .addOnSuccessListener { barcodes ->
                         // Process QR codes and find the first valid barcode
                         val foundQrCode = barcodes.find { barcode ->
-                            println("xxx ${barcode.rawValue}")
-
                             barcode.format == Barcode.FORMAT_QR_CODE && barcode.rawValue != null
-                            // TODO add pingonmfa filtering
-//                                    && (
-//                                barcode.rawValue?.startsWith(UriScheme.OTPAUTH.value) == true ||
-//                                barcode.rawValue?.startsWith(UriScheme.PUSHAUTH.value) == true ||
-//                                barcode.rawValue?.startsWith(UriScheme.MFAUTH.value) == true
-//                            )
                         }
                         
                         // If we found a matching QR code, process it

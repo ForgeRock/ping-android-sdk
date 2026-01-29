@@ -1,6 +1,6 @@
-[![Ping Identity](https://www.pingidentity.com/content/dam/picr/nav/Ping-Logo-2.svg)](https://github.com/ForgeRock/ping-android-sdk)
+[![Ping Identity](https://www.pingidentity.com/content/dam/picr/nav/Ping-Logo-2.svg)](https://github.com/pingidentity/pingone-mobile-sdk-android)
 
-# Ping Authenticator Sample App
+# PingOne MFA Authenticator Sample App
 
 This sample application demonstrates how to implement multi-factor authentication using the Ping Identity SDK. The app allows users to register and manage both OATH credentials (TOTP/HOTP) and Push authentication credentials.
 
@@ -8,38 +8,19 @@ This sample application demonstrates how to implement multi-factor authenticatio
 
 This application is a sample and not intended for production use. It is provided for educational purposes to demonstrate the use of the Ping Identity SDK.
 
-The application uses a public reverse geocoding service for location mapping. This service is not guaranteed to be accurate or available. For a production application, it is recommended to use a more robust and reliable geocoding service.
-
 ## Features
 
 ### OATH Authentication
-- **QR Code Scanning**: Register accounts by scanning QR codes containing OATH credentials
-- **Manual Entry**: Manually enter account details
-- **Journey Authentication**: Register accounts through authenticated Journey login flows
+- **QR Code Scanning**: Register accounts by scanning QR codes 
 - **TOTP Support**: Automatic generation of time-based one-time passwords with countdown timer
-- **HOTP Support**: Counter-based one-time passwords with refresh capability
-- **Copy OTP**: Copy to clipboard functionality
 
 ### Push Authentication
 - **QR Code Registration**: Register for push authentication by scanning QR codes
-- **Journey Authentication**: Register for push authentication through authenticated Journey login flows
 - **Push Notifications**: Receive and respond to authentication requests
 - **System Notifications**: Display system notifications when push requests are received
 - **Direct Actions**: Approve or deny authentication requests directly from system notification tray (DEFAULT type)
 - **Push Biometric Authentication**: Authenticate using fingerprint or face recognition (BIOMETRIC type)
 - **Push Challenge Verification**: Verify challenge numbers for enhanced security (CHALLENGE type)
-- **Location Display**: View location information when provided in push notifications
-- **Notification Management**: Clean up old notifications via Settings screen
-- **Device Token Management**: View device token information
-
-### Journey-based Credential Enrollment
-- **User Authentication**: Allow the app to authenticate users through Journey flows
-- **Seamless Integration**: MFA registration integrated directly into authentication flows
-- **User Association**: Journey-registered credentials are automatically associated with the authenticated user
-
-### Common
-- **Account Management**: View, organize, and delete accounts
-- **Account Grouping**: Group MFA accounts with the same issuer/account name
 
 ## Architecture overview
 
@@ -59,8 +40,8 @@ The Ping Authenticator App sample is a modular Android application built on Mode
 
 - **Presentation Layer**: Android Activities/Fragments for user interaction.
 - **Domain Layer**: Handles business logic, orchestrates feature flows, and manages state.
-- **Data/Service Layer**: Integrates with Ping SDK modules (`push`, `oath`, `journey`) and other services.
-- **SDK Layer**: Abstracts the complexity to deal with MFA capabilities and comunication with Ping backend.
+- **Data/Service Layer**: Integrates with Ping SDK modules (`push`, `otp`).
+- **SDK Layer**: Abstracts the complexity to deal with MFA capabilities and communication with Ping backend.
 
 The application follows modern Android development practices:
 
@@ -71,7 +52,7 @@ The application follows modern Android development practices:
 - **Navigation**: For handling navigation between screens
 - **Material 3**: For modern, adaptive UI components
 - **Firebase Cloud Messaging**: For receiving push notifications
-- **OpenStreetMap**: For displaying location information in push notifications
+- **Biometric**: For fingerprint/face recognition
 
 ## Implementation Details
 
@@ -79,18 +60,16 @@ The application follows modern Android development practices:
 
 ```
 src/main/kotlin/com/pingidentity/authenticatorapp/
-├── AuthenticatorApp.kt             # App initialization, SDK clients (Push, OATH, Journey)
+├── PingOneMFApp.kt                 # App initialization
 ├── managers/
-│   ├── JourneyManager.kt           # Journey logic, state, integration
-│   ├── PushManager.kt              # Push logic, state, integration
-│   └── OathManager.kt              # OATH logic, state, integration
+│   ├── AccountsManager.kt          # Pairing account and accounts retrieval from the SDK
+│   └── OtpManager.kt               # OTP generation and auto-refresh
 ├── ui/
 │   ├── AccountsScreen.kt           # Account management UI
-│   ├── PushNotificationsScreen.kt  # Push notification UI
+│   ├── OtpScreen.kt                # OTP presentation screen
 │   └── ...                         # Other Compose screens
 ├── data/
-│   ├── AuthenticatorViewModel.kt   # Coordinates between Push and OATH managers and handles UI-specific logic
-│   ├── LoginViewModel.kt           # Coordinates between Journey and other managers handling UI-specific logic
+│   ├── MainViewModel.kt            # Acts as the central coordinator between the PingOne MFA SDK managers and the UI
 │   ├── DiagnosticLogger.kt         # Logging
 │   └── UserPreferences.kt          # Preferences
 └── ...
@@ -98,11 +77,10 @@ src/main/kotlin/com/pingidentity/authenticatorapp/
 
 **Key Classes & Structure:**
 
-- `AuthenticatorApp.kt`: Initializes Push, OATH, and Journey clients, manages global app state.
+- `PingOneMFApp.kt`: Configures logging, initializes the PingOne MFA SDK, and registers the Firebase push token.
 - `managers/`: Integrates Ping SDK modules.
-- `managers/JourneyManager.kt`: Handles Journey lifecycle with MFA registration.
-- `managers/PushManager.kt`: Encapsulates push notification logic and state.
-- `managers/OathManager.kt`: Handles OATH token lifecycle and OTP generation.
+- `managers/AccountsManager.kt`: wraps the PingOne MFA SDK to pair users and load MFA accounts.
+- `managers/OtpManager.kt`: continuously fetches OTP codes from the PingOne MFA SDK, maintains their countdown lifecycle, and exposes the current OTP state to the UI via a reactive flow.
 - `ui/`: Compose screens and components for account and notification management.
 - `data/`: Models, preferences, logging.
 
@@ -112,11 +90,11 @@ src/main/kotlin/com/pingidentity/authenticatorapp/
 - **User Actions**: Approve/deny requests from notification or app UI.
 - **Result Reporting**: Communicates user decisions to Ping backend securely.
 
-**Class:** `PushManager.kt`
+**Class:** `PushNotificationService.kt`
 
 **Flow Diagram (textual):**
 ```
-Push Request → PushManager → Notification UI → User Action → Ping Backend
+Push Request → PushNotificationService → SDK module → Notification UI → User Action → Ping Backend
 ```
 
 #### Push Authentication Types
@@ -126,13 +104,19 @@ The app handles three different types of push authentication:
 1. **DEFAULT**: Simple approval/denial directly from the notification
    ```kotlin
    // Approve a standard notification
-   pushClient.approveNotification(notificationId)
+   notification.approveNotification(notification, authMethod)
+   ```
+    ***important:***
+If you're approving the notification from the notification banner button (notification action) you must call:
+   ```kotlin
+   // Approve a background notification
+   PingOneMFA.approvePushNotificationFromBanner(notification)
    ```
 
 2. **BIOMETRIC**: Authentication using biometric verification
    ```kotlin
    // Approve with biometric authentication
-   pushClient.approveBiometricNotification(notificationId)
+   notification.approveBiometricNotification(notification, authMethod)
    ```
 
 3. **CHALLENGE**: Verification using challenge numbers
@@ -141,62 +125,25 @@ The app handles three different types of push authentication:
    val numbers = pushNotification.getNumbersChallenge()
    
    // Approve with challenge response
-   pushClient.approveChallengeNotification(notificationId, challengeResponse)
+   notification.approveNotification(notification, authMethod, challengeResponse)
    ```
 
 
-### OATH Module
-- **Token Provisioning**: Enrolls OATH tokens via QR/manual entry or Journey authentication flows.
-- **Code Generation**: Generates OTP codes (TOTP/HOTP) for authentication.
-- **Token Management**: UI for listing, renaming, deleting tokens.
-- **Security**: OTP codes can be hidden (optional).
+### OTP Module
+- **Token Retrieval**: Retrieves OTP from the SDK and displays it to the user.
+- **Token Refreshment**: Refreshes the OTP code when it expires.
 
-**Class:** `OathManager.kt`
+**Class:** `OtpManager.kt`
 
 **Flow Diagram (textual):**
 ```
-Enroll Token → OathManager → Generate OTP → Display in UI → User enters code
-Journey Flow → Auto-Register → Associate with User → Mark as Journey-enabled
-```
-
-### Journey Module
-- **Authentication Flows**: Handles PingOne Advanced Identity Cloud (AIC) authentication journeys.
-- **MFA Registration**: Automatically registers MFA credentials during authentication flows.
-- **User Association**: Associates registered credentials with authenticated users.
-
-**Class:** `LoginViewModel.kt`
-
-**Flow Diagram (textual):**
-```
-Start Journey → Authentication Steps → MFA Registration → Success → Associate Credentials
+Enroll User → OtpManager → Ping One SDK → Token Retrieval → Display in UI → User enters code
 ```
 
 ### QR Code Scanning
 
-The app uses CameraX and ML Kit to scan and decode QR codes:
+The app uses CameraX and ML Kit to scan and decode QR codes.
 
-#### OATH QR Codes (otpauth:// URIs):
-```
-otpauth://totp/Example:alice@google.com?secret=JBSWY3DPEHPK3PXP&issuer=Example&algorithm=SHA1&digits=6&period=30
-```
-
-#### Push QR Codes (pushauth:// URIs):
-```
-pushauth://push/Example:bob@example.com?pushauth_uri=https://example.com/push&client_id=clientId123
-```
-
-### Journey-Based Registration
-
-The app also supports registering MFA credentials through authenticated Journey flows:
-
-#### Journey Authentication Flow:
-1. **Start Journey**: Initiate authentication with PingOne Advanced Identity Cloud
-2. **Authentication Steps**: Complete required authentication steps (username/password, etc.)
-3. **MFA Registration**: Journey automatically provides MFA registration URIs during the flow
-4. **Auto-Registration**: App automatically registers OATH/Push credentials from Journey callbacks
-5. **User Association**: Successfully authenticated credentials are associated with the user session
-
-This provides a seamless user experience where MFA credentials are automatically registered during the authentication process without requiring separate QR code scanning.
 
 ## Getting Started
 
@@ -205,6 +152,7 @@ This provides a seamless user experience where MFA credentials are automatically
 - Android Studio Koala | 2024.1.1 or newer
 - Android SDK 29 or higher
 - Gradle 8.7 or newer
+- google-services.json file (to work with FCM push notifications)
 
 ### Building the App
 
@@ -214,43 +162,14 @@ This provides a seamless user experience where MFA credentials are automatically
 
 ## Testing
 
-### Testing OATH Functionality
+### Testing Functionality
 
-To test the app's OATH functionality, you can:
+To test the app's functionality, you need:
 
-1. **QR Code Method**:
-   - Use any TOTP/HOTP QR code generator
-   - Create test credentials using command line tools like `oathtool`
-   - Use online TOTP testing services
+- A PingOne account with MFA enabled
+- FCM configured for your Android application
+- The app properly registered with FCM to receive push notifications
 
-2. **Journey Method**:
-   - Configure a PingOne Advanced Identity Cloud environment with OATH MFA
-   - Set up Journey flows that include MFA registration steps
-   - Test the full authentication flow including automatic credential registration
-
-### Testing Push Functionality
-
-To test the app's Push functionality, you need:
-
-1. **QR Code Method**:
-   - A PingAM account with push authentication configured
-   - FCM configured for your Android application
-   - The app properly registered with FCM to receive push notifications
-
-2. **Journey Method**:
-   - A PingOne Advanced Identity Cloud environment with Push MFA configured
-   - Journey flows that include Push registration steps
-   - FCM properly configured to receive push notifications
-   - Test environment to generate push authentication requests
-
-### Testing Journey Integration
-
-To test the Journey-based MFA registration:
-
-1. Set up a PingOne Advanced Identity Cloud environment
-2. Configure Journey flows with MFA registration callbacks
-3. Test the complete flow: authentication → MFA registration → credential association
-4. Verify that registered credentials show user session indicators in the UI
 
 ## Contributing
 

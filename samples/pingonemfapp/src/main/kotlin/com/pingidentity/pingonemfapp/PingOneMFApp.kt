@@ -30,7 +30,7 @@ class PingOneMFApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
-        
+
         // Initialize diagnostic logging if enabled
         val userPreferences = UserPreferences(this)
         val diagnosticLogger = if (userPreferences.isDiagnosticLoggingEnabled()) {
@@ -38,16 +38,16 @@ class PingOneMFApp : Application() {
         } else {
             Logger.STANDARD
         }
-        
+
         // Set the global logger
         Logger.logger = diagnosticLogger
-        
+
         // Log initial startup
         if (userPreferences.isDiagnosticLoggingEnabled()) {
             diagnosticLogger.i("AuthenticatorApp: Diagnostic logging enabled")
             diagnosticLogger.i("AuthenticatorApp: Starting SDK initialization")
         }
-        
+
         CoroutineScope(Dispatchers.Default).launch {
             // initialize PingOneMFA SDK
             try {
@@ -57,7 +57,7 @@ class PingOneMFApp : Application() {
                 diagnosticLogger.e("PingOneMFA SDK initialization failed", e)
             }
 
-            // Obtain the device token from Firebase and set it in the Push client
+            // Obtain the device token from Firebase and set register it with PingOneMFA SDK
             try {
                 FirebaseApp.initializeApp(this@PingOneMFApp)
                 PingOneMFA.register(FirebaseMessaging.getInstance().token.await())

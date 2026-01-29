@@ -51,7 +51,6 @@ fun AuthenticatorNavHost(
             QrScannerScreen(
                 viewModel = authenticatorViewModel,
                 onScanComplete = {
-                    println("QrScannerScreen: Scan complete")
                     navController.popBackStack() },
                 onDismiss = { navController.popBackStack() }
             )

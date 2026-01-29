@@ -2,10 +2,8 @@ package com.pingidentity.pingonemfa.push
 
 import android.content.Context
 import android.os.Parcelable
-import com.pingidentity.android.ContextProvider
 import com.pingidentity.pingidsdkv2.NotificationObject
 import kotlinx.coroutines.suspendCancellableCoroutine
-import kotlinx.parcelize.IgnoredOnParcel
 import kotlinx.parcelize.Parcelize
 import java.util.UUID
 import kotlin.coroutines.resume
@@ -37,7 +35,6 @@ data class PushNotification(
                     if (error == null) {
                         cont.resume(Result.success(Unit))
                     } else {
-                        println(error.userInfo.toString())
                         cont.resume(Result.failure(Exception(error.userInfo.toString())))
                     }
                 }
@@ -81,9 +78,9 @@ data class PushNotification(
 
     fun getPushType () : PushType {
         return when {
-            notificationObject.isTest -> PushType.DRY
+            notificationObject.isTest -> PushType.DRY // TODO handle in Sample App
             notificationObject.numberMatchingType != null -> PushType.CHALLENGE
-            else -> PushType.DEFAULT
+            else -> PushType.DEFAULT // TODO handle how to receive BIOMETRIC enforcement
         }
     }
 }

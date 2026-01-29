@@ -32,6 +32,7 @@ object PingOneMFA {
         return suspendCancellableCoroutine { init ->
             PingOne.configure(
                 ContextProvider.context,
+                // for demonstration purposes we simply hardcode the North America geo
                 PingOneGeo.NORTH_AMERICA
             ) { error ->
                 if (error == null) {
