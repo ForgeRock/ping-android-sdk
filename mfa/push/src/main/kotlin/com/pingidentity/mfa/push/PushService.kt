@@ -8,6 +8,7 @@
 package com.pingidentity.mfa.push
 
 import com.pingidentity.mfa.commons.exception.CredentialLockedException
+import com.pingidentity.mfa.commons.exception.DuplicateCredentialException
 import com.pingidentity.mfa.commons.exception.MfaException
 import com.pingidentity.mfa.commons.exception.MfaPolicyViolationException
 import com.pingidentity.mfa.commons.policy.MfaPolicyEvaluator
@@ -109,12 +110,29 @@ internal class PushService(
      * @return The created PushCredential.
      * @throws IllegalArgumentException if the URI is invalid.
      * @throws MfaPolicyViolationException if policies are violated during registration.
+     * @throws DuplicateCredentialException if a credential with the same issuer and account name already exists.
      * @throws MfaException if the credential cannot be created.
      */
     suspend fun addCredentialFromUri(uri: String): PushCredential {
         try {
             // Parse the URI to create a PushCredential
             val credential = PushUriParser.parse(uri)
+            
+            // Check for duplicate credential by issuer and account name BEFORE platform registration
+            val existingCredential = storage.getCredentialByIssuerAndAccount(
+                credential.issuer,
+                credential.accountName
+            )
+            
+            // Only throw duplicate exception if the existing credential has a different ID
+            // (same ID means we're updating, not creating a duplicate)
+            if (existingCredential != null && existingCredential.id != credential.id) {
+                logger.w("Credential already exists for issuer '${credential.issuer}' and account '${credential.accountName}'")
+                throw DuplicateCredentialException(
+                    issuer = credential.issuer,
+                    accountName = credential.accountName
+                )
+            }
             
             // Evaluate policies during registration if policies are present
             if (!credential.policies.isNullOrBlank()) {
@@ -176,10 +194,27 @@ internal class PushService(
      *
      * @param credential The credential to add.
      * @return The added credential (potentially locked due to policy violation).
+     * @throws DuplicateCredentialException if a credential with the same issuer and account name already exists.
      * @throws MfaException if the credential cannot be added.
      */
     suspend fun addCredential(credential: PushCredential): PushCredential {
         try {
+            // Check for duplicate credential by issuer and account name
+            val existingCredential = storage.getCredentialByIssuerAndAccount(
+                credential.issuer,
+                credential.accountName
+            )
+            
+            // Only throw duplicate exception if the existing credential has a different ID
+            // (same ID means we're updating, not creating a duplicate)
+            if (existingCredential != null && existingCredential.id != credential.id) {
+                logger.w("Credential already exists for issuer '${credential.issuer}' and account '${credential.accountName}'")
+                throw DuplicateCredentialException(
+                    issuer = credential.issuer,
+                    accountName = credential.accountName
+                )
+            }
+            
             // Evaluate policies at runtime if context is available and policies exist
             logger.d("Evaluating policies for OATH credential: ${credential.id}")
             evaluateAndUpdateCredentialPolicies(credential, store = false)

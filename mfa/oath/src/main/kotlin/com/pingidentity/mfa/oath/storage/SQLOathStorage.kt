@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2025-2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -132,6 +132,9 @@ class SQLOathStorage private constructor(
             db.execSQL("CREATE INDEX IF NOT EXISTS idx_oath_issuer ON $OATH_TABLE ($OATH_COLUMN_ISSUER)")
             db.execSQL("CREATE INDEX IF NOT EXISTS idx_oath_user_id ON $OATH_TABLE ($OATH_COLUMN_USER_ID)")
             db.execSQL("CREATE INDEX IF NOT EXISTS idx_oath_resource_id ON $OATH_TABLE ($OATH_COLUMN_RESOURCE_ID)")
+            
+            // Create unique index to prevent duplicate credentials with the same issuer and account name
+            db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS idx_oath_unique_credential ON $OATH_TABLE ($OATH_COLUMN_ISSUER, $OATH_COLUMN_ACCOUNT_NAME)")
         }
         
         logger.d("OATH SQL storage created")
@@ -318,6 +321,36 @@ class SQLOathStorage private constructor(
             currentCoroutineContext().ensureActive()
             logger.e("Failed to retrieve OATH credential with ID $credentialId: ${e.message}", e)
             throw MfaStorageException("Failed to retrieve OATH credential with ID $credentialId", e)
+        }
+    }
+
+    /**
+     * Retrieve an OATH credential by issuer and account name.
+     * Performs case-sensitive comparison to detect duplicate credentials.
+     *
+     * @param issuer The issuer of the credential.
+     * @param accountName The account name of the credential.
+     * @return The OATH credential if found, or null if not found.
+     * @throws MfaStorageException if the credential cannot be retrieved.
+     */
+    override suspend fun getCredentialByIssuerAndAccount(issuer: String, accountName: String): OathCredential? = withContext(Dispatchers.IO) {
+        checkDatabase()
+        
+        try {
+            // Use case-sensitive query to find matching credential
+            val results = query(
+                "SELECT * FROM $OATH_TABLE WHERE $OATH_COLUMN_ISSUER = ? AND $OATH_COLUMN_ACCOUNT_NAME = ?",
+                arrayOf(issuer, accountName)
+            ) { cursor ->
+                extractDataFromCursor(cursor)
+            }
+            
+            val data = results.firstOrNull() ?: return@withContext null
+            return@withContext createOathCredentialFromData(data)
+        } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
+            logger.e("Failed to retrieve OATH credential by issuer and account: ${e.message}", e)
+            throw MfaStorageException("Failed to retrieve OATH credential by issuer '$issuer' and account '$accountName'", e)
         }
     }
     

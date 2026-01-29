@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2025-2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -130,6 +130,11 @@ class OathServiceTest {
         // Given
         val credentialSlot = slot<OathCredential>()
         
+        // Mock duplicate check to return null (no duplicate)
+        coEvery {
+            mockStorage.getCredentialByIssuerAndAccount(any(), any())
+        } returns null
+        
         coEvery {
             mockStorage.storeOathCredential(capture(credentialSlot))
         } just runs
@@ -150,6 +155,11 @@ class OathServiceTest {
     fun `test get credential returns from cache when caching enabled`() = runTest {
         // Setup credential in cache first by adding it
         // Given
+        // Mock duplicate check to return null (no duplicate)
+        coEvery {
+            mockStorage.getCredentialByIssuerAndAccount(any(), any())
+        } returns null
+        
         coEvery {
             mockStorage.storeOathCredential(any())
         } just runs
@@ -183,6 +193,11 @@ class OathServiceTest {
             oathType = OathType.HOTP,
             counter = 1L
         )
+        
+        // Mock duplicate check to return null (no duplicate)
+        coEvery {
+            mockStorage.getCredentialByIssuerAndAccount(any(), any())
+        } returns null
         
         coEvery {
             mockStorage.storeOathCredential(any<OathCredential>())
@@ -226,6 +241,11 @@ class OathServiceTest {
     @Test
     fun `test credential is not cached when caching disabled`() = runTest {
         // Given
+        // Mock duplicate check to return null (no duplicate)
+        coEvery {
+            mockStorage.getCredentialByIssuerAndAccount(any(), any())
+        } returns null
+        
         coEvery {
             mockStorage.storeOathCredential(any<OathCredential>())
         } just runs
@@ -250,4 +270,114 @@ class OathServiceTest {
             mockStorage.retrieveOathCredential(testCredentialId)
         }
     }
+
+    @Test
+    fun `test adding duplicate credential throws DuplicateCredentialException`() = runTest {
+        // Given
+        val existingCredential = testCredential.copy(
+            id = UUID.randomUUID().toString()
+        )
+        
+        // Mock storage to return existing credential with same issuer and account
+        coEvery {
+            mockStorage.getCredentialByIssuerAndAccount(testCredential.issuer, testCredential.accountName)
+        } returns existingCredential
+        
+        // When/Then
+        try {
+            oathServiceWithCache.addCredential(testCredential)
+            throw AssertionError("Expected DuplicateCredentialException to be thrown")
+        } catch (e: com.pingidentity.mfa.commons.exception.DuplicateCredentialException) {
+            // Verify exception details
+            assertEquals(testCredential.issuer, e.issuer)
+            assertEquals(testCredential.accountName, e.accountName)
+            assertTrue(e.message!!.contains("Credential already exists"))
+            assertTrue(e.message!!.contains(testCredential.issuer))
+            assertTrue(e.message!!.contains(testCredential.accountName))
+            
+            // Verify storage was not called to store the duplicate
+            coVerify(exactly = 0) {
+                mockStorage.storeOathCredential(any())
+            }
+        } catch (e: MfaException) {
+            // If it's wrapped in MfaException, check the cause
+            val cause = e.cause
+            if (cause is com.pingidentity.mfa.commons.exception.DuplicateCredentialException) {
+                assertEquals(testCredential.issuer, cause.issuer)
+                assertEquals(testCredential.accountName, cause.accountName)
+                assertTrue(cause.message!!.contains("Credential already exists"))
+                assertTrue(cause.message!!.contains(testCredential.issuer))
+                assertTrue(cause.message!!.contains(testCredential.accountName))
+                
+                // Verify storage was not called to store the duplicate
+                coVerify(exactly = 0) {
+                    mockStorage.storeOathCredential(any())
+                }
+            } else {
+                throw AssertionError("Expected DuplicateCredentialException but got: ${e.message}", e)
+            }
+        }
+    }
+
+    @Test
+    fun `test adding credential with different issuer succeeds`() = runTest {
+        // Given
+        val differentCredential = testCredential.copy(
+            id = UUID.randomUUID().toString(),
+            issuer = "Different Issuer"
+        )
+        
+        // Mock storage to return null (no existing credential)
+        coEvery {
+            mockStorage.getCredentialByIssuerAndAccount(differentCredential.issuer, differentCredential.accountName)
+        } returns null
+        
+        coEvery {
+            mockStorage.storeOathCredential(any<OathCredential>())
+        } just runs
+        
+        // When
+        val result = oathServiceWithCache.addCredential(differentCredential)
+        
+        // Then
+        assertNotNull(result)
+        assertEquals(differentCredential.id, result.id)
+        
+        // Verify storage was called
+        coVerify(exactly = 1) {
+            mockStorage.storeOathCredential(differentCredential)
+        }
+    }
+
+    @Test
+    fun `test adding credential with different account name succeeds`() = runTest {
+        // Given
+        val differentCredential = testCredential.copy(
+            id = UUID.randomUUID().toString(),
+            accountName = "different@example.com",
+            displayAccountName = "different@example.com"
+        )
+        
+        // Mock storage to return null (no existing credential)
+        coEvery {
+            mockStorage.getCredentialByIssuerAndAccount(differentCredential.issuer, differentCredential.accountName)
+        } returns null
+        
+        coEvery {
+            mockStorage.storeOathCredential(any<OathCredential>())
+        } just runs
+        
+        // When
+        val result = oathServiceWithCache.addCredential(differentCredential)
+        
+        // Then
+        assertNotNull(result)
+        assertEquals(differentCredential.id, result.id)
+        
+        // Verify storage was called
+        coVerify(exactly = 1) {
+            mockStorage.storeOathCredential(differentCredential)
+        }
+    }
 }
+

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2025-2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -89,14 +89,16 @@ class PushPolicyIntegrationTest {
      * Creates a test Push credential with optional policies
      */
     private fun createTestPushCredential(
+        issuer: String = "Example Corp",
+        accountName: String = "test@example.com",
         policies: String? = null,
         isLocked: Boolean = false,
         lockingPolicy: String? = null
     ): PushCredential {
         return PushCredential(
             id = UUID.randomUUID().toString(),
-            issuer = "Example Corp",
-            accountName = "test@example.com",
+            issuer = issuer,
+            accountName = accountName,
             serverEndpoint = "https://example.com/push",
             sharedSecret = "testsecret12345",
             policies = policies,
@@ -275,9 +277,14 @@ class PushPolicyIntegrationTest {
 
         // Create multiple test credentials with different policy configurations
         val credential1 = createTestPushCredential(
-            policies = """{"biometricAvailable":{}}"""
+            issuer = "Issuer1",
+            accountName = "user1@example.com",
+            policies = """{{"biometricAvailable":{}}}"""
         )
-        val credential2 = createTestPushCredential()
+        val credential2 = createTestPushCredential(
+            issuer = "Issuer2",
+            accountName = "user2@example.com"
+        )
 
         // Store the credentials
         client.saveCredential(credential1).getOrThrow()

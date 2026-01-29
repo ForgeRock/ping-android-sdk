@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2025-2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -490,5 +490,64 @@ class SharedPrefsOathStorageAndroidTest {
             // If time didn't advance as expected in the test environment, we'll skip this check
             println("Note: Time remaining did not decrease as expected in test environment")
         }
+    }
+    
+    @OptIn(ExperimentalCoroutinesApi::class)
+    @Test
+    fun testDuplicateCredentialDetection() = runTest {
+        // 1. Add a TOTP credential
+        val credential = client.saveCredential(
+            OathCredential(
+                issuer = testIssuer,
+                displayIssuer = testIssuer,
+                accountName = testAccountName,
+                displayAccountName = testAccountName,
+                oathType = OathType.TOTP,
+                oathAlgorithm = OathAlgorithm.SHA1,
+                period = 30,
+                digits = 6,
+                secret = testSecret
+            )
+        ).getOrThrow()
+        
+        assertNotNull("First credential should be saved successfully", credential)
+        
+        // 2. Try to add the same credential again with the same issuer and accountName
+        val duplicateResult = client.saveCredential(
+            OathCredential(
+                issuer = testIssuer,
+                displayIssuer = testIssuer,
+                accountName = testAccountName,
+                displayAccountName = testAccountName,
+                oathType = OathType.TOTP,
+                oathAlgorithm = OathAlgorithm.SHA1,
+                period = 30,
+                digits = 6,
+                secret = testSecret
+            )
+        )
+        
+        // 3. Verify that adding the duplicate credential failed
+        assertTrue("Duplicate credential should fail", duplicateResult.isFailure)
+        
+        val exception = duplicateResult.exceptionOrNull()
+        assertNotNull("Exception should not be null", exception)
+        
+        // The exception message or cause should mention that the credential already exists
+        val errorMessage = exception?.message ?: ""
+        val causeMessage = exception?.cause?.message ?: ""
+        val hasDuplicateMessage = errorMessage.contains("already exists", ignoreCase = true) || 
+                                  errorMessage.contains("duplicate", ignoreCase = true) ||
+                                  causeMessage.contains("already exists", ignoreCase = true) ||
+                                  causeMessage.contains("duplicate", ignoreCase = true)
+        
+        assertTrue(
+            "Error message should mention duplicate credential. Got: $errorMessage, cause: $causeMessage",
+            hasDuplicateMessage
+        )
+        
+        // 4. Verify we still only have one credential
+        val allCredentials = client.getCredentials().getOrThrow()
+        assertEquals("Should only have one credential", 1, allCredentials.size)
     }
 }

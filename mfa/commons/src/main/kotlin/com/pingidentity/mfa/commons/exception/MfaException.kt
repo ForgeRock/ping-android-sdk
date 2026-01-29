@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2025-2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -95,3 +95,22 @@ class MfaPolicyViolationException(
     val policy: com.pingidentity.mfa.commons.policy.MfaPolicy? = null,
     cause: Throwable? = null
 ) : MfaException(message, cause)
+
+/**
+ * Exception thrown when attempting to register a credential that already exists.
+ * 
+ * This exception is thrown when a credential with the same issuer and account name
+ * combination already exists in storage, preventing duplicate credential registration.
+ * 
+ * @param issuer The issuer of the duplicate credential.
+ * @param accountName The account name of the duplicate credential.
+ * @param cause The underlying cause of the exception.
+ */
+class DuplicateCredentialException(
+    val issuer: String,
+    val accountName: String,
+    cause: Throwable? = null
+) : MfaException(
+    message = "Credential already exists for issuer '$issuer' and account '$accountName'",
+    cause = cause
+)

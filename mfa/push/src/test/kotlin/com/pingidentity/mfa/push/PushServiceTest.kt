@@ -72,6 +72,9 @@ class PushServiceTest {
         mockContext = mockk()
         mockLogger = mockk(relaxed = true)
         mockPolicyEvaluator = mockk(relaxed = true)
+        
+        // Set up default mock for duplicate check (returns null = no duplicate)
+        coEvery { mockStorage.getCredentialByIssuerAndAccount(any(), any()) } returns null
 
         // Create mock configurations
         configWithCache = mockk<PushConfiguration>().apply {
@@ -92,8 +95,18 @@ class PushServiceTest {
         mockkObject(PushUriParser)
 
         // Initialize service variants with mock storage, HTTP client, and policy evaluator
-        pushServiceWithCache = PushService(mockStorage, configWithCache, KtorHttpClient(mockHttpClient), mockPolicyEvaluator)
-        pushServiceWithoutCache = PushService(mockStorage, configWithoutCache, KtorHttpClient(mockHttpClient), mockPolicyEvaluator)
+        pushServiceWithCache = PushService(
+            mockStorage,
+            configWithCache,
+            KtorHttpClient(mockHttpClient),
+            mockPolicyEvaluator
+        )
+        pushServiceWithoutCache = PushService(
+            mockStorage,
+            configWithoutCache,
+            KtorHttpClient(mockHttpClient),
+            mockPolicyEvaluator
+        )
 
         // Create test credential
         testCredentialId = UUID.randomUUID().toString()
@@ -202,10 +215,10 @@ class PushServiceTest {
     fun `test remove credential removes from storage and cache`() = runTest {
         // Given
         coEvery { mockStorage.storePushCredential(any()) } just runs
-        
+
         // Add credential first
         pushServiceWithCache.addCredential(testCredential)
-        
+
         // Clear mock and set up remove credential mock
         clearMocks(mockStorage)
         coEvery { mockStorage.removePushCredential(testCredentialId) } returns true
@@ -267,7 +280,7 @@ class PushServiceTest {
         assertEquals(testCredentialId, result?.credentialId)
         coVerify(exactly = 1) { mockStorage.storePushNotification(any()) }
     }
-    
+
     @Test
     fun `test process notification from string creates and stores notification`() = runTest {
         // Given
@@ -393,7 +406,7 @@ class PushServiceTest {
         // Given
         val mockDeviceTokenManager = mockk<PushDeviceTokenManager>()
         val mockHandler = mockk<PushHandler>()
-        
+
         // Create a spied version of the service with our mocks
         val pushService = spyk(
             PushService(
@@ -405,10 +418,10 @@ class PushServiceTest {
                 handlers = mapOf(PushPlatform.PING_AM.name to mockHandler)
             )
         )
-        
+
         // Skip actual URI parsing by mocking the addCredentialFromUri method
         coEvery { pushService.addCredentialFromUri(any()) } returns testCredential
-        
+
         // Mock storage
         coEvery { mockStorage.storePushCredential(any()) } just runs
 
@@ -420,35 +433,36 @@ class PushServiceTest {
     }
 
     @Test
-    fun `test add credential from URI throws exception when device token not available`() = runTest {
-        // Given
-        val mockDeviceTokenManager = mockk<PushDeviceTokenManager>()
-        
-        // Create a spied version of the service with our mocks
-        val pushService = spyk(
-            PushService(
-                storage = mockStorage,
-                configuration = configWithCache,
-                httpClient = KtorHttpClient(mockHttpClient),
-                policyEvaluator = mockPolicyEvaluator,
-                tokenManager = mockDeviceTokenManager
-            )
-        )
-        
-        // Make the service throw MfaException directly when called
-        coEvery { pushService.addCredentialFromUri(any()) } throws 
-            MfaException("Failed to add credential: Device token not available")
+    fun `test add credential from URI throws exception when device token not available`() =
+        runTest {
+            // Given
+            val mockDeviceTokenManager = mockk<PushDeviceTokenManager>()
 
-        try {
-            // When - use any valid string since we're mocking the method
-            pushService.addCredentialFromUri("test-uri")
-            // Should not reach here
-            assert(false) { "Expected MfaException but no exception was thrown" }
-        } catch (e: MfaException) {
-            // Then - we expect an MfaException
-            assert(e.message?.contains("Device token not available") ?: false)
+            // Create a spied version of the service with our mocks
+            val pushService = spyk(
+                PushService(
+                    storage = mockStorage,
+                    configuration = configWithCache,
+                    httpClient = KtorHttpClient(mockHttpClient),
+                    policyEvaluator = mockPolicyEvaluator,
+                    tokenManager = mockDeviceTokenManager
+                )
+            )
+
+            // Make the service throw MfaException directly when called
+            coEvery { pushService.addCredentialFromUri(any()) } throws
+                    MfaException("Failed to add credential: Device token not available")
+
+            try {
+                // When - use any valid string since we're mocking the method
+                pushService.addCredentialFromUri("test-uri")
+                // Should not reach here
+                assert(false) { "Expected MfaException but no exception was thrown" }
+            } catch (e: MfaException) {
+                // Then - we expect an MfaException
+                assert(e.message?.contains("Device token not available") ?: false)
+            }
         }
-    }
 
     @Test
     fun `test update device token updates locally and on server for all credentials`() = runTest {
@@ -538,7 +552,7 @@ class PushServiceTest {
         // Then
         assertEquals(testDeviceToken, result)
     }
-    
+
     @Test
     fun `test get device token returns null on error`() = runTest {
         // Given
@@ -579,7 +593,7 @@ class PushServiceTest {
 
         coVerify(exactly = 1) { mockStorage.retrievePushCredential(testCredentialId) }
     }
-    
+
     @Test
     fun `test getAllNotifications retrieves all notifications from storage`() = runTest {
         // Given
@@ -593,7 +607,7 @@ class PushServiceTest {
         assertEquals(notifications, result)
         coVerify(exactly = 1) { mockStorage.getAllPushNotifications() }
     }
-    
+
     @Test
     fun `test setDeviceToken returns false when specific credential not found`() = runTest {
         // Given
@@ -617,7 +631,7 @@ class PushServiceTest {
         // Then - should return false when credential not found
         assertFalse(result)
     }
-    
+
     @Test
     fun `test storage error throws MfaException`() = runTest {
         // Given - test one storage error as example (they all follow same pattern)
@@ -631,7 +645,7 @@ class PushServiceTest {
             assert(e.message?.contains("Failed") == true)
         }
     }
-    
+
     @Test
     fun `test processNotification returns null for unknown platform`() = runTest {
         // Given
@@ -643,7 +657,7 @@ class PushServiceTest {
         // Then
         assertEquals(null, result)
     }
-    
+
     @Test
     fun `test processNotification throws exception on handler error`() = runTest {
         // Given
@@ -669,7 +683,7 @@ class PushServiceTest {
             assert(e.message?.contains("Failed to process push notification") == true)
         }
     }
-    
+
     @Test
     fun `test approveNotification throws exception when notification not found`() = runTest {
         // Given
@@ -683,7 +697,7 @@ class PushServiceTest {
             assert(e.message?.contains("Failed to approve notification") == true)
         }
     }
-    
+
     @Test
     fun `test denyNotification throws exception when credential not found`() = runTest {
         // Given
@@ -698,7 +712,7 @@ class PushServiceTest {
             assert(e.message?.contains("Failed to deny notification") == true)
         }
     }
-    
+
     @Test
     fun `test setDeviceToken does not update when token is same`() = runTest {
         // Given
@@ -720,7 +734,7 @@ class PushServiceTest {
         assertTrue(result)
         coVerify(exactly = 0) { mockDeviceTokenManager.updateDeviceToken(any()) }
     }
-    
+
     @Test
     fun `test processNotification does not update credential userId when already set`() = runTest {
         // Given
@@ -754,7 +768,7 @@ class PushServiceTest {
         // Then - should NOT update credential since userId already exists
         coVerify(exactly = 0) { mockStorage.storePushCredential(any()) }
     }
-    
+
     @Test
     fun `test setDeviceToken returns false when local update fails`() = runTest {
         // Given
@@ -778,7 +792,7 @@ class PushServiceTest {
         assertFalse(result)
         coVerify(exactly = 0) { mockStorage.getAllPushCredentials() }
     }
-    
+
     @Test
     fun `test setDeviceToken succeeds with no credentials registered`() = runTest {
         // Given
@@ -803,7 +817,7 @@ class PushServiceTest {
         assertTrue(result)
         coVerify(exactly = 1) { mockStorage.getAllPushCredentials() }
     }
-    
+
     @Test
     fun `test setDeviceToken continues with remaining credentials when one fails`() = runTest {
         // Given
@@ -824,7 +838,13 @@ class PushServiceTest {
         coEvery { mockDeviceTokenManager.updateDeviceToken(testDeviceToken) } returns true
         coEvery { mockDeviceTokenManager.getDeviceTokenId() } returns "old-token"
         coEvery { mockStorage.getAllPushCredentials() } returns listOf(testCredential, credential2)
-        coEvery { mockHandler.setDeviceToken(testCredential, any(), any()) } throws RuntimeException("Network error")
+        coEvery {
+            mockHandler.setDeviceToken(
+                testCredential,
+                any(),
+                any()
+            )
+        } throws RuntimeException("Network error")
         coEvery { mockHandler.setDeviceToken(credential2, any(), any()) } returns true
 
         // When
@@ -835,7 +855,7 @@ class PushServiceTest {
         coVerify(exactly = 1) { mockHandler.setDeviceToken(testCredential, testDeviceToken, any()) }
         coVerify(exactly = 1) { mockHandler.setDeviceToken(credential2, testDeviceToken, any()) }
     }
-    
+
     @Test
     fun `test processNotification returns existing notification for duplicates`() = runTest {
         // Given
@@ -868,7 +888,7 @@ class PushServiceTest {
         assertEquals(testNotification, result)
         coVerify(exactly = 0) { mockStorage.storePushNotification(any()) }
     }
-    
+
     @Test
     fun `test setDeviceToken returns false when handler fails for all credentials`() = runTest {
         // Given
@@ -897,7 +917,7 @@ class PushServiceTest {
         assertFalse(result)
         coVerify(exactly = 1) { mockHandler.setDeviceToken(testCredential, testDeviceToken, any()) }
     }
-    
+
     @Test
     fun `test approveNotification returns false when notification already responded`() = runTest {
         // Given
@@ -911,7 +931,7 @@ class PushServiceTest {
         assertFalse(result)
         coVerify(exactly = 0) { mockStorage.updatePushNotification(any()) }
     }
-    
+
     @Test
     fun `test denyNotification returns false when notification already responded`() = runTest {
         // Given
@@ -925,43 +945,47 @@ class PushServiceTest {
         assertFalse(result)
         coVerify(exactly = 0) { mockStorage.updatePushNotification(any()) }
     }
-    
-    @Test
-    fun `test approveNotification throws CredentialLockedException when credential is locked`() = runTest {
-        // Given
-        val lockedCredential = testCredential.copy(isLocked = true, lockingPolicy = "test-policy")
-        coEvery { mockStorage.retrievePushNotification(testNotificationId) } returns testNotification
-        coEvery { mockStorage.retrievePushCredential(testCredentialId) } returns lockedCredential
 
-        // When/Then - CredentialLockedException is wrapped in MfaException by the outer try-catch
-        try {
-            pushServiceWithCache.approveNotification(testNotificationId)
-            assert(false) { "Expected MfaException" }
-        } catch (e: MfaException) {
-            // The CredentialLockedException is the cause
-            assert(e.cause is com.pingidentity.mfa.commons.exception.CredentialLockedException)
-            assert((e.cause as com.pingidentity.mfa.commons.exception.CredentialLockedException).policyName == "test-policy")
-        }
-    }
-    
     @Test
-    fun `test denyNotification throws CredentialLockedException when credential is locked`() = runTest {
-        // Given
-        val lockedCredential = testCredential.copy(isLocked = true, lockingPolicy = "test-policy")
-        coEvery { mockStorage.retrievePushNotification(testNotificationId) } returns testNotification
-        coEvery { mockStorage.retrievePushCredential(testCredentialId) } returns lockedCredential
+    fun `test approveNotification throws CredentialLockedException when credential is locked`() =
+        runTest {
+            // Given
+            val lockedCredential =
+                testCredential.copy(isLocked = true, lockingPolicy = "test-policy")
+            coEvery { mockStorage.retrievePushNotification(testNotificationId) } returns testNotification
+            coEvery { mockStorage.retrievePushCredential(testCredentialId) } returns lockedCredential
 
-        // When/Then - CredentialLockedException is wrapped in MfaException by the outer try-catch
-        try {
-            pushServiceWithCache.denyNotification(testNotificationId)
-            assert(false) { "Expected MfaException" }
-        } catch (e: MfaException) {
-            // The CredentialLockedException is the cause
-            assert(e.cause is com.pingidentity.mfa.commons.exception.CredentialLockedException)
-            assert((e.cause as com.pingidentity.mfa.commons.exception.CredentialLockedException).policyName == "test-policy")
+            // When/Then - CredentialLockedException is wrapped in MfaException by the outer try-catch
+            try {
+                pushServiceWithCache.approveNotification(testNotificationId)
+                assert(false) { "Expected MfaException" }
+            } catch (e: MfaException) {
+                // The CredentialLockedException is the cause
+                assert(e.cause is com.pingidentity.mfa.commons.exception.CredentialLockedException)
+                assert((e.cause as com.pingidentity.mfa.commons.exception.CredentialLockedException).policyName == "test-policy")
+            }
         }
-    }
-    
+
+    @Test
+    fun `test denyNotification throws CredentialLockedException when credential is locked`() =
+        runTest {
+            // Given
+            val lockedCredential =
+                testCredential.copy(isLocked = true, lockingPolicy = "test-policy")
+            coEvery { mockStorage.retrievePushNotification(testNotificationId) } returns testNotification
+            coEvery { mockStorage.retrievePushCredential(testCredentialId) } returns lockedCredential
+
+            // When/Then - CredentialLockedException is wrapped in MfaException by the outer try-catch
+            try {
+                pushServiceWithCache.denyNotification(testNotificationId)
+                assert(false) { "Expected MfaException" }
+            } catch (e: MfaException) {
+                // The CredentialLockedException is the cause
+                assert(e.cause is com.pingidentity.mfa.commons.exception.CredentialLockedException)
+                assert((e.cause as com.pingidentity.mfa.commons.exception.CredentialLockedException).policyName == "test-policy")
+            }
+        }
+
     @Test
     fun `test removeCredential removes associated notifications`() = runTest {
         // Given
@@ -975,7 +999,7 @@ class PushServiceTest {
         assertTrue(result)
         coVerify(exactly = 1) { mockStorage.removePushNotificationsForCredential(testCredentialId) }
     }
-    
+
     @Test
     fun `test processNotification updates credential userId when missing`() = runTest {
         // Given
@@ -1008,13 +1032,13 @@ class PushServiceTest {
         pushService.processNotification(messageData)
 
         // Then
-        coVerify(exactly = 1) { 
+        coVerify(exactly = 1) {
             mockStorage.storePushCredential(
                 match { it.id == testCredentialId && it.userId == "new-user-id" }
-            ) 
+            )
         }
     }
-    
+
     @Test
     fun `test approveNotification throws exception when handler missing for platform`() = runTest {
         // Given
@@ -1030,7 +1054,7 @@ class PushServiceTest {
             assert(e.message?.contains("Failed to approve notification") == true)
         }
     }
-    
+
     @Test
     fun `test denyNotification throws exception when handler missing for platform`() = runTest {
         // Given
@@ -1046,7 +1070,7 @@ class PushServiceTest {
             assert(e.message?.contains("Failed to deny notification") == true)
         }
     }
-    
+
     @Test
     fun `test approveNotification returns false when handler sendApproval fails`() = runTest {
         // Given
@@ -1070,7 +1094,7 @@ class PushServiceTest {
         assertFalse(result)
         coVerify(exactly = 0) { mockStorage.updatePushNotification(any()) }
     }
-    
+
     @Test
     fun `test denyNotification returns false when handler sendDenial fails`() = runTest {
         // Given
@@ -1094,5 +1118,206 @@ class PushServiceTest {
         assertFalse(result)
         coVerify(exactly = 0) { mockStorage.updatePushNotification(any()) }
     }
-}
 
+    @Test
+    fun `test addCredentialFromUri throws DuplicateCredentialException for duplicate credentials`() =
+        runTest {
+            // Given
+            val testUri =
+                "pushauth://push/TestIssuer:test@example.com?s=secret&r=https://test.com&a=SHA256&c=challenge"
+            val existingCredential = testCredential.copy(
+                id = UUID.randomUUID().toString()
+            )
+
+            // Mock parsing
+            coEvery { PushUriParser.parse(testUri) } returns testCredential
+
+            // Mock storage to return existing credential with same issuer and account
+            coEvery {
+                mockStorage.getCredentialByIssuerAndAccount(
+                    testCredential.issuer,
+                    testCredential.accountName
+                )
+            } returns existingCredential
+
+            // Mock handler
+            val mockHandler = mockk<PushHandler>()
+            val mockDeviceTokenManager = mockk<PushDeviceTokenManager>()
+            coEvery { mockDeviceTokenManager.getDeviceTokenId() } returns "test-token-id"
+
+            val pushService = PushService(
+                storage = mockStorage,
+                configuration = configWithCache,
+                httpClient = KtorHttpClient(mockHttpClient),
+                policyEvaluator = mockPolicyEvaluator,
+                tokenManager = mockDeviceTokenManager,
+                handlers = mapOf(PushPlatform.PING_AM.name to mockHandler)
+            )
+
+            // When/Then
+            try {
+                pushService.addCredentialFromUri(testUri)
+                throw AssertionError("Expected DuplicateCredentialException to be thrown")
+            } catch (e: com.pingidentity.mfa.commons.exception.DuplicateCredentialException) {
+                // Verify exception details
+                assertEquals(testCredential.issuer, e.issuer)
+                assertEquals(testCredential.accountName, e.accountName)
+                assertTrue(e.message!!.contains("Credential already exists"))
+                assertTrue(e.message!!.contains(testCredential.issuer))
+                assertTrue(e.message!!.contains(testCredential.accountName))
+
+                // Verify handler registration was not called
+                coVerify(exactly = 0) {
+                    mockHandler.register(any(), any())
+                }
+
+                // Verify storage was not called to store the duplicate
+                coVerify(exactly = 0) {
+                    mockStorage.storePushCredential(any())
+                }
+            } catch (e: MfaException) {
+                // If it's wrapped in MfaException, check the cause
+                val cause = e.cause
+                if (cause is com.pingidentity.mfa.commons.exception.DuplicateCredentialException) {
+                    assertEquals(testCredential.issuer, cause.issuer)
+                    assertEquals(testCredential.accountName, cause.accountName)
+                    assertTrue(cause.message!!.contains("Credential already exists"))
+                    assertTrue(cause.message!!.contains(testCredential.issuer))
+                    assertTrue(cause.message!!.contains(testCredential.accountName))
+
+                    // Verify handler registration was not called
+                    coVerify(exactly = 0) {
+                        mockHandler.register(any(), any())
+                    }
+
+                    // Verify storage was not called to store the duplicate
+                    coVerify(exactly = 0) {
+                        mockStorage.storePushCredential(any())
+                    }
+                } else {
+                    throw AssertionError("Expected DuplicateCredentialException but got: ${e.message}", e)
+                }
+            }
+        }
+
+    @Test
+    fun `test addCredentialFromUri succeeds with different issuer`() = runTest {
+        // Given
+        val testUri =
+            "pushauth://push/DifferentIssuer:test@example.com?s=secret&r=https://test.com&a=SHA256&c=challenge"
+        val differentCredential = testCredential.copy(
+            id = UUID.randomUUID().toString(),
+            issuer = "DifferentIssuer"
+        )
+
+        // Mock parsing
+        coEvery { PushUriParser.parse(testUri) } returns differentCredential
+        coEvery { PushUriParser.registrationParameters(testUri) } returns emptyMap()
+
+        // Mock storage to return null (no existing credential)
+        coEvery {
+            mockStorage.getCredentialByIssuerAndAccount(
+                differentCredential.issuer,
+                differentCredential.accountName
+            )
+        } returns null
+
+        coEvery {
+            mockStorage.storePushCredential(any<PushCredential>())
+        } just runs
+
+        // Mock handler
+        val mockHandler = mockk<PushHandler>()
+        coEvery { mockHandler.register(any(), any()) } returns true
+
+        val mockDeviceTokenManager = mockk<PushDeviceTokenManager>()
+        coEvery { mockDeviceTokenManager.getDeviceTokenId() } returns "test-token-id"
+
+        val pushService = PushService(
+            storage = mockStorage,
+            configuration = configWithCache,
+            httpClient = KtorHttpClient(mockHttpClient),
+            policyEvaluator = mockPolicyEvaluator,
+            tokenManager = mockDeviceTokenManager,
+            handlers = mapOf(PushPlatform.PING_AM.name to mockHandler)
+        )
+
+        // When
+        val result = pushService.addCredentialFromUri(testUri)
+
+        // Then
+        assertNotNull(result)
+        assertEquals(differentCredential.id, result.id)
+
+        // Verify handler registration was called
+        coVerify(exactly = 1) {
+            mockHandler.register(any(), any())
+        }
+
+        // Verify storage was called
+        coVerify(exactly = 1) {
+            mockStorage.storePushCredential(any())
+        }
+    }
+
+    @Test
+    fun `test addCredentialFromUri succeeds with different account name`() = runTest {
+        // Given
+        val testUri =
+            "pushauth://push/TestIssuer:different@example.com?s=secret&r=https://test.com&a=SHA256&c=challenge"
+        val differentCredential = testCredential.copy(
+            id = UUID.randomUUID().toString(),
+            accountName = "different@example.com",
+            displayAccountName = "different@example.com"
+        )
+
+        // Mock parsing
+        coEvery { PushUriParser.parse(testUri) } returns differentCredential
+        coEvery { PushUriParser.registrationParameters(testUri) } returns emptyMap()
+
+        // Mock storage to return null (no existing credential)
+        coEvery {
+            mockStorage.getCredentialByIssuerAndAccount(
+                differentCredential.issuer,
+                differentCredential.accountName
+            )
+        } returns null
+
+        coEvery {
+            mockStorage.storePushCredential(any<PushCredential>())
+        } just runs
+
+        // Mock handler
+        val mockHandler = mockk<PushHandler>()
+        coEvery { mockHandler.register(any(), any()) } returns true
+
+        val mockDeviceTokenManager = mockk<PushDeviceTokenManager>()
+        coEvery { mockDeviceTokenManager.getDeviceTokenId() } returns "test-token-id"
+
+        val pushService = PushService(
+            storage = mockStorage,
+            configuration = configWithCache,
+            httpClient = KtorHttpClient(mockHttpClient),
+            policyEvaluator = mockPolicyEvaluator,
+            tokenManager = mockDeviceTokenManager,
+            handlers = mapOf(PushPlatform.PING_AM.name to mockHandler)
+        )
+
+        // When
+        val result = pushService.addCredentialFromUri(testUri)
+
+        // Then
+        assertNotNull(result)
+        assertEquals(differentCredential.id, result.id)
+
+        // Verify handler registration was called
+        coVerify(exactly = 1) {
+            mockHandler.register(any(), any())
+        }
+
+        // Verify storage was called
+        coVerify(exactly = 1) {
+            mockStorage.storePushCredential(any())
+        }
+    }
+}

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2025-2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -510,11 +510,14 @@ class OathClientAndroidTest {
         )
         assertTrue("URI should contain correct OTP type", exportedUri.contains("otpauth://totp/"))
 
-        // Create a new client and import the credential
-        val newClient = createTestClient()
+        // Generate code from original credential
+        val originalCode = client.generateCode(credential.id).getOrThrow()
+        
+        // Remove the original credential before importing to avoid duplicate constraint
+        client.deleteCredential(credential.id).getOrThrow()
 
-        // Import the exported credential
-        val importedCredential = newClient.addCredentialFromUri(exportedUri).getOrThrow()
+        // Import the exported credential back
+        val importedCredential = client.addCredentialFromUri(exportedUri).getOrThrow()
 
         // Verify the imported credential matches the original
         assertNotNull("Imported credential should not be null", importedCredential)
@@ -532,20 +535,18 @@ class OathClientAndroidTest {
         assertEquals("Digits should match", credential.digits, importedCredential.digits)
         assertEquals("Period should match", credential.period, importedCredential.period)
 
-        // Generate codes from both clients to ensure they produce the same OTP
-        val originalCode = client.generateCode(credential.id).getOrThrow()
-        val importedCode = newClient.generateCode(importedCredential.id).getOrThrow()
+        // Generate code from imported credential
+        val importedCode = client.generateCode(importedCredential.id).getOrThrow()
 
-        // For the same time period, both should generate identical codes
+        // Both should generate identical codes (same secret, same time period)
         assertEquals(
             "Original and imported credential should generate same code",
             originalCode,
             importedCode
         )
 
-        // Close the clients when done
+        // Close the client when done
         client.close()
-        newClient.close()
     }
 
 
@@ -851,6 +852,46 @@ class OathClientAndroidTest {
         )
 
         // Close the client when done
+        client.close()
+    }
+    
+    @Test
+    fun testDuplicateCredentialDetection() = runTest {
+        val client = createTestClient()
+        
+        // Create a test URI
+        val uri = "otpauth://totp/Example:test@example.com?secret=JBSWY3DPEHPK3PXP&issuer=Example"
+        
+        // Add a credential from the URI
+        val credential = client.addCredentialFromUri(uri).getOrThrow()
+        assertNotNull("First credential should be added successfully", credential)
+        
+        // Try to add the same credential again (same issuer and accountName)
+        val duplicateResult = client.addCredentialFromUri(uri)
+        
+        // Verify that adding the duplicate credential failed
+        assertTrue("Duplicate credential should fail", duplicateResult.isFailure)
+        
+        val exception = duplicateResult.exceptionOrNull()
+        assertNotNull("Exception should not be null", exception)
+        
+        // The exception message or cause should mention that the credential already exists
+        val errorMessage = exception?.message ?: ""
+        val causeMessage = exception?.cause?.message ?: ""
+        val hasDuplicateMessage = errorMessage.contains("already exists", ignoreCase = true) || 
+                                  errorMessage.contains("duplicate", ignoreCase = true) ||
+                                  causeMessage.contains("already exists", ignoreCase = true) ||
+                                  causeMessage.contains("duplicate", ignoreCase = true)
+        
+        assertTrue(
+            "Error message should mention duplicate credential. Got: $errorMessage, cause: $causeMessage",
+            hasDuplicateMessage
+        )
+        
+        // Verify we still only have one credential
+        val allCredentials = client.getCredentials().getOrThrow()
+        assertEquals("Should only have one credential", 1, allCredentials.size)
+        
         client.close()
     }
 

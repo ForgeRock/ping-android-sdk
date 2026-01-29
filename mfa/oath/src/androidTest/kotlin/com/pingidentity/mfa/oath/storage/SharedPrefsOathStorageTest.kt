@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2025-2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -26,6 +26,7 @@ import org.junit.runner.RunWith
 import java.util.UUID
 
 @RunWith(AndroidJUnit4::class)
+@OptIn(ExperimentalCoroutinesApi::class)
 class SharedPrefsOathStorageTest {
 
     private lateinit var storage: SharedPrefsOathStorage
@@ -58,8 +59,7 @@ class SharedPrefsOathStorageTest {
         // Close resources
         storage.close()
     }
-    
-    @OptIn(ExperimentalCoroutinesApi::class)
+
     @Test
     fun testStoreAndRetrieveCredential() = runTest {
         // Create a test credential
@@ -88,7 +88,6 @@ class SharedPrefsOathStorageTest {
         assertEquals("Secret should match", credential.secret, retrievedCredential?.secret)
     }
     
-    @OptIn(ExperimentalCoroutinesApi::class)
     @Test
     fun testRetrieveNonExistentCredential() = runTest {
         // Try to retrieve a non-existent credential
@@ -98,8 +97,7 @@ class SharedPrefsOathStorageTest {
         // Verify
         assertNull("Retrieved non-existent credential should be null", retrievedCredential)
     }
-    
-    @OptIn(ExperimentalCoroutinesApi::class)
+
     @Test
     fun testGetAllCredentials_Empty() = runTest {
         // Get all credentials when none exist
@@ -108,8 +106,7 @@ class SharedPrefsOathStorageTest {
         // Verify
         assertTrue("Credential list should be empty", credentials.isEmpty())
     }
-    
-    @OptIn(ExperimentalCoroutinesApi::class)
+
     @Test
     fun testGetAllCredentials_Multiple() = runTest {
         // Create and store multiple credentials
@@ -145,8 +142,7 @@ class SharedPrefsOathStorageTest {
         assertTrue("Should contain credential 1", credentials.any { it.id == credential1.id })
         assertTrue("Should contain credential 2", credentials.any { it.id == credential2.id })
     }
-    
-    @OptIn(ExperimentalCoroutinesApi::class)
+
     @Test
     fun testRemoveCredential_Existing() = runTest {
         // Create and store a credential
@@ -172,8 +168,7 @@ class SharedPrefsOathStorageTest {
         assertTrue("Remove should return true for existing credential", result)
         assertNull("Credential should no longer exist", storage.retrieveOathCredential(credential.id))
     }
-    
-    @OptIn(ExperimentalCoroutinesApi::class)
+
     @Test
     fun testRemoveCredential_NonExisting() = runTest {
         // Try to remove a non-existent credential
@@ -183,8 +178,7 @@ class SharedPrefsOathStorageTest {
         // Verify
         assertFalse("Remove should return false for non-existent credential", result)
     }
-    
-    @OptIn(ExperimentalCoroutinesApi::class)
+
     @Test
     fun testClearCredentials() = runTest {
         // Create and store multiple credentials
@@ -221,8 +215,7 @@ class SharedPrefsOathStorageTest {
         // Verify
         assertTrue("Credential list should be empty after clear", storage.getAllOathCredentials().isEmpty())
     }
-    
-    @OptIn(ExperimentalCoroutinesApi::class)
+
     @Test
     fun testUpdateCredential() = runTest {
         // Create and store a credential
@@ -254,7 +247,6 @@ class SharedPrefsOathStorageTest {
         assertEquals("Updated account name should match", "Updated Account", retrievedCredential?.displayAccountName)
     }
 
-    @OptIn(ExperimentalCoroutinesApi::class)
     @Test
     fun testCredentialWithMalformedJson() = runTest {
         // Get direct access to SharedPreferences
@@ -271,8 +263,7 @@ class SharedPrefsOathStorageTest {
         // This should throw an MfaStorageException
         storage.retrieveOathCredential(credentialId)
     }
-    
-    @OptIn(ExperimentalCoroutinesApi::class)
+
     @Test
     fun testInitialize() = runTest {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
@@ -317,8 +308,7 @@ class SharedPrefsOathStorageTest {
         uninitializedStorage.clear()
         uninitializedStorage.close()
     }
-    
-    @OptIn(ExperimentalCoroutinesApi::class)
+
     @Test
     fun testClear() = runTest {
         // Store some credentials
@@ -345,6 +335,69 @@ class SharedPrefsOathStorageTest {
         // Storage should still be usable after clear
         storage.storeOathCredential(credential)
         assertNotNull(storage.retrieveOathCredential(credential.id))
+    }
+
+    @Test
+    fun testGetCredentialByIssuerAndAccount() = runTest {
+        // Create and store test credentials with different issuers and account names
+        val credential1 = OathCredential(
+            issuer = "Test Issuer 1",
+            displayIssuer = "Test Issuer 1",
+            accountName = "user1@example.com",
+            displayAccountName = "user1@example.com",
+            oathType = OathType.TOTP,
+            secret = testSecret
+        )
+        val credential2 = OathCredential(
+            issuer = "Test Issuer 2",
+            displayIssuer = "Test Issuer 2",
+            accountName = "user2@example.com",
+            displayAccountName = "user2@example.com",
+            oathType = OathType.TOTP,
+            secret = testSecret
+        )
+        val credential3 = OathCredential(
+            issuer = "Test Issuer 1", // Same issuer as credential1
+            displayIssuer = "Test Issuer 1",
+            accountName = "user3@example.com", // Different account
+            displayAccountName = "user3@example.com",
+            oathType = OathType.TOTP,
+            secret = testSecret
+        )
+        
+        storage.storeOathCredential(credential1)
+        storage.storeOathCredential(credential2)
+        storage.storeOathCredential(credential3)
+        
+        // Test finding existing credential
+        val found1 = storage.getCredentialByIssuerAndAccount("Test Issuer 1", "user1@example.com")
+        assertNotNull("Should find credential1", found1)
+        assertEquals("Should return correct credential", credential1.id, found1?.id)
+        
+        // Test finding another existing credential
+        val found2 = storage.getCredentialByIssuerAndAccount("Test Issuer 2", "user2@example.com")
+        assertNotNull("Should find credential2", found2)
+        assertEquals("Should return correct credential", credential2.id, found2?.id)
+        
+        // Test finding credential with same issuer but different account
+        val found3 = storage.getCredentialByIssuerAndAccount("Test Issuer 1", "user3@example.com")
+        assertNotNull("Should find credential3", found3)
+        assertEquals("Should return correct credential", credential3.id, found3?.id)
+        
+        // Test not finding non-existent credential (wrong issuer)
+        val notFound1 = storage.getCredentialByIssuerAndAccount("Non-existent Issuer", "user1@example.com")
+        assertNull("Should not find credential with wrong issuer", notFound1)
+        
+        // Test not finding non-existent credential (wrong account)
+        val notFound2 = storage.getCredentialByIssuerAndAccount("Test Issuer 1", "nonexistent@example.com")
+        assertNull("Should not find credential with wrong account", notFound2)
+        
+        // Test case sensitivity
+        val notFound3 = storage.getCredentialByIssuerAndAccount("test issuer 1", "user1@example.com")
+        assertNull("Should be case-sensitive for issuer", notFound3)
+        
+        val notFound4 = storage.getCredentialByIssuerAndAccount("Test Issuer 1", "USER1@EXAMPLE.COM")
+        assertNull("Should be case-sensitive for account name", notFound4)
     }
 
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2025-2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -41,6 +41,7 @@ import java.util.UUID
  */
 @RunWith(AndroidJUnit4::class)
 @SmallTest
+@OptIn(ExperimentalCoroutinesApi::class)
 class SQLOathStorageTest {
 
     private lateinit var appContext: Context
@@ -50,7 +51,6 @@ class SQLOathStorageTest {
         override suspend fun getPassphrase() = "test_passphrase"
     }
 
-    @OptIn(ExperimentalCoroutinesApi::class)
     @Before
     fun setup() = runTest {
         // Get the application context
@@ -72,8 +72,7 @@ class SQLOathStorageTest {
         // Clean up any existing test data
         cleanupTestData()
     }
-    
-    @OptIn(ExperimentalCoroutinesApi::class)
+
     @After
     fun tearDown() = runTest {
         // Ensure storage is closed after each test
@@ -130,7 +129,7 @@ class SQLOathStorageTest {
     /**
      * Test that database and tables are created successfully during initialization
      */
-    @OptIn(ExperimentalCoroutinesApi::class)
+
     @Test
     fun testDatabaseInitialization() = runTest {
         // Create a new storage instance with a different database name
@@ -173,7 +172,7 @@ class SQLOathStorageTest {
     /**
      * Test storing and retrieving a credential
      */
-    @OptIn(ExperimentalCoroutinesApi::class)
+
     @Test
     fun testStoreAndRetrieveCredential() = runTest {
         // Create a test credential
@@ -199,7 +198,6 @@ class SQLOathStorageTest {
     /**
      * Test retrieving all credentials
      */
-    @OptIn(ExperimentalCoroutinesApi::class)
     @Test
     fun testGetAllCredentials() = runTest {
         // Ensure we start with an empty database
@@ -230,11 +228,7 @@ class SQLOathStorageTest {
         assertTrue("Should contain credential 3", 
             allCredentials.any { it.id == credential3.id && it.issuer == "Issuer3" })
     }
-    
-    /**
-     * Test removing a credential
-     */
-    @OptIn(ExperimentalCoroutinesApi::class)
+
     @Test
     fun testRemoveCredential() = runTest {
         // Create and store a test credential
@@ -255,11 +249,7 @@ class SQLOathStorageTest {
         val retrievedAfter = storage.retrieveOathCredential(testCred.id)
         assertNull("Credential should not exist after removal", retrievedAfter)
     }
-    
-    /**
-     * Test removing a credential that doesn't exist
-     */
-    @OptIn(ExperimentalCoroutinesApi::class)
+
     @Test
     fun testRemoveNonExistentCredential() = runTest {
         // Attempt to remove a credential with a non-existent ID
@@ -268,16 +258,12 @@ class SQLOathStorageTest {
         // Verify removal was not successful
         assertFalse("Removal of non-existent credential should return false", removed)
     }
-    
-    /**
-     * Test clearing all credentials
-     */
-    @OptIn(ExperimentalCoroutinesApi::class)
+
     @Test
     fun testClearCredentials() = runTest {
-        // Create and store multiple test credentials
-        val credential1 = createTestCredential()
-        val credential2 = createTestCredential()
+        // Create and store multiple test credentials with unique issuer/account combinations
+        val credential1 = createTestCredential(issuer = "Issuer1", accountName = "user1@example.com")
+        val credential2 = createTestCredential(issuer = "Issuer2", accountName = "user2@example.com")
         
         storage.storeOathCredential(credential1)
         storage.storeOathCredential(credential2)
@@ -293,11 +279,7 @@ class SQLOathStorageTest {
         val afterClear = storage.getAllOathCredentials()
         assertEquals("Should have 0 credentials after clearing", 0, afterClear.size)
     }
-    
-    /**
-     * Test updating a credential
-     */
-    @OptIn(ExperimentalCoroutinesApi::class)
+
     @Test
     fun testUpdateCredential() = runTest {
         // Create and store a test credential
@@ -323,11 +305,7 @@ class SQLOathStorageTest {
         assertEquals("Issuer should be updated", "Updated Issuer", retrievedCred?.issuer)
         assertEquals("Account name should be updated", "updated@example.com", retrievedCred?.accountName)
     }
-    
-    /**
-     * Test different oath types
-     */
-    @OptIn(ExperimentalCoroutinesApi::class)
+
     @Test
     fun testDifferentOathTypes() = runTest {
         // Create TOTP and HOTP credentials
@@ -356,11 +334,7 @@ class SQLOathStorageTest {
         assertEquals("HOTP type should be preserved", OathType.HOTP, retrievedHotp?.oathType)
         assertEquals("HOTP counter should be preserved", 42L, retrievedHotp?.counter)
     }
-    
-    /**
-     * Test database behavior with different OATH algorithms
-     */
-    @OptIn(ExperimentalCoroutinesApi::class)
+
     @Test
     fun testDifferentAlgorithms() = runTest {
         // Create credentials with different algorithms
@@ -389,11 +363,7 @@ class SQLOathStorageTest {
         assertEquals("SHA256 algorithm should be preserved", OathAlgorithm.SHA256, retrievedSha256?.oathAlgorithm)
         assertEquals("SHA512 algorithm should be preserved", OathAlgorithm.SHA512, retrievedSha512?.oathAlgorithm)
     }
-    
-    /**
-     * Test reopening the database works correctly
-     */
-    @OptIn(ExperimentalCoroutinesApi::class)
+
     @Test
     fun testReopenDatabase() = runTest {
         // Create and store a test credential
@@ -426,11 +396,7 @@ class SQLOathStorageTest {
             reopenedStorage.close()
         }
     }
-    
-    /**
-     * Test direct table creation with raw SQL
-     */
-    @OptIn(ExperimentalCoroutinesApi::class)
+
     @Test
     fun testDirectTableCreation() = runTest {
         // This test verifies that SQLOathStorage can directly create its tables
@@ -476,11 +442,7 @@ class SQLOathStorageTest {
             context.deleteDatabase(testDbName)
         }
     }
-    
-    /**
-     * Test minimal operations to verify database functionality
-     */
-    @OptIn(ExperimentalCoroutinesApi::class)
+
     @Test
     fun testMinimalDatabaseOperations() = runTest {
         // This test performs a minimal database operation after initializing
@@ -580,11 +542,7 @@ class SQLOathStorageTest {
             context.deleteDatabase(testDbName)
         }
     }
-    
-    /**
-     * Test storage builder pattern
-     */
-    @OptIn(ExperimentalCoroutinesApi::class)
+
     @Test
     fun testStorageBuilder() = runTest {
         // Create a new storage instance with the builder
@@ -617,11 +575,7 @@ class SQLOathStorageTest {
             }
         }
     }
-    
-    /**
-     * Test creating storage with a custom passphrase
-     */
-    @OptIn(ExperimentalCoroutinesApi::class)
+
     @Test
     fun testStorageWithCustomPassphrase() = runTest {
         // Create a new storage instance with a custom passphrase
@@ -654,5 +608,56 @@ class SQLOathStorageTest {
                 println("Warning: Failed to clean up passphrase storage: ${e.message}")
             }
         }
+    }
+
+    @Test
+    fun testGetCredentialByIssuerAndAccount() = runTest {
+        // Create and store test credentials with different issuers and account names
+        val credential1 = createTestCredential(
+            issuer = "Test Issuer 1",
+            accountName = "user1@example.com"
+        )
+        val credential2 = createTestCredential(
+            issuer = "Test Issuer 2",
+            accountName = "user2@example.com"
+        )
+        val credential3 = createTestCredential(
+            issuer = "Test Issuer 1", // Same issuer as credential1
+            accountName = "user3@example.com" // Different account
+        )
+        
+        storage.storeOathCredential(credential1)
+        storage.storeOathCredential(credential2)
+        storage.storeOathCredential(credential3)
+        
+        // Test finding existing credential
+        val found1 = storage.getCredentialByIssuerAndAccount("Test Issuer 1", "user1@example.com")
+        assertNotNull("Should find credential1", found1)
+        assertEquals("Should return correct credential", credential1.id, found1?.id)
+        
+        // Test finding another existing credential
+        val found2 = storage.getCredentialByIssuerAndAccount("Test Issuer 2", "user2@example.com")
+        assertNotNull("Should find credential2", found2)
+        assertEquals("Should return correct credential", credential2.id, found2?.id)
+        
+        // Test finding credential with same issuer but different account
+        val found3 = storage.getCredentialByIssuerAndAccount("Test Issuer 1", "user3@example.com")
+        assertNotNull("Should find credential3", found3)
+        assertEquals("Should return correct credential", credential3.id, found3?.id)
+        
+        // Test not finding non-existent credential (wrong issuer)
+        val notFound1 = storage.getCredentialByIssuerAndAccount("Non-existent Issuer", "user1@example.com")
+        assertNull("Should not find credential with wrong issuer", notFound1)
+        
+        // Test not finding non-existent credential (wrong account)
+        val notFound2 = storage.getCredentialByIssuerAndAccount("Test Issuer 1", "nonexistent@example.com")
+        assertNull("Should not find credential with wrong account", notFound2)
+        
+        // Test case sensitivity
+        val notFound3 = storage.getCredentialByIssuerAndAccount("test issuer 1", "user1@example.com")
+        assertNull("Should be case-sensitive for issuer", notFound3)
+        
+        val notFound4 = storage.getCredentialByIssuerAndAccount("Test Issuer 1", "USER1@EXAMPLE.COM")
+        assertNull("Should be case-sensitive for account name", notFound4)
     }
 }
