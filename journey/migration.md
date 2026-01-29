@@ -1,6 +1,15 @@
 # Journey Module Migration: Forgerock to Ping SDK
 
-This document provides a comprehensive mapping of the Journey module from the legacy Forgerock SDK to the new Ping SDK. It is intended to be used as a reference for refactoring and migration efforts.
+This document provides a comprehensive mapping of the Journey module from the legacy Forgerock SDK to the new Ping SDK. It is intended to be used as a reference for refactoring and migration efforts. The examples are based on real-world implementations and demonstrate the key architectural and API changes.
+
+
+## Migration Overview
+
+The primary architectural shift is the move from a **callback-based asynchronous model to a modern, coroutine-based approach**.
+
+*   **Legacy (Callbacks):** The legacy SDK used a `NodeListener` with methods like `onSuccess`, `onException`, and `onCallbackReceived`. This led to nested callbacks and made the code harder to follow.
+
+*   **New (Coroutines):** The new Ping SDK embraces Kotlin Coroutines. Methods like `start` and `next` are `suspend` functions. This allows for writing asynchronous code in a sequential, synchronous-looking manner, which greatly improves readability and maintainability. The different outcomes of an operation are handled by the sealed `Node` class (`ContinueNode`, `SuccessNode`, `ErrorNode`, `FailureNode`), which allows for exhaustive `when` statements.
 
 ## Quick Reference
 
@@ -17,13 +26,6 @@ This document provides a comprehensive mapping of the Journey module from the le
 
 ---
 
-## Migration Overview
-
-The primary architectural shift is the move from a **callback-based asynchronous model to a modern, coroutine-based approach**.
-
-*   **Legacy (Callbacks):** The legacy SDK used a `NodeListener` with methods like `onSuccess`, `onException`, and `onCallbackReceived`. This led to nested callbacks and made the code harder to follow.
-
-*   **New (Coroutines):** The new Ping SDK embraces Kotlin Coroutines. Methods like `start` and `next` are `suspend` functions. This allows for writing asynchronous code in a sequential, synchronous-looking manner, which greatly improves readability and maintainability. The different outcomes of an operation are handled by the sealed `Node` class (`ContinueNode`, `SuccessNode`, `ErrorNode`, `FailureNode`), which allows for exhaustive `when` statements.
 
 ## Example: SDK Initialization
 
