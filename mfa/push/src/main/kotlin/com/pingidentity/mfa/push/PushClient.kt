@@ -52,10 +52,9 @@ class PushClient internal constructor(
          * 
          * ```
          * val pushClient = PushClient {
-         *     encryptionEnabled = true
          *     timeoutMs = 60000
          *     logger = Logger.STANDARD
-         *     storage = SQLPushStorage()
+         *     storage = SQLPushStorage()  // Uses encrypted storage by default
          *     // Add custom push handlers
          *     addPushHandler("CUSTOM_PLATFORM", CustomPushHandler())
          * }
@@ -73,18 +72,24 @@ class PushClient internal constructor(
 
         /**
          * Creates a default PushStorage implementation with the appropriate configuration.
+         * Uses encrypted storage by default (KeyStorePassphraseProvider).
+         *
+         * To use unencrypted storage, provide a custom storage implementation:
+         * ```
+         * PushClient {
+         *     storage = SQLPushStorage {
+         *         passphraseProvider = NonePassphraseProvider()
+         *     }
+         * }
+         * ```
          *
          * @param config The Push configuration to use for the storage.
-         * @return A configured PushStorage implementation.
+         * @return A configured PushStorage implementation with encryption enabled.
          */
         internal fun defaultStorage(config: PushConfiguration): PushStorage {
             return SQLPushStorage {
                 context = config.context
-                passphraseProvider = if (config.encryptionEnabled) {
-                    KeyStorePassphraseProvider(config.context, logger = config.logger)
-                } else {
-                    NonePassphraseProvider()
-                }
+                passphraseProvider = KeyStorePassphraseProvider(config.context, logger = config.logger)
                 logger = config.logger
             }
         }

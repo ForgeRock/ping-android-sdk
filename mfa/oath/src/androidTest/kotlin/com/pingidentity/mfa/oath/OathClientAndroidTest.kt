@@ -68,29 +68,27 @@ class OathClientAndroidTest {
     private fun cleanupExistingCredentials() {
         println("Cleaning up existing credentials before test")
         
-        // First try with encryption disabled
-        cleanupWithClient(encryptionEnabled = false)
+        // First try with no encryption
+        cleanupWithClient(testPassphraseProvider = NonePassphraseProvider())
         
-        // Then try with encryption enabled to catch any credentials stored with encryption
-        cleanupWithClient(encryptionEnabled = true)
+        // Then try with encryption to catch any credentials stored with encryption
+        cleanupWithClient(testPassphraseProvider = testPassphraseProvider)
     }
     
     /**
-     * Helper method to clean up credentials with a specific configuration.
+     * Helper method to clean up credentials with a specific passphrase provider.
      */
-    private fun cleanupWithClient(encryptionEnabled: Boolean) {
+    private fun cleanupWithClient(testPassphraseProvider: PassphraseProvider) {
         try {
-            // Create storage with appropriate passphrase provider based on encryption setting
+            // Create storage with the specified passphrase provider
             val testStorage = SQLOathStorage {
                 context = appContext
-                // Use TestPassphraseProvider for encrypted storage, NonePassphraseProvider for non-encrypted
-                passphraseProvider = if (encryptionEnabled) testPassphraseProvider else NonePassphraseProvider()
+                passphraseProvider = testPassphraseProvider
             }
             
             // Create a client with the specified configuration
             runTest {
                 val client = OathClient {
-                    this.encryptionEnabled = encryptionEnabled
                     this.storage = testStorage
                     logger = Logger.STANDARD
                 }
@@ -118,7 +116,6 @@ class OathClientAndroidTest {
         val config = OathConfiguration {
             enableCredentialCache = true
             timeout = 60.toDuration(DurationUnit.SECONDS)
-            encryptionEnabled = false
             storage = SQLOathStorage {
                 context = appContext
                 passphraseProvider = NonePassphraseProvider() // No encryption for this test
@@ -413,7 +410,6 @@ class OathClientAndroidTest {
         val config = OathConfiguration {
             enableCredentialCache = true
             timeout = 60.toDuration(DurationUnit.SECONDS)
-            encryptionEnabled = false
         }
 
         val client = OathClient(config)
@@ -692,9 +688,11 @@ class OathClientAndroidTest {
     fun testDifferentOathAlgorithms() = runTest {
         // Create an OathClient with NonePassphraseProvider for non-encrypted storage
         val client = OathClient {
-            encryptionEnabled = false
+            storage = SQLOathStorage {
+                context = appContext
+                passphraseProvider = NonePassphraseProvider()
+            }
             logger = Logger.STANDARD
-            // Storage will be created with NonePassphraseProvider due to encryptionEnabled = false
         }
 
         // Create test URIs with different algorithms
@@ -747,9 +745,11 @@ class OathClientAndroidTest {
     fun testCredentialWithCustomDigits() = runTest(timeout = 30.minutes) {
         // Create an OathClient with NonePassphraseProvider for non-encrypted storage
         val client = OathClient {
-            encryptionEnabled = false
+            storage = SQLOathStorage {
+                context = appContext
+                passphraseProvider = NonePassphraseProvider()
+            }
             logger = Logger.STANDARD
-            // Storage will be created with NonePassphraseProvider due to encryptionEnabled = false
         }
 
         // Create URIs with different digit lengths
@@ -782,9 +782,11 @@ class OathClientAndroidTest {
     fun testReinitializeClient() = runTest {
         // Create an OathClient with NonePassphraseProvider for non-encrypted storage
         val client = OathClient {
-            encryptionEnabled = false
+            storage = SQLOathStorage {
+                context = appContext
+                passphraseProvider = NonePassphraseProvider()
+            }
             logger = Logger.STANDARD
-            // Storage will be created with NonePassphraseProvider due to encryptionEnabled = false
         }
 
         // Add a credential
@@ -826,9 +828,11 @@ class OathClientAndroidTest {
     fun testCredentialMetadata() = runTest {
         // Create an OathClient with NonePassphraseProvider for non-encrypted storage
         val client = OathClient {
-            encryptionEnabled = false
+            storage = SQLOathStorage {
+                context = appContext
+                passphraseProvider = NonePassphraseProvider()
+            }
             logger = Logger.STANDARD
-            // Storage will be created with NonePassphraseProvider due to encryptionEnabled = false
         }
 
         // Add a credential with creation time that we can verify
@@ -900,20 +904,17 @@ class OathClientAndroidTest {
      */
 
     private suspend fun createTestClient(
-        encryptionEnabled: Boolean = false,
-        enableCredentialCache: Boolean = false
+        enableCredentialCache: Boolean = false,
+        testPassphraseProvider: PassphraseProvider = NonePassphraseProvider()
     ): OathClient {
-        // Create storage with appropriate passphrase provider based on encryption setting
+        // Create storage with the specified passphrase provider
         val testStorage = SQLOathStorage {
             context = appContext
-            // Use appropriate passphrase provider based on encryption setting
-            passphraseProvider =
-                if (encryptionEnabled) testPassphraseProvider else NonePassphraseProvider()
+            passphraseProvider = testPassphraseProvider
         }
 
         // Create client with the configuration
         val client = OathClient {
-            this.encryptionEnabled = encryptionEnabled
             this.enableCredentialCache = enableCredentialCache
             this.storage = testStorage
             this.logger = Logger.STANDARD

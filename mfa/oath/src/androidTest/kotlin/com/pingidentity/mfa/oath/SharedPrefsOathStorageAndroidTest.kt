@@ -87,7 +87,6 @@ class SharedPrefsOathStorageAndroidTest {
         client = OathClient {
             this.storage = this@SharedPrefsOathStorageAndroidTest.storage
             enableCredentialCache = false
-            encryptionEnabled = false // Disable encryption for tests
             logger = Logger.logger
         }
     }
@@ -294,7 +293,6 @@ class SharedPrefsOathStorageAndroidTest {
         // 4. Create a new client with the new storage using DSL style
         val newClient = OathClient {
             this.storage = newStorage
-            encryptionEnabled = false
         }
         newClient.initialize()
         

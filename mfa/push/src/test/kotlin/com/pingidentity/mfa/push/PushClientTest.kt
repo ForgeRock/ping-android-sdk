@@ -12,6 +12,7 @@ import com.google.firebase.messaging.RemoteMessage
 import com.pingidentity.android.ContextProvider
 import com.pingidentity.logger.Logger
 import com.pingidentity.mfa.push.storage.PushStorage
+import com.pingidentity.mfa.push.storage.SQLPushStorage
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -844,39 +845,21 @@ class PushClientTest {
     }
 
     @Test
-    fun `test companion object defaultStorage with encryption enabled`() = runTest {
+    fun `test companion object defaultStorage creates encrypted storage by default`() = runTest {
         // Given - set up context provider
         ContextProvider.init(mockContext)
-        val configWithEncryption = mockk<PushConfiguration>().apply {
+        val config = mockk<PushConfiguration>().apply {
             every { context } returns mockContext
-            every { encryptionEnabled } returns true
             every { logger } returns mockLogger
         }
 
         // When
-        val storage = PushClient.defaultStorage(configWithEncryption)
+        val storage = PushClient.defaultStorage(config)
 
-        // Then
+        // Then - verify storage is created with encryption (KeyStorePassphraseProvider by default)
         assertNotNull(storage)
         assertTrue(storage is PushStorage)
-    }
-
-    @Test
-    fun `test companion object defaultStorage with encryption disabled`() = runTest {
-        // Given - set up context provider
-        ContextProvider.init(mockContext)
-        val configWithoutEncryption = mockk<PushConfiguration>().apply {
-            every { context } returns mockContext
-            every { encryptionEnabled } returns false
-            every { logger } returns mockLogger
-        }
-
-        // When
-        val storage = PushClient.defaultStorage(configWithoutEncryption)
-
-        // Then
-        assertNotNull(storage)
-        assertTrue(storage is PushStorage)
+        assertTrue(storage is SQLPushStorage)
     }
 
     @Test
@@ -889,7 +872,6 @@ class PushClientTest {
         val newClient = PushClient {
             logger = mockLogger
             storage = mockStorage
-            encryptionEnabled = false
         }
 
         // Then

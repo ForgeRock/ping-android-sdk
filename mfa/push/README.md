@@ -395,10 +395,9 @@ val pushClient = PushClient {
 The custom storage options include:
 
 - **context**: Android application context (required)
-- **encryptionEnabled**: Whether to encrypt the database (default: true)
 - **databaseName**: Custom database name for the SQLite database (optional)
 - **databaseVersion**: Custom database version (default: 1)
-- **passphraseProvider**: Custom passphrase provider for database encryption (default: uses Android KeyStore)
+- **passphraseProvider**: Custom passphrase provider for database encryption (default: KeyStorePassphraseProvider for encrypted storage, use NonePassphraseProvider() for unencrypted storage)
 
 ## Advanced Usage
 
@@ -552,7 +551,6 @@ class PushMainActivity : AppCompatActivity() {
         lifecycleScope.launch {
             try {
                 pushClient = PushClient {
-                    encryptionEnabled = true
                     enableCredentialCache = true
                 }
                 
