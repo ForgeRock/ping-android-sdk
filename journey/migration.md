@@ -89,24 +89,17 @@ FRSession.authenticate(context, "Login", nodeListener)
 ```
 ### Modern
 ```kotlin
-// In a ViewModel, using viewModelScope
-viewModelScope.launch {
-    try {
-        var node: Node = journey.start("Login")
+var node: Node = journey.start("Login")
 
-        while (node is ContinueNode) {
-            // Process node and set callbacks
-            node = (node as ContinueNode).next()
-        }
+while (node is ContinueNode) {
+    // Process node and set callbacks
+    node = (node as ContinueNode).next()
+}
 
-        when (node) {
-            is SuccessNode -> { /* Handle success */ }
-            is ErrorNode -> { /* Handle API error */ }
-            is FailureNode -> { /* Handle exception */ }
-        }
-    } catch (e: Exception) {
-        // Handle exceptions
-    }
+when (node) {
+    is SuccessNode -> { /* Handle success */ }
+    is ErrorNode -> { /* Handle API error */ }
+    is FailureNode -> { /* Handle exception */ }
 }
 ```
 
@@ -134,99 +127,6 @@ viewModelScope.launch {
 | `UserInfo` | `UserInfo` | The `UserInfo` model remains, but it is now retrieved synchronously or with coroutines. |
 | `AccessToken` | `Token` | The `AccessToken` model is now named `Token`. |
 
-
-## Example: Error Handling with Node Types
-
-The Ping SDK uses sealed classes to represent different outcomes of an authentication operation.
-
-#### SuccessNode
-- **When**: Authentication completed successfully
-- **Contains**: Session and user information
-- **Action**: Transition to authenticated state
-- **Code**:
-```kotlin
-is SuccessNode -> {
-    logger.info("Authentication successful")
-    saveSession(node)
-}
-```
-
-#### ContinueNode
-- **When**: More steps required (callbacks need to be filled)
-- **Contains**: List of callbacks for user input
-- **Action**: Display callback UI and call next()
-- **Code**:
-```kotlin
-is ContinueNode -> {
-    displayCallbacks(node.callbacks)
-    val nextNode = node.next()
-}
-```
-
-#### ErrorNode
-- **When**: API/Server returned an expected error response
-- **Difference from FailureNode**: Expected error from authentication logic (user error, not system error)
-- **Examples**: Invalid credentials, locked account, MFA failed, policy violation
-- **Contains**: Error code and message from server
-- **Action**: User-recoverable, allow retry
-- **Code**:
-```kotlin
-is ErrorNode -> {
-    logger.error("Authentication failed: ${node.errorMessage}")
-    showUserFriendlyError(node.errorMessage)
-    state.update { it.copy(error = node.errorMessage, allowRetry = true) }
-}
-```
-
-#### FailureNode
-- **When**: Unexpected exception occurred (system/network error)
-- **Difference from ErrorNode**: Unexpected exception, not part of normal auth flow
-- **Examples**: Network timeout, JSON parse error, SDK configuration error
-- **Contains**: Exception object with details
-- **Action**: Non-recoverable situation, may suggest app restart
-- **Code**:
-```kotlin
-is FailureNode -> {
-    logger.error("Unexpected error occurred", node.exception)
-    showSystemError("An unexpected error occurred. Please try again.")
-    state.update { it.copy(error = node.exception.message, allowRetry = false) }
-}
-```
-
-### Complete Error Handling Example
-```kotlin
-viewModelScope.launch {
-    var node: Node = journey.start("Login")
-
-    while (node is ContinueNode) {
-        node = node.next()
-    }
-
-    when (node) {
-        is SuccessNode -> {
-            logger.info("Login successful")
-            state.update { it.copy(isLoggedIn = true, error = null) }
-        }
-        is ErrorNode -> {
-            logger.warn("Auth error: ${node.errorMessage}")
-            state.update { it.copy(error = node.errorMessage) }
-        }
-        is FailureNode -> {
-            logger.error("System error", node.exception)
-            state.update { it.copy(error = "System error: ${node.exception.message}") }
-        }
-    }
-}
-```
-
-### Legacy vs Modern Comparison
-| Aspect | Legacy | Modern |
-|--------|--------|--------|
-| **Error handling** | `onException(e: Exception)` callback | `is FailureNode` in when statement |
-| **API errors** | Caught in `onException` | `is ErrorNode` with error message |
-| **User recovery** | Manual decision in callback | Different handling for ErrorNode vs FailureNode |
-| **Control flow** | Scattered across callbacks | Sequential in try-catch block |
-
 ---
 
 ## Example: Common Migration Patterns
@@ -234,23 +134,25 @@ viewModelScope.launch {
 Quick reference for common migration patterns:
 
 ### User Logout
+#### Legacy
 ```kotlin
-// Legacy
 FRUser.getCurrentUser()?.logout()
-
-// Modern
+```
+#### Modern
+```kotlin
 journey.user()?.logout()
 ```
 
 ### Retrieving User Profile
+#### Legacy
 ```kotlin
-// Legacy
 FRUser.getCurrentUser()?.getUserInfo(object : FRListener<UserInfo> {
     override fun onSuccess(result: UserInfo) { /* ... */ }
     override fun onException(e: Exception) { /* ... */ }
 })
-
-// Modern
+```
+#### Modern
+```kotlin
 when (val result = journey.user()?.userinfo(false)) {
     is Result.Failure -> { /* ... */ }
     is Result.Success -> { /* ... */ }
@@ -258,44 +160,67 @@ when (val result = journey.user()?.userinfo(false)) {
 ```
 
 ### Access Token Management
+#### Legacy
 ```kotlin
-// Legacy - Get Access Token
+// Get Access Token
 val accessToken = FRUser.getCurrentUser()?.accessToken
 
-// Modern - Get Access Token
-val token = journey.user()?.token
-
-// Legacy - Refresh Token
+// Refresh Token
 FRUser.getCurrentUser()?.refreshAccessToken(object : FRListener<AccessToken?> {
     override fun onSuccess(result: AccessToken?) { /* ... */ }
     override fun onException(e: Exception) { /* ... */ }
 })
+```
 
-// Modern - Refresh Token
+#### Modern
+```kotlin
+// Get Access Token
+val token = journey.user()?.token
+
+// Refresh Token
 val result: Result<Token, OidcError> = journey.user()?.refresh()
 ```
 
 ---
 
-## Example: Social Login (Google)
+## Example: Social Login
+Configuration should be done on the server to enable different IDP such as apple, google, facebook.
 
-### Legacy
-```kotlin
-import org.forgerock.android.auth.idp.GoogleSignInHandler
-
-// First callback: SelectIdPCallback
-if (callback is SelectIdPCallback) {
-    val providersArray = callback.providers
-    // Display providers to user and get selection
-    val googleProvider = providersArray.first { it.provider == "google" }
-    callback.setProvider(googleProvider)
-    
-    node.next(context, nodeListener)
+### Select IDP
+IDP is retrieved from the configuration internally within the SDK.
+#### Legacy
+```java
+IdPHandler getIdPHandler() {
+    IdPHandler idPHandler = null;
+    if (provider.toLowerCase().contains("google")) {
+        idPHandler = new GoogleIdentityServicesHandler ();
+    } else if (provider.toLowerCase().contains("facebook")) {
+        idPHandler = new FacebookSignInHandler ();
+    } else if (provider.toLowerCase().contains("apple")) {
+        idPHandler = new AppleSignInHandler ();
+    }
+    return idPHandler;
 }
+```
 
-// Second callback: IdPCallback
+#### Modern
+```kotlin
+override fun init(name: String, value: JsonElement) {
+        when (name) {
+            "providers" -> {
+                providers = value.jsonArray.map {
+                    IdPValue(it.jsonObject)
+                }
+            }
+        }
+    }
+```
+### IDP Callback
+#### Legacy
+```kotlin
+
+// Callback: IdPCallback
 if (callback is IdPCallback) {
-    val handler = GoogleSignInHandler()
     callback.signIn(context, handler, object : FRListener<String> {
         override fun onSuccess(result: String) {
             node.next(context, nodeListener)
@@ -307,163 +232,35 @@ if (callback is IdPCallback) {
 }
 ```
 
-### Modern
+#### Modern
 ```kotlin
-import com.pingidentity.idp.callback.SelectIdpCallback
-import com.pingidentity.idp.callback.IdpCallback
-
-// First callback: SelectIdpCallback
-if (callback is SelectIdpCallback) {
-    val providersArray = callback.providers
-    // Display providers to user and get selection
-    val googleProvider = providersArray.first { it.provider == "google" }
-    callback.setProvider(googleProvider)
-    
-    node = node.next()
-}
-
-// Second callback: IdpCallback
+// Callback: IdpCallback
 if (callback is IdpCallback) {
-    callback.idpSignIn(activity) { result ->
+    callback.authorize(redirectUri) { result ->
         when (result) {
-            is Result.Success -> {
-                logger.info("Google sign-in successful")
+            is Result.Success -> { idpResult
+                logger.info("Sign in successful ${idpResult.token}")
                 node = node.next()
             }
             is Result.Failure -> {
-                logger.error("Google sign-in failed", result.error)
+                logger.error("IDP sign-in failed", result.error)
             }
         }
     }
 }
 ```
 
-## Example: Social Login (Facebook)
-
-### Legacy
-```kotlin
-import org.forgerock.android.auth.idp.FacebookSignInHandler
-
-// First callback: SelectIdPCallback
-if (callback is SelectIdPCallback) {
-    val providersArray = callback.providers
-    // Display providers to user and get selection
-    val facebookProvider = providersArray.first { it.provider == "facebook" }
-    callback.setProvider(facebookProvider)
-    
-    node.next(context, nodeListener)
-}
-
-// Second callback: IdPCallback
-if (callback is IdPCallback) {
-    val handler = FacebookSignInHandler()
-    callback.signIn(context, handler, object : FRListener<String> {
-        override fun onSuccess(result: String) {
-            node.next(context, nodeListener)
-        }
-        override fun onException(e: Exception) {
-            logger.error("Facebook sign-in failed", e)
-        }
-    })
-}
-```
-
-### Modern
-```kotlin
-import com.pingidentity.idp.callback.SelectIdpCallback
-import com.pingidentity.idp.callback.IdpCallback
-
-// First callback: SelectIdpCallback
-if (callback is SelectIdpCallback) {
-    val providersArray = callback.providers
-    // Display providers to user and get selection
-    val facebookProvider = providersArray.first { it.provider == "facebook" }
-    callback.setProvider(facebookProvider)
-    
-    node = node.next()
-}
-
-// Second callback: IdpCallback
-if (callback is IdpCallback) {
-    callback.idpSignIn(activity) { result ->
-        when (result) {
-            is Result.Success -> {
-                logger.info("Facebook sign-in successful")
-                node = node.next()
-            }
-            is Result.Failure -> {
-                logger.error("Facebook sign-in failed", result.error)
-            }
-        }
-    }
-}
-```
-
-## Example: Social Login (Apple)
-
-### Legacy
-```kotlin
-import androidx.credentials.CredentialManager
-
-// First callback: SelectIdPCallback
-if (callback is SelectIdPCallback) {
-    val providersArray = callback.providers
-    // Display providers to user and get selection
-    val appleProvider = providersArray.first { it.provider == "apple" }
-    callback.setProvider(appleProvider)
-    
-    node.next(context, nodeListener)
-}
-
-// Second callback: IdPCallback
-if (callback is IdPCallback) {
-    // Legacy SDK relies on external Apple Sign In library
-    // Manual implementation needed
-    node.next(context, nodeListener)
-}
-```
-
-### Modern
-```kotlin
-import com.pingidentity.idp.callback.SelectIdpCallback
-import com.pingidentity.idp.callback.IdpCallback
-
-// First callback: SelectIdpCallback
-if (callback is SelectIdpCallback) {
-    val providersArray = callback.providers
-    // Display providers to user and get selection
-    val appleProvider = providersArray.first { it.provider == "apple" }
-    callback.setProvider(appleProvider)
-    
-    node = node.next()
-}
-
-// Second callback: IdpCallback
-if (callback is IdpCallback) {
-    callback.idpSignIn(activity) { result ->
-        when (result) {
-            is Result.Success -> {
-                logger.info("Apple sign-in successful")
-                node = node.next()
-            }
-            is Result.Failure -> {
-                logger.error("Apple sign-in failed", result.error)
-            }
-        }
-    }
-}
-```
 ---
 ## Example: WebAuthn Registration
 
-### Legacy
+#### Legacy
 ```kotlin
 val callback = WebAuthRegistrationCallback()
 callback.setResidentKeyRequirement(ResidentKeyRequirement.RESIDENT_KEY_DISCOURAGED)
 callback.register(context, deviceName, node)
 ```
 
-### Modern
+#### Modern
 ```kotlin
 val callback = FidoRegistrationCallback()
 callback.register(deviceName)
@@ -479,13 +276,13 @@ callback.register(deviceName)
 
 ## Example: WebAuthn Authentication
 
-### Legacy
+#### Legacy
 ```kotlin
 val callback = WebAuthAuthenticationCallback()
 callback.authenticate(context, deviceName, node)
 ```
 
-### Modern
+#### Modern
 ```kotlin
 val callback = FidoAuthenticationCallback()
 callback.authenticate()
@@ -503,11 +300,8 @@ callback.authenticate()
 
 ## Example: Device Binding Callback
 
-### Legacy
+#### Legacy
 ```kotlin
-// Legacy SDK used device binding from separate module
-import org.forgerock.android.auth.device.DeviceBindingCallback
-
 val callback = DeviceBindingCallback()
 callback.bind(context, deviceName, object : FRListener<String> {
     override fun onSuccess(result: String) {
@@ -520,299 +314,164 @@ callback.bind(context, deviceName, object : FRListener<String> {
 })
 ```
 
-### Modern
+#### Modern
 ```kotlin
-// Modern SDK with coroutine-based device binding
-import com.pingidentity.device.binding.DeviceBindingCallback
-import com.pingidentity.device.binding.Prompt
-
-@Composable
-fun DeviceBindingCallback(
-    viewModel: DeviceBindingCallbackViewModel,
-    onNext: () -> Unit
-) {
-    var deviceName by remember { mutableStateOf(Build.MODEL) }
-    
-    // PIN Dialog (shown when ViewModel requests it)
-    viewModel.activePinPrompt?.let { prompt ->
-        PinCollectorDialog(
-            prompt = prompt,
-            onPinEntered = { pin ->
-                viewModel.submitPin(pin.toCharArray())
+val result = callback.bind {
+    this.deviceName = deviceName
+    appPinConfig {
+        pinCollector { prompt ->
+            // Trigger UI to show dialog
+            pinDeferred = CompletableDeferred()
+            activePinPrompt = prompt
+            // Suspend until user supplies PIN (or cancellation)
+            pinDeferred!!.await().also {
+                // Once consumed, clear state so dialog closes
+                activePinPrompt = null
             }
-        )
+        }
+        //pinCollector = { prompt -> collectPin(prompt) }
     }
-    
-    Column {
-        OutlinedTextField(
-            value = deviceName,
-            onValueChange = { deviceName = it },
-            label = { Text("Device Name") }
-        )
-        Button(
-            onClick = {
-                viewModel.bind(deviceName = deviceName) { result ->
-                    result.onSuccess { onNext() }
-                    result.onFailure { it.printStackTrace() }
-                }
-            }
-        ) {
-            Text("Bind Device")
+    biometricAuthenticatorConfig {
+        keyGenParameterSpec {
+            //setUnlockedDeviceRequired(true)
+            //setUserAuthenticationValidWhileOnBody(true)
+            //setUserPresenceRequired(true)
+            //setIsStrongBoxBacked(false)
+            //setInvalidatedByBiometricEnrollment(false)
         }
     }
+
+
+}.onFailure {
 }
 ```
 
 ## Example: Device Profiling Callback
 
-### Legacy
-```kotlin
-// Legacy SDK had limited device profiling capabilities
-// Required manual collection of device information
-import org.forgerock.android.auth.device.DeviceProfileCallback
-
-val callback = DeviceProfileCallback()
-// Manual implementation of device collectors
-callback.collect(context)
+#### Legacy
 ```
+FRDeviceCollectorBuilder builder = FRDeviceCollector.builder();
+if (metadata) {
+    builder.collector(new MetadataCollector());
+}
+if (location) {
+    builder.collector(new LocationCollector());
+}
 
-### Modern
-```kotlin
-// Modern SDK with comprehensive device profiling
-import com.pingidentity.device.profile.DeviceProfileCallback
-import com.pingidentity.device.profile.DeviceProfileConfig
-import com.pingidentity.device.profile.collector.*
-
-@Composable
-fun DeviceProfileCallback(
-    deviceProfileCallback: DeviceProfileCallback,
-    onNext: () -> Unit,
-) {
-    val scope = rememberCoroutineScope()
-    var isLoading by remember { mutableStateOf(true) }
-
-    LaunchedEffect(key1 = true) {
-        scope.launch {
-            val result = deviceProfileCallback.collect {
-                collectors {
-                    clear()
-                    add(PlatformCollector())      // OS, device model, security
-                    add(HardwareCollector())       // CPU, memory, display
-                    add(NetworkCollector())        // Network connectivity
-                    add(TelephonyCollector)        // Carrier information
-                    add(BluetoothCollector)        // Bluetooth support
-                    add(BrowserCollector)          // Browser/WebView info
-                }
-            }
-            isLoading = false
-            onNext()
-        }
+builder.build().collect(context, new FRListener<JSONObject>() {
+    @Override
+    public void onSuccess(JSONObject result) {
+        setValue(result.toString());
+        Listener.onSuccess(listener, null);
     }
 
-    if (isLoading) {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
-            ) {
-                CircularProgressIndicator(modifier = Modifier.size(48.dp))
-                Spacer(modifier = Modifier.height(16.dp))
-                Text("Gathering Device Profile...")
-            }
-        }
+    @Override
+    public void onException(Exception e) {
+        Listener.onException(listener, e);
     }
 }
 ```
 
-## Example: PingOne Protect Evaluation
-
-### Legacy
+#### Modern
 ```kotlin
-// Legacy SDK had basic risk assessment
-// Limited to simple threat detection
-val callback = ProtectCallback()
-callback.evaluate(context, object : FRListener<String> {
-    override fun onSuccess(result: String) {
-        logger.info("Threat evaluation complete")
-        node.next(context, nodeListener)
-    }
-    override fun onException(e: Exception) {
-        logger.error("Evaluation failed", e)
-    }
-})
-```
-
-### Modern
-```kotlin
-// Modern SDK with advanced PingOne Protect evaluation
-import com.pingidentity.protect.journey.PingOneProtectEvaluationCallback
-
-@Composable
-fun PingOneProtectEvaluation(
-    field: PingOneProtectEvaluationCallback,
-    onNext: () -> Unit,
-) {
-    val scope = rememberCoroutineScope()
-    var isLoading by remember(field) { mutableStateOf(true) }
-
-    LaunchedEffect(key1 = field) {
-        scope.launch {
-            try {
-                val startTime = System.currentTimeMillis()
-                field.collect() // Advanced threat assessment
-                val taskDuration = System.currentTimeMillis() - startTime
-
-                // Ensure minimum display time for user feedback
-                val remainingTime = 2000 - taskDuration
-                if (remainingTime > 0) {
-                    delay(remainingTime)
-                }
-                isLoading = false
-                onNext()
-            } catch (e: Exception) {
-                logger.error("Protect evaluation failed", e)
-                isLoading = false
-            }
-        }
-    }
-
-    if (isLoading) {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center,
-                modifier = Modifier.padding(16.dp)
-            ) {
-                CircularProgressIndicator(modifier = Modifier.size(48.dp))
-                Spacer(modifier = Modifier.height(16.dp))
-                Text("Evaluating device risk...")
-            }
-        }
+val result = deviceProfileCallback.collect {
+    collectors {
+        clear()
+        add(PlatformCollector())      // OS, device model, security
+        add(HardwareCollector())       // CPU, memory, display
+        add(NetworkCollector())        // Network connectivity
+        add(TelephonyCollector)        // Carrier information
+        add(BluetoothCollector)        // Bluetooth support
+        add(BrowserCollector)          // Browser/WebView info
     }
 }
 ```
 
----
-
-## Example: Protecting API Requests (PingOne Protect)
-
-### Legacy
+## Example: Device Identifier
+#### Legacy
 ```kotlin
-// Legacy SDK required manual risk token inclusion
-val riskToken = ProtectCollector.getInstance().getRiskToken()
-val headers = mapOf("X-Risk-Token" to riskToken)
-// Manual header management
-makeApiRequest(url, headers)
+DeviceIdentifier.builder().context(applicationContext).build().identifier
 ```
 
-### Modern
+#### Modern
 ```kotlin
-// Modern SDK automatically includes protect signals
-import com.pingidentity.protect.Protect
+DefaultDeviceIdentifier.id()
+```
 
-// Automatic risk assessment and signal collection
-Protect.start() // Initializes threat assessment
+## Example: PingOne Protect
+### Initialization
 
-// Risk signals automatically included in authentication journey
+#### Legacy
+```kotlin
+val nodeListenerFuture = object : PingOneProtectInitializeCallback {
+    val nodeListener: NodeListener<FRSession?> = this
+    override fun onCallbackReceived(node: Node) {
+        node.getCallback(PingOneProtectInitializeCallback::class.java)?.let {
+            it.start(context)
+        }
+        return
+    }
+} 
+```
+#### Modern
+```kotlin
 val callback = PingOneProtectInitializeCallback()
-callback.initialize()  // Collects behavioral data, device signals, etc.
-
-// Automatic retry with adaptive authentication if needed
-when (node) {
-    is ContinueNode -> {
-        // Protect signals already included
-        node = node.next()
-    }
-    is ErrorNode -> {
-        if (node.needsRiskEvaluation) {
-            // Trigger additional evaluation if high risk detected
-            Protect.evaluate()
-        }
-    }
+callback.start().onSuccess {
+    logger.info("PingOne Protect initialization successful")
+}.onFailure { error ->
+    logger.error("PingOne Protect initialization failed", error)
 }
 ```
 
+### Evaluation
+```kotlin
+val nodeListenerFuture: PingOneProtectNodeListener = object : PingOneProtectNodeListener(
+    context, "evaluate-default"
+) {
+    val nodeListener: NodeListener<FRSession?> = this
+    override fun onCallbackReceived(node: Node) {
+        node.getCallback(PingOneProtectEvaluationCallback::class.java)?.let {
+            it.getData(context)
+            node.next(context, nodeListener)
+            return
+        }
+        super.onCallbackReceived(node)
+    }
+}
+FRSession.authenticate(context, authenticationTree, nodeListenerFuture)
+```
+
+#### Modern
+```kotlin
+val callback = PingOneProtectEvaluationCallback()
+callback.collect().onSuccess {
+    logger.info("PingOne Protect evaluation successful")
+}.onFailure { error ->
+    logger.error("PingOne Protect evaluation failed", error)
+}
+```
 ---
 
 ## Example: ReCAPTCHA Enterprise
 
 ### Legacy
 ```kotlin
-import com.google.android.recaptcha.Recaptcha
-import org.forgerock.android.auth.callback.ReCaptchaEnterpriseCallback
-
-if (callback is ReCaptchaEnterpriseCallback) {
-    // Optional payload customization
-    callback.setPayload(mapOf(
-        "firewallPolicyEvaluation" to false
-    ))
-    
-    // Optional custom error code
-    callback.setClientError("custom_client_error")
-    
-    Recaptcha.getClient(context).executeAsync("login")
-        .addOnSuccessListener { token ->
-            logger.info("ReCAPTCHA verification successful")
-            node.next(context, nodeListener)
-        }
-        .addOnFailureListener { error ->
-            logger.error("ReCAPTCHA verification failed", error)
-            node.next(context, nodeListener)
-        }
-}
+val callback = ReCaptchaEnterpriseCallback()
+callback.execute(application = application)
 ```
 
 ### Modern
 ```kotlin
-import com.pingidentity.recaptcha.enterprise.ReCaptchaEnterpriseCallback
-
-@Composable
-fun ReCaptchaEnterpriseCallback(
-    reCaptchaEnterpriseCallback: ReCaptchaEnterpriseCallback,
-    onNext: () -> Unit,
-) {
-    val scope = rememberCoroutineScope()
-    var isLoading by remember { mutableStateOf(true) }
-
-    LaunchedEffect(key1 = true) {
-        scope.launch {
-            reCaptchaEnterpriseCallback.verify {
-                // Optionally customize the configuration here
-                // config.payload = mapOf("custom_key" to "custom_value")
-            }.onSuccess { result ->
-                logger.info("ReCAPTCHA Token Result: $result")
-                isLoading = false
-                onNext()
-            }.onFailure { error ->
-                logger.error("ReCAPTCHA Verification Failed: ${error.message}", error)
-                isLoading = false
-                onNext() // Proceed to next step (or handle error differently)
-            }
-        }
-    }
-
-    if (isLoading) {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center,
-                modifier = Modifier.padding(16.dp)
-            ) {
-                CircularProgressIndicator(modifier = Modifier.size(48.dp))
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(text = "ReCAPTCHA verification in progress...")
-            }
-        }
-    }
+val reCaptchaEnterpriseCallback = ReCaptchaEnterpriseCallback()
+reCaptchaEnterpriseCallback.verify {
+    // Optionally customize the configuration here
+    // config.payload = mapOf("custom_key" to "custom_value")
+}.onSuccess { result ->
+    logger.info("ReCAPTCHA Token Result: $result")
+    onNext()
+}.onFailure { error ->
+    logger.error("ReCAPTCHA Verification Failed: ${error.message}", error)
+    onNext() // Proceed to next step (or handle error differently)
 }
 ```
 
@@ -910,34 +569,25 @@ currentUser?.getUserInfo(object : FRListener<UserInfo> {
 
 ### Modern
 ```kotlin
-// Check if user is authenticated
-viewModelScope.launch {
-    try {
-        val user = journey.user()
-        if (user != null) {
-            logger.info("User is authenticated: ${user.id}")
-            // User is logged in
-            
-            // Get user info asynchronously
-            when (val result = user.userinfo(false)) {
-                is Result.Success -> {
-                    val userInfo = result.value
-                    logger.info("User info: ${userInfo.name}")
-                    state.update { it.copy(userInfo = userInfo) }
-                }
-                is Result.Failure -> {
-                    logger.error("Failed to get user info", result.error)
-                    state.update { it.copy(error = "Failed to load user info") }
-                }
-            }
-        } else {
-            logger.info("No authenticated user")
-            // Show login screen
-            state.update { it.copy(requiresLogin = true) }
+journey.user()?.let {
+    logger.info("User is authenticated: ${user.id}")
+    // User is logged in
+
+    // Get user info asynchronously
+    when (val result = user.userinfo(false)) {
+        is Result.Success -> {
+            val userInfo = result.value
+            logger.info("User info: ${userInfo.name}")
+            state.update { it.copy(userInfo = userInfo) }
         }
-    } catch (e: Exception) {
-        logger.error("Session check failed", e)
+        is Result.Failure -> {
+            logger.error("Failed to get user info", result.error)
+            state.update { it.copy(error = "Failed to load user info") }
+        }
     }
+} ?: run {
+    logger.warn("No authenticated user")
+    null
 }
 ```
 
@@ -947,8 +597,6 @@ viewModelScope.launch {
 
 ### Legacy
 ```kotlin
-import org.forgerock.android.auth.FRUser
-
 FRUser.browser().appAuthConfigurer().customTabsIntent {
     it.setColorScheme(CustomTabsIntent.COLOR_SCHEME_DARK)
 }.appAuthConfiguration { appAuthConfiguration ->
@@ -959,56 +607,35 @@ FRUser.browser().appAuthConfigurer().customTabsIntent {
     object : FRListener<FRUser> {
         override fun onSuccess(result: FRUser) {
             logger.info("Browser login successful")
-            navigateToHome()
         }
         override fun onException(e: Exception) {
             logger.error("Browser login failed", e)
-            showError("Login failed")
         }
     })
 ```
 
 ### Modern
 ```kotlin
-import com.pingidentity.oidc.module.Oidc
-import com.pingidentity.oidc.OidcWeb
-
 var oidcWeb = OidcWeb {
-    logger = Logger.WARN
-    module(Oidc) {
-        clientId = oidcConfig.clientId
-        discoveryEndpoint = oidcConfig.discoveryEndpoint
-        scopes = mutableSetOf("openid", "email", "profile")
-        redirectUri = oidcConfig.redirectUri
-        signOutRedirectUri = oidcConfig.signOutRedirectUri
-    }
-    module(com.pingidentity.oidc.module.Web) {
-        customTabsCustomizer = {
-            setColorScheme(CustomTabsIntent.COLOR_SCHEME_DARK)
-        }
-    }
+    // Existing Oidc config
 }
 
-viewModelScope.launch {
-    oidcWeb.authorize()
-        .onSuccess { user ->
-            logger.info("Browser login successful")
-            state.update { it.copy(user = user, isLoggedIn = true) }
-            navigateToHome()
-        }
-        .onFailure { error ->
-            logger.error("Browser login failed", error)
-            state.update { it.copy(error = error.message) }
-        }
-}
+oidcWeb.authorize()
+    .onSuccess { user ->
+        logger.info("Browser login successful")
+        state.update { it.copy(user = user, isLoggedIn = true) }
+        navigateToHome()
+    }
+    .onFailure { error ->
+        logger.error("Browser login failed", error)
+        state.update { it.copy(error = error.message) }
+    }
 ```
 
 ## Example: Centralized Logout (Browser-based OIDC)
 
 ### Legacy
 ```kotlin
-import org.forgerock.android.auth.FRUser
-
 FRUser.browser().logout(fragmentActivity,
     object : FRListener<Void?> {
         override fun onSuccess(result: Void?) {
@@ -1025,106 +652,78 @@ FRUser.browser().logout(fragmentActivity,
 
 ### Modern
 ```kotlin
-import com.pingidentity.oidc.OidcWeb
-
-viewModelScope.launch {
-    try {
-        val oidcWeb = /* initialized OidcWeb instance */
-        oidcWeb.user()?.logout()
-        
-        logger.info("Browser logout successful")
-        state.update { it.copy(isLoggedIn = false, user = null) }
-        navigateToLogin()
-    } catch (e: Exception) {
-        logger.error("Browser logout failed", e)
-        // Still navigate to login even if logout fails
-        navigateToLogin()
-    }
-}
+val oidcWeb = /* initialized OidcWeb instance */
+oidcWeb.user()?.logout()
 ```
 
 ## Example: Getting Access Token After Session
 
 ### Legacy
 ```kotlin
-import org.forgerock.android.auth.FRUser
-
 val currentUser = FRUser.getCurrentUser()
-if (currentUser != null) {
-    currentUser.getAccessToken(object : FRListener<AccessToken> {
-        override fun onSuccess(result: AccessToken) {
-            val token = result.value
-            val expiresAt = result.expiresAt
-            logger.info("Token expires at: $expiresAt")
-            
-            // Use token for API requests
-            makeAuthenticatedRequest(token)
-        }
-        override fun onException(e: Exception) {
-            logger.error("Failed to get access token", e)
-            
-            // Try to refresh token
-            currentUser.refreshAccessToken(object : FRListener<AccessToken?> {
-                override fun onSuccess(result: AccessToken?) {
-                    if (result != null) {
-                        makeAuthenticatedRequest(result.value)
-                    }
+currentUser.getAccessToken(object : FRListener<AccessToken> {
+    override fun onSuccess(result: AccessToken) {
+        val token = result.value
+        val expiresAt = result.expiresAt
+        logger.info("Token expires at: $expiresAt")
+
+        // Use token for API requests
+        makeAuthenticatedRequest(token)
+    }
+    override fun onException(e: Exception) {
+        logger.error("Failed to get access token", e)
+
+        // Try to refresh token
+        currentUser.refreshAccessToken(object : FRListener<AccessToken?> {
+            override fun onSuccess(result: AccessToken?) {
+                if (result != null) {
+                    makeAuthenticatedRequest(result.value)
                 }
-                override fun onException(e: Exception) {
-                    logger.error("Token refresh failed", e)
-                    // Token expired, require re-authentication
-                    navigateToLogin()
-                }
-            })
-        }
-    })
-}
+            }
+            override fun onException(e: Exception) {
+                logger.error("Token refresh failed", e)
+                // Token expired, require re-authentication
+            }
+        })
+    }
+})
 ```
 
 ### Modern
 ```kotlin
-import com.pingidentity.journey.user
+val user = journey.user()
+if (user != null) {
+    // Get current access token
+    val token = user.token
+    if (token != null) {
+        logger.info("Token expires at: ${token.expiresAt}")
 
-viewModelScope.launch {
-    try {
-        val user = journey.user()
-        if (user != null) {
-            // Get current access token
-            val token = user.token
-            if (token != null) {
-                logger.info("Token expires at: ${token.expiresAt}")
-                
-                // Check if token is expired or about to expire
-                if (token.isExpired || token.expiresIn < 60) {
-                    // Refresh token
-                    when (val result = user.refresh()) {
-                        is Result.Success -> {
-                            val refreshedToken = result.value
-                            logger.info("Token refreshed")
-                            makeAuthenticatedRequest(refreshedToken)
-                        }
-                        is Result.Failure -> {
-                            logger.error("Token refresh failed", result.error)
-                            // Token refresh failed, require re-authentication
-                            navigateToLogin()
-                        }
-                    }
-                } else {
-                    // Token is still valid
-                    makeAuthenticatedRequest(token)
+        // Check if token is expired or about to expire
+        if (token.isExpired || token.expiresIn < 60) {
+            // Refresh token
+            when (val result = user.refresh()) {
+                is Result.Success -> {
+                    val refreshedToken = result.value
+                    logger.info("Token refreshed")
+                    makeAuthenticatedRequest(refreshedToken)
                 }
-            } else {
-                logger.warn("No access token available")
-                navigateToLogin()
+                is Result.Failure -> {
+                    // Token refresh failed, require re-authentication
+                    logger.error("Token refresh failed", result.error)
+                    // navigate to login
+                }
             }
         } else {
-            logger.warn("No authenticated user")
-            navigateToLogin()
+            // Token is still valid
+            makeAuthenticatedRequest(token)
         }
-    } catch (e: Exception) {
-        logger.error("Error retrieving access token", e)
-        navigateToLogin()
+    } else {
+        logger.warn("No access token available")
+        // navigate to login
     }
+} else {
+    logger.warn("No authenticated user")
+    // navigate to login
 }
 ```
 
@@ -1157,6 +756,40 @@ dependencies {
     implementation(libs.ping.sdk.network)
 }
 ```
+
+### Example `libs.versions.toml`
+
+```toml
+[versions]
+ping-sdk = "2.0.0-beta1"
+
+[libraries]
+ping-sdk-journey = { group = "com.pingidentity.sdks", name = "journey", version.ref = "ping-sdk" }
+ping-sdk-orchestrate = { group = "com.pingidentity.sdks", name = "orchestrate", version.ref = "ping-sdk" }
+ping-sdk-oidc = { group = "com.pingidentity.sdks", name = "oidc", version.ref = "ping-sdk" }
+ping-sdk-device-profile = { group = "com.pingidentity.sdks", name = "device-profile", version.ref = "ping-sdk" }
+ping-sdk-binding = { group = "com.pingidentity.sdks", name = "binding", version.ref = "ping-sdk" }
+ping-sdk-push = { group = "com.pingidentity.sdks", name = "push", version.ref = "ping-sdk" }
+ping-sdk-protect = { group = "com.pingidentity.sdks", name = "protect", version.ref = "ping-sdk" }
+ping-sdk-davinci = { group = "com.pingidentity.sdks", name = "davinci", version.ref = "ping-sdk" }
+ping-sdk-browser = { group = "com.pingidentity.sdks", name = "browser", version.ref = "ping-sdk" }
+ping-sdk-utils = { group = "com.pingidentity.sdks", name = "utils", version.ref = "ping-sdk" }
+ping-sdk-logger = { group = "com.pingidentity.sdks", name = "logger", version.ref = "ping-sdk" }
+ping-sdk-storage = { group = "com.pingidentity.sdks", name = "storage", version.ref = "ping-sdk" }
+ping-sdk-network = { group = "com.pingidentity.sdks", name = "network", version.ref = "ping-sdk" }
+ping-sdk-device-id = { group = "com.pingidentity.sdks", name = "device-id", version.ref = "ping-sdk" }
+ping-sdk-device-root = { group = "com.pingidentity.sdks", name = "device-root", version.ref = "ping-sdk" }
+ping-sdk-device-profile = { group = "com.pingidentity.sdks", name = "device-profile", version.ref = "ping-sdk" }
+ping-sdk-migration = { group = "com.pingidentity.sdks", name = "migration", version.ref = "ping-sdk" }
+ping-sdk-oath = { group = "com.pingidentity.sdks", name = "oath", version.ref = "ping-sdk" }
+ping-sdk-device-client = { group = "com.pingidentity.sdks", name = "device-client", version.ref = "ping-sdk" }
+ping-sdk-binding-ui = { group = "com.pingidentity.sdks", name = "binding-ui", version.ref = "ping-sdk" }
+ping-sdk-journey-plugin = { group = "com.pingidentity.sdks", name = "journey-plugin", version.ref = "ping-sdk" }
+ping-sdk-davinci-plugin = { group = "com.pingidentity.sdks", name = "davinci-plugin", version.ref = "ping-sdk" }
+ping-sdk-commons = { group = "com.pingidentity.sdks", name = "commons", version.ref = "ping-sdk" }
+ping-sdk-android = { group = "com.pingidentity.sdks", name = "android", version.ref = "ping-sdk" }
+```
+
 
 ### Available Libraries
 
