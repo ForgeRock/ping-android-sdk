@@ -508,36 +508,33 @@ private val nodeListener = object : NodeListener<FRSession> {
 ### Modern
 ```kotlin
 // In Activity or ViewModel handling deep links
-viewModelScope.launch {
-    val resumeUri = intent?.data // Contains 'suspendedId' parameter
-    if (resumeUri != null) {
-        try {
-            // Resume authentication flow
-            var node: Node = journey.resume(uri = resumeUri)
-            
-            while (node is ContinueNode) {
-                // Process callbacks
-                node = node.next()
-            }
-            
-            when (node) {
-                is SuccessNode -> {
-                    logger.info("Authentication successful after resume")
-                    navigateToHome()
-                }
-                is ErrorNode -> {
-                    logger.warn("Resume authentication error: ${node.errorMessage}")
-                    showError(node.errorMessage)
-                }
-                is FailureNode -> {
-                    logger.error("Resume authentication failed", node.exception)
-                    showError("Authentication failed. Please try again.")
-                }
-            }
-        } catch (e: Exception) {
-            logger.error("Resume authentication exception", e)
-            showError("An error occurred during authentication")
+val resumeUri = intent?.data // Contains 'suspendedId' parameter
+if (resumeUri != null) {
+    try {
+        // Resume authentication flow
+        var node: Node = journey.resume(uri = resumeUri)
+
+        while (node is ContinueNode) {
+            // Process callbacks
+            node = node.next()
         }
+
+        when (node) {
+            is SuccessNode -> {
+                logger.info("Authentication successful after resume")
+            }
+            is ErrorNode -> {
+                logger.warn("Resume authentication error: ${node.errorMessage}")
+                showError(node.errorMessage)
+            }
+            is FailureNode -> {
+                logger.error("Resume authentication failed", node.exception)
+                showError("Authentication failed. Please try again.")
+            }
+        }
+    } catch (e: Exception) {
+        logger.error("Resume authentication exception", e)
+        showError("An error occurred during authentication")
     }
 }
 ```
