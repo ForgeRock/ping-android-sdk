@@ -186,35 +186,6 @@ val result: Result<Token, OidcError> = journey.user()?.refresh()
 ## Example: Social Login
 Configuration should be done on the server to enable different IDP such as apple, google, facebook.
 
-### Select IDP
-IDP is retrieved from the configuration internally within the SDK.
-#### Legacy
-```java
-IdPHandler getIdPHandler() {
-    IdPHandler idPHandler = null;
-    if (provider.toLowerCase().contains("google")) {
-        idPHandler = new GoogleIdentityServicesHandler ();
-    } else if (provider.toLowerCase().contains("facebook")) {
-        idPHandler = new FacebookSignInHandler ();
-    } else if (provider.toLowerCase().contains("apple")) {
-        idPHandler = new AppleSignInHandler ();
-    }
-    return idPHandler;
-}
-```
-
-#### Modern
-```kotlin
-override fun init(name: String, value: JsonElement) {
-        when (name) {
-            "providers" -> {
-                providers = value.jsonArray.map {
-                    IdPValue(it.jsonObject)
-                }
-            }
-        }
-    }
-```
 ### IDP Callback
 #### Legacy
 ```kotlin
@@ -226,7 +197,7 @@ if (callback is IdPCallback) {
             node.next(context, nodeListener)
         }
         override fun onException(e: Exception) {
-            logger.error("Google sign-in failed", e)
+            logger.error("Sign-in failed", e)
         }
     })
 }
