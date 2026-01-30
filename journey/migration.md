@@ -29,7 +29,7 @@ The primary architectural shift is the move from a **callback-based asynchronous
 
 ## Example: SDK Initialization
 
-### Legacy
+#### Legacy
 ```kotlin
  val PingAM = FROptionsBuilder.build {
     server {
@@ -49,7 +49,7 @@ The primary architectural shift is the move from a **callback-based asynchronous
     }
 }
 ```
-### Modern
+#### Modern
 ```kotlin
 val journey = Journey {
     logger = Logger.STANDARD
@@ -69,7 +69,7 @@ val journey = Journey {
 ```
 
 ## Example: Starting Authentication and Handling Nodes
-### Legacy
+#### Legacy
 ```kotlin
 private val nodeListener = object : NodeListener<FRSession> {
     override fun onSuccess(result: FRSession) {
@@ -87,7 +87,7 @@ private val nodeListener = object : NodeListener<FRSession> {
 }
 FRSession.authenticate(context, "Login", nodeListener)
 ```
-### Modern
+#### Modern
 ```kotlin
 var node: Node = journey.start("Login")
 
@@ -454,13 +454,13 @@ callback.collect().onSuccess {
 
 ## Example: ReCAPTCHA Enterprise
 
-### Legacy
+#### Legacy
 ```kotlin
 val callback = ReCaptchaEnterpriseCallback()
 callback.execute(application = application)
 ```
 
-### Modern
+#### Modern
 ```kotlin
 val reCaptchaEnterpriseCallback = ReCaptchaEnterpriseCallback()
 reCaptchaEnterpriseCallback.verify {
@@ -477,7 +477,7 @@ reCaptchaEnterpriseCallback.verify {
 
 ## Example: Resume Authentication Flow (Suspended Email Node)
 
-### Legacy
+#### Legacy
 ```kotlin
 // In MainActivity or Activity handling deep links
 override fun onCreate(savedInstanceState: Bundle?) {
@@ -505,7 +505,7 @@ private val nodeListener = object : NodeListener<FRSession> {
 }
 ```
 
-### Modern
+#### Modern
 ```kotlin
 // In Activity or ViewModel handling deep links
 val resumeUri = intent?.data // Contains 'suspendedId' parameter
@@ -513,12 +513,10 @@ if (resumeUri != null) {
     try {
         // Resume authentication flow
         var node: Node = journey.resume(uri = resumeUri)
-
-        while (node is ContinueNode) {
-            // Process callbacks
-            node = node.next()
-        }
-
+        
+        // Process callbacks
+        node = node.next()
+        
         when (node) {
             is SuccessNode -> {
                 logger.info("Authentication successful after resume")
@@ -541,7 +539,7 @@ if (resumeUri != null) {
 
 ## Example: Checking Current User Session
 
-### Legacy
+#### Legacy
 ```kotlin
 // Check if user is authenticated
 val currentUser = FRUser.getCurrentUser()
@@ -564,7 +562,7 @@ currentUser?.getUserInfo(object : FRListener<UserInfo> {
 })
 ```
 
-### Modern
+#### Modern
 ```kotlin
 journey.user()?.let {
     logger.info("User is authenticated: ${user.id}")
@@ -592,7 +590,7 @@ journey.user()?.let {
 
 ## Example: Centralized Login (Browser-based OIDC)
 
-### Legacy
+#### Legacy
 ```kotlin
 FRUser.browser().appAuthConfigurer().customTabsIntent {
     it.setColorScheme(CustomTabsIntent.COLOR_SCHEME_DARK)
@@ -611,7 +609,7 @@ FRUser.browser().appAuthConfigurer().customTabsIntent {
     })
 ```
 
-### Modern
+#### Modern
 ```kotlin
 var oidcWeb = OidcWeb {
     // Existing Oidc config
@@ -631,7 +629,7 @@ oidcWeb.authorize()
 
 ## Example: Centralized Logout (Browser-based OIDC)
 
-### Legacy
+#### Legacy
 ```kotlin
 FRUser.browser().logout(fragmentActivity,
     object : FRListener<Void?> {
@@ -647,7 +645,7 @@ FRUser.browser().logout(fragmentActivity,
     })
 ```
 
-### Modern
+#### Modern
 ```kotlin
 val oidcWeb = /* initialized OidcWeb instance */
 oidcWeb.user()?.logout()
@@ -655,7 +653,7 @@ oidcWeb.user()?.logout()
 
 ## Example: Getting Access Token After Session
 
-### Legacy
+#### Legacy
 ```kotlin
 val currentUser = FRUser.getCurrentUser()
 currentUser.getAccessToken(object : FRListener<AccessToken> {
@@ -686,7 +684,7 @@ currentUser.getAccessToken(object : FRListener<AccessToken> {
 })
 ```
 
-### Modern
+#### Modern
 ```kotlin
 val user = journey.user()
 if (user != null) {
