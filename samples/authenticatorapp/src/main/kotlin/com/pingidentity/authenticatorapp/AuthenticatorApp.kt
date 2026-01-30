@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2025-2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -17,7 +17,10 @@ import com.pingidentity.journey.module.Oidc
 import com.pingidentity.logger.Logger
 import com.pingidentity.logger.STANDARD
 import com.pingidentity.mfa.oath.OathClient
+import com.pingidentity.mfa.oath.storage.SQLOathStorage
 import com.pingidentity.mfa.push.PushClient
+import com.pingidentity.mfa.push.storage.SQLPushStorage
+import com.pingidentity.storage.sqlite.passphrase.KeyStorePassphraseProvider
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -41,9 +44,17 @@ class AuthenticatorApp : Application() {
     @Volatile
     private lateinit var journey: Journey
 
+    @Volatile
+    private lateinit var oathStorage: SQLOathStorage
+
+    @Volatile
+    private lateinit var pushStorage: SQLPushStorage
+
     private val pushClientDeferred = CompletableDeferred<PushClient>()
     private val oathClientDeferred = CompletableDeferred<OathClient>()
     private val journeyDeferred = CompletableDeferred<Journey>()
+    private val oathStorageDeferred = CompletableDeferred<SQLOathStorage>()
+    private val pushStorageDeferred = CompletableDeferred<SQLPushStorage>()
 
     override fun onCreate() {
         super.onCreate()
@@ -85,11 +96,47 @@ class AuthenticatorApp : Application() {
             journeyDeferred.complete(journey)
             diagnosticLogger.i("AuthenticatorApp: Journey client initialized")
 
-            // Initialize Push client
-            pushClient = PushClient {
+            // Create storage instances
+            oathStorage = SQLOathStorage {
+                context = this@AuthenticatorApp
+                passphraseProvider = KeyStorePassphraseProvider(
+                    this@AuthenticatorApp,
+                    logger = diagnosticLogger
+                )
+                this.logger = diagnosticLogger
+            }
+            oathStorageDeferred.complete(oathStorage)
+            diagnosticLogger.i("AuthenticatorApp: OATH storage created")
+
+            pushStorage = SQLPushStorage {
+                context = this@AuthenticatorApp
+                passphraseProvider = KeyStorePassphraseProvider(
+                    this@AuthenticatorApp,
+                    logger = diagnosticLogger
+                )
+                this.logger = diagnosticLogger
+            }
+            pushStorageDeferred.complete(pushStorage)
+            diagnosticLogger.i("AuthenticatorApp: Push storage created")
+
+            // Initialize OATH client with storage
+            oathClient = OathClient {
+                // Use the pre-created storage instance
+                storage = oathStorage
                 // Enable credential caching
                 enableCredentialCache = true
+                // Set diagnostic logger if enabled, otherwise standard logger
+                this.logger = diagnosticLogger
+            }
+            oathClientDeferred.complete(oathClient)
+            diagnosticLogger.i("AuthenticatorApp: OATH client initialized")
 
+            // Initialize Push client with storage
+            pushClient = PushClient {
+                // Use the pre-created storage instance
+                storage = pushStorage
+                // Enable credential caching
+                enableCredentialCache = true
                 // Set diagnostic logger if enabled, otherwise standard logger
                 this.logger = diagnosticLogger
             }
@@ -104,17 +151,6 @@ class AuthenticatorApp : Application() {
             } catch (e: IllegalStateException) {
                 diagnosticLogger.e("Firebase not configured properly", e)
             }
-
-            // Initialize OATH client
-            oathClient = OathClient {
-                // Enable credential caching
-                enableCredentialCache = true
-
-                // Set diagnostic logger if enabled, otherwise standard logger
-                this.logger = diagnosticLogger
-            }
-            oathClientDeferred.complete(oathClient)
-            diagnosticLogger.i("AuthenticatorApp: OATH client initialized")
             diagnosticLogger.i("AuthenticatorApp: SDK initialization complete")
         }
     }
@@ -144,6 +180,24 @@ class AuthenticatorApp : Application() {
                 return app.journeyDeferred.getCompleted()
             }
             return app.journeyDeferred.await()
+        }
+
+        suspend fun getOathStorage(context: Application): SQLOathStorage {
+            val app = context as? AuthenticatorApp
+                ?: throw IllegalStateException("Context must be AuthenticatorApp")
+            if (app.oathStorageDeferred.isCompleted) {
+                return app.oathStorageDeferred.getCompleted()
+            }
+            return app.oathStorageDeferred.await()
+        }
+
+        suspend fun getPushStorage(context: Application): SQLPushStorage {
+            val app = context as? AuthenticatorApp
+                ?: throw IllegalStateException("Context must be AuthenticatorApp")
+            if (app.pushStorageDeferred.isCompleted) {
+                return app.pushStorageDeferred.getCompleted()
+            }
+            return app.pushStorageDeferred.await()
         }
     }
 }

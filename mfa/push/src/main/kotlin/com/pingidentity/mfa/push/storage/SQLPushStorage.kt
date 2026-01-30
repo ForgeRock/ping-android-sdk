@@ -36,12 +36,20 @@ class SQLPushStorage private constructor(
     databaseName: String,
     databaseVersion: Int = 1,
     passphraseProvider: PassphraseProvider,
+    allowDestructiveRecovery: Boolean,
+    maxBackupCount: Int,
+    backupOnError: Boolean,
+    onDatabaseError: (suspend (SQLiteStorage.ErrorCode, Boolean, Exception) -> Unit)?,
     override val logger: Logger = Logger.logger
 ) : SQLiteStorage(
     context = context,
     databaseName = databaseName,
     databaseVersion = databaseVersion,
     passphraseProvider = passphraseProvider,
+    allowDestructiveRecovery = allowDestructiveRecovery,
+    maxBackupCount = maxBackupCount,
+    backupOnError = backupOnError,
+    onDatabaseError = onDatabaseError,
     logger = logger
 ), PushStorage {
 
@@ -60,11 +68,15 @@ class SQLPushStorage private constructor(
         builder.databaseName,
         builder.databaseVersion,
         builder.passphraseProvider,
+        builder.allowDestructiveRecovery,
+        builder.maxBackupCount,
+        builder.backupOnError,
+        builder.onDatabaseError,
         builder.logger
     )
 
     companion object {
-        private const val DEFAULT_DATABASE_NAME = "pingidentity_mfa.db"
+        private const val DEFAULT_DATABASE_NAME = "pingidentity_push.db"
         
         // Push credential specific columns
         private const val PUSH_COLUMN_ID = "id"
@@ -125,6 +137,10 @@ class SQLPushStorage private constructor(
         var databaseVersion: Int = 1
         var initialPassphrase: String? = null // Default is null, in case developer does not want to supply their own passphrase
         var passphraseProvider: PassphraseProvider = KeyStorePassphraseProvider(context, initialPassphrase)
+        var allowDestructiveRecovery: Boolean = false
+        var maxBackupCount: Int = 3
+        var backupOnError: Boolean = true
+        var onDatabaseError: (suspend (SQLiteStorage.ErrorCode, Boolean, Exception) -> Unit)? = null
         var logger: Logger = Logger.logger
     }
 

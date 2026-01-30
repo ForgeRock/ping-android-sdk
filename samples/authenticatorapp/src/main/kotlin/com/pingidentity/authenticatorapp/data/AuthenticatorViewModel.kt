@@ -832,6 +832,204 @@ class AuthenticatorViewModel(
             }
         }
     }
+
+    /**
+     * Gets the list of OATH backup files.
+     * Returns a list of backup file info (name, size, timestamp).
+     */
+    fun getOathBackupFiles(callback: (List<BackupFileInfo>) -> Unit) {
+        viewModelScope.launch {
+            try {
+                val backups = oathManager.getBackupFiles()
+                callback(backups)
+            } catch (e: Exception) {
+                _uiState.update { it.copy(error = "Failed to get OATH backups: ${e.message}") }
+                callback(emptyList())
+            }
+        }
+    }
+    
+    /**
+     * Gets the list of PUSH backup files.
+     * Returns a list of backup file info (name, size, timestamp).
+     */
+    fun getPushBackupFiles(callback: (List<BackupFileInfo>) -> Unit) {
+        viewModelScope.launch {
+            try {
+                val backups = pushManager.getBackupFiles()
+                callback(backups)
+            } catch (e: Exception) {
+                _uiState.update { it.copy(error = "Failed to get PUSH backups: ${e.message}") }
+                callback(emptyList())
+            }
+        }
+    }
+    
+    /**
+     * Restores OATH database from the latest backup.
+     */
+    fun restoreOathFromBackup() {
+        viewModelScope.launch {
+            try {
+                val success = oathManager.restoreFromBackup()
+                if (success) {
+                    _uiState.update { it.copy(message = "OATH database restored successfully") }
+                    // Reload credentials after restoration
+                    loadOathCredentials()
+                } else {
+                    _uiState.update { it.copy(error = "No OATH backup available to restore") }
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(error = "Failed to restore OATH backup: ${e.message}") }
+            }
+        }
+    }
+    
+    /**
+     * Restores PUSH database from the latest backup.
+     */
+    fun restorePushFromBackup() {
+        viewModelScope.launch {
+            try {
+                val success = pushManager.restoreFromBackup()
+                if (success) {
+                    _uiState.update { it.copy(message = "PUSH database restored successfully") }
+                    // Reload credentials after restoration
+                    loadPushCredentials()
+                } else {
+                    _uiState.update { it.copy(error = "No PUSH backup available to restore") }
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(error = "Failed to restore PUSH backup: ${e.message}") }
+            }
+        }
+    }
+    
+    /**
+     * Simulates making the OATH database read-only for testing error handling.
+     */
+    fun simulateOathDatabaseReadOnly() {
+        viewModelScope.launch {
+            try {
+                oathManager.makeDatabaseReadOnly()
+                _uiState.update { 
+                    it.copy(message = "OATH database is now read-only. Restart app to test error handling.") 
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(error = "Failed to make OATH DB read-only: ${e.message}") }
+            }
+        }
+    }
+    
+    /**
+     * Simulates corrupting the PUSH database for testing error handling.
+     */
+    fun simulatePushDatabaseCorruption() {
+        viewModelScope.launch {
+            try {
+                pushManager.corruptDatabase()
+                _uiState.update { 
+                    it.copy(message = "PUSH database corrupted. Restart app to test error handling.") 
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(error = "Failed to corrupt PUSH DB: ${e.message}") }
+            }
+        }
+    }
+    
+    /**
+     * Clears all backup files for both OATH and PUSH.
+     */
+    fun clearAllBackups() {
+        viewModelScope.launch {
+            try {
+                val oathCleared = oathManager.clearBackups()
+                val pushCleared = pushManager.clearBackups()
+                val total = oathCleared + pushCleared
+                _uiState.update { 
+                    it.copy(message = "Cleared $total backup file(s) ($oathCleared OATH, $pushCleared PUSH)") 
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(error = "Failed to clear backups: ${e.message}") }
+            }
+        }
+    }
+    
+    /**
+     * Creates manual backups for both OATH and PUSH databases.
+     */
+    fun createManualBackups() {
+        viewModelScope.launch {
+            try {
+                var oathBackupCount = 0
+                var pushBackupCount = 0
+                
+                // Get current backup counts
+                val oathInfo = oathManager.getDatabaseInfo()
+                val pushInfo = pushManager.getDatabaseInfo()
+                
+                val beforeOathCount = oathInfo.backupCount
+                val beforePushCount = pushInfo.backupCount
+                
+                // Create OATH backup
+                try {
+                    oathManager.createManualBackup()
+                    val afterOathInfo = oathManager.getDatabaseInfo()
+                    oathBackupCount = afterOathInfo.backupCount - beforeOathCount
+                } catch (e: Exception) {
+                    diagnosticLogger.w("Failed to create OATH backup: ${e.message}")
+                }
+                
+                // Create PUSH backup
+                try {
+                    pushManager.createManualBackup()
+                    val afterPushInfo = pushManager.getDatabaseInfo()
+                    pushBackupCount = afterPushInfo.backupCount - beforePushCount
+                } catch (e: Exception) {
+                    diagnosticLogger.w("Failed to create PUSH backup: ${e.message}")
+                }
+                
+                val message = buildString {
+                    append("Manual backup created successfully!")
+                    if (oathBackupCount > 0 || pushBackupCount > 0) {
+                        append(" (")
+                        if (oathBackupCount > 0) append("OATH: +$oathBackupCount")
+                        if (oathBackupCount > 0 && pushBackupCount > 0) append(", ")
+                        if (pushBackupCount > 0) append("PUSH: +$pushBackupCount")
+                        append(")")
+                    }
+                }
+                
+                _uiState.update { it.copy(message = message) }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(error = "Failed to create backups: ${e.message}") }
+            }
+        }
+    }
+    
+    /**
+     * Gets database information for display.
+     */
+    fun getDatabaseInfo(callback: (DatabaseInfo) -> Unit) {
+        viewModelScope.launch {
+            try {
+                val oathInfo = oathManager.getDatabaseInfo()
+                val pushInfo = pushManager.getDatabaseInfo()
+                
+                val info = DatabaseInfo(
+                    oathDbPath = oathInfo.path,
+                    oathDbSize = oathInfo.size,
+                    oathBackupCount = oathInfo.backupCount,
+                    pushDbPath = pushInfo.path,
+                    pushDbSize = pushInfo.size,
+                    pushBackupCount = pushInfo.backupCount
+                )
+                callback(info)
+            } catch (e: Exception) {
+                _uiState.update { it.copy(error = "Failed to get database info: ${e.message}") }
+            }
+        }
+    }
 }
 
 /**

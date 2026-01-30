@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2025-2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -9,6 +9,7 @@ package com.pingidentity.authenticatorapp.managers
 
 import android.util.Log
 import com.google.firebase.messaging.FirebaseMessaging
+import com.pingidentity.authenticatorapp.data.BackupFileInfo
 import com.pingidentity.authenticatorapp.data.DiagnosticLogger
 import com.pingidentity.authenticatorapp.data.PushNotificationItem
 import com.pingidentity.authenticatorapp.data.toUiItems
@@ -23,16 +24,20 @@ import kotlin.coroutines.resumeWithException
 import com.pingidentity.mfa.push.PushClient
 import com.pingidentity.mfa.push.PushCredential
 import com.pingidentity.mfa.push.PushNotification
+import com.pingidentity.mfa.push.storage.SQLPushStorage
+import java.io.File
 
 /**
  * Manager class for handling all Push credential and notification operations.
  * Encapsulates Push-specific business logic and state management.
  *
  * @param pushClient The Push MFA client instance
+ * @param pushStorage The Push storage instance (optional, for backup operations)
  * @param diagnosticLogger DiagnosticLogger for logging
  */
 class PushManager(
     private var pushClient: PushClient? = null,
+    private var pushStorage: SQLPushStorage? = null,
     private val diagnosticLogger: DiagnosticLogger
 ) {
     
@@ -61,10 +66,14 @@ class PushManager(
     val lastAddedPushCredential: StateFlow<PushCredential?> = _lastAddedPushCredential.asStateFlow()
 
     /**
-     * Sets the Push client instance.
+     * Sets the Push client instance and optionally the storage instance.
+     * 
+     * @param client The Push client instance
+     * @param storage Optional storage instance for backup operations
      */
-    fun setClient(client: PushClient) {
+    fun setClient(client: PushClient, storage: SQLPushStorage? = null) {
         this.pushClient = client
+        this.pushStorage = storage
     }
 
     /**
@@ -314,7 +323,7 @@ class PushManager(
         val client = pushClient
         return try {
             withContext(Dispatchers.IO) {
-                (client as? PushClient)?.getDeviceToken() ?: Result.success("Not available")
+                client?.getDeviceToken() ?: Result.success("Not available")
             }.also { result ->
                 result.onSuccess { token ->
                     diagnosticLogger.d("Retrieved device token from PushClient: $token")
@@ -363,7 +372,7 @@ class PushManager(
             // Set new token in PushClient
             val setResult = withContext(Dispatchers.IO) {
                 val client = pushClient
-                (client as? PushClient)?.setDeviceToken(newToken)
+                client?.setDeviceToken(newToken)
             }
             
             if (setResult != null) {
@@ -450,5 +459,244 @@ class PushManager(
      */
     private fun maskUri(uri: String): String {
         return uri.replace(Regex("secret=[^&]*"), "secret=*****")
+    }
+
+    /**
+     * Gets the list of backup files for Push database.
+     * Requires storage instance to be set via setClient() or constructor.
+     */
+    suspend fun getBackupFiles(): List<BackupFileInfo> {
+        return withContext(Dispatchers.IO) {
+            try {
+                val storage = pushStorage
+                if (storage == null) {
+                    diagnosticLogger.w("Push storage not available. Pass storage to setClient() to enable backup operations.")
+                    return@withContext emptyList()
+                }
+                
+                val backupFiles = storage.listBackupFiles()
+                
+                backupFiles.map { file ->
+                    BackupFileInfo(
+                        name = file.name,
+                        sizeBytes = file.length(),
+                        timestamp = parseBackupTimestamp(file.name)
+                    )
+                }
+            } catch (e: Exception) {
+                diagnosticLogger.e("Error getting Push backup files", e)
+                emptyList()
+            }
+        }
+    }
+    
+    /**
+     * Parses timestamp from backup filename.
+     * Format: {databaseName}_backup_{timestamp}.db
+     */
+    private fun parseBackupTimestamp(filename: String): Long {
+        return try {
+            val timestampStr = filename
+                .substringAfter("_backup_")
+                .substringBefore(".db")
+            timestampStr.toLongOrNull() ?: 0L
+        } catch (_: Exception) {
+            0L
+        }
+    }
+    
+    /**
+     * Restores Push database from the latest backup.
+     * Requires storage instance to be set via setClient() or constructor.
+     */
+    suspend fun restoreFromBackup(): Boolean {
+        return withContext(Dispatchers.IO) {
+            try {
+                val storage = pushStorage
+                if (storage == null) {
+                    diagnosticLogger.w("Push storage not available. Pass storage to setClient() to enable backup operations.")
+                    return@withContext false
+                }
+                
+                val success = storage.attemptBackupRestoration()
+                
+                if (success) {
+                    diagnosticLogger.i("Successfully restored Push database from backup")
+                } else {
+                    diagnosticLogger.w("Failed to restore Push database from backup")
+                }
+                
+                success
+            } catch (e: Exception) {
+                diagnosticLogger.e("Error restoring Push backup", e)
+                false
+            }
+        }
+    }
+    
+    /**
+     * Creates a manual backup of the PUSH database.
+     * Requires storage instance to be set via setClient() or constructor.
+     */
+    suspend fun createManualBackup() {
+        return withContext(Dispatchers.IO) {
+            try {
+                val storage = pushStorage
+                if (storage == null) {
+                    diagnosticLogger.w("Push storage not available. Pass storage to setClient() to enable backup operations.")
+                    return@withContext
+                }
+                
+                storage.createDatabaseBackup()
+                diagnosticLogger.i("Manual Push backup created successfully")
+            } catch (e: Exception) {
+                diagnosticLogger.e("Error creating manual Push backup", e)
+                throw e
+            }
+        }
+    }
+    
+    /**
+     * Corrupts the Push database for testing error handling.
+     * Creates a backup first to ensure recovery is possible.
+     * Requires storage instance to be set via setClient() or constructor.
+     */
+    suspend fun corruptDatabase() {
+        return withContext(Dispatchers.IO) {
+            try {
+                val storage = pushStorage
+                if (storage == null) {
+                    diagnosticLogger.w("Push storage not available. Pass storage to setClient() to enable backup operations.")
+                    return@withContext
+                }
+                
+                // Create backup FIRST to ensure recovery is possible
+                diagnosticLogger.i("Creating backup before corrupting database")
+                storage.createDatabaseBackup()
+                diagnosticLogger.i("Backup created successfully")
+                
+                val contextField = storage.javaClass.superclass?.getDeclaredField("context")
+                contextField?.isAccessible = true
+                val context = contextField?.get(storage) as? android.content.Context
+                
+                val databaseNameField = storage.javaClass.superclass?.getDeclaredField("databaseName")
+                databaseNameField?.isAccessible = true
+                val databaseName = databaseNameField?.get(storage) as? String ?: "pingidentity_push.db"
+                
+                if (context != null) {
+                    val dbFile = context.getDatabasePath(databaseName)
+                    if (dbFile.exists()) {
+                        pushClient?.close()
+                        dbFile.writeBytes(ByteArray(1024) { 0xFF.toByte() })
+                        diagnosticLogger.w("Corrupted Push database for testing: ${dbFile.absolutePath}")
+                        diagnosticLogger.w("⚠️ App will need to restore from backup on next launch")
+                    } else {
+                        diagnosticLogger.w("Push database file not found: ${dbFile.absolutePath}")
+                    }
+                } else {
+                    diagnosticLogger.w("Unable to access storage context")
+                }
+            } catch (e: Exception) {
+                diagnosticLogger.e("Error corrupting Push database", e)
+                throw e
+            }
+        }
+    }
+    
+    /**
+     * Clears all Push backup files.
+     * Requires storage instance to be set via setClient() or constructor.
+     */
+    suspend fun clearBackups(): Int {
+        return withContext(Dispatchers.IO) {
+            try {
+                val storage = pushStorage
+                if (storage == null) {
+                    diagnosticLogger.w("Push storage not available. Pass storage to setClient() to enable backup operations.")
+                    return@withContext 0
+                }
+                
+                val backups = getBackupFiles()
+                if (backups.isEmpty()) {
+                    diagnosticLogger.i("No Push backup files to clear")
+                    return@withContext 0
+                }
+                
+                val contextField = storage.javaClass.superclass?.getDeclaredField("context")
+                contextField?.isAccessible = true
+                val context = contextField?.get(storage) as? android.content.Context
+                
+                val databaseNameField = storage.javaClass.superclass?.getDeclaredField("databaseName")
+                databaseNameField?.isAccessible = true
+                val databaseName = databaseNameField?.get(storage) as? String ?: "pingidentity_push.db"
+                
+                if (context != null) {
+                    val dbDir = context.getDatabasePath(databaseName).parentFile
+                    var deletedCount = 0
+                    
+                    backups.forEach { backup ->
+                        val backupFile = File(dbDir, backup.name)
+                        if (backupFile.exists() && backupFile.delete()) {
+                            deletedCount++
+                            diagnosticLogger.d("Deleted Push backup: ${backup.name}")
+                        }
+                    }
+                    
+                    diagnosticLogger.i("Cleared $deletedCount Push backup files")
+                    return@withContext deletedCount
+                }
+                
+                diagnosticLogger.w("Unable to access storage context for clearing backups")
+                0
+            } catch (e: Exception) {
+                diagnosticLogger.e("Error clearing Push backups", e)
+                0
+            }
+        }
+    }
+    
+    /**
+     * Gets information about the Push database.
+     * Requires storage instance to be set via setClient() or constructor.
+     */
+    suspend fun getDatabaseInfo(): DbInfo {
+        return withContext(Dispatchers.IO) {
+            try {
+                val storage = pushStorage
+                if (storage == null) {
+                    diagnosticLogger.w("Push storage not available. Pass storage to setClient() to enable backup operations.")
+                    return@withContext DbInfo(path = "unknown", size = 0L, backupCount = 0)
+                }
+                
+                val contextField = storage.javaClass.superclass?.getDeclaredField("context")
+                contextField?.isAccessible = true
+                val context = contextField?.get(storage) as? android.content.Context
+                
+                val databaseNameField = storage.javaClass.superclass?.getDeclaredField("databaseName")
+                databaseNameField?.isAccessible = true
+                val databaseName = databaseNameField?.get(storage) as? String ?: "pingidentity_push.db"
+                
+                if (context != null) {
+                    val dbFile = context.getDatabasePath(databaseName)
+                    val size = if (dbFile.exists()) dbFile.length() else 0L
+                    val backups = getBackupFiles()
+                    
+                    return@withContext DbInfo(
+                        path = databaseName,
+                        size = size,
+                        backupCount = backups.size
+                    )
+                }
+                
+                DbInfo(
+                    path = "pingidentity_push.db",
+                    size = 0L,
+                    backupCount = 0
+                )
+            } catch (e: Exception) {
+                diagnosticLogger.e("Error getting Push database info", e)
+                DbInfo(path = "unknown", size = 0L, backupCount = 0)
+            }
+        }
     }
 }

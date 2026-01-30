@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2025-2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -119,13 +119,17 @@ class MainActivity : ComponentActivity() {
             val pushManager = PushManager(diagnosticLogger = diagnosticLogger)
             val journeyManager = JourneyManager(diagnosticLogger = diagnosticLogger)
 
+            // Get storage instances
+            val oathStorage = AuthenticatorApp.getOathStorage(application)
+            val pushStorage = AuthenticatorApp.getPushStorage(application)
+
             // Initialize the clients in the managers
             val journeyClient = AuthenticatorApp.getJourney(application)
             journeyManager.setClient(journeyClient)
             val oauthClient = AuthenticatorApp.getOathClient(application)
-            oathManager.setClient(oauthClient)
+            oathManager.setClient(oauthClient, oathStorage)
             val pushClient = AuthenticatorApp.getPushClient(application)
-            pushManager.setClient(pushClient)
+            pushManager.setClient(pushClient, pushStorage)
 
             // Create ViewModels with clients already set
             authenticatorViewModel = AuthenticatorViewModel(
