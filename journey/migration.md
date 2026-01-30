@@ -475,7 +475,7 @@ reCaptchaEnterpriseCallback.verify {
 }
 ```
 
-## Example: Resume Authentication Flow
+## Example: Resume Authentication Flow (Suspended Email Node)
 
 ### Legacy
 ```kotlin
