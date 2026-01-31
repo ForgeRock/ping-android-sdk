@@ -586,15 +586,13 @@ var oidcWeb = OidcWeb {
     // Existing Oidc config
 }
 
-oidcWeb.authorize()
-    .onSuccess { user ->
+oidcWeb.authorize {
+    // Additional config
+}.onSuccess { user ->
         logger.info("Browser login successful")
-        state.update { it.copy(user = user, isLoggedIn = true) }
-        navigateToHome()
     }
     .onFailure { error ->
         logger.error("Browser login failed", error)
-        state.update { it.copy(error = error.message) }
     }
 ```
 
