@@ -120,6 +120,9 @@ object PingOneMFA {
             }
         }
 
+    /*
+     * Retrieves OTP code from PingOne.
+     */
     suspend fun collectOtp(): Result<OtpCodeInfo> = suspendCancellableCoroutine { cont ->
         PingOne.getOneTimePassCode(ContextProvider.context) { otpInfo, error ->
             if (!cont.isActive) return@getOneTimePassCode
@@ -167,6 +170,9 @@ object PingOneMFA {
             }
         }
 
+    /*
+     * Approves MFA push notification. Should be called from notification action if application is in the background.
+     */
     fun approvePushNotificationFromBanner(notification: PushNotification?){
         val appContext = ContextProvider.context
         val intent = Intent(appContext, PushApprovalService::class.java).apply {
@@ -177,6 +183,9 @@ object PingOneMFA {
         ContextCompat.startForegroundService(appContext, intent)
     }
 
+    /*
+     * Denies MFA push notification. Should be called from notification action if application is in the background.
+     */
     fun denyPushNotificationFromBanner(notification: PushNotification?){
         val appContext = ContextProvider.context
         val intent = Intent(appContext, PushApprovalService::class.java).apply {

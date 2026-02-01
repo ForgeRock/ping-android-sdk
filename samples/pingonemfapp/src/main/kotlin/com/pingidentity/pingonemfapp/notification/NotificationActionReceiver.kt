@@ -10,6 +10,7 @@ package com.pingidentity.pingonemfapp.notification
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import androidx.core.app.NotificationManagerCompat
 import com.pingidentity.pingonemfa.commons.PingOneMFA
 import com.pingidentity.pingonemfa.push.PushNotification
@@ -32,7 +33,11 @@ class NotificationActionReceiver : BroadcastReceiver() {
     }
     
     override fun onReceive(context: Context, intent: Intent) {
-        val notification = intent.getParcelableExtra(EXTRA_NOTIFICATION, PushNotification::class.java)
+        val notification = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            intent.getParcelableExtra(EXTRA_NOTIFICATION, PushNotification::class.java)
+        } else {
+            intent.getParcelableExtra(EXTRA_NOTIFICATION)
+        }
         val notificationId = intent.getStringExtra(EXTRA_NOTIFICATION_ID) ?: return
         val notificationHashCode = notificationId.hashCode()
         // Cancel the notification immediately to provide feedback that the action was received

@@ -1,5 +1,6 @@
 package com.pingidentity.pingonemfa.push
 
+//noinspection SuspiciousImport
 import android.R
 import android.app.Notification
 import android.app.NotificationChannel
@@ -31,7 +32,11 @@ internal class PushApprovalService : Service(){
         startForeground(NOTIFICATION_ID, createForegroundNotification())
 
         val notificationObject =
-            intent?.getParcelableExtra("notification", PushNotification::class.java)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                intent?.getParcelableExtra("notification", PushNotification::class.java)
+            } else {
+                intent?.getParcelableExtra("notification")
+            }
         val authMethod = intent?.getStringExtra("auth_method") ?: ""
         val userAction = intent?.getStringExtra("user_action") ?: ""
         if (notificationObject == null) {
@@ -43,9 +48,9 @@ internal class PushApprovalService : Service(){
         scope.launch {
             try {
                 if (userAction.equals("approve", ignoreCase = true)) {
-                    approveWithClosedSdk(notificationObject, authMethod)
+                    approveNotificationWithAppInBackground(notificationObject, authMethod)
                 }else{
-                    denyWithClosedSdk(notificationObject)
+                    denyNotificationWithAppInBackground(notificationObject)
                 }
             } catch (e: Exception) {
                 Log.e("MfaApprovalService", "approval failed: ${e.message}", e)
@@ -60,15 +65,13 @@ internal class PushApprovalService : Service(){
 
     private fun createForegroundNotification(): Notification {
         val channelId = "mfa_approval_channel"
-        if (Build.VERSION.SDK_INT >= 26) {
-            val manager = getSystemService(NotificationManager::class.java)
-            val channel = NotificationChannel(
-                channelId,
-                "MFA Approvals",
-                NotificationManager.IMPORTANCE_MAX
-            )
-            manager.createNotificationChannel(channel)
-        }
+        val manager = getSystemService(NotificationManager::class.java)
+        val channel = NotificationChannel(
+            channelId,
+            "MFA Approval",
+            NotificationManager.IMPORTANCE_HIGH
+        )
+        manager.createNotificationChannel(channel)
 
         return NotificationCompat.Builder(this, channelId)
             .setContentTitle("Approving login…")
@@ -78,7 +81,7 @@ internal class PushApprovalService : Service(){
             .build()
     }
 
-    private suspend fun approveWithClosedSdk(
+    private suspend fun approveNotificationWithAppInBackground(
         notification: PushNotification,
         auth: String
     ) = suspendCancellableCoroutine { cont ->
@@ -96,7 +99,7 @@ internal class PushApprovalService : Service(){
             if (cont.isActive) cont.resumeWithException(e)
         }
     }
-    private suspend fun denyWithClosedSdk(
+    private suspend fun denyNotificationWithAppInBackground(
         notification: PushNotification
     ) = suspendCancellableCoroutine { cont ->
         try {

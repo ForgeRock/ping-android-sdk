@@ -41,6 +41,10 @@ class AccountsManager(
                 diagnosticLogger.d("Loaded ${accounts.size} MFA accounts from PingOneMFA")
                 updatePingOneMFAAccounts()
             }
+            result.onFailure {
+                diagnosticLogger.e("Failed to load MFA accounts from PingOneMFA", it)
+                _mfaAccounts.value = emptyList()
+            }
             _isLoadingMfaAccounts.value = false
             result
         } catch (e: Exception) {

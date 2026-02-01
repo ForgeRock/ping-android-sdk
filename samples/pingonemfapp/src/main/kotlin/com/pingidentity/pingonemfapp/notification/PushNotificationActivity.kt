@@ -8,6 +8,7 @@
 package com.pingidentity.pingonemfapp.notification
 
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -49,7 +50,11 @@ class PushNotificationActivity : ComponentActivity() {
         // Get notification ID from intent
         val notificationId = intent?.getStringExtra(EXTRA_NOTIFICATION_ID)
 
-        val notification = intent?.getParcelableExtra(EXTRA_NOTIFICATION, PushNotification::class.java)
+        val notification = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            intent?.getParcelableExtra(EXTRA_NOTIFICATION, PushNotification::class.java)
+        } else {
+            intent?.getParcelableExtra(EXTRA_NOTIFICATION)
+        }
         // If no notification ID, log and finish
         if (notificationId == null) {
             diagnosticLogger.w("No notification ID provided")
