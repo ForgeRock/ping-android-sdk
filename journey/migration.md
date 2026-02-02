@@ -13,16 +13,31 @@ The primary architectural shift is the move from a **callback-based asynchronous
 
 ## Quick Reference
 
-| Legacy SDK | Modern Ping SDK | Key Changes |
-|------------|-----------------|-------------|
-| `FRSession.authenticate(context, journeyName, listener)` | `journey.start(journeyName)` | No context parameter, returns Node directly |
-| `node.next(context, listener)` | `continueNode.next()` | Context captured at SDK init, suspend function |
-| `FRUser.getCurrentUser()` | `journey.user()` | Async property access, nullable |
-| `FRUser.getCurrentUser()?.logout()` | `journey.user()?.logout()` | Direct suspend function, no callback |
-| `FRUser.getCurrentUser()?.getUserInfo(listener)` | `user.userinfo()` | Returns Result type, suspend function |
-| `FRUser.getCurrentUser()?.accessToken` | `journey.user()?.token` | Direct property access, Token instead of AccessToken |
+### Method Mapping
+
+| Legacy Method | New Ping Method | Parameter Changes | Return Type |
+| :--- | :--- | :--- | :--- |
+| `FRSession.authenticate(context, journeyName, listener)` | `journey.start(journeyName)` | - `context` is no longer passed directly to every method. <br>- The `listener` is replaced by the `suspend` function's return value. | `void` (asynchronous with listener) -> `Node` (synchronous-style with coroutines) |
+| `node.next(context, listener)` | `continueNode.next()` | - `context` is no longer passed directly. <br>- The `listener` is replaced by the `suspend` function's return value. | `void` (asynchronous with listener) -> `Node` (synchronous-style with coroutines) |
+| `FRUser.getCurrentUser()?.logout()` | `journey.user()?.logout()` | The new SDK provides a nullable `user` object from the journey, on which logout can be called. | `void` -> `void` |
+| `FRUser.getCurrentUser()?.getUserInfo(...)` | `user.userinfo()` | The `FRListener` is replaced by a `Result` object. | `void` (asynchronous with listener) -> `Result<UserInfo, Exception>` |
+| `FRUser.getCurrentUser()?.accessToken` | `journey.user()?.token` | Direct property access vs. a nullable property on the user object. | `AccessToken` -> `Token?` |
+| `FRUser.getCurrentUser()?.revokeAccessToken(...)` | `journey.user()?.revoke()` | The `FRListener` is replaced by a `suspend` function. | `void` (asynchronous with listener) -> `suspend` function |
+| `FRUser.getCurrentUser()?.refreshAccessToken(...)` | `journey.user()?.refresh()` | The `FRListener` is replaced by a `Result` object. | `void` (asynchronous with listener) -> `Result<Token, OidcError>` |
 | `NodeListener` callbacks | Sealed `Node` types | ContinueNode, SuccessNode, ErrorNode, FailureNode |
 | `onException(e)` callback | `is ErrorNode` or `is FailureNode` | Explicit error type discrimination |
+
+### Data Model Translation
+
+| Legacy SDK Class | New Ping SDK Model | Description |
+| :--- | :--- | :--- |
+| `FRSession` | `SuccessNode` / `Journey` | The `FRSession` object, which represents a successful login, is now represented by a `SuccessNode` returned by the journey. The `Journey` object itself holds the session state. |
+| `Node` | `ContinueNode` | The `Node` object in the legacy SDK, which contains callbacks for user input, is now represented by a `ContinueNode`. |
+| `Exception` in `onException` | `ErrorNode` / `FailureNode` | Errors and exceptions are now handled through sealed classes `ErrorNode` (for API errors) and `FailureNode` (for exceptions). |
+| `Callback` | `Callback` | The `Callback` classes are similar in both SDKs, but the new SDK has a more structured approach to handling them within the `ContinueNode`. |
+| `FROptions` | `JourneyConfig` | The SDK initialization options have been streamlined into a new `JourneyConfig` class with a builder-style configuration. |
+| `UserInfo` | `UserInfo` | The `UserInfo` model remains, but it is now retrieved synchronously or with coroutines. |
+| `AccessToken` | `Token` | The `AccessToken` model is now named `Token`. |
 
 ---
 
@@ -102,32 +117,6 @@ when (node) {
     is FailureNode -> { /* Handle exception */ }
 }
 ```
-
-## Reference: Method Mapping
-
-| Legacy Method | New Ping Method | Parameter Changes | Return Type |
-| :--- | :--- | :--- | :--- |
-| `FRSession.authenticate(context, journeyName, listener)` | `journey.start(journeyName)` | - `context` is no longer passed directly to every method. <br>- The `listener` is replaced by the `suspend` function's return value. | `void` (asynchronous with listener) -> `Node` (synchronous-style with coroutines) |
-| `node.next(context, listener)` | `continueNode.next()` | - `context` is no longer passed directly. <br>- The `listener` is replaced by the `suspend` function's return value. | `void` (asynchronous with listener) -> `Node` (synchronous-style with coroutines) |
-| `FRUser.getCurrentUser()?.logout()` | `journey.user()?.logout()` | The new SDK provides a nullable `user` object from the journey, on which logout can be called. | `void` -> `void` |
-| `FRUser.getCurrentUser()?.getUserInfo(...)` | `user.userinfo()` | The `FRListener` is replaced by a `Result` object. | `void` (asynchronous with listener) -> `Result<UserInfo, Exception>` |
-| `FRUser.getCurrentUser()?.accessToken` | `journey.user()?.token` | Direct property access vs. a nullable property on the user object. | `AccessToken` -> `Token?` |
-| `FRUser.getCurrentUser()?.revokeAccessToken(...)` | `journey.user()?.revoke()` | The `FRListener` is replaced by a `suspend` function. | `void` (asynchronous with listener) -> `suspend` function |
-| `FRUser.getCurrentUser()?.refreshAccessToken(...)` | `journey.user()?.refresh()` | The `FRListener` is replaced by a `Result` object. | `void` (asynchronous with listener) -> `Result<Token, OidcError>` |
-
-## Reference: Data Model Translation
-
-| Legacy SDK Class | New Ping SDK Model | Description |
-| :--- | :--- | :--- |
-| `FRSession` | `SuccessNode` / `Journey` | The `FRSession` object, which represents a successful login, is now represented by a `SuccessNode` returned by the journey. The `Journey` object itself holds the session state. |
-| `Node` | `ContinueNode` | The `Node` object in the legacy SDK, which contains callbacks for user input, is now represented by a `ContinueNode`. |
-| `Exception` in `onException` | `ErrorNode` / `FailureNode` | Errors and exceptions are now handled through sealed classes `ErrorNode` (for API errors) and `FailureNode` (for exceptions). |
-| `Callback` | `Callback` | The `Callback` classes are similar in both SDKs, but the new SDK has a more structured approach to handling them within the `ContinueNode`. |
-| `FROptions` | `JourneyConfig` | The SDK initialization options have been streamlined into a new `JourneyConfig` class with a builder-style configuration. |
-| `UserInfo` | `UserInfo` | The `UserInfo` model remains, but it is now retrieved synchronously or with coroutines. |
-| `AccessToken` | `Token` | The `AccessToken` model is now named `Token`. |
-
----
 
 ## Example: Common Migration Patterns
 
