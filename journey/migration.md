@@ -89,15 +89,18 @@ val journey = Journey {
 private val nodeListener = object : NodeListener<FRSession> {
     override fun onSuccess(result: FRSession) {
         // Handle successful login
+        logger.i("Authentication successful")
+        processCallbacks(node, nodeListener)
     }
 
     override fun onException(e: Exception) {
         // Handle error
+        logger.e("Authentication failed", e)
     }
 
     override fun onCallbackReceived(node: Node) {
         // Process node and set callbacks
-        node.next(context, this)
+        processCallbacks(node)
     }
 }
 FRSession.authenticate(context, "Login", nodeListener)
@@ -106,21 +109,48 @@ FRSession.authenticate(context, "Login", nodeListener)
 ```kotlin
 var node: Node = journey.start("Login")
 
-while (node is ContinueNode) {
-    // Process node and set callbacks
-    node = (node as ContinueNode).next()
-}
-
 when (node) {
-    is SuccessNode -> { /* Handle success */ }
-    is ErrorNode -> { /* Handle API error */ }
-    is FailureNode -> { /* Handle exception */ }
+    is ContinueNode -> { 
+        processCallbacks(node)
+        node.next()
+    }
+    is SuccessNode -> { 
+        println("Authentication successful") 
+    }
+    is ErrorNode -> {
+        println("Authentication failed. ${node.message}") 
+    }
+    is FailureNode -> { 
+        println("Failed to authenticate. ${node.cause}") 
+    }
 }
 ```
 
-## Example: Common Migration Patterns
-
-Quick reference for common migration patterns:
+### Move to next node in the Journey
+#### Legacy
+```kotlin
+fun processCallbacks(node: Node, nodeListener: NodeListener<FRSession>) {
+    node.callbacks?.forEach {
+        if (it is NameCallback) {
+            it.setName("username")
+        } else if (it is PasswordCallback) {
+            it.setPassword("password".toCharArray())
+        }
+    }
+    node.next(context, nodeListener)
+}
+```
+#### Modern
+```kotlin
+fun processCallbacks(node: ContinueNode) {
+    callbacks.forEach { callback ->
+        when (callback) {
+            is NameCallback -> callback.name = "username"
+            is PasswordCallback -> callback.password = "password"
+        }
+    }
+}
+```
 
 ### User Logout
 #### Legacy
