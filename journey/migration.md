@@ -15,29 +15,29 @@ The primary architectural shift is the move from a **callback-based asynchronous
 
 ### Method Mapping
 
-| Legacy Method | New Ping Method | Parameter Changes | Return Type |
-| :--- | :--- | :--- | :--- |
-| `FRSession.authenticate(context, journeyName, listener)` | `journey.start(journeyName)` | - `context` is no longer passed directly to every method. <br>- The `listener` is replaced by the `suspend` function's return value. | `void` (asynchronous with listener) -> `Node` (synchronous-style with coroutines) |
-| `node.next(context, listener)` | `continueNode.next()` | - `context` is no longer passed directly. <br>- The `listener` is replaced by the `suspend` function's return value. | `void` (asynchronous with listener) -> `Node` (synchronous-style with coroutines) |
-| `FRUser.getCurrentUser()?.logout()` | `journey.user()?.logout()` | The new SDK provides a nullable `user` object from the journey, on which logout can be called. | `void` -> `void` |
-| `FRUser.getCurrentUser()?.getUserInfo(...)` | `user.userinfo()` | The `FRListener` is replaced by a `Result` object. | `void` (asynchronous with listener) -> `Result<UserInfo, Exception>` |
-| `FRUser.getCurrentUser()?.accessToken` | `journey.user()?.token` | Direct property access vs. a nullable property on the user object. | `AccessToken` -> `Token?` |
-| `FRUser.getCurrentUser()?.revokeAccessToken(...)` | `journey.user()?.revoke()` | The `FRListener` is replaced by a `suspend` function. | `void` (asynchronous with listener) -> `suspend` function |
-| `FRUser.getCurrentUser()?.refreshAccessToken(...)` | `journey.user()?.refresh()` | The `FRListener` is replaced by a `Result` object. | `void` (asynchronous with listener) -> `Result<Token, OidcError>` |
-| `NodeListener` callbacks | Sealed `Node` types | ContinueNode, SuccessNode, ErrorNode, FailureNode |
-| `onException(e)` callback | `is ErrorNode` or `is FailureNode` | Explicit error type discrimination |
+| Legacy Method                                            | New Ping Method                    | Parameter Changes                                                                                                                    | Return Type                                                                       |
+|:---------------------------------------------------------|:-----------------------------------|:-------------------------------------------------------------------------------------------------------------------------------------|:----------------------------------------------------------------------------------|
+| `FRSession.authenticate(context, journeyName, listener)` | `journey.start(journeyName)`       | - `context` is no longer passed directly to every method. <br>- The `listener` is replaced by the `suspend` function's return value. | `void` (asynchronous with listener) -> `Node` (synchronous-style with coroutines) |
+| `node.next(context, listener)`                           | `continueNode.next()`              | - `context` is no longer passed directly. <br>- The `listener` is replaced by the `suspend` function's return value.                 | `void` (asynchronous with listener) -> `Node` (synchronous-style with coroutines) |
+| `FRUser.getCurrentUser()?.logout()`                      | `journey.user()?.logout()`         | The new SDK provides a nullable `user` object from the journey, on which logout can be called.                                       | `void` -> `void`                                                                  |
+| `FRUser.getCurrentUser()?.getUserInfo(...)`              | `user.userinfo()`                  | The `FRListener` is replaced by a `Result` object.                                                                                   | `void` (asynchronous with listener) -> `Result<UserInfo, Exception>`              |
+| `FRUser.getCurrentUser()?.accessToken`                   | `journey.user()?.token`            | Direct property access vs. a nullable property on the user object.                                                                   | `AccessToken` -> `Token?`                                                         |
+| `FRUser.getCurrentUser()?.revokeAccessToken(...)`        | `journey.user()?.revoke()`         | The `FRListener` is replaced by a `suspend` function.                                                                                | `void` (asynchronous with listener) -> `suspend` function                         |
+| `FRUser.getCurrentUser()?.refreshAccessToken(...)`       | `journey.user()?.refresh()`        | The `FRListener` is replaced by a `Result` object.                                                                                   | `void` (asynchronous with listener) -> `Result<Token, OidcError>`                 |
+| `NodeListener` callbacks                                 | Sealed `Node` types                | ContinueNode, SuccessNode, ErrorNode, FailureNode                                                                                    |
+| `onException(e)` callback                                | `is ErrorNode` or `is FailureNode` | Explicit error type discrimination                                                                                                   |
 
 ### Data Model Translation
 
-| Legacy SDK Class | New Ping SDK Model | Description |
-| :--- | :--- | :--- |
-| `FRSession` | `SuccessNode` / `Journey` | The `FRSession` object, which represents a successful login, is now represented by a `SuccessNode` returned by the journey. The `Journey` object itself holds the session state. |
-| `Node` | `ContinueNode` | The `Node` object in the legacy SDK, which contains callbacks for user input, is now represented by a `ContinueNode`. |
-| `Exception` in `onException` | `ErrorNode` / `FailureNode` | Errors and exceptions are now handled through sealed classes `ErrorNode` (for API errors) and `FailureNode` (for exceptions). |
-| `Callback` | `Callback` | The `Callback` classes are similar in both SDKs, but the new SDK has a more structured approach to handling them within the `ContinueNode`. |
-| `FROptions` | `JourneyConfig` | The SDK initialization options have been streamlined into a new `JourneyConfig` class with a builder-style configuration. |
-| `UserInfo` | `UserInfo` | The `UserInfo` model remains, but it is now retrieved synchronously or with coroutines. |
-| `AccessToken` | `Token` | The `AccessToken` model is now named `Token`. |
+| Legacy SDK Class             | New Ping SDK Model          | Description                                                                                                                                                                      |
+|:-----------------------------|:----------------------------|:---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `FRSession`                  | `SuccessNode` / `Journey`   | The `FRSession` object, which represents a successful login, is now represented by a `SuccessNode` returned by the journey. The `Journey` object itself holds the session state. |
+| `Node`                       | `ContinueNode`              | The `Node` object in the legacy SDK, which contains callbacks for user input, is now represented by a `ContinueNode`.                                                            |
+| `Exception` in `onException` | `ErrorNode` / `FailureNode` | Errors and exceptions are now handled through sealed classes `ErrorNode` (for API errors) and `FailureNode` (for exceptions).                                                    |
+| `Callback`                   | `Callback`                  | The `Callback` classes are similar in both SDKs, but the new SDK has a more structured approach to handling them within the `ContinueNode`.                                      |
+| `FROptions`                  | `JourneyConfig`             | The SDK initialization options have been streamlined into a new `JourneyConfig` class with a builder-style configuration.                                                        |
+| `UserInfo`                   | `UserInfo`                  | The `UserInfo` model remains, but it is now retrieved synchronously or with coroutines.                                                                                          |
+| `AccessToken`                | `Token`                     | The `AccessToken` model is now named `Token`.                                                                                                                                    |
 
 ---
 
@@ -685,16 +685,20 @@ dependencies {
     implementation(libs.ping.sdk.oidc) // For OIDC
     implementation(libs.ping.sdk.device.profile) // For device profiling
     implementation(libs.ping.sdk.binding) // For device binding
+    implementation(libs.ping.sdk.device.id) // For device ID
+    implementation(libs.ping.sdk.device.root) // For device root detection
     implementation(libs.ping.sdk.push) // For push notifications
     implementation(libs.ping.sdk.protect) // For PingOne Protect
     implementation(libs.ping.sdk.davinci) // For DaVinci integration
 
     // UI and other utilities
+    implementation(libs.ping.sdk.android)
     implementation(libs.ping.sdk.browser)
-    implementation(libs.ping.sdk.utils)
+    implementation(libs.ping.sdk.commons)
     implementation(libs.ping.sdk.logger)
-    implementation(libs.ping.sdk.storage)
     implementation(libs.ping.sdk.network)
+    implementation(libs.ping.sdk.storage)
+    implementation(libs.ping.sdk.utils)
 }
 ```
 
@@ -736,28 +740,28 @@ ping-sdk-android = { group = "com.pingidentity.sdks", name = "android", version.
 
 The following libraries are available in the Ping Identity SDK. You can find the latest versions on [Maven Central](https://central.sonatype.com/namespace/com.pingidentity.sdks).
 
-| Library | Description |
-| :--- | :--- |
-| `android` | Core Android components for the SDK. |
-| `binding` | Used for binding devices to user accounts. |
-| `binding-ui` | UI components for device binding. |
-| `browser` | Utilities for handling web-based authentication flows. |
-| `commons` | Common classes for multi-factor authentication. |
-| `davinci` | Allows integration with PingOne DaVinci orchestration flows. |
-| `davinci-plugin` | A plugin for extending DaVinci integration. |
-| `device-client` | A client for device-related operations. |
-| `device-id` | Provides a unique device identifier. |
-| `device-profile` | Enables device profiling for risk assessment. |
-| `device-root` | Detects if the device is rooted or jailbroken. |
-| `journey` | Core library for handling authentication journeys. |
-| `journey-plugin` | A plugin for extending journey functionality. |
-| `logger` | A logging library for the SDK. |
-| `migration` | Assists with migrating from older SDK versions. |
-| `network` | Handles network requests for the SDK. |
-| `oath` | Implements the OATH (Initiative for Open Authentication) standard. |
-| `oidc` | Provides OpenID Connect (OIDC) functionality. |
-| `orchestrate` | Handles the orchestration of journey nodes. |
-| `protect` | Integrates with PingOne Protect for advanced fraud detection. |
-| `push` | Manages push notifications for multi-factor authentication. |
-| `storage` | Provides secure storage for SDK data. |
-| `utils` | Common utility classes used across the SDK. |
+| Library          | Description                                                        |
+|:-----------------|:-------------------------------------------------------------------|
+| `android`        | Core Android components for the SDK.                               |
+| `binding`        | Used for binding devices to user accounts.                         |
+| `binding-ui`     | UI components for device binding.                                  |
+| `browser`        | Utilities for handling web-based authentication flows.             |
+| `commons`        | Common classes for multi-factor authentication.                    |
+| `davinci`        | Allows integration with PingOne DaVinci orchestration flows.       |
+| `davinci-plugin` | A plugin for extending DaVinci integration.                        |
+| `device-client`  | A client for device-related operations.                            |
+| `device-id`      | Provides a unique device identifier.                               |
+| `device-profile` | Enables device profiling for risk assessment.                      |
+| `device-root`    | Detects if the device is rooted or jailbroken.                     |
+| `journey`        | Core library for handling authentication journeys.                 |
+| `journey-plugin` | A plugin for extending journey functionality.                      |
+| `logger`         | A logging library for the SDK.                                     |
+| `migration`      | Assists with migrating from older SDK versions.                    |
+| `network`        | Handles network requests for the SDK.                              |
+| `oath`           | Implements the OATH (Initiative for Open Authentication) standard. |
+| `oidc`           | Provides OpenID Connect (OIDC) functionality.                      |
+| `orchestrate`    | Handles the orchestration of journey nodes.                        |
+| `protect`        | Integrates with PingOne Protect for advanced fraud detection.      |
+| `push`           | Manages push notifications for multi-factor authentication.        |
+| `storage`        | Provides secure storage for SDK data.                              |
+| `utils`          | Common utility classes used across the SDK.                        |
