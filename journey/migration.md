@@ -333,25 +333,27 @@ val result = callback.bind {
 
 #### Legacy
 ```java
-FRDeviceCollectorBuilder builder = FRDeviceCollector.builder();
-if (metadata) {
-    builder.collector(new MetadataCollector());
-}
-if (location) {
-    builder.collector(new LocationCollector());
-}
-
-builder.build().collect(context, new FRListener<JSONObject>() {
-    @Override
-    public void onSuccess(JSONObject result) {
-        setValue(result.toString());
-        Listener.onSuccess(listener, null);
+public void deviceCollector() {
+    FRDeviceCollectorBuilder builder = FRDeviceCollector.builder();
+    if (metadata) {
+        builder.collector(new MetadataCollector());
+    }
+    if (location) {
+        builder.collector(new LocationCollector());
     }
 
-    @Override
-    public void onException(Exception e) {
-        Listener.onException(listener, e);
-    }
+    builder.build().collect(context, new FRListener<JSONObject>() {
+        @Override
+        public void onSuccess(JSONObject result) {
+            setValue(result.toString());
+            Listener.onSuccess(listener, null);
+        }
+
+        @Override
+        public void onException(Exception e) {
+            Listener.onException(listener, e);
+        }
+    });
 }
 ```
 
@@ -386,15 +388,15 @@ DefaultDeviceIdentifier.id()
 
 #### Legacy
 ```kotlin
-val nodeListenerFuture = object : PingOneProtectInitializeCallback {
-    val nodeListener: NodeListener<FRSession?> = this
-    override fun onCallbackReceived(node: Node) {
-        node.getCallback(PingOneProtectInitializeCallback::class.java)?.let {
-            it.start(context)
-        }
-        return
-    }
-} 
+if (callback is PingOneProtectInitializeCallback) {
+    try {
+        callback.start(context)
+    } catch (e: PingOneProtectInitException) {
+        Logger.error("PingOneInitException", e, e.message)
+    } catch (e: Exception) {
+        Logger.error("PingOneInitException", e, e.message)
+    }    
+}
 ```
 #### Modern
 ```kotlin
@@ -408,20 +410,9 @@ callback.start().onSuccess {
 
 ### Evaluation
 ```kotlin
-val nodeListenerFuture: PingOneProtectNodeListener = object : PingOneProtectNodeListener(
-    context, "evaluate-default"
-) {
-    val nodeListener: NodeListener<FRSession?> = this
-    override fun onCallbackReceived(node: Node) {
-        node.getCallback(PingOneProtectEvaluationCallback::class.java)?.let {
-            it.getData(context)
-            node.next(context, nodeListener)
-            return
-        }
-        super.onCallbackReceived(node)
-    }
+if (callback is PingOneProtectEvaluationCallback) {
+    callback.getData(context)
 }
-FRSession.authenticate(context, authenticationTree, nodeListenerFuture)
 ```
 
 #### Modern
@@ -603,59 +594,17 @@ oidcWeb.authorize {
     }
 ```
 
-## Example: Centralized Logout (Browser-based OIDC)
-
-#### Legacy
-```kotlin
-FRUser.browser().logout(fragmentActivity,
-    object : FRListener<Void?> {
-        override fun onSuccess(result: Void?) {
-            logger.i("Browser logout successful")
-            navigateToLogin()
-        }
-        override fun onException(e: Exception) {
-            logger.e("Browser logout failed", e)
-            // Still navigate to login even if logout fails
-            navigateToLogin()
-        }
-    })
-```
-
-#### Modern
-```kotlin
-val oidcWeb = /* initialized OidcWeb instance */
-oidcWeb.user()?.logout()
-```
-
 ## Example: Getting Access Token After Session
 
 #### Legacy
 ```kotlin
-val currentUser = FRUser.getCurrentUser()
-currentUser.getAccessToken(object : FRListener<AccessToken> {
+FRUser.getCurrentUser()?.getAccessToken(object : FRListener<AccessToken> {
     override fun onSuccess(result: AccessToken) {
-        val token = result.value
-        val expiresAt = result.expiresAt
-        logger.i("Token expires at: $expiresAt")
-
-        // Use token for API requests
-        makeAuthenticatedRequest(token)
+        logger.i("Token retrieved ${result.value}")
     }
+
     override fun onException(e: Exception) {
         logger.e("Failed to get access token", e)
-
-        // Try to refresh token
-        currentUser.refreshAccessToken(object : FRListener<AccessToken?> {
-            override fun onSuccess(result: AccessToken?) {
-                if (result != null) {
-                    makeAuthenticatedRequest(result.value)
-                }
-            }
-            override fun onException(e: Exception) {
-                logger.e("Token refresh failed", e)
-                // Token expired, require re-authentication
-            }
-        })
     }
 })
 ```
