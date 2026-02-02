@@ -183,7 +183,7 @@ callback.signIn(context, handler, object : FRListener<String> {
         node.next(context, nodeListener)
     }
     override fun onException(e: Exception) {
-        logger.error("Sign-in failed", e)
+        logger.e("Sign-in failed", e)
     }
 })
 ```
@@ -193,11 +193,11 @@ callback.signIn(context, handler, object : FRListener<String> {
 callback.authorize(redirectUri) { result ->
     when (result) {
         is Result.Success -> { idpResult
-            logger.info("Sign in successful ${idpResult.token}")
+            logger.i("Sign in successful ${idpResult.token}")
             node = node.next()
         }
         is Result.Failure -> {
-            logger.error("IDP sign-in failed", result.error)
+            logger.e("IDP sign-in failed", result.error)
         }
     }
 }
@@ -218,11 +218,11 @@ callback.register(context, deviceName, node)
 val callback = FidoRegistrationCallback()
 callback.register(deviceName)
     .onSuccess { result ->
-        logger.info("WebAuthn registration successful")
+        logger.i("WebAuthn registration successful")
         state.update { it.copy(registered = true) }
     }
     .onFailure { error ->
-        logger.error("WebAuthn registration failed", error)
+        logger.e("WebAuthn registration failed", error)
         state.update { it.copy(error = error.message) }
     }
 ```
@@ -240,11 +240,11 @@ callback.authenticate(context, deviceName, node)
 val callback = FidoAuthenticationCallback()
 callback.authenticate()
     .onSuccess { result ->
-        logger.info("WebAuthn authentication successful")
+        logger.i("WebAuthn authentication successful")
         state.update { it.copy(authenticated = true) }
     }
     .onFailure { error ->
-        logger.error("WebAuthn authentication failed", error)
+        logger.e("WebAuthn authentication failed", error)
         state.update { it.copy(error = error.message) }
     }
 ```
@@ -258,10 +258,10 @@ callback.authenticate()
 val callback = DeviceBindingCallback()
 callback.bind(context, deviceName, object : FRListener<String> {
     override fun onSuccess(result: String) {
-        logger.info("Device bound successfully")
+        logger.i("Device bound successfully")
     }
     override fun onException(e: Exception) {
-        logger.error("Device binding failed", e)
+        logger.e("Device binding failed", e)
     }
 })
 ```
@@ -295,7 +295,7 @@ val result = callback.bind {
 
 
 }.onFailure {
-    logger.error("Device binding failed", it)
+    logger.e("Device binding failed", it)
 }
 ```
 
@@ -370,9 +370,9 @@ val nodeListenerFuture = object : PingOneProtectInitializeCallback {
 ```kotlin
 val callback = PingOneProtectInitializeCallback()
 callback.start().onSuccess {
-    logger.info("PingOne Protect initialization successful")
+    logger.i("PingOne Protect initialization successful")
 }.onFailure { error ->
-    logger.error("PingOne Protect initialization failed", error)
+    logger.e("PingOne Protect initialization failed", error)
 }
 ```
 
@@ -398,9 +398,9 @@ FRSession.authenticate(context, authenticationTree, nodeListenerFuture)
 ```kotlin
 val callback = PingOneProtectEvaluationCallback()
 callback.collect().onSuccess {
-    logger.info("PingOne Protect evaluation successful")
+    logger.i("PingOne Protect evaluation successful")
 }.onFailure { error ->
-    logger.error("PingOne Protect evaluation failed", error)
+    logger.e("PingOne Protect evaluation failed", error)
 }
 ```
 ---
@@ -420,10 +420,10 @@ reCaptchaEnterpriseCallback.verify {
     // Optionally customize the configuration here
     // config.payload = mapOf("custom_key" to "custom_value")
 }.onSuccess { result ->
-    logger.info("ReCAPTCHA Token Result: $result")
+    logger.i("ReCAPTCHA Token Result: $result")
     onNext()
 }.onFailure { error ->
-    logger.error("ReCAPTCHA Verification Failed: ${error.message}", error)
+    logger.e("ReCAPTCHA Verification Failed: ${error.message}", error)
     onNext() // Proceed to next step (or handle error differently)
 }
 ```
@@ -445,7 +445,7 @@ override fun onCreate(savedInstanceState: Bundle?) {
 
 private val nodeListener = object : NodeListener<FRSession> {
     override fun onSuccess(result: FRSession) {
-        logger.info("Authentication successful after resume")
+        logger.i("Authentication successful after resume")
         navigateToHome()
     }
     override fun onCallbackReceived(node: Node) {
@@ -453,7 +453,7 @@ private val nodeListener = object : NodeListener<FRSession> {
         node.next(context, this)
     }
     override fun onException(e: Exception) {
-        logger.error("Resume authentication failed", e)
+        logger.e("Resume authentication failed", e)
     }
 }
 ```
@@ -472,17 +472,17 @@ if (resumeUri != null) {
         
         when (node) {
             is SuccessNode -> {
-                logger.info("Authentication successful after resume")
+                logger.i("Authentication successful after resume")
             }
             is ErrorNode -> {
-                logger.warn("Resume authentication error: ${node.errorMessage}")
+                logger.w("Resume authentication error: ${node.errorMessage}")
             }
             is FailureNode -> {
-                logger.error("Resume authentication failed", node.exception)
+                logger.e("Resume authentication failed", node.exception)
             }
         }
     } catch (e: Exception) {
-        logger.error("Resume authentication exception", e)
+        logger.e("Resume authentication exception", e)
     }
 }
 ```
@@ -494,20 +494,20 @@ if (resumeUri != null) {
 // Check if user is authenticated
 val currentUser = FRUser.getCurrentUser()
 if (currentUser != null) {
-    logger.info("User is authenticated: ${currentUser.id}")
+    logger.i("User is authenticated: ${currentUser.id}")
     // User is logged in
 } else {
-    logger.info("No authenticated user")
+    logger.i("No authenticated user")
     // Show login screen
 }
 
 // Get user info
 currentUser?.getUserInfo(object : FRListener<UserInfo> {
     override fun onSuccess(result: UserInfo) {
-        logger.info("User info: ${result.name}")
+        logger.i("User info: ${result.name}")
     }
     override fun onException(e: Exception) {
-        logger.error("Failed to get user info", e)
+        logger.e("Failed to get user info", e)
     }
 })
 ```
@@ -515,21 +515,21 @@ currentUser?.getUserInfo(object : FRListener<UserInfo> {
 #### Modern
 ```kotlin
 journey.user()?.let {
-    logger.info("User is authenticated: ${user.id}")
+    logger.i("User is authenticated: ${user.id}")
     // User is logged in
 
     // Get user info asynchronously
     when (val result = user.userinfo(false)) {
         is Result.Success -> {
             val userInfo = result.value
-            logger.info("User info: ${userInfo.name}")
+            logger.i("User info: ${userInfo.name}")
         }
         is Result.Failure -> {
-            logger.error("Failed to get user info", result.error)
+            logger.e("Failed to get user info", result.error)
         }
     }
 } ?: run {
-    logger.warn("No authenticated user")
+    logger.w("No authenticated user")
     null
 }
 ```
@@ -549,10 +549,10 @@ FRUser.browser().appAuthConfigurer().customTabsIntent {
 .login(fragmentActivity,
     object : FRListener<FRUser> {
         override fun onSuccess(result: FRUser) {
-            logger.info("Browser login successful")
+            logger.i("Browser login successful")
         }
         override fun onException(e: Exception) {
-            logger.error("Browser login failed", e)
+            logger.e("Browser login failed", e)
         }
     })
 ```
@@ -566,10 +566,10 @@ var oidcWeb = OidcWeb {
 oidcWeb.authorize {
     // Additional config
 }.onSuccess { user ->
-        logger.info("Browser login successful")
+        logger.i("Browser login successful")
     }
     .onFailure { error ->
-        logger.error("Browser login failed", error)
+        logger.e("Browser login failed", error)
     }
 ```
 
@@ -580,11 +580,11 @@ oidcWeb.authorize {
 FRUser.browser().logout(fragmentActivity,
     object : FRListener<Void?> {
         override fun onSuccess(result: Void?) {
-            logger.info("Browser logout successful")
+            logger.i("Browser logout successful")
             navigateToLogin()
         }
         override fun onException(e: Exception) {
-            logger.error("Browser logout failed", e)
+            logger.e("Browser logout failed", e)
             // Still navigate to login even if logout fails
             navigateToLogin()
         }
@@ -606,13 +606,13 @@ currentUser.getAccessToken(object : FRListener<AccessToken> {
     override fun onSuccess(result: AccessToken) {
         val token = result.value
         val expiresAt = result.expiresAt
-        logger.info("Token expires at: $expiresAt")
+        logger.i("Token expires at: $expiresAt")
 
         // Use token for API requests
         makeAuthenticatedRequest(token)
     }
     override fun onException(e: Exception) {
-        logger.error("Failed to get access token", e)
+        logger.e("Failed to get access token", e)
 
         // Try to refresh token
         currentUser.refreshAccessToken(object : FRListener<AccessToken?> {
@@ -622,7 +622,7 @@ currentUser.getAccessToken(object : FRListener<AccessToken> {
                 }
             }
             override fun onException(e: Exception) {
-                logger.error("Token refresh failed", e)
+                logger.e("Token refresh failed", e)
                 // Token expired, require re-authentication
             }
         })
@@ -637,7 +637,7 @@ if (user != null) {
     // Get current access token
     val token = user.token
     if (token != null) {
-        logger.info("Token expires at: ${token.expiresAt}")
+        logger.i("Token expires at: ${token.expiresAt}")
 
         // Check if token is expired or about to expire
         if (token.isExpired || token.expiresIn < 60) {
@@ -645,12 +645,12 @@ if (user != null) {
             when (val result = user.refresh()) {
                 is Result.Success -> {
                     val refreshedToken = result.value
-                    logger.info("Token refreshed")
+                    logger.i("Token refreshed")
                     makeAuthenticatedRequest(refreshedToken)
                 }
                 is Result.Failure -> {
                     // Token refresh failed, require re-authentication
-                    logger.error("Token refresh failed", result.error)
+                    logger.e("Token refresh failed", result.error)
                     // navigate to login
                 }
             }
@@ -659,11 +659,11 @@ if (user != null) {
             makeAuthenticatedRequest(token)
         }
     } else {
-        logger.warn("No access token available")
+        logger.w("No access token available")
         // navigate to login
     }
 } else {
-    logger.warn("No authenticated user")
+    logger.w("No authenticated user")
     // navigate to login
 }
 ```
