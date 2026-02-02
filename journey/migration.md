@@ -7,9 +7,9 @@ This document provides a comprehensive mapping of the Journey module from the le
 
 The primary architectural shift is the move from a **callback-based asynchronous model to a modern, coroutine-based approach**.
 
-*   **Legacy (Callbacks):** The legacy SDK used a `NodeListener` with methods like `onSuccess`, `onException`, and `onCallbackReceived`. This led to nested callbacks and made the code harder to follow.
+*   **Legacy (Callbacks):** The legacy SDK used a `NodeListener` with methods like `onSuccess`, `onException`, and `onCallbackReceived`. 
 
-*   **New (Coroutines):** The new Ping SDK embraces Kotlin Coroutines. Methods like `start` and `next` are `suspend` functions. This allows for writing asynchronous code in a sequential, synchronous-looking manner, which greatly improves readability and maintainability. The different outcomes of an operation are handled by the sealed `Node` class (`ContinueNode`, `SuccessNode`, `ErrorNode`, `FailureNode`), which allows for exhaustive `when` statements.
+*   **New (Coroutines):** The new Ping SDK embraces Kotlin Coroutines. Methods like `start` and `next` are `suspend` functions. This allows for writing asynchronous code in a sequential, synchronous-looking manner. The different outcomes of an operation are handled by the sealed `Node` class (`ContinueNode`, `SuccessNode`, `ErrorNode`, `FailureNode`), which allows for exhaustive `when` statements.
 
 ## Quick Reference
 
@@ -189,33 +189,26 @@ Configuration should be done on the server to enable different IDP such as apple
 ### IDP Callback
 #### Legacy
 ```kotlin
-
-// Callback: IdPCallback
-if (callback is IdPCallback) {
-    callback.signIn(context, handler, object : FRListener<String> {
-        override fun onSuccess(result: String) {
-            node.next(context, nodeListener)
-        }
-        override fun onException(e: Exception) {
-            logger.error("Sign-in failed", e)
-        }
-    })
-}
+callback.signIn(context, handler, object : FRListener<String> {
+    override fun onSuccess(result: String) {
+        node.next(context, nodeListener)
+    }
+    override fun onException(e: Exception) {
+        logger.error("Sign-in failed", e)
+    }
+})
 ```
 
 #### Modern
 ```kotlin
-// Callback: IdpCallback
-if (callback is IdpCallback) {
-    callback.authorize(redirectUri) { result ->
-        when (result) {
-            is Result.Success -> { idpResult
-                logger.info("Sign in successful ${idpResult.token}")
-                node = node.next()
-            }
-            is Result.Failure -> {
-                logger.error("IDP sign-in failed", result.error)
-            }
+callback.authorize(redirectUri) { result ->
+    when (result) {
+        is Result.Success -> { idpResult
+            logger.info("Sign in successful ${idpResult.token}")
+            node = node.next()
+        }
+        is Result.Failure -> {
+            logger.error("IDP sign-in failed", result.error)
         }
     }
 }
@@ -277,7 +270,6 @@ val callback = DeviceBindingCallback()
 callback.bind(context, deviceName, object : FRListener<String> {
     override fun onSuccess(result: String) {
         logger.info("Device bound successfully")
-        node.next(context, nodeListener)
     }
     override fun onException(e: Exception) {
         logger.error("Device binding failed", e)
@@ -314,13 +306,14 @@ val result = callback.bind {
 
 
 }.onFailure {
+    logger.error("Device binding failed", it)
 }
 ```
 
 ## Example: Device Profiling Callback
 
 #### Legacy
-```
+```java
 FRDeviceCollectorBuilder builder = FRDeviceCollector.builder();
 if (metadata) {
     builder.collector(new MetadataCollector());
@@ -494,16 +487,13 @@ if (resumeUri != null) {
             }
             is ErrorNode -> {
                 logger.warn("Resume authentication error: ${node.errorMessage}")
-                showError(node.errorMessage)
             }
             is FailureNode -> {
                 logger.error("Resume authentication failed", node.exception)
-                showError("Authentication failed. Please try again.")
             }
         }
     } catch (e: Exception) {
         logger.error("Resume authentication exception", e)
-        showError("An error occurred during authentication")
     }
 }
 ```
@@ -544,11 +534,9 @@ journey.user()?.let {
         is Result.Success -> {
             val userInfo = result.value
             logger.info("User info: ${userInfo.name}")
-            state.update { it.copy(userInfo = userInfo) }
         }
         is Result.Failure -> {
             logger.error("Failed to get user info", result.error)
-            state.update { it.copy(error = "Failed to load user info") }
         }
     }
 } ?: run {
