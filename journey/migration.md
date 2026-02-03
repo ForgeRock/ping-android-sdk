@@ -152,16 +152,6 @@ fun processCallbacks(node: ContinueNode) {
 }
 ```
 
-### User Logout
-#### Legacy
-```kotlin
-FRUser.getCurrentUser()?.logout()
-```
-#### Modern
-```kotlin
-journey.user()?.logout()
-```
-
 ### Retrieving User Profile
 #### Legacy
 ```kotlin
@@ -198,6 +188,16 @@ val token = journey.user()?.token
 
 // Refresh Token
 val result: Result<Token, OidcError> = journey.user()?.refresh()
+```
+
+### User Logout
+#### Legacy
+```kotlin
+FRUser.getCurrentUser()?.logout()
+```
+#### Modern
+```kotlin
+journey.user()?.logout()
 ```
 
 ---
@@ -294,7 +294,7 @@ callback.bind(context, deviceName, object : FRListener<String> {
 
 #### Modern
 ```kotlin
-val result = callback.bind {
+callback.bind {
     this.deviceName = deviceName
     appPinConfig {
         pinCollector { prompt ->
@@ -355,7 +355,7 @@ public void deviceCollector() {
 
 #### Modern
 ```kotlin
-val result = deviceProfileCallback.collect {
+deviceProfileCallback.collect {
     collectors {
         clear()
         add(PlatformCollector())      // OS, device model, security
@@ -576,10 +576,6 @@ FRUser.browser().appAuthConfigurer().customTabsIntent {
 
 #### Modern
 ```kotlin
-var oidcWeb = OidcWeb {
-    // Existing Oidc config
-}
-
 oidcWeb.authorize {
     // Additional config
 }.onSuccess { user ->
