@@ -185,7 +185,7 @@ when (val result = journey.user()?.userinfo(false)) {
 val accessToken = FRUser.getCurrentUser()?.accessToken
 
 // Refresh Token
-FRUser.getCurrentUser()?.refreshAccessToken(object : FRListener<AccessToken?> {
+FRUser.getCurrentUser()?.refresh(object : FRListener<AccessToken?> {
     override fun onSuccess(result: AccessToken?) { /* ... */ }
     override fun onException(e: Exception) { /* ... */ }
 })
