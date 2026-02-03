@@ -249,11 +249,9 @@ val callback = FidoRegistrationCallback()
 callback.register(deviceName)
     .onSuccess { result ->
         logger.i("WebAuthn registration successful")
-        state.update { it.copy(registered = true) }
     }
     .onFailure { error ->
         logger.e("WebAuthn registration failed", error)
-        state.update { it.copy(error = error.message) }
     }
 ```
 
@@ -271,11 +269,9 @@ val callback = FidoAuthenticationCallback()
 callback.authenticate()
     .onSuccess { result ->
         logger.i("WebAuthn authentication successful")
-        state.update { it.copy(authenticated = true) }
     }
     .onFailure { error ->
         logger.e("WebAuthn authentication failed", error)
-        state.update { it.copy(error = error.message) }
     }
 ```
 
@@ -442,7 +438,7 @@ reCaptchaEnterpriseCallback.verify {
     // config.payload = mapOf("custom_key" to "custom_value")
 }.onSuccess { result ->
     logger.i("ReCAPTCHA Token Result: $result")
-    onNext()
+    onNext() // Proceed to next step 
 }.onFailure { error ->
     logger.e("ReCAPTCHA Verification Failed: ${error.message}", error)
     onNext() // Proceed to next step (or handle error differently)
