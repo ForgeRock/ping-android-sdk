@@ -162,7 +162,7 @@ FRUser.getCurrentUser()?.getUserInfo(object : FRListener<UserInfo> {
 ```
 #### Modern
 ```kotlin
-when (val result = journey.user()?.userinfo(false)) {
+when (val result = user.userinfo(false)) {
     is Result.Failure -> { /* ... */ }
     is Result.Success -> { /* ... */ }
 }
@@ -296,30 +296,7 @@ callback.bind(context, deviceName, object : FRListener<String> {
 ```kotlin
 callback.bind {
     this.deviceName = deviceName
-    appPinConfig {
-        pinCollector { prompt ->
-            // Trigger UI to show dialog
-            pinDeferred = CompletableDeferred()
-            activePinPrompt = prompt
-            // Suspend until user supplies PIN (or cancellation)
-            pinDeferred!!.await().also {
-                // Once consumed, clear state so dialog closes
-                activePinPrompt = null
-            }
-        }
-        //pinCollector = { prompt -> collectPin(prompt) }
-    }
-    biometricAuthenticatorConfig {
-        keyGenParameterSpec {
-            //setUnlockedDeviceRequired(true)
-            //setUserAuthenticationValidWhileOnBody(true)
-            //setUserPresenceRequired(true)
-            //setIsStrongBoxBacked(false)
-            //setInvalidatedByBiometricEnrollment(false)
-        }
-    }
-
-
+    // Optional configuration
 }.onFailure {
     logger.e("Device binding failed", it)
 }
@@ -356,15 +333,7 @@ public void deviceCollector() {
 #### Modern
 ```kotlin
 deviceProfileCallback.collect {
-    collectors {
-        clear()
-        add(PlatformCollector())      // OS, device model, security
-        add(HardwareCollector())       // CPU, memory, display
-        add(NetworkCollector())        // Network connectivity
-        add(TelephonyCollector)        // Carrier information
-        add(BluetoothCollector)        // Bluetooth support
-        add(BrowserCollector)          // Browser/WebView info
-    }
+    collectors.apply(DefaultDeviceCollector())
 }
 ```
 
@@ -577,7 +546,7 @@ FRUser.browser().appAuthConfigurer().customTabsIntent {
 #### Modern
 ```kotlin
 oidcWeb.authorize {
-    // Additional config
+    // Additional configuration
 }.onSuccess { user ->
         logger.i("Browser login successful")
     }
@@ -603,39 +572,15 @@ FRUser.getCurrentUser()?.getAccessToken(object : FRListener<AccessToken> {
 
 #### Modern
 ```kotlin
-val user = journey.user()
-if (user != null) {
-    // Get current access token
-    val token = user.token
-    if (token != null) {
-        logger.i("Token expires at: ${token.expiresAt}")
-
-        // Check if token is expired or about to expire
-        if (token.isExpired || token.expiresIn < 60) {
-            // Refresh token
-            when (val result = user.refresh()) {
-                is Result.Success -> {
-                    val refreshedToken = result.value
-                    logger.i("Token refreshed")
-                    makeAuthenticatedRequest(refreshedToken)
-                }
-                is Result.Failure -> {
-                    // Token refresh failed, require re-authentication
-                    logger.e("Token refresh failed", result.error)
-                    // navigate to login
-                }
-            }
-        } else {
-            // Token is still valid
-            makeAuthenticatedRequest(token)
+val user = journey.user()?.let {
+    when (val result = it.token()) {
+        is Failure -> {
+            logger.e("Failed to get access token")
         }
-    } else {
-        logger.w("No access token available")
-        // navigate to login
+        is Success -> {
+            logger.i("Token retrieved ${result.value}")
+        }
     }
-} else {
-    logger.w("No authenticated user")
-    // navigate to login
 }
 ```
 
