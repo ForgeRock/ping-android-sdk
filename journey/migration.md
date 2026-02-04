@@ -447,15 +447,14 @@ private val nodeListener = object : NodeListener<FRSession> {
 #### Modern
 ```kotlin
 // In Activity or ViewModel handling deep links
-val resumeUri = intent?.data // Contains 'suspendedId' parameter
-if (resumeUri != null) {
+intent?.data?.let { resumeUri ->
     try {
         // Resume authentication flow
         var node: Node = journey.resume(uri = resumeUri)
-        
+
         // Process callbacks
         node = node.next()
-        
+
         when (node) {
             is SuccessNode -> {
                 logger.i("Authentication successful after resume")
