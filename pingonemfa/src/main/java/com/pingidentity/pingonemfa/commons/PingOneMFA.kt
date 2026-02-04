@@ -184,7 +184,7 @@ object PingOneMFA {
     /*
      * Approves MFA push notification. Should be called from notification action if application is in the background.
      */
-    fun approvePushNotificationFromBanner(notification: PushNotification?){
+    fun approvePushNotificationFromBanner(notification: PushNotification){
         val appContext = ContextProvider.context
         val intent = Intent(appContext, PushApprovalService::class.java).apply {
             putExtra("notification", notification)
@@ -197,7 +197,7 @@ object PingOneMFA {
     /*
      * Denies MFA push notification. Should be called from notification action if application is in the background.
      */
-    fun denyPushNotificationFromBanner(notification: PushNotification?){
+    fun denyPushNotificationFromBanner(notification: PushNotification){
         val appContext = ContextProvider.context
         val intent = Intent(appContext, PushApprovalService::class.java).apply {
             putExtra("notification", notification)
