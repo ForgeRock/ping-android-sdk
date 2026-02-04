@@ -184,7 +184,7 @@ FRUser.getCurrentUser()?.refresh(object : FRListener<AccessToken?> {
 #### Modern
 ```kotlin
 // Get Access Token
-val token = journey.user()?.token
+val token = journey.user()?.token()
 
 // Refresh Token
 val result: Result<Token, OidcError> = journey.user()?.refresh()
