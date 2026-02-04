@@ -18,6 +18,7 @@ android {
 }
 dependencies {
     implementation(project(":foundation:android"))
+    implementation(project(":foundation:logger"))
     implementation(libs.com.pingidentity.pingonemfa)
 
     implementation(libs.kotlinx.coroutines.core)

@@ -18,40 +18,50 @@ import com.pingidentity.pingonemfa.otp.OtpCodeInfo
 import com.pingidentity.pingonemfa.push.PushApprovalService
 import com.pingidentity.pingonemfa.push.PushNotification
 import com.pingidentity.pingonemfa.util.AccountParser
+import com.pingidentity.logger.Logger
+
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.InternalCoroutinesApi
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import kotlin.coroutines.resume
-import kotlin.coroutines.resumeWithException
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import kotlin.coroutines.resume
 
 object PingOneMFA {
-
+    private val logger: Logger = Logger.logger
     private var isInitialized: Boolean = false
     private var lock = Mutex()
 
     //SDK must be initialized once and cannot handle parallel configure calls
-    suspend fun initialize(): Unit = lock.withLock {
+    suspend fun initialize(): Result<Unit> = lock.withLock {
         if (isInitialized) {
-            return
+            return Result.success(Unit)
         }
-        return suspendCancellableCoroutine { init ->
-            PingOne.configure(
-                ContextProvider.context,
-                // for demonstration purposes we simply hardcode the North America geo
-                PingOneGeo.NORTH_AMERICA
-            ) { error ->
-                if (error == null) {
-                    isInitialized = true
-                    init.resume(Unit)
-                }else{
-                    init.resumeWithException(PingOneMFAException(error.message))
+        suspendCancellableCoroutine { continuation ->
+            try {
+                PingOne.configure(
+                    ContextProvider.context,
+                    // for demonstration purposes we simply hardcode the North America geo
+                    PingOneGeo.NORTH_AMERICA
+                ) { error ->
+                    continuation.resume(
+                        error?.let {
+                            logger.e("PingOne initialization failed: ${it.userInfo}")
+                            Result.failure(PingOneMFAException(it.message))
+                        } ?: run {
+                            isInitialized = true
+                            Result.success(Unit)
+                        }
+                    )
                 }
+            }catch (e: Exception){
+                logger.e("PingOne initialization failed", e)
+                continuation.resume(Result.failure(PingOneMFAException(e.message)))
             }
         }
     }
@@ -59,23 +69,29 @@ object PingOneMFA {
     /*
      * Registers push token with PingOne. Should be called each time the token is refreshed.
      */
-    suspend fun register(pushToken: String) : Boolean = withContext(Dispatchers.IO) {
-        suspendCancellableCoroutine { cont ->
+    suspend fun register(pushToken: String) : Result<Unit> = withContext(Dispatchers.IO) {
+        suspendCancellableCoroutine { continuation ->
             try {
                 PingOne.setDeviceToken(
                     ContextProvider.context,
                     pushToken,
                     NotificationProvider.FCM
                 ) { errors ->
-                    val success = errors == null || errors.isEmpty() || errors.all { it == null }
-                    if (cont.isActive) {
-                        cont.resume(success)
-                    }
+                    val result =
+                        errors
+                            ?.firstOrNull { it != null }
+                            ?.let { err ->
+                                logger.e("PingOne push token registration failed: ${err.userInfo}")
+                                Result.failure(PingOneMFAException(err.message))
+                            }
+                            ?: Result.success(Unit)
+
+                    continuation.resume(result)
+
                 }
-            } catch (_: Exception) {
-                if (cont.isActive) {
-                    cont.resume(false)
-                }
+            } catch (e : Exception) {
+                logger.e("PingOne push token registration failed", e)
+                continuation.resume(Result.failure(PingOneMFAException(e.message)))
             }
         }
     }
@@ -83,25 +99,21 @@ object PingOneMFA {
     /*
      * Starts pairing process with PingOne.
      */
-    suspend fun pair(pairingKey: String): Result<Unit> = suspendCancellableCoroutine { cont ->
+    suspend fun pair(pairingKey: String): Result<Unit> = suspendCancellableCoroutine { continuation ->
         try {
             PingOne.pair(
                 ContextProvider.context,
                 pairingKey
-            ) { pairingInfo, error ->
-                if (!cont.isActive) {
-                    return@pair
-                }
-                if (error == null) {
-                    cont.resume(Result.success(Unit))
-                } else {
-                    cont.resume(Result.failure(Exception(error.message)))
-                }
+            ) { _, error ->
+                val result = error?.let { err ->
+                    logger.e("PingOne pairing failed: ${err.userInfo}")
+                    Result.failure(PingOneMFAException(err.message))
+                } ?: Result.success(Unit)
+                continuation.resume(result)
             }
         } catch (e: Exception) {
-            if (cont.isActive) {
-                cont.resume(Result.failure(e))
-            }
+            logger.e("PingOne pairing failed", e)
+            continuation.resume(Result.failure(PingOneMFAException(e.message)))
         }
     }
 
@@ -109,43 +121,47 @@ object PingOneMFA {
      * Retrieves all paired accounts from PingOne
      */
     suspend fun getAccounts(): Result<List<PingOneMfaAccount>> =
-        suspendCancellableCoroutine { cont ->
+        suspendCancellableCoroutine { continuation ->
             try {
                 PingOne.getInfo(
                     ContextProvider.context
                 ) { deviceInfo, errors ->
-                    run {
-                        if (!cont.isActive) return@getInfo
-                        if (deviceInfo!= null){
-                            val accounts = AccountParser().parseAccounts(deviceInfo)
-                            cont.resume(Result.success(accounts))
-                        }else{
-                            cont.resume(Result.failure(PingOneMFAException(errors[0]?.message)))
-                        }
+                    val result = deviceInfo?.let {
+                        Result.success(AccountParser().parseAccounts(it))
+                    }?: run {
+                        logger.e("PingOne getAccounts failed: ${errors.firstOrNull()?.userInfo}")
+                        Result.failure(PingOneMFAException(errors.firstOrNull()?.message))
                     }
+                    continuation.resume(result)
                 }
             }catch (e: Exception){
-                if (cont.isActive) {
-                    cont.resume(Result.failure(e))
-                }
+                logger.e("PingOne getAccounts failed", e)
+                continuation.resume(Result.failure(PingOneMFAException(e.message)))
             }
         }
 
     /*
      * Retrieves OTP code from PingOne.
      */
-    suspend fun collectOtp(): Result<OtpCodeInfo> = suspendCancellableCoroutine { cont ->
-        PingOne.getOneTimePassCode(ContextProvider.context) { otpInfo, error ->
-            if (!cont.isActive) return@getOneTimePassCode
-            val result = if (otpInfo != null) {
-                Result.success(OtpCodeInfo(
-                    otpInfo.passcode,
-                    ((otpInfo.validUntil * 1000 - System.currentTimeMillis()) / 1000).toInt()
-                ))
-            } else {
-                Result.failure(PingOneMFAException(error?.message))
+    suspend fun collectOtp(): Result<OtpCodeInfo> = suspendCancellableCoroutine { continuation ->
+        try {
+            PingOne.getOneTimePassCode(ContextProvider.context) { otpInfo, error ->
+                val result = otpInfo?.let {
+                    Result.success(
+                        OtpCodeInfo(
+                            otpInfo.passcode,
+                            ((otpInfo.validUntil * 1000 - System.currentTimeMillis()) / 1000).toInt()
+                        )
+                    )
+                }?: run {
+                    logger.e("PingOne collectOtp failed: ${error?.userInfo}")
+                    Result.failure(PingOneMFAException(error?.message))
+                }
+                continuation.resume(result)
             }
-            cont.resume(result)
+        } catch (e: Exception) {
+            logger.e("PingOne collectOtp failed", e)
+            continuation.resume(Result.failure(PingOneMFAException(e.message)))
         }
     }
 
@@ -153,31 +169,29 @@ object PingOneMFA {
      * Transforms received FCM Remote Message object from PingOne into PushNotification object
      */
     suspend fun collectPush(message: RemoteMessage): Result<PushNotification> =
-        suspendCancellableCoroutine { cont ->
+        suspendCancellableCoroutine { continuation ->
             try {
                 PingOne.processRemoteNotification(
                     ContextProvider.context,
                     message
                 ) { notificationObject, error ->
-                    if (!cont.isActive) return@processRemoteNotification
-                    if (notificationObject != null) {
-                        cont.resume(
-                            Result.success(
-                                PushNotification(
-                                    notificationObject = notificationObject,
-                                    title = getTitleFromRemoteMessageData(message.data["aps"]),
-                                    message = getBodyFromRemoteMessageData(message.data["aps"])
-                                )
+                    val result = notificationObject?.let {
+                        Result.success(
+                            PushNotification(
+                                notificationObject = notificationObject,
+                                title = getTitleFromRemoteMessageData(message.data["aps"]),
+                                message = getBodyFromRemoteMessageData(message.data["aps"])
                             )
                         )
-                        return@processRemoteNotification
+                    }?: run {
+                        logger.e("PingOne collectPush failed: ${error?.userInfo}")
+                        Result.failure(PingOneMFAException(error?.message))
                     }
-                    cont.resume(Result.failure(PingOneMFAException(error?.message)))
+                    continuation.resume(result)
                 }
             }catch (e: Exception){
-                if (cont.isActive) {
-                    cont.resume(Result.failure(PingOneMFAException(e.message)))
-                }
+                logger.e("PingOne collectPush failed", e)
+                continuation.resume(Result.failure(PingOneMFAException(e.message)))
             }
         }
 
