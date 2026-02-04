@@ -23,9 +23,12 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import org.json.JSONObject
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 
 object PingOneMFA {
 
@@ -204,19 +207,23 @@ object PingOneMFA {
         ContextCompat.startForegroundService(appContext, intent)
     }
 
-    private fun getTitleFromRemoteMessageData(data: String?): String?{
-        return if (data == null) {
-            null
-        }else{
-            JSONObject(data).getJSONObject("alert").getString("title")
+    private fun getTitleFromRemoteMessageData(data: String?): String? =
+        data?.let {
+            Json.parseToJsonElement(it)
+                .jsonObject["alert"]
+                ?.jsonObject
+                ?.get("body")
+                ?.jsonPrimitive
+                ?.contentOrNull
         }
-    }
 
-    private fun getBodyFromRemoteMessageData(data: String?): String?{
-        return if (data == null) {
-            null
-        }else{
-            JSONObject(data).getJSONObject("alert").getString("body")
+    private fun getBodyFromRemoteMessageData(data: String?): String? =
+        data?.let {
+            Json.parseToJsonElement(it)
+                .jsonObject["alert"]
+                ?.jsonObject
+                ?.get("body")
+                ?.jsonPrimitive
+                ?.contentOrNull
         }
-    }
 }
