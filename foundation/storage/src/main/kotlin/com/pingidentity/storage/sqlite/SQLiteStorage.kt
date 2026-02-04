@@ -27,6 +27,24 @@ import net.zetetic.database.sqlcipher.SQLiteOpenHelper
  *
  * This is an abstract base class that provides common SQLite database functionality.
  * Subclasses should implement their specific storage operations based on their table structure.
+ *
+ * @param context The Android context used to access the database.
+ * @param databaseName The name of the database file. Default is "pingidentity_storage.db".
+ * @param databaseVersion The version number of the database schema. Used for database migrations.
+ * @param passphraseProvider Provider for the database encryption passphrase. Defaults to KeyStore-based provider.
+ * @param allowDestructiveRecovery If true, allows the SDK to delete corrupted databases and start fresh.
+ *                                  WARNING: This will cause data loss. Only enable if you have external backup strategies.
+ *                                  Default is false (safe by default).
+ * @param maxBackupCount Maximum number of backup files to retain. Older backups beyond this limit are automatically deleted.
+ *                        Set to 0 to disable backup creation entirely. Default is 3.
+ * @param backupOnError If true, creates a backup of the database before attempting destructive recovery.
+ *                       Only applies when allowDestructiveRecovery is true. Default is true.
+ * @param autoRestoreFromBackup If true, automatically attempts to restore from the most recent backup when database
+ *                               initialization fails. If false, backup restoration must be triggered manually.
+ *                               Default is true.
+ * @param onDatabaseError Optional, invoked when a database error occurs. Receives the error code,
+ *                         recovery status, and exception. Useful for logging and telemetry.
+ * @param logger Logger instance for diagnostic output. Defaults to the global Logger instance.
  */
 open class SQLiteStorage(
     protected val context: Context,
@@ -36,6 +54,7 @@ open class SQLiteStorage(
     protected val allowDestructiveRecovery: Boolean = false,
     protected val maxBackupCount: Int = 3,
     protected val backupOnError: Boolean = true,
+    protected val autoRestoreFromBackup: Boolean = true,
     protected val onDatabaseError: (suspend (ErrorCode, Boolean, Exception) -> Unit)? = null,
     protected open val logger: Logger = Logger.logger
 ) {
@@ -97,8 +116,6 @@ open class SQLiteStorage(
             val passphrase = passphraseProvider.getPassphrase()
             logger.d("Using passphrase from provider for database initialization")
 
-            var restorationAttempted = false
-
             try {
                 // Open or create the database
                 internalDatabase = SQLiteDatabase.openOrCreateDatabase(
@@ -114,9 +131,8 @@ open class SQLiteStorage(
                 val errorCode = classifyError(e)
                 logger.e("Database initialization failed with error code $errorCode: ${e.message}", e)
 
-                // Attempt to restore from backup before proceeding with destructive recovery
-                if (!restorationAttempted) {
-                    restorationAttempted = true
+                // Attempt to restore from backup only if auto-restore is enabled
+                if (autoRestoreFromBackup) {
                     logger.i("Attempting to restore from backup")
                     val restored = attemptBackupRestoration()
 
@@ -137,25 +153,40 @@ open class SQLiteStorage(
                             logger.e("Failed to open database after restoration: ${retryException.message}", retryException)
                             closeAndCleanupDatabase(retryErrorCode, retryException)
                             
-                            // Create a new helper and try again
+                            // Create a new encrypted database with the passphrase
                             dbHelper = createDatabaseHelper(context, databaseName, databaseVersion)
-                            internalDatabase = dbHelper.writableDatabase
+                            internalDatabase = SQLiteDatabase.openOrCreateDatabase(
+                                context.getDatabasePath(databaseName).absolutePath,
+                                passphrase,
+                                null,
+                                null,
+                            )
                         }
                     } else {
                         logger.w("Backup restoration failed or no backups available")
                         closeAndCleanupDatabase(errorCode, e)
                         
-                        // Create a new helper and try again
+                        // Create a new encrypted database with the passphrase
                         dbHelper = createDatabaseHelper(context, databaseName, databaseVersion)
-                        internalDatabase = dbHelper.writableDatabase
+                        internalDatabase = SQLiteDatabase.openOrCreateDatabase(
+                            context.getDatabasePath(databaseName).absolutePath,
+                            passphrase,
+                            null,
+                            null,
+                        )
                     }
                 } else {
                     // Already attempted restoration, proceed with cleanup
                     closeAndCleanupDatabase(errorCode, e)
                     
-                    // Create a new helper and try again
+                    // Create a new encrypted database with the passphrase
                     dbHelper = createDatabaseHelper(context, databaseName, databaseVersion)
-                    internalDatabase = dbHelper.writableDatabase
+                    internalDatabase = SQLiteDatabase.openOrCreateDatabase(
+                        context.getDatabasePath(databaseName).absolutePath,
+                        passphrase,
+                        null,
+                        null,
+                    )
                 }
             }
 
@@ -296,26 +327,15 @@ open class SQLiteStorage(
                 logger.e("Failed to delete database file: ${e.message}", e)
             }
 
-            // Re-initialize the properties - we need to be careful to set up new instances
-            // since these are now lateinit
-            initializeEmptyInstances()
-        }
-    }
-
-    /**
-     * Initialize empty instances for lateinit properties after cleanup.
-     * This is needed because we can't directly set lateinit properties to null.
-     */
-    private suspend fun initializeEmptyInstances() {
-        executeOnIO {
-            // Create temporary instances to satisfy lateinit requirements
-            dbHelper = createDatabaseHelper(context, databaseName, databaseVersion)
+            // Log backup preservation info
+            // We preserve backups because they remain valid with the existing passphrase
+            // and provide a safety net for potential manual recovery
             try {
-                internalDatabase = dbHelper.readableDatabase
-                internalDatabase.close()
+                val backups = listBackupFiles()
+                logger.i("Preserved ${backups.size} backup file(s) for potential recovery")
             } catch (e: Exception) {
                 currentCoroutineContext().ensureActive()
-                logger.e("Failed to create temporary database instance: ${e.message}", e)
+                logger.w("Failed to count backups: ${e.message}", e)
             }
         }
     }
@@ -430,9 +450,6 @@ open class SQLiteStorage(
             
             logger.d("SQL storage closed")
         }
-        
-        // Reinitialize with empty instances to satisfy lateinit requirements
-        initializeEmptyInstances()
     }
 
     /**

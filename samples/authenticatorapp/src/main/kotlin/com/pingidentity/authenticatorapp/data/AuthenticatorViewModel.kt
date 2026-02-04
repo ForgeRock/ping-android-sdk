@@ -33,6 +33,40 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /**
+ * Enum representing different types of initialization errors.
+ */
+enum class InitializationErrorType {
+    OATH_DATABASE_CORRUPTED,
+    PUSH_DATABASE_CORRUPTED,
+    BOTH_DATABASES_CORRUPTED,
+    OATH_INITIALIZATION_FAILED,
+    PUSH_INITIALIZATION_FAILED,
+    JOURNEY_INITIALIZATION_FAILED,
+    FIREBASE_CONFIGURATION_ERROR,
+    UNKNOWN_ERROR
+}
+
+/**
+ * Represents an error from a specific component during initialization.
+ */
+data class ComponentError(
+    val component: String,  // "OATH", "Push", "Journey", "Firebase"
+    val exception: Exception
+)
+
+/**
+ * Data class representing an initialization error with recovery options.
+ */
+data class InitializationError(
+    val type: InitializationErrorType,
+    val message: String,
+    val errors: List<ComponentError> = emptyList(),
+    val canRestoreFromBackup: Boolean = false,
+    val canUseDestructiveRecovery: Boolean = false,
+    val timestamp: Long = System.currentTimeMillis()
+)
+
+/**
  * ViewModel for the Authenticator app.
  * Coordinates between different managers and handles UI-specific logic.
  * 
@@ -79,6 +113,12 @@ class AuthenticatorViewModel(
 
     val themeMode: StateFlow<ThemeMode>
         get() = userPreferences.themeModeFlow
+
+    val destructiveRecovery: StateFlow<Boolean>
+        get() = userPreferences.destructiveRecoveryFlow
+
+    val autoRestoreFromBackup: StateFlow<Boolean>
+        get() = userPreferences.autoRestoreFromBackupFlow
 
 
     /**
@@ -294,6 +334,15 @@ class AuthenticatorViewModel(
         viewModelScope.launch {
             diagnosticLogger.d("SettingsScreen: setTapToReveal: $enabled")
             userPreferences.setTapToReveal(enabled)
+        }
+    }
+
+    /**
+     * Set whether auto-restore from backup is enabled.
+     */
+    fun setAutoRestoreFromBackup(enabled: Boolean) {
+        viewModelScope.launch {
+            userPreferences.setAutoRestoreFromBackup(enabled)
         }
     }
 
@@ -871,7 +920,7 @@ class AuthenticatorViewModel(
     fun restoreOathFromBackup() {
         viewModelScope.launch {
             try {
-                val success = oathManager.restoreFromBackup()
+                val success = oathManager.restoreFromBackup(getApplication())
                 if (success) {
                     _uiState.update { it.copy(message = "OATH database restored successfully") }
                     // Reload credentials after restoration
@@ -891,7 +940,7 @@ class AuthenticatorViewModel(
     fun restorePushFromBackup() {
         viewModelScope.launch {
             try {
-                val success = pushManager.restoreFromBackup()
+                val success = pushManager.restoreFromBackup(getApplication())
                 if (success) {
                     _uiState.update { it.copy(message = "PUSH database restored successfully") }
                     // Reload credentials after restoration
@@ -917,6 +966,38 @@ class AuthenticatorViewModel(
                 }
             } catch (e: Exception) {
                 _uiState.update { it.copy(error = "Failed to make OATH DB read-only: ${e.message}") }
+            }
+        }
+    }
+    
+    /**
+     * Simulates corrupting the OATH database for testing error handling.
+     */
+    fun simulateOathDatabaseCorruption() {
+        viewModelScope.launch {
+            try {
+                oathManager.corruptDatabase()
+                _uiState.update { 
+                    it.copy(message = "OATH database corrupted. Restart app to test recovery.") 
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(error = "Failed to corrupt OATH database: ${e.message}") }
+            }
+        }
+    }
+    
+    /**
+     * Simulates making the PUSH database read-only for testing error handling.
+     */
+    fun simulatePushDatabaseReadOnly() {
+        viewModelScope.launch {
+            try {
+                pushManager.makeDatabaseReadOnly()
+                _uiState.update { 
+                    it.copy(message = "Push database is now read-only. Restart app to test error handling.") 
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(error = "Failed to make Push DB read-only: ${e.message}") }
             }
         }
     }
@@ -1030,6 +1111,82 @@ class AuthenticatorViewModel(
             }
         }
     }
+    
+    /**
+     * Sets the initialization error state.
+     */
+    fun setInitializationError(error: InitializationError) {
+        _uiState.update { it.copy(initializationError = error) }
+    }
+    
+    /**
+     * Attempts to restore from backup.
+     */
+    suspend fun attemptRestoreFromBackup(): Result<Boolean> {
+        val initError = _uiState.value.initializationError ?: return Result.failure(
+            IllegalStateException("No initialization error present")
+        )
+        
+        return try {
+            var oathRestored = true
+            var pushRestored = true
+            
+            // Check which components need restoration based on error list
+            val hasOathError = initError.errors.any { it.component == "OATH" }
+            val hasPushError = initError.errors.any { it.component == "Push" }
+            
+            // Restore OATH if it failed
+            if (hasOathError) {
+                oathRestored = oathManager.restoreFromBackup(getApplication())
+                diagnosticLogger.i("OATH restore result: $oathRestored")
+            }
+            
+            // Restore Push if it failed
+            if (hasPushError) {
+                pushRestored = pushManager.restoreFromBackup(getApplication())
+                diagnosticLogger.i("Push restore result: $pushRestored")
+            }
+            
+            val success = oathRestored && pushRestored
+            if (success) {
+                diagnosticLogger.i("Successfully restored from backup")
+                Result.success(true)
+            } else {
+                val failedComponents = mutableListOf<String>()
+                if (hasOathError && !oathRestored) failedComponents.add("OATH")
+                if (hasPushError && !pushRestored) failedComponents.add("Push")
+                Result.failure(Exception("Backup restoration failed for: ${failedComponents.joinToString(", ")}"))
+            }
+        } catch (e: Exception) {
+            diagnosticLogger.e("Error during backup restoration", e)
+            Result.failure(e)
+        }
+    }
+    
+    /**
+     * Enables destructive recovery and triggers app restart.
+     * This will delete corrupted databases and start fresh.
+     */
+    suspend fun enableDestructiveRecoveryAndRestart(): Result<Unit> {
+        return try {
+            // Enable destructive recovery in settings
+            userPreferences.setDestructiveRecovery(true)
+            diagnosticLogger.i("Destructive recovery enabled - app will restart")
+            Result.success(Unit)
+        } catch (e: Exception) {
+            diagnosticLogger.e("Error enabling destructive recovery", e)
+            Result.failure(e)
+        }
+    }
+    
+    /**
+     * Sets the destructive recovery setting.
+     */
+    fun setDestructiveRecovery(enabled: Boolean) {
+        viewModelScope.launch {
+            userPreferences.setDestructiveRecovery(enabled)
+        }
+    }
 }
 
 /**
@@ -1048,6 +1205,7 @@ data class AuthenticatorUiState(
     val lastAddedPushCredential: PushCredential? = null,
     val error: String? = null,
     val message: String? = null,
+    val initializationError: InitializationError? = null,
     // Loading states for better UX
     val isInitialLoading: Boolean = false,
     val isRefreshing: Boolean = false,

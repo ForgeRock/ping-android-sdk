@@ -68,6 +68,7 @@ import com.pingidentity.authenticatorapp.data.AccountGroup
 import com.pingidentity.authenticatorapp.data.AuthenticatorViewModel
 import com.pingidentity.authenticatorapp.data.BackupFileInfo
 import com.pingidentity.authenticatorapp.data.DatabaseInfo
+import com.pingidentity.authenticatorapp.ui.components.SettingItem
 import com.pingidentity.mfa.commons.policy.BiometricAvailablePolicy
 import com.pingidentity.mfa.commons.policy.DeviceTamperingPolicy
 
@@ -85,6 +86,8 @@ fun TestScreen(
     var deviceToken by remember { mutableStateOf<String?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
     val uiState by viewModel.uiState.collectAsState()
+    val destructiveRecovery by viewModel.destructiveRecovery.collectAsState()
+    val autoRestoreFromBackup by viewModel.autoRestoreFromBackup.collectAsState()
     
     // Account locking dialog states
     var showAccountSelectionDialog by remember { mutableStateOf(false) }
@@ -95,6 +98,8 @@ fun TestScreen(
     var showOathBackupsDialog by remember { mutableStateOf(false) }
     var showPushBackupsDialog by remember { mutableStateOf(false) }
     var showDatabaseInfoDialog by remember { mutableStateOf(false) }
+    var showDestructiveRecoveryDialog by remember { mutableStateOf(false) }
+    var showAutoRestoreDialog by remember { mutableStateOf(false) }
     var oathBackups by remember { mutableStateOf<List<BackupFileInfo>>(emptyList()) }
     var pushBackups by remember { mutableStateOf<List<BackupFileInfo>>(emptyList()) }
     var databaseInfo by remember { mutableStateOf<DatabaseInfo?>(null) }
@@ -367,6 +372,44 @@ fun TestScreen(
 
                     Spacer(modifier = Modifier.height(16.dp))
 
+                    // Destructive Recovery Setting
+                    SettingItem(
+                        icon = Icons.Default.Warning,
+                        title = "Enable destructive database recovery",
+                        description = "Automatically delete and recreate corrupted databases on initialization errors. Warning: This will cause data loss if corruption occurs.",
+                        checked = destructiveRecovery,
+                        onToggle = { enabled ->
+                            if (enabled) {
+                                showDestructiveRecoveryDialog = true
+                            } else {
+                                viewModel.setDestructiveRecovery(false)
+                            }
+                        }
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // Auto-Restore From Backup Setting
+                    SettingItem(
+                        icon = if (autoRestoreFromBackup) Icons.Default.Sync else Icons.Default.Dashboard,
+                        title = "Auto-restore from backup",
+                        description = if (autoRestoreFromBackup) {
+                            "SDK will automatically restore from backups on database errors"
+                        } else {
+                            "Disabled - You will see error screen and can choose recovery method"
+                        },
+                        checked = autoRestoreFromBackup,
+                        onToggle = { enabled ->
+                            if (!enabled) {
+                                showAutoRestoreDialog = true
+                            } else {
+                                viewModel.setAutoRestoreFromBackup(true)
+                            }
+                        }
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
                     // Create manual backup section
                     Button(
                         onClick = { viewModel.createManualBackups() },
@@ -482,36 +525,97 @@ fun TestScreen(
 
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    OutlinedButton(
-                        onClick = { viewModel.simulateOathDatabaseReadOnly() },
+                    // Grid layout: 2x2 for database error simulation
+                    Row(
                         modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = MaterialTheme.colorScheme.error
-                        )
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Warning,
-                            contentDescription = "Simulate Read-Only"
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Make OATH DB Read-Only")
+                        OutlinedButton(
+                            onClick = { viewModel.simulateOathDatabaseReadOnly() },
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = MaterialTheme.colorScheme.error
+                            )
+                        ) {
+                            Column(horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
+                                Text(
+                                    text = "OATH",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = "Read-Only",
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
+                        }
+
+                        OutlinedButton(
+                            onClick = { viewModel.simulateOathDatabaseCorruption() },
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = MaterialTheme.colorScheme.error
+                            )
+                        ) {
+                            Column(horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
+                                Text(
+                                    text = "OATH",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = "Corrupt",
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
+                        }
                     }
 
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    OutlinedButton(
-                        onClick = { viewModel.simulatePushDatabaseCorruption() },
+                    Row(
                         modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = MaterialTheme.colorScheme.error
-                        )
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Error,
-                            contentDescription = "Simulate Corruption"
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Corrupt PUSH Database")
+                        OutlinedButton(
+                            onClick = { viewModel.simulatePushDatabaseReadOnly() },
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = MaterialTheme.colorScheme.error
+                            )
+                        ) {
+                            Column(horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
+                                Text(
+                                    text = "Push",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = "Read-Only",
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
+                        }
+
+                        OutlinedButton(
+                            onClick = { viewModel.simulatePushDatabaseCorruption() },
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = MaterialTheme.colorScheme.error
+                            )
+                        ) {
+                            Column(horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
+                                Text(
+                                    text = "Push",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = "Corrupt",
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
+                        }
                     }
 
                     Spacer(modifier = Modifier.height(8.dp))
@@ -738,6 +842,91 @@ fun TestScreen(
             confirmButton = {
                 TextButton(onClick = { showPushBackupsDialog = false }) {
                     Text("Close")
+                }
+            }
+        )
+    }
+    
+    // Destructive recovery confirmation dialog
+    if (showDestructiveRecoveryDialog) {
+        AlertDialog(
+            onDismissRequest = { showDestructiveRecoveryDialog = false },
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.Warning,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.error
+                )
+            },
+            title = {
+                Text("Enable Destructive Recovery?")
+            },
+            text = {
+                Text(
+                    "WARNING: When enabled, if database corruption is detected during app initialization, " +
+                    "the app will automatically delete all your credentials and start fresh.\n\n" +
+                    "This helps the app recover from errors automatically, but you will lose all " +
+                    "stored accounts if corruption occurs.\n\n" +
+                    "This setting is intended for testing and development purposes."
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.setDestructiveRecovery(true)
+                        showDestructiveRecoveryDialog = false
+                    },
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Text("Enable")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDestructiveRecoveryDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+    
+    // Auto-restore confirmation dialog
+    if (showAutoRestoreDialog) {
+        AlertDialog(
+            onDismissRequest = { showAutoRestoreDialog = false },
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.Dashboard,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            },
+            title = {
+                Text("Disable Auto-Restore From Backup?")
+            },
+            text = {
+                Text(
+                    "When disabled, the SDK will NOT automatically restore from backups when database errors occur.\n\n" +
+                    "✓ You will see an error screen when corruption occurs\n" +
+                    "✓ You can choose to manually restore from backup or use destructive recovery\n" +
+                    "✓ Backups are still created and available\n\n" +
+                    "This gives you better control over the recovery process and allows testing the error handling UI."
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.setAutoRestoreFromBackup(false)
+                        showAutoRestoreDialog = false
+                    }
+                ) {
+                    Text("Disable")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showAutoRestoreDialog = false }) {
+                    Text("Cancel")
                 }
             }
         )

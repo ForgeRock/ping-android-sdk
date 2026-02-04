@@ -33,6 +33,7 @@ class SQLOathStorage private constructor(
     databaseName: String,
     databaseVersion: Int = 1,
     passphraseProvider: PassphraseProvider,
+    autoRestoreFromBackup: Boolean,
     allowDestructiveRecovery: Boolean,
     maxBackupCount: Int,
     backupOnError: Boolean,
@@ -43,6 +44,7 @@ class SQLOathStorage private constructor(
     databaseName = databaseName,
     databaseVersion = databaseVersion,
     passphraseProvider = passphraseProvider,
+    autoRestoreFromBackup = autoRestoreFromBackup,
     allowDestructiveRecovery = allowDestructiveRecovery,
     maxBackupCount = maxBackupCount,
     backupOnError = backupOnError,
@@ -65,6 +67,7 @@ class SQLOathStorage private constructor(
         builder.databaseName,
         builder.databaseVersion,
         builder.passphraseProvider,
+        builder.autoRestoreFromBackup,
         builder.allowDestructiveRecovery,
         builder.maxBackupCount,
         builder.backupOnError,
@@ -110,6 +113,7 @@ class SQLOathStorage private constructor(
         var databaseVersion: Int = 1
         var initialPassphrase: String? = null // Default is null, in case developer does not want to supply their own passphrase
         var passphraseProvider: PassphraseProvider = KeyStorePassphraseProvider(context, initialPassphrase)
+        var autoRestoreFromBackup: Boolean = true
         var allowDestructiveRecovery: Boolean = false
         var maxBackupCount: Int = 3
         var backupOnError: Boolean = true

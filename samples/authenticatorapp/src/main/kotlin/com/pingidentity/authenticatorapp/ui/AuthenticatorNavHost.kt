@@ -9,6 +9,8 @@ package com.pingidentity.authenticatorapp.ui
 
 import android.content.Intent
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
@@ -29,6 +31,18 @@ fun AuthenticatorNavHost(
     loginViewModel: LoginViewModel = viewModel(),
     initialDestination: String = "accounts"
 ) {
+    // Check for initialization errors
+    val uiState by authenticatorViewModel.uiState.collectAsState()
+    
+    // If there's an initialization error, show the error screen instead
+    if (uiState.initializationError != null) {
+        InitializationErrorScreen(
+            viewModel = authenticatorViewModel,
+            initializationError = uiState.initializationError!!
+        )
+        return
+    }
+    
     // Create the NavController
     val navController = rememberNavController()
 

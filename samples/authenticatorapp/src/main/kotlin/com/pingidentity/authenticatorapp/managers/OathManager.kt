@@ -7,6 +7,7 @@
 
 package com.pingidentity.authenticatorapp.managers
 
+import com.pingidentity.authenticatorapp.AuthenticatorApp
 import com.pingidentity.authenticatorapp.data.BackupFileInfo
 import com.pingidentity.authenticatorapp.data.DiagnosticLogger
 import kotlinx.coroutines.Dispatchers
@@ -243,15 +244,27 @@ class OathManager(
     
     /**
      * Restores OATH database from the latest backup.
-     * Requires storage instance to be set via setClient() or constructor.
+     * This method creates a temporary storage instance to access backup files without requiring
+     * full database initialization. This allows restoration even when the database is corrupted.
+     * 
+     * @param context Android context needed to create temporary storage instance
      */
-    suspend fun restoreFromBackup(): Boolean {
+    suspend fun restoreFromBackup(context: android.content.Context): Boolean {
         return withContext(Dispatchers.IO) {
             try {
-                val storage = oathStorage
+                // Try to use existing storage if available
+                var storage = oathStorage
+                
+                // If storage is not available (e.g., initialization failed), create a temporary instance
+                // just for accessing backup restoration functionality using centralized config
                 if (storage == null) {
-                    diagnosticLogger.w("OATH storage not available. Pass storage to setClient() to enable backup operations.")
-                    return@withContext false
+                    diagnosticLogger.i("Creating temporary storage instance for backup restoration")
+                    storage = AuthenticatorApp.createOathStorage(
+                        context = context,
+                        autoRestoreFromBackup = false,
+                        allowDestructiveRecovery = false,
+                        logger = diagnosticLogger
+                    )
                 }
                 
                 val success = storage.attemptBackupRestoration()
@@ -259,13 +272,60 @@ class OathManager(
                 if (success) {
                     diagnosticLogger.i("Successfully restored OATH database from backup")
                 } else {
-                    diagnosticLogger.w("Failed to restore OATH database from backup")
+                    diagnosticLogger.w("Failed to restore OATH database from backup or no backups available")
                 }
                 
                 success
             } catch (e: Exception) {
                 diagnosticLogger.e("Error restoring OATH backup", e)
                 false
+            }
+        }
+    }
+    
+    /**
+     * Corrupts the OATH database for testing error handling.
+     * Creates a backup first to ensure recovery is possible.
+     * Requires storage instance to be set via setClient() or constructor.
+     */
+    suspend fun corruptDatabase() {
+        return withContext(Dispatchers.IO) {
+            try {
+                val storage = oathStorage
+                if (storage == null) {
+                    diagnosticLogger.w("OATH storage not available. Pass storage to setClient() to enable backup operations.")
+                    return@withContext
+                }
+                
+                // Create backup FIRST to ensure recovery is possible
+                diagnosticLogger.i("Creating backup before corrupting database")
+                storage.createDatabaseBackup()
+                diagnosticLogger.i("Backup created successfully")
+                
+                val contextField = storage.javaClass.superclass?.getDeclaredField("context")
+                contextField?.isAccessible = true
+                val context = contextField?.get(storage) as? android.content.Context
+                
+                val databaseNameField = storage.javaClass.superclass?.getDeclaredField("databaseName")
+                databaseNameField?.isAccessible = true
+                val databaseName = databaseNameField?.get(storage) as? String ?: "pingidentity_oath.db"
+                
+                if (context != null) {
+                    val dbFile = context.getDatabasePath(databaseName)
+                    if (dbFile.exists()) {
+                        oathClient?.close()
+                        dbFile.writeBytes(ByteArray(1024) { 0xFF.toByte() })
+                        diagnosticLogger.w("Corrupted OATH database for testing: ${dbFile.absolutePath}")
+                        diagnosticLogger.w("⚠️ App will need to restore from backup on next launch")
+                    } else {
+                        diagnosticLogger.w("OATH database file not found: ${dbFile.absolutePath}")
+                    }
+                } else {
+                    diagnosticLogger.w("Unable to access storage context")
+                }
+            } catch (e: Exception) {
+                diagnosticLogger.e("Error corrupting OATH database", e)
+                throw e
             }
         }
     }

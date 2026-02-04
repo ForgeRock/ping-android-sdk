@@ -9,6 +9,7 @@ package com.pingidentity.authenticatorapp.managers
 
 import android.util.Log
 import com.google.firebase.messaging.FirebaseMessaging
+import com.pingidentity.authenticatorapp.AuthenticatorApp
 import com.pingidentity.authenticatorapp.data.BackupFileInfo
 import com.pingidentity.authenticatorapp.data.DiagnosticLogger
 import com.pingidentity.authenticatorapp.data.PushNotificationItem
@@ -507,15 +508,27 @@ class PushManager(
     
     /**
      * Restores Push database from the latest backup.
-     * Requires storage instance to be set via setClient() or constructor.
+     * This method creates a temporary storage instance to access backup files without requiring
+     * full database initialization. This allows restoration even when the database is corrupted.
+     * 
+     * @param context Android context needed to create temporary storage instance
      */
-    suspend fun restoreFromBackup(): Boolean {
+    suspend fun restoreFromBackup(context: android.content.Context): Boolean {
         return withContext(Dispatchers.IO) {
             try {
-                val storage = pushStorage
+                // Try to use existing storage if available
+                var storage = pushStorage
+                
+                // If storage is not available (e.g., initialization failed), create a temporary instance
+                // just for accessing backup restoration functionality using centralized config
                 if (storage == null) {
-                    diagnosticLogger.w("Push storage not available. Pass storage to setClient() to enable backup operations.")
-                    return@withContext false
+                    diagnosticLogger.i("Creating temporary storage instance for backup restoration")
+                    storage = AuthenticatorApp.createPushStorage(
+                        context = context,
+                        autoRestoreFromBackup = false,
+                        allowDestructiveRecovery = false,
+                        logger = diagnosticLogger
+                    )
                 }
                 
                 val success = storage.attemptBackupRestoration()
@@ -523,7 +536,7 @@ class PushManager(
                 if (success) {
                     diagnosticLogger.i("Successfully restored Push database from backup")
                 } else {
-                    diagnosticLogger.w("Failed to restore Push database from backup")
+                    diagnosticLogger.w("Failed to restore Push database from backup or no backups available")
                 }
                 
                 success
@@ -551,6 +564,53 @@ class PushManager(
                 diagnosticLogger.i("Manual Push backup created successfully")
             } catch (e: Exception) {
                 diagnosticLogger.e("Error creating manual Push backup", e)
+                throw e
+            }
+        }
+    }
+    
+    /**
+     * Makes the Push database read-only for testing error handling.
+     * Creates a backup first to ensure recovery is possible.
+     * Requires storage instance to be set via setClient() or constructor.
+     */
+    suspend fun makeDatabaseReadOnly() {
+        return withContext(Dispatchers.IO) {
+            try {
+                val storage = pushStorage
+                if (storage == null) {
+                    diagnosticLogger.w("Push storage not available. Pass storage to setClient() to enable backup operations.")
+                    return@withContext
+                }
+                
+                // Create backup FIRST to ensure recovery is possible
+                diagnosticLogger.i("Creating backup before making database read-only")
+                storage.createDatabaseBackup()
+                diagnosticLogger.i("Backup created successfully")
+                
+                val contextField = storage.javaClass.superclass?.getDeclaredField("context")
+                contextField?.isAccessible = true
+                val context = contextField?.get(storage) as? android.content.Context
+                
+                val databaseNameField = storage.javaClass.superclass?.getDeclaredField("databaseName")
+                databaseNameField?.isAccessible = true
+                val databaseName = databaseNameField?.get(storage) as? String ?: "pingidentity_push.db"
+                
+                if (context != null) {
+                    val dbFile = context.getDatabasePath(databaseName)
+                    if (dbFile.exists()) {
+                        pushClient?.close()
+                        dbFile.setReadOnly()
+                        diagnosticLogger.w("Made Push database read-only for testing: ${dbFile.absolutePath}")
+                        diagnosticLogger.w("⚠️ App will fail on next write attempt")
+                    } else {
+                        diagnosticLogger.w("Push database file not found: ${dbFile.absolutePath}")
+                    }
+                } else {
+                    diagnosticLogger.w("Unable to access storage context")
+                }
+            } catch (e: Exception) {
+                diagnosticLogger.e("Error making Push database read-only", e)
                 throw e
             }
         }

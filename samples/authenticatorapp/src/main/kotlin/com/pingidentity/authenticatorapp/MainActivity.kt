@@ -119,38 +119,98 @@ class MainActivity : ComponentActivity() {
             val pushManager = PushManager(diagnosticLogger = diagnosticLogger)
             val journeyManager = JourneyManager(diagnosticLogger = diagnosticLogger)
 
-            // Get storage instances
-            val oathStorage = AuthenticatorApp.getOathStorage(application)
-            val pushStorage = AuthenticatorApp.getPushStorage(application)
+            // Check for initialization errors first
+            val initError = AuthenticatorApp.getInitializationError(application)
+            
+            if (initError != null) {
+                // Create ViewModels even with errors so we can show the error screen
+                authenticatorViewModel = AuthenticatorViewModel(
+                    application = application,
+                    userPreferences = userPreferences,
+                    oathManager = oathManager,
+                    pushManager = pushManager,
+                    accountGroupingManager = AccountGroupingManager(userPreferences, diagnosticLogger),
+                    testAccountFactory = TestAccountFactory()
+                )
+                
+                loginViewModel = LoginViewModel(
+                    application = application,
+                    journeyManager = journeyManager,
+                    oathManager = oathManager,
+                    pushManager = pushManager
+                )
+                
+                // Set the initialization error in the ViewModel
+                authenticatorViewModel.setInitializationError(initError)
+                
+                // Mark ViewModels as initialized
+                areViewModelsInitialized = true
+                return@launch
+            }
 
-            // Initialize the clients in the managers
-            val journeyClient = AuthenticatorApp.getJourney(application)
-            journeyManager.setClient(journeyClient)
-            val oauthClient = AuthenticatorApp.getOathClient(application)
-            oathManager.setClient(oauthClient, oathStorage)
-            val pushClient = AuthenticatorApp.getPushClient(application)
-            pushManager.setClient(pushClient, pushStorage)
+            // Get storage instances (will throw if initialization failed)
+            try {
+                val oathStorage = AuthenticatorApp.getOathStorage(application)
+                val pushStorage = AuthenticatorApp.getPushStorage(application)
 
-            // Create ViewModels with clients already set
-            authenticatorViewModel = AuthenticatorViewModel(
-                application = application,
-                userPreferences = userPreferences,
-                oathManager = oathManager,
-                pushManager = pushManager,
-                accountGroupingManager = AccountGroupingManager(userPreferences, diagnosticLogger),
-                testAccountFactory = TestAccountFactory()
-            )
+                // Initialize the clients in the managers
+                val journeyClient = AuthenticatorApp.getJourney(application)
+                journeyManager.setClient(journeyClient)
+                val oauthClient = AuthenticatorApp.getOathClient(application)
+                oathManager.setClient(oauthClient, oathStorage)
+                val pushClient = AuthenticatorApp.getPushClient(application)
+                pushManager.setClient(pushClient, pushStorage)
 
-            // Create LoginViewModel
-            loginViewModel = LoginViewModel(
-                application = application,
-                journeyManager = journeyManager,
-                oathManager = oathManager,
-                pushManager = pushManager
-            )
+                // Create ViewModels with clients already set
+                authenticatorViewModel = AuthenticatorViewModel(
+                    application = application,
+                    userPreferences = userPreferences,
+                    oathManager = oathManager,
+                    pushManager = pushManager,
+                    accountGroupingManager = AccountGroupingManager(userPreferences, diagnosticLogger),
+                    testAccountFactory = TestAccountFactory()
+                )
 
-            // Mark ViewModels as initialized and trigger UI update
-            areViewModelsInitialized = true
+                // Create LoginViewModel
+                loginViewModel = LoginViewModel(
+                    application = application,
+                    journeyManager = journeyManager,
+                    oathManager = oathManager,
+                    pushManager = pushManager
+                )
+
+                // Mark ViewModels as initialized and trigger UI update
+                areViewModelsInitialized = true
+            } catch (e: Exception) {
+                diagnosticLogger.e("Failed to initialize ViewModels", e)
+                
+                // Check if there are initialization errors to display
+                val errorAfterException = AuthenticatorApp.getInitializationError(application)
+                
+                // Create basic ViewModels to show error
+                authenticatorViewModel = AuthenticatorViewModel(
+                    application = application,
+                    userPreferences = userPreferences,
+                    oathManager = oathManager,
+                    pushManager = pushManager,
+                    accountGroupingManager = AccountGroupingManager(userPreferences, diagnosticLogger),
+                    testAccountFactory = TestAccountFactory()
+                )
+                
+                loginViewModel = LoginViewModel(
+                    application = application,
+                    journeyManager = journeyManager,
+                    oathManager = oathManager,
+                    pushManager = pushManager
+                )
+                
+                // Set the error if we found one
+                if (errorAfterException != null) {
+                    authenticatorViewModel.setInitializationError(errorAfterException)
+                }
+                
+                areViewModelsInitialized = true
+            }
         }
     }
     

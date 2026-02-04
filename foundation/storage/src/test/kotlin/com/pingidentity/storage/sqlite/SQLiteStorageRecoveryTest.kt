@@ -278,11 +278,72 @@ class SQLiteStorageRecoveryTest {
     }
     
     /**
+     * Test that autoRestoreFromBackup parameter controls automatic restoration behavior.
+     * 
+     * This test verifies that the flag is properly stored and accessible, which controls
+     * whether automatic restoration happens during initializeDatabase().
+     * 
+     * When autoRestoreFromBackup is false:
+     * - The SDK will NOT automatically restore from backups during initialization
+     * - Application can show error screen and let user choose recovery method
+     * - Backups can still be created and manually restored
+     * 
+     * When autoRestoreFromBackup is true (default):
+     * - Automatic restoration happens during initialization (backward compatible)
+     */
+    @Test
+    @TestRailCase(0)
+    fun testAutoRestoreFromBackupFlag() = runTest {
+        // Test with autoRestoreFromBackup = false
+        val storageNoAutoRestore = TestSQLiteStorage(
+            context = mockContext,
+            databaseName = "${testDatabaseName}_no_auto_restore",
+            autoRestoreFromBackup = false,
+            maxBackupCount = 3,
+            backupOnError = true
+        )
+        
+        // Verify configuration - flag should be false
+        assertEquals(false, storageNoAutoRestore.autoRestoreFromBackupValue,
+            "autoRestoreFromBackup should be false when explicitly set")
+        
+        // Verify other flags are independent
+        assertEquals(3, storageNoAutoRestore.maxBackupCountValue,
+            "maxBackupCount should be preserved")
+        assertEquals(true, storageNoAutoRestore.backupOnErrorValue,
+            "backupOnError should be preserved")
+        
+        // Test with autoRestoreFromBackup = true (default)
+        val storageWithAutoRestore = TestSQLiteStorage(
+            context = mockContext,
+            databaseName = "${testDatabaseName}_with_auto_restore",
+            autoRestoreFromBackup = true,
+            maxBackupCount = 3,
+            backupOnError = true
+        )
+        
+        // Verify configuration - flag should be true
+        assertEquals(true, storageWithAutoRestore.autoRestoreFromBackupValue,
+            "autoRestoreFromBackup should be true when explicitly set")
+        
+        // Test with default value (should be true for backward compatibility)
+        val storageDefault = TestSQLiteStorage(
+            context = mockContext,
+            databaseName = "${testDatabaseName}_default"
+        )
+        
+        // Verify default is true
+        assertEquals(true, storageDefault.autoRestoreFromBackupValue,
+            "autoRestoreFromBackup should default to true for backward compatibility")
+    }
+    
+    /**
      * Test implementation of SQLiteStorage that exposes protected methods and properties for testing.
      */
     private class TestSQLiteStorage(
         context: Context,
         databaseName: String = "test.db",
+        autoRestoreFromBackup: Boolean = true,
         allowDestructiveRecovery: Boolean = false,
         maxBackupCount: Int = 3,
         backupOnError: Boolean = true,
@@ -291,13 +352,20 @@ class SQLiteStorageRecoveryTest {
         context = context,
         databaseName = databaseName,
         passphraseProvider = NonePassphraseProvider(),
+        autoRestoreFromBackup = autoRestoreFromBackup,
         allowDestructiveRecovery = allowDestructiveRecovery,
         maxBackupCount = maxBackupCount,
         backupOnError = backupOnError,
         onDatabaseError = onDatabaseError
     ) {
+        // Expose autoRestoreFromBackup for testing
+        val autoRestoreFromBackupValue: Boolean get() = autoRestoreFromBackup
+        
         // Expose allowDestructiveRecovery for testing
         val allowDestructiveRecoveryValue: Boolean get() = allowDestructiveRecovery
+        
+        // Expose maxBackupCount for testing
+        val maxBackupCountValue: Int get() = maxBackupCount
         
         // Expose backupOnError for testing
         val backupOnErrorValue: Boolean get() = backupOnError
