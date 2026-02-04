@@ -20,7 +20,6 @@ import androidx.core.app.NotificationManagerCompat
 import com.pingidentity.pingonemfapp.R
 import com.pingidentity.pingonemfapp.notification.NotificationActionReceiver.Companion.ACTION_APPROVE
 import com.pingidentity.pingonemfapp.notification.NotificationActionReceiver.Companion.ACTION_DENY
-import com.pingidentity.pingonemfapp.notification.NotificationActionReceiver.Companion.EXTRA_NOTIFICATION_ID
 import com.pingidentity.pingonemfa.push.PushNotification
 import com.pingidentity.pingonemfa.push.PushType
 
@@ -73,8 +72,6 @@ class NotificationHelper(private val context: Context) {
         // Create an intent that opens the PushNotificationActivity directly
         val intent = Intent(context, PushNotificationActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK
-            // Add notification ID
-            putExtra(EXTRA_NOTIFICATION_ID, notification.id)
             // Add notification object
             putExtra(NotificationActionReceiver.EXTRA_NOTIFICATION, notification)
         }
@@ -147,7 +144,6 @@ class NotificationHelper(private val context: Context) {
         // Approve action
         val approveIntent = Intent(context, NotificationActionReceiver::class.java).apply {
             action = ACTION_APPROVE
-            putExtra(EXTRA_NOTIFICATION_ID, notificationId)
             putExtra(NotificationActionReceiver.EXTRA_NOTIFICATION, notification)
         }
 
@@ -161,7 +157,6 @@ class NotificationHelper(private val context: Context) {
         // Deny action
         val denyIntent = Intent(context, NotificationActionReceiver::class.java).apply {
             action = ACTION_DENY
-            putExtra(EXTRA_NOTIFICATION_ID, notificationId)
             putExtra(NotificationActionReceiver.EXTRA_NOTIFICATION, notification)
         }
         val denyPendingIntent = PendingIntent.getBroadcast(
@@ -198,7 +193,6 @@ class NotificationHelper(private val context: Context) {
             // Add flags to ensure the activity is shown when the device is locked or screen is off
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or 
                     Intent.FLAG_ACTIVITY_CLEAR_TASK
-            putExtra(EXTRA_NOTIFICATION_ID, notificationId)
             putExtra(NotificationActionReceiver.EXTRA_NOTIFICATION, notification)
         }
         
