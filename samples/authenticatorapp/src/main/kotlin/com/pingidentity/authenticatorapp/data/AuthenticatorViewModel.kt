@@ -483,14 +483,7 @@ class AuthenticatorViewModel(
             oathManager.addCredentialFromUri(uri).onSuccess {
                 _uiState.update { it.copy(error = null) }
             }.onFailure { e ->
-                val errorMessage = when {
-                    e is DuplicateCredentialException || e.cause is DuplicateCredentialException -> {
-                        val dupException = (e as? DuplicateCredentialException) ?: (e.cause as DuplicateCredentialException)
-                        "Account already exists: ${dupException.issuer} - ${dupException.accountName}"
-                    }
-                    else -> e.message ?: "Failed to add OATH credential"
-                }
-                _uiState.update { it.copy(error = errorMessage) }
+                updateErrorMessage(e, "Failed to add OATH credential")
             }
         }
     }
@@ -503,14 +496,7 @@ class AuthenticatorViewModel(
             pushManager.addCredentialFromUri(uri).onSuccess {
                 _uiState.update { it.copy(error = null) }
             }.onFailure { e ->
-                val errorMessage = when {
-                    e is DuplicateCredentialException || e.cause is DuplicateCredentialException -> {
-                        val dupException = (e as? DuplicateCredentialException) ?: (e.cause as DuplicateCredentialException)
-                        "Account already exists: ${dupException.issuer} - ${dupException.accountName}"
-                    }
-                    else -> e.message ?: "Failed to add Push credential"
-                }
-                _uiState.update { it.copy(error = errorMessage) }
+                updateErrorMessage(e, "Failed to add Push credential")
             }
         }
     }
@@ -526,14 +512,7 @@ class AuthenticatorViewModel(
                 oathManager.addCredentialFromUri(uri).onSuccess {
                     _uiState.update { it.copy(error = null) }
                 }.onFailure { e ->
-                    val errorMessage = when {
-                        e is DuplicateCredentialException || e.cause is DuplicateCredentialException -> {
-                            val dupException = (e as? DuplicateCredentialException) ?: (e.cause as DuplicateCredentialException)
-                            "Account already exists: ${dupException.issuer} - ${dupException.accountName}"
-                        }
-                        else -> e.message ?: "Failed to add OATH credential"
-                    }
-                    _uiState.update { it.copy(error = errorMessage) }
+                    updateErrorMessage(e, "Failed to add OATH credential")
                     return@launch
                 }
 
@@ -1186,6 +1165,22 @@ class AuthenticatorViewModel(
         viewModelScope.launch {
             userPreferences.setDestructiveRecovery(enabled)
         }
+    }
+
+    /**
+     * Updates the error message in the UI state.
+     */
+    private fun updateErrorMessage(throwable: Throwable, message: String) {
+        val errorMessage = when {
+            throwable is DuplicateCredentialException || throwable.cause is DuplicateCredentialException -> {
+                val dupException = (throwable as? DuplicateCredentialException)
+                    ?: (throwable.cause as DuplicateCredentialException)
+                "Account already exists: ${dupException.issuer} - ${dupException.accountName}"
+            }
+
+            else -> throwable.message ?: message
+        }
+        _uiState.update { it.copy(error = errorMessage) }
     }
 }
 
