@@ -7,30 +7,58 @@
 
 package com.pingidentity.pingonemfa.util
 
-import com.google.gson.JsonObject
 import com.pingidentity.pingonemfa.commons.PingOneMfaAccount
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
 
-internal class AccountParser {
-    fun parseAccounts(json: JsonObject): List<PingOneMfaAccount> {
-        val result = mutableListOf<PingOneMfaAccount>()
+internal class AccountParser(
+    private val json: Json = Json {
+        ignoreUnknownKeys = true
+        explicitNulls = false
+    }
+) {
+    fun parseAccounts(rawJson: String): List<PingOneMfaAccount> {
+        val decoded = json.decodeFromString<AccountsResponse>(rawJson)
 
-        json.entrySet().forEach { (region, regionElement) ->
-            val users = regionElement.asJsonObject
-                .getAsJsonArray("users")
-                ?.mapNotNull { it.asJsonObject }
-                ?: emptyList()
-
-            users.forEach { user ->
-                result += PingOneMfaAccount(
+        return decoded.regions.flatMap { (region, regionDto) ->
+            regionDto.users.map {
+                PingOneMfaAccount(
                     region = region,
-                    id = user.get("id")?.asString ?: "",
-                    environment = user.getAsJsonObject("environment")?.get("id")?.asString ?: "",
-                    deviceId = user.getAsJsonObject("device")?.get("id")?.asString ?: "",
-                    name = user.getAsJsonObject("name")?.get("given")?.asString ?: "",
-                    family = user.getAsJsonObject("name")?.get("family")?.asString ?: ""
+                    id = it.id.orEmpty(),
+                    environment = it.environment?.id.orEmpty(),
+                    deviceId = it.device?.id.orEmpty(),
+                    name = it.name?.given.orEmpty(),
+                    family = it.name?.family.orEmpty()
                 )
             }
         }
-        return result
     }
 }
+@Serializable
+internal data class AccountsResponse(
+    val regions: Map<String, RegionDto>
+)
+
+@Serializable
+internal data class RegionDto(
+    val users: List<UserDto> = emptyList()
+)
+
+@Serializable
+internal data class UserDto(
+    val id: String? = null,
+    val environment: IdContainer? = null,
+    val device: IdContainer? = null,
+    val name: NameDto? = null
+)
+
+@Serializable
+internal data class IdContainer(
+    val id: String? = null
+)
+
+@Serializable
+internal data class NameDto(
+    val given: String? = null,
+    val family: String? = null
+)

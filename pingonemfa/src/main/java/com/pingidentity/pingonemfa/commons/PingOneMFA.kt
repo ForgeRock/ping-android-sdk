@@ -11,6 +11,7 @@ import android.content.Intent
 import androidx.core.content.ContextCompat
 import com.google.firebase.messaging.RemoteMessage
 import com.pingidentity.android.ContextProvider
+import com.pingidentity.logger.Logger
 import com.pingidentity.pingidsdkv2.PingOne
 import com.pingidentity.pingidsdkv2.PingOneGeo
 import com.pingidentity.pingidsdkv2.types.NotificationProvider
@@ -18,10 +19,7 @@ import com.pingidentity.pingonemfa.otp.OtpCodeInfo
 import com.pingidentity.pingonemfa.push.PushApprovalService
 import com.pingidentity.pingonemfa.push.PushNotification
 import com.pingidentity.pingonemfa.util.AccountParser
-import com.pingidentity.logger.Logger
-
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.InternalCoroutinesApi
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -127,7 +125,7 @@ object PingOneMFA {
                     ContextProvider.context
                 ) { deviceInfo, errors ->
                     val result = deviceInfo?.let {
-                        Result.success(AccountParser().parseAccounts(it))
+                        Result.success(AccountParser().parseAccounts(it.toString()))
                     }?: run {
                         logger.e("PingOne getAccounts failed: ${errors.firstOrNull()?.userInfo}")
                         Result.failure(PingOneMFAException(errors.firstOrNull()?.message))
