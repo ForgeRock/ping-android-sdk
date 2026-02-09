@@ -300,16 +300,11 @@ open class SQLiteStorage(
 
             // Create backup before deletion if enabled
             if (backupOnError) {
-                try {
-                    val backupFile = createDatabaseBackup()
-                    if (backupFile != null) {
-                        logger.i("Created backup before database deletion: ${backupFile.name}")
-                    } else {
-                        logger.w("Failed to create backup before deletion")
-                    }
-                } catch (e: Exception) {
-                    currentCoroutineContext().ensureActive()
-                    logger.e("Error creating backup: ${e.message}", e)
+                val backupFile = createDatabaseBackup()
+                if (backupFile != null) {
+                    logger.i("Created backup before database deletion: ${backupFile.name}")
+                } else {
+                    logger.w("Failed to create backup before deletion")
                 }
             }
 
@@ -319,24 +314,17 @@ open class SQLiteStorage(
             }
 
             // Delete the database file
-            try {
-                context.deleteDatabase(databaseName)
+            if (context.deleteDatabase(databaseName)) {
                 logger.d("Database file deleted successfully")
-            } catch (e: Exception) {
-                currentCoroutineContext().ensureActive()
-                logger.e("Failed to delete database file: ${e.message}", e)
+            } else {
+                logger.w("Failed to delete database file")
             }
 
             // Log backup preservation info
             // We preserve backups because they remain valid with the existing passphrase
             // and provide a safety net for potential manual recovery
-            try {
-                val backups = listBackupFiles()
-                logger.i("Preserved ${backups.size} backup file(s) for potential recovery")
-            } catch (e: Exception) {
-                currentCoroutineContext().ensureActive()
-                logger.w("Failed to count backups: ${e.message}", e)
-            }
+            val backups = listBackupFiles()
+            logger.i("Preserved ${backups.size} backup file(s) for potential recovery")
         }
     }
 
