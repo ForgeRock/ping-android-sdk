@@ -40,7 +40,7 @@ class SQLPushStorage private constructor(
     allowDestructiveRecovery: Boolean,
     maxBackupCount: Int,
     backupOnError: Boolean,
-    onDatabaseError: (suspend (SQLiteStorage.ErrorCode, Boolean, Exception) -> Unit)?,
+    onDatabaseError: (suspend (Exception, Boolean) -> Unit)?,
     override val logger: Logger = Logger.logger
 ) : SQLiteStorage(
     context = context,
@@ -144,7 +144,7 @@ class SQLPushStorage private constructor(
         var allowDestructiveRecovery: Boolean = false
         var maxBackupCount: Int = 3
         var backupOnError: Boolean = true
-        var onDatabaseError: (suspend (SQLiteStorage.ErrorCode, Boolean, Exception) -> Unit)? = null
+        var onDatabaseError: (suspend (Exception, Boolean) -> Unit)? = null
         var logger: Logger = Logger.logger
     }
 
@@ -1273,7 +1273,7 @@ class SQLPushStorage private constructor(
             // Parse pushType from string
             val pushType = try {
                 PushType.fromString(pushTypeStr)
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 PushType.DEFAULT
             }
 

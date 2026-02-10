@@ -44,8 +44,9 @@ import net.zetetic.database.sqlcipher.SQLiteOpenHelper
  * @param autoRestoreFromBackup If true, automatically attempts to restore from the most recent backup when database
  *                               initialization fails. If false, backup restoration must be triggered manually.
  *                               Default is true.
- * @param onDatabaseError Optional, invoked when a database error occurs. Receives the error code,
- *                         recovery status, and exception. Useful for logging and telemetry.
+ * @param onDatabaseError Optional callback invoked when a database error occurs during initialization.
+ *                         Receives the exception and a boolean indicating whether recovery will be attempted.
+ *                         Useful for logging, telemetry, and custom error handling.
  * @param logger Logger instance for diagnostic output. Defaults to the global Logger instance.
  */
 open class SQLiteStorage(
@@ -57,7 +58,7 @@ open class SQLiteStorage(
     protected val maxBackupCount: Int = 3,
     protected val backupOnError: Boolean = true,
     protected val autoRestoreFromBackup: Boolean = true,
-    protected val onDatabaseError: (suspend (ErrorCode, Boolean, Exception) -> Unit)? = null,
+    protected val onDatabaseError: (suspend (Exception, Boolean) -> Unit)? = null,
     protected open val logger: Logger = Logger.logger
 ) {
     companion object {
@@ -82,25 +83,6 @@ open class SQLiteStorage(
         }
     }
 
-    /**
-     * Error codes for database initialization failures.
-     */
-    enum class ErrorCode {
-        /** Wrong passphrase (KeyStore issue) */
-        PASSPHRASE_INVALID,
-        
-        /** File permissions issue (read-only) */
-        PERMISSION_DENIED,
-        
-        /** Database file corrupted */
-        CORRUPTION,
-        
-        /** Insufficient storage space */
-        DISK_FULL,
-        
-        /** Unknown or general error */
-        UNKNOWN
-    }
 
     // List of table creator functions
     private val tableCreators = mutableListOf<(SQLiteDatabase) -> Unit>()
@@ -159,9 +141,7 @@ open class SQLiteStorage(
                 } catch (e: Exception) {
                     currentCoroutineContext().ensureActive()
 
-                    // Classify the error
-                    val errorCode = classifyError(e)
-                    logger.e("Database initialization failed with error code $errorCode: ${e.message}", e)
+                    logger.e("Database initialization failed: ${e.message}", e)
 
                     // Attempt to restore from backup only if auto-restore is enabled
                     if (autoRestoreFromBackup) {
@@ -181,9 +161,8 @@ open class SQLiteStorage(
                                 logger.d("Database opened successfully after restoration")
                             } catch (retryException: Exception) {
                                 currentCoroutineContext().ensureActive()
-                                val retryErrorCode = classifyError(retryException)
                                 logger.e("Failed to open database after restoration: ${retryException.message}", retryException)
-                                closeAndCleanupDatabase(retryErrorCode, retryException)
+                                closeAndCleanupDatabase(retryException)
 
                                 // Create a new encrypted database with the passphrase
                                 dbHelper = createDatabaseHelper(context, databaseName, databaseVersion)
@@ -196,7 +175,7 @@ open class SQLiteStorage(
                             }
                         } else {
                             logger.w("Backup restoration failed or no backups available")
-                            closeAndCleanupDatabase(errorCode, e)
+                            closeAndCleanupDatabase(e)
 
                             // Create a new encrypted database with the passphrase
                             dbHelper = createDatabaseHelper(context, databaseName, databaseVersion)
@@ -209,7 +188,7 @@ open class SQLiteStorage(
                         }
                     } else {
                         // Already attempted restoration, proceed with cleanup
-                        closeAndCleanupDatabase(errorCode, e)
+                        closeAndCleanupDatabase(e)
 
                         // Create a new encrypted database with the passphrase
                         dbHelper = createDatabaseHelper(context, databaseName, databaseVersion)
@@ -280,9 +259,8 @@ open class SQLiteStorage(
                 }
             } catch (e: Exception) {
                 currentCoroutineContext().ensureActive()
-                val errorCode = classifyError(e)
-                logger.e("Database validation query failed with error code $errorCode: ${e.message}", e)
-                closeAndCleanupDatabase(errorCode, e)
+                logger.e("Database validation query failed: ${e.message}", e)
+                closeAndCleanupDatabase(e)
                 throw e
             }
         }
@@ -292,11 +270,10 @@ open class SQLiteStorage(
      * Close and cleanup database resources.
      * Respects the allowDestructiveRecovery flag and creates backups when enabled.
      *
-     * @param errorCode The error code that triggered the cleanup.
      * @param exception The exception that caused the error.
      * @throws StorageException if destructive recovery is not allowed.
      */
-    private suspend fun closeAndCleanupDatabase(errorCode: ErrorCode = ErrorCode.UNKNOWN, exception: Exception? = null) {
+    private suspend fun closeAndCleanupDatabase(exception: Exception? = null) {
         executeOnIO {
             // Attempt to close internalDatabase
             try {
@@ -320,10 +297,10 @@ open class SQLiteStorage(
 
             // Check if destructive recovery is allowed
             if (!allowDestructiveRecovery) {
-                logger.e("Database initialization failed with error code: $errorCode. Destructive recovery is disabled.")
+                logger.e("Database initialization failed. Destructive recovery is disabled.")
                 if (exception != null) {
-                    // Notify callback if provided
-                    onDatabaseError?.invoke(errorCode, false, exception)
+                    // Notify callback if provided - canRecover = false
+                    onDatabaseError?.invoke(exception, false)
                 }
                 // Re-throw the exception to prevent database deletion
                 throw StorageException("Database initialization failed and destructive recovery is disabled", exception)
@@ -341,9 +318,9 @@ open class SQLiteStorage(
                 }
             }
 
-            // Notify callback before deletion
+            // Notify callback before deletion - canRecover = true
             if (exception != null) {
-                onDatabaseError?.invoke(errorCode, true, exception)
+                onDatabaseError?.invoke(exception, true)
             }
 
             // Delete the database file
@@ -431,35 +408,6 @@ open class SQLiteStorage(
         }
     }
 
-    /**
-     * Classify the error type based on the exception.
-     *
-     * @param exception The exception to classify.
-     * @return The error code corresponding to the exception.
-     */
-    protected open fun classifyError(exception: Exception): ErrorCode {
-        val message = exception.message?.lowercase() ?: ""
-        
-        return when {
-            message.contains("passphrase") || message.contains("decrypt") || 
-            message.contains("file is not a database") || message.contains("file is encrypted") -> {
-                ErrorCode.PASSPHRASE_INVALID
-            }
-            message.contains("readonly") || message.contains("read-only") || 
-            message.contains("permission denied") || message.contains("eacces") -> {
-                ErrorCode.PERMISSION_DENIED
-            }
-            message.contains("corrupt") || message.contains("malformed") || 
-            message.contains("damaged") || message.contains("database disk image is malformed") -> {
-                ErrorCode.CORRUPTION
-            }
-            message.contains("disk") || message.contains("space") || 
-            message.contains("enospc") || message.contains("full") -> {
-                ErrorCode.DISK_FULL
-            }
-            else -> ErrorCode.UNKNOWN
-        }
-    }
 
     /**
      * Close the database connection.

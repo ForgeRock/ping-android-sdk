@@ -9,7 +9,6 @@ package com.pingidentity.storage.sqlite
 
 import android.content.Context
 import com.pingidentity.logger.Logger
-import com.pingidentity.storage.exception.StorageException
 import com.pingidentity.storage.sqlite.passphrase.NonePassphraseProvider
 import com.pingidentity.testrail.TestRailCase
 import com.pingidentity.testrail.TestRailWatcher
@@ -23,7 +22,6 @@ import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
@@ -101,10 +99,6 @@ class SQLiteStorageRecoveryTest {
     @Test
     @TestRailCase(0)
     fun testDestructiveRecoveryEnabled() = runTest {
-        var errorCallbackInvoked = false
-        var callbackErrorCode: SQLiteStorage.ErrorCode? = null
-        var callbackCanRecover: Boolean? = null
-        
         // Create storage with destructive recovery enabled and error callback
         val storage = TestSQLiteStorage(
             context = mockContext,
@@ -112,11 +106,7 @@ class SQLiteStorageRecoveryTest {
             allowDestructiveRecovery = true,
             maxBackupCount = 3,
             backupOnError = true,
-            onDatabaseError = { errorCode, canRecover, exception ->
-                errorCallbackInvoked = true
-                callbackErrorCode = errorCode
-                callbackCanRecover = canRecover
-            }
+            onDatabaseError = null,
         )
         
         // Create a fake database file
@@ -132,54 +122,6 @@ class SQLiteStorageRecoveryTest {
         // Verify configuration
         assertEquals(true, storage.allowDestructiveRecoveryValue)
         assertEquals(true, storage.backupOnErrorValue)
-    }
-    
-    /**
-     * Test error classification for different exception types.
-     */
-    @Test
-    @TestRailCase(0)
-    fun testErrorClassification() = runTest {
-        val storage = TestSQLiteStorage(
-            context = mockContext,
-            databaseName = testDatabaseName,
-            allowDestructiveRecovery = false
-        )
-        
-        // Test passphrase errors
-        val passphraseError = Exception("Invalid passphrase for database")
-        assertEquals(
-            SQLiteStorage.ErrorCode.PASSPHRASE_INVALID,
-            storage.classifyError(passphraseError)
-        )
-        
-        // Test permission errors
-        val permissionError = Exception("Permission denied: read-only database")
-        assertEquals(
-            SQLiteStorage.ErrorCode.PERMISSION_DENIED,
-            storage.classifyError(permissionError)
-        )
-        
-        // Test corruption errors
-        val corruptionError = Exception("database disk image is malformed")
-        assertEquals(
-            SQLiteStorage.ErrorCode.CORRUPTION,
-            storage.classifyError(corruptionError)
-        )
-        
-        // Test disk full errors
-        val diskFullError = Exception("No space left on device (ENOSPC)")
-        assertEquals(
-            SQLiteStorage.ErrorCode.DISK_FULL,
-            storage.classifyError(diskFullError)
-        )
-        
-        // Test unknown errors
-        val unknownError = Exception("Some random error")
-        assertEquals(
-            SQLiteStorage.ErrorCode.UNKNOWN,
-            storage.classifyError(unknownError)
-        )
     }
     
     /**
@@ -347,7 +289,7 @@ class SQLiteStorageRecoveryTest {
         allowDestructiveRecovery: Boolean = false,
         maxBackupCount: Int = 3,
         backupOnError: Boolean = true,
-        onDatabaseError: (suspend (SQLiteStorage.ErrorCode, Boolean, Exception) -> Unit)? = null
+        onDatabaseError: (suspend (Exception, Boolean) -> Unit)? = null
     ) : SQLiteStorage(
         context = context,
         databaseName = databaseName,
@@ -371,9 +313,8 @@ class SQLiteStorageRecoveryTest {
         val backupOnErrorValue: Boolean get() = backupOnError
         
         // Expose protected methods for testing
-        public override suspend fun createDatabaseBackup() = super.createDatabaseBackup()
-        public override suspend fun listBackupFiles() = super.listBackupFiles()
-        public override suspend fun attemptBackupRestoration() = super.attemptBackupRestoration()
-        public override fun classifyError(exception: Exception) = super.classifyError(exception)
+        override suspend fun createDatabaseBackup() = super.createDatabaseBackup()
+        override suspend fun listBackupFiles() = super.listBackupFiles()
+        override suspend fun attemptBackupRestoration() = super.attemptBackupRestoration()
     }
 }

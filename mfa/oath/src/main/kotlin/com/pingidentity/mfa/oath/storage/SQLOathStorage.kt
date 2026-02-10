@@ -37,7 +37,7 @@ class SQLOathStorage private constructor(
     allowDestructiveRecovery: Boolean,
     maxBackupCount: Int,
     backupOnError: Boolean,
-    onDatabaseError: (suspend (SQLiteStorage.ErrorCode, Boolean, Exception) -> Unit)?,
+    onDatabaseError: (suspend (Exception, Boolean) -> Unit)?,
     override val logger: Logger = Logger.logger
 ) : SQLiteStorage(
     context = context,
@@ -117,7 +117,7 @@ class SQLOathStorage private constructor(
         var allowDestructiveRecovery: Boolean = false
         var maxBackupCount: Int = 3
         var backupOnError: Boolean = true
-        var onDatabaseError: (suspend (SQLiteStorage.ErrorCode, Boolean, Exception) -> Unit)? = null
+        var onDatabaseError: (suspend (Exception, Boolean) -> Unit)? = null
         var logger: Logger = Logger.logger
     }
     
@@ -383,7 +383,7 @@ class SQLOathStorage private constructor(
     override suspend fun getAllOathCredentials(): List<OathCredential> {
         try {
             val dataList = retrieveAllOathCredentialsData()
-            return dataList.mapNotNull { createOathCredentialFromData(it) }
+            return dataList.map { createOathCredentialFromData(it) }
         } catch (e: Exception) {
             currentCoroutineContext().ensureActive()
             throw MfaStorageException("Failed to retrieve all OATH credentials", e)
@@ -533,7 +533,7 @@ class SQLOathStorage private constructor(
      * @param data The data map to create the credential from.
      * @return The created OATH credential.
      */
-    private fun createOathCredentialFromData(data: Map<String, Any?>): OathCredential? {
+    private fun createOathCredentialFromData(data: Map<String, Any?>): OathCredential {
         try {
             val id = data[OATH_COLUMN_ID] as String
             val userId = data[OATH_COLUMN_USER_ID] as? String
