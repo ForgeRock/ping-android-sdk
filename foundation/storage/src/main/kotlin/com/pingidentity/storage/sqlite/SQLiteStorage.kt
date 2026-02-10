@@ -16,6 +16,8 @@ import com.pingidentity.storage.sqlite.passphrase.PassphraseProvider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import net.zetetic.database.sqlcipher.SQLiteDatabase
 import net.zetetic.database.sqlcipher.SQLiteOpenHelper
@@ -61,6 +63,23 @@ open class SQLiteStorage(
     companion object {
         private const val DEFAULT_DATABASE_NAME = "pingidentity_storage.db"
         private const val DATABASE_VERSION = 1
+
+        /**
+         * Global mutex map to synchronize database initialization per database name.
+         * This prevents multiple parallel calls to initializeDatabase() for the same database,
+         * which is critical when SQLOathStorage and SQLPushStorage share the same database.
+         */
+        private val initializationMutexes = mutableMapOf<String, Mutex>()
+        private val mutexMapLock = Any()
+
+        /**
+         * Get or create a mutex for the given database name.
+         */
+        private fun getMutexForDatabase(databaseName: String): Mutex {
+            return synchronized(mutexMapLock) {
+                initializationMutexes.getOrPut(databaseName) { Mutex() }
+            }
+        }
     }
 
     /**
@@ -102,57 +121,83 @@ open class SQLiteStorage(
      * This method creates the database and tables if they don't exist.
      * If the database cannot be opened, it will attempt to restore from backup if available.
      *
+     * This method is globally synchronized per database name to prevent multiple parallel
+     * initializations of the same database, which is critical when SQLOathStorage and
+     * SQLPushStorage share the same database file.
+     *
      * @throws StorageException if the database cannot be opened or the tables cannot be created.
      */
     suspend fun initializeDatabase() = executeOnIO {
-        try {
-            // Load SQLCipher libraries
-            System.loadLibrary("sqlcipher")
-
-            // Create database helper
-            dbHelper = createDatabaseHelper(context, databaseName, databaseVersion)
-
-            // Get the passphrase from the provider
-            val passphrase = passphraseProvider.getPassphrase()
-            logger.d("Using passphrase from provider for database initialization")
+        // Acquire database-specific mutex to prevent parallel initialization
+        val mutex = getMutexForDatabase(databaseName)
+        mutex.withLock {
+            // Check if already initialized to avoid redundant work
+            if (::internalDatabase.isInitialized && internalDatabase.isOpen) {
+                logger.d("Database $databaseName is already initialized and open, skipping re-initialization")
+                return@executeOnIO
+            }
 
             try {
-                // Open or create the database
-                internalDatabase = SQLiteDatabase.openOrCreateDatabase(
-                    context.getDatabasePath(databaseName).absolutePath,
-                    passphrase,
-                    null,
-                    null,
-                )
-            } catch (e: Exception) {
-                currentCoroutineContext().ensureActive()
-                
-                // Classify the error
-                val errorCode = classifyError(e)
-                logger.e("Database initialization failed with error code $errorCode: ${e.message}", e)
+                // Load SQLCipher libraries
+                System.loadLibrary("sqlcipher")
 
-                // Attempt to restore from backup only if auto-restore is enabled
-                if (autoRestoreFromBackup) {
-                    logger.i("Attempting to restore from backup")
-                    val restored = attemptBackupRestoration()
+                // Create database helper
+                dbHelper = createDatabaseHelper(context, databaseName, databaseVersion)
 
-                    if (restored) {
-                        logger.i("Backup restoration successful, retrying database initialization")
-                        // Retry opening the restored database
-                        try {
-                            internalDatabase = SQLiteDatabase.openOrCreateDatabase(
-                                context.getDatabasePath(databaseName).absolutePath,
-                                passphrase,
-                                null,
-                                null,
-                            )
-                            logger.d("Database opened successfully after restoration")
-                        } catch (retryException: Exception) {
-                            currentCoroutineContext().ensureActive()
-                            val retryErrorCode = classifyError(retryException)
-                            logger.e("Failed to open database after restoration: ${retryException.message}", retryException)
-                            closeAndCleanupDatabase(retryErrorCode, retryException)
-                            
+                // Get the passphrase from the provider
+                val passphrase = passphraseProvider.getPassphrase()
+                logger.d("Using passphrase from provider for database initialization")
+
+                try {
+                    // Open or create the database
+                    internalDatabase = SQLiteDatabase.openOrCreateDatabase(
+                        context.getDatabasePath(databaseName).absolutePath,
+                        passphrase,
+                        null,
+                        null,
+                    )
+                } catch (e: Exception) {
+                    currentCoroutineContext().ensureActive()
+
+                    // Classify the error
+                    val errorCode = classifyError(e)
+                    logger.e("Database initialization failed with error code $errorCode: ${e.message}", e)
+
+                    // Attempt to restore from backup only if auto-restore is enabled
+                    if (autoRestoreFromBackup) {
+                        logger.i("Attempting to restore from backup")
+                        val restored = attemptBackupRestoration()
+
+                        if (restored) {
+                            logger.i("Backup restoration successful, retrying database initialization")
+                            // Retry opening the restored database
+                            try {
+                                internalDatabase = SQLiteDatabase.openOrCreateDatabase(
+                                    context.getDatabasePath(databaseName).absolutePath,
+                                    passphrase,
+                                    null,
+                                    null,
+                                )
+                                logger.d("Database opened successfully after restoration")
+                            } catch (retryException: Exception) {
+                                currentCoroutineContext().ensureActive()
+                                val retryErrorCode = classifyError(retryException)
+                                logger.e("Failed to open database after restoration: ${retryException.message}", retryException)
+                                closeAndCleanupDatabase(retryErrorCode, retryException)
+
+                                // Create a new encrypted database with the passphrase
+                                dbHelper = createDatabaseHelper(context, databaseName, databaseVersion)
+                                internalDatabase = SQLiteDatabase.openOrCreateDatabase(
+                                    context.getDatabasePath(databaseName).absolutePath,
+                                    passphrase,
+                                    null,
+                                    null,
+                                )
+                            }
+                        } else {
+                            logger.w("Backup restoration failed or no backups available")
+                            closeAndCleanupDatabase(errorCode, e)
+
                             // Create a new encrypted database with the passphrase
                             dbHelper = createDatabaseHelper(context, databaseName, databaseVersion)
                             internalDatabase = SQLiteDatabase.openOrCreateDatabase(
@@ -163,9 +208,9 @@ open class SQLiteStorage(
                             )
                         }
                     } else {
-                        logger.w("Backup restoration failed or no backups available")
+                        // Already attempted restoration, proceed with cleanup
                         closeAndCleanupDatabase(errorCode, e)
-                        
+
                         // Create a new encrypted database with the passphrase
                         dbHelper = createDatabaseHelper(context, databaseName, databaseVersion)
                         internalDatabase = SQLiteDatabase.openOrCreateDatabase(
@@ -175,39 +220,27 @@ open class SQLiteStorage(
                             null,
                         )
                     }
-                } else {
-                    // Already attempted restoration, proceed with cleanup
-                    closeAndCleanupDatabase(errorCode, e)
-                    
-                    // Create a new encrypted database with the passphrase
-                    dbHelper = createDatabaseHelper(context, databaseName, databaseVersion)
-                    internalDatabase = SQLiteDatabase.openOrCreateDatabase(
-                        context.getDatabasePath(databaseName).absolutePath,
-                        passphrase,
-                        null,
-                        null,
-                    )
                 }
-            }
 
-            logger.d("SQL storage initialized successfully")
+                logger.d("SQL storage initialized successfully")
 
-            // Validate database is properly initialized by testing a simple query
-            validateDatabaseInitialization()
-            
-            // Call all registered table creators
-            tableCreators.forEach { creator ->
-                try {
-                    creator(internalDatabase)
-                } catch (e: Exception) {
-                    currentCoroutineContext().ensureActive()
-                    logger.e("Failed to create table: ${e.message}", e)
+                // Validate database is properly initialized by testing a simple query
+                validateDatabaseInitialization()
+
+                // Call all registered table creators
+                tableCreators.forEach { creator ->
+                    try {
+                        creator(internalDatabase)
+                    } catch (e: Exception) {
+                        currentCoroutineContext().ensureActive()
+                        logger.e("Failed to create table: ${e.message}", e)
+                    }
                 }
+            } catch (e: Exception) {
+                currentCoroutineContext().ensureActive()
+                logger.e("Failed to initialize database: ${e.message}", e)
+                throw StorageException("Failed to initialize database", e)
             }
-        } catch (e: Exception) {
-            currentCoroutineContext().ensureActive()
-            logger.e("Failed to initialize database: ${e.message}", e)
-            throw StorageException("Failed to initialize database", e)
         }
     }
 
