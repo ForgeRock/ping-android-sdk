@@ -394,6 +394,44 @@ class PingOneMFATest {
     }
 
     @Test
+    fun `collectMobilePayload returns payload when error is null`() = runTest {
+        every {
+            PingOne.generateMobilePayload(any(), any())
+        } answers {
+            val callback = arg<PingOne.PingOneGenerateMobilePayloadCallback>(1)
+            callback.onComplete("mockPayload", null)
+        }
+        val result = PingOneMFA.collectMobilePayload()
+        assertTrue(result.isSuccess)
+        assertEquals(result.getOrNull(), "mockPayload")
+    }
+
+    @Test
+    fun `collectMobilePayload returns error when error is not null`() = runTest {
+        every {
+            PingOne.generateMobilePayload(any(), any())
+        } answers {
+            val callback = arg<PingOne.PingOneGenerateMobilePayloadCallback>(1)
+            callback.onComplete(null, PingOneSDKError(10003, "mockedError"))
+        }
+        val result = PingOneMFA.collectMobilePayload()
+        assertTrue(result.isFailure)
+        assertTrue { result.exceptionOrNull() is PingOneMFAException }
+        assertTrue { result.exceptionOrNull()?.message == "mockedError" }
+    }
+
+    @Test
+    fun `collectMobilePayload returns error when exception is thrown`() = runTest {
+        every {
+            PingOne.generateMobilePayload(any(), any())
+        } throws RuntimeException("Mocked Exception")
+        val result = PingOneMFA.collectMobilePayload()
+        assertTrue(result.isFailure)
+        assertTrue { result.exceptionOrNull() is PingOneMFAException }
+        assertTrue { result.exceptionOrNull()?.message == "Mocked Exception" }
+    }
+
+    @Test
     fun `approvePushNotificationFromBanner starts foreground service with correct intent`() {
         val mockNotification = mockk<PushNotification>(relaxed = true)
         mockkStatic(ContextCompat::class)

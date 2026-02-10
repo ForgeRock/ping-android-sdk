@@ -194,6 +194,26 @@ object PingOneMFA {
         }
 
     /*
+     * Retrieves mobile payload from PingOne.
+     */
+    suspend fun collectMobilePayload(): Result<String> = suspendCancellableCoroutine { continuation ->
+        try {
+            PingOne.generateMobilePayload(ContextProvider.context) { payload, error ->
+                val result = payload?.let {
+                    Result.success(payload)
+                }?: run {
+                    logger.e("PingOne collectMobilePayload failed: ${error?.userInfo}")
+                    Result.failure(PingOneMFAException(error?.message))
+                }
+                continuation.resume(result)
+            }
+        }catch (e: Exception){
+            logger.e("PingOne collectMobilePayload failed", e)
+            continuation.resume(Result.failure(PingOneMFAException(e.message)))
+        }
+    }
+
+    /*
      * Approves MFA push notification. Should be called from notification action if application is in the background.
      */
     fun approvePushNotificationFromBanner(notification: PushNotification){
