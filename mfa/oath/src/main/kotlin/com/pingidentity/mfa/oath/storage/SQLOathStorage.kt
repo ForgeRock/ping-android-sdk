@@ -7,17 +7,13 @@
 
 package com.pingidentity.mfa.oath.storage
 
-import android.content.Context
 import android.database.Cursor
-import com.pingidentity.android.ContextProvider
-import com.pingidentity.logger.Logger
 import com.pingidentity.mfa.commons.exception.MfaStorageException
 import com.pingidentity.mfa.oath.OathAlgorithm
 import com.pingidentity.mfa.oath.OathCredential
 import com.pingidentity.mfa.oath.OathType
-import com.pingidentity.storage.sqlite.passphrase.KeyStorePassphraseProvider
-import com.pingidentity.storage.sqlite.passphrase.PassphraseProvider
 import com.pingidentity.storage.sqlite.SQLiteStorage
+import com.pingidentity.storage.sqlite.SQLiteStorageConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
@@ -28,56 +24,41 @@ import java.util.Date
  * SQLite-based implementation of [OathStorage].
  * This class directly extends [SQLiteStorage] with OATH-specific functionality.
  */
-class SQLOathStorage private constructor(
-    context: Context,
-    databaseName: String,
-    databaseVersion: Int = 1,
-    passphraseProvider: PassphraseProvider,
-    autoRestoreFromBackup: Boolean,
-    allowDestructiveRecovery: Boolean,
-    maxBackupCount: Int,
-    backupOnError: Boolean,
-    onDatabaseError: (suspend (Exception, Boolean) -> Unit)?,
-    override val logger: Logger = Logger.logger
+class SQLOathStorage(
+    config: SQLiteStorageConfig
 ) : SQLiteStorage(
-    context = context,
-    databaseName = databaseName,
-    databaseVersion = databaseVersion,
-    passphraseProvider = passphraseProvider,
-    autoRestoreFromBackup = autoRestoreFromBackup,
-    allowDestructiveRecovery = allowDestructiveRecovery,
-    maxBackupCount = maxBackupCount,
-    backupOnError = backupOnError,
-    onDatabaseError = onDatabaseError,
-    logger = logger
+    context = config.context,
+    databaseName = config.databaseName,
+    databaseVersion = config.databaseVersion,
+    passphraseProvider = config.passphraseProvider,
+    autoRestoreFromBackup = config.autoRestoreFromBackup,
+    allowDestructiveRecovery = config.allowDestructiveRecovery,
+    maxBackupCount = config.maxBackupCount,
+    backupOnError = config.backupOnError,
+    onDatabaseError = config.onDatabaseError,
+    logger = config.logger
 ), OathStorage {
-
-    /**
-     * Builder-style DSL constructor for SQLOathStorage.
-     */
-    constructor(block: Builder.() -> Unit) : this(
-        Builder().apply(block)
-    )
-
-    /**
-     * Internal constructor to support creation from Builder.
-     */
-    private constructor(builder: Builder) : this(
-        builder.context,
-        builder.databaseName,
-        builder.databaseVersion,
-        builder.passphraseProvider,
-        builder.autoRestoreFromBackup,
-        builder.allowDestructiveRecovery,
-        builder.maxBackupCount,
-        builder.backupOnError,
-        builder.onDatabaseError,
-        builder.logger
-    )
 
     companion object {
         private const val DEFAULT_DATABASE_NAME = "pingidentity_oath.db"
         
+        /**
+         * Invoke operator to create SQLOathStorage with DSL syntax.
+         *
+         * Example usage:
+         * ```
+         * val storage = SQLOathStorage {
+         *     context = applicationContext
+         *     databaseName = "custom_oath.db"
+         *     allowDestructiveRecovery = true
+         * }
+         * ```
+         */
+        operator fun invoke(block: SQLiteStorageConfig.() -> Unit = {}) =
+            SQLOathStorage(SQLiteStorageConfig().apply {
+                databaseName = DEFAULT_DATABASE_NAME
+            }.apply(block))
+
         // OATH credential specific columns
         private const val OATH_COLUMN_ID = "id"
         private const val OATH_COLUMN_USER_ID = "user_id"
@@ -102,23 +83,6 @@ class SQLOathStorage private constructor(
         // Table name for OATH credentials
         private const val TABLE_PREFIX = "mfa_"
         private const val OATH_TABLE = "${TABLE_PREFIX}oath_data"
-    }
-    
-    /**
-     * Builder class for configuring SQLOathStorage.
-     */
-    class Builder {
-        var context: Context = ContextProvider.context
-        var databaseName: String = DEFAULT_DATABASE_NAME
-        var databaseVersion: Int = 1
-        var initialPassphrase: String? = null // Default is null, in case developer does not want to supply their own passphrase
-        var passphraseProvider: PassphraseProvider = KeyStorePassphraseProvider(context, initialPassphrase)
-        var autoRestoreFromBackup: Boolean = true
-        var allowDestructiveRecovery: Boolean = false
-        var maxBackupCount: Int = 3
-        var backupOnError: Boolean = true
-        var onDatabaseError: (suspend (Exception, Boolean) -> Unit)? = null
-        var logger: Logger = Logger.logger
     }
     
     init {

@@ -8,18 +8,14 @@
 package com.pingidentity.mfa.push.storage
 
 import android.content.ContentValues
-import android.content.Context
 import android.database.Cursor
-import com.pingidentity.android.ContextProvider
-import com.pingidentity.logger.Logger
 import com.pingidentity.mfa.commons.exception.MfaStorageException
 import com.pingidentity.mfa.push.PushCredential
 import com.pingidentity.mfa.push.PushDeviceToken
 import com.pingidentity.mfa.push.PushNotification
 import com.pingidentity.mfa.push.PushType
-import com.pingidentity.storage.sqlite.passphrase.KeyStorePassphraseProvider
-import com.pingidentity.storage.sqlite.passphrase.PassphraseProvider
 import com.pingidentity.storage.sqlite.SQLiteStorage
+import com.pingidentity.storage.sqlite.SQLiteStorageConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
@@ -31,56 +27,41 @@ import java.util.Date
  * SQLite-based implementation of [PushStorage].
  * This class directly extends [SQLiteStorage] with Push-specific functionality.
  */
-class SQLPushStorage private constructor(
-    context: Context,
-    databaseName: String,
-    databaseVersion: Int = 1,
-    passphraseProvider: PassphraseProvider,
-    autoRestoreFromBackup: Boolean,
-    allowDestructiveRecovery: Boolean,
-    maxBackupCount: Int,
-    backupOnError: Boolean,
-    onDatabaseError: (suspend (Exception, Boolean) -> Unit)?,
-    override val logger: Logger = Logger.logger
+class SQLPushStorage(
+    config: SQLiteStorageConfig
 ) : SQLiteStorage(
-    context = context,
-    databaseName = databaseName,
-    databaseVersion = databaseVersion,
-    passphraseProvider = passphraseProvider,
-    autoRestoreFromBackup = autoRestoreFromBackup,
-    allowDestructiveRecovery = allowDestructiveRecovery,
-    maxBackupCount = maxBackupCount,
-    backupOnError = backupOnError,
-    onDatabaseError = onDatabaseError,
-    logger = logger
+    context = config.context,
+    databaseName = config.databaseName,
+    databaseVersion = config.databaseVersion,
+    passphraseProvider = config.passphraseProvider,
+    autoRestoreFromBackup = config.autoRestoreFromBackup,
+    allowDestructiveRecovery = config.allowDestructiveRecovery,
+    maxBackupCount = config.maxBackupCount,
+    backupOnError = config.backupOnError,
+    onDatabaseError = config.onDatabaseError,
+    logger = config.logger
 ), PushStorage {
-
-    /**
-     * Builder-style DSL constructor for SQLPushStorage.
-     */
-    constructor(block: Builder.() -> Unit) : this(
-        Builder().apply(block)
-    )
-
-    /**
-     * Internal constructor to support creation from Builder.
-     */
-    private constructor(builder: Builder) : this(
-        builder.context,
-        builder.databaseName,
-        builder.databaseVersion,
-        builder.passphraseProvider,
-        builder.autoRestoreFromBackup,
-        builder.allowDestructiveRecovery,
-        builder.maxBackupCount,
-        builder.backupOnError,
-        builder.onDatabaseError,
-        builder.logger
-    )
 
     companion object {
         private const val DEFAULT_DATABASE_NAME = "pingidentity_push.db"
         
+        /**
+         * Invoke operator to create SQLPushStorage with DSL syntax.
+         *
+         * Example usage:
+         * ```
+         * val storage = SQLPushStorage {
+         *     context = applicationContext
+         *     databaseName = "custom_push.db"
+         *     allowDestructiveRecovery = true
+         * }
+         * ```
+         */
+        operator fun invoke(block: SQLiteStorageConfig.() -> Unit = {}) =
+            SQLPushStorage(SQLiteStorageConfig().apply {
+                databaseName = DEFAULT_DATABASE_NAME
+            }.apply(block))
+
         // Push credential specific columns
         private const val PUSH_COLUMN_ID = "id"
         private const val PUSH_COLUMN_USER_ID = "user_id"
@@ -130,23 +111,7 @@ class SQLPushStorage private constructor(
         private const val NOTIFICATION_TABLE = "${TABLE_PREFIX}push_notifications"
         private const val DEVICE_TOKEN_TABLE = "${TABLE_PREFIX}push_device_tokens"
     }
-    
-    /**
-     * Builder class for configuring SQLPushStorage.
-     */
-    class Builder {
-        var context: Context = ContextProvider.context
-        var databaseName: String = DEFAULT_DATABASE_NAME
-        var databaseVersion: Int = 1
-        var initialPassphrase: String? = null // Default is null, in case developer does not want to supply their own passphrase
-        var passphraseProvider: PassphraseProvider = KeyStorePassphraseProvider(context, initialPassphrase)
-        var autoRestoreFromBackup: Boolean = true
-        var allowDestructiveRecovery: Boolean = false
-        var maxBackupCount: Int = 3
-        var backupOnError: Boolean = true
-        var onDatabaseError: (suspend (Exception, Boolean) -> Unit)? = null
-        var logger: Logger = Logger.logger
-    }
+
 
     init {
         // Register the Push table creator
