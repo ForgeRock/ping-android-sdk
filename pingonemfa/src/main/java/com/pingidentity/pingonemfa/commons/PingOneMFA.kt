@@ -224,7 +224,7 @@ object PingOneMFA {
             Json.parseToJsonElement(it)
                 .jsonObject["alert"]
                 ?.jsonObject
-                ?.get("body")
+                ?.get("title")
                 ?.jsonPrimitive
                 ?.contentOrNull
         }

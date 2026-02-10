@@ -13,8 +13,7 @@ class AccountParserTest {
     fun `single region single user`() {
         val json = """
         {
-          "regions": {
-            "NA": {
+           "NA": {
               "users": [
                 {
                   "id": "u1",
@@ -23,8 +22,7 @@ class AccountParserTest {
                   "name": { "given": "John", "family": "Doe" }
                 }
               ]
-            }
-          }
+           }
         }
         """
 
@@ -44,17 +42,15 @@ class AccountParserTest {
     @Test
     fun `multiple regions multiple users`() {
         val json = """
-        {
-          "regions": {
-            "NA": {
-              "users": [{ "id": "u1" }]
-            },
-            "EU": {
-              "users": [{ "id": "u2" }]
-            }
-          }
-        }
-        """
+    {
+      "NA": {
+        "users": [{ "id": "u1" }]
+      },
+      "EU": {
+        "users": [{ "id": "u2" }]
+      }
+    }
+    """.trimIndent()
 
         val result = parser.parseAccounts(json)
 
@@ -66,12 +62,10 @@ class AccountParserTest {
     @Test
     fun `missing users defaults to empty`() {
         val json = """
-        {
-          "regions": {
-            "NA": {}
-          }
-        }
-        """
+    {
+      "NA": {}
+    }
+    """.trimIndent()
 
         val result = parser.parseAccounts(json)
 
@@ -81,14 +75,12 @@ class AccountParserTest {
     @Test
     fun `missing nested objects produce empty strings`() {
         val json = """
-        {
-          "regions": {
-            "NA": {
-              "users": [{ "id": "u1" }]
-            }
-          }
-        }
-        """
+    {
+      "NA": {
+        "users": [{ "id": "u1" }]
+      }
+    }
+    """.trimIndent()
 
         val account = parser.parseAccounts(json).first()
 
@@ -101,16 +93,14 @@ class AccountParserTest {
     @Test
     fun `partial name object`() {
         val json = """
-        {
-          "regions": {
-            "NA": {
-              "users": [
-                { "id": "u1", "name": { "given": "Alice" } }
-              ]
-            }
-          }
-        }
-        """
+    {
+      "NA": {
+        "users": [
+          { "id": "u1", "name": { "given": "Alice" } }
+        ]
+      }
+    }
+    """.trimIndent()
 
         val account = parser.parseAccounts(json).first()
 
@@ -121,22 +111,21 @@ class AccountParserTest {
     @Test
     fun `unknown fields are ignored`() {
         val json = """
-        {
-          "regions": {
-            "NA": {
-              "users": [
-                {
-                  "id": "u1",
-                  "unknown": "value",
-                  "environment": { "id": "env1", "extra": "x" }
-                }
-              ]
-            }
+    {
+      "NA": {
+        "users": [
+          {
+            "id": "u1",
+            "unknown": "value",
+            "environment": { "id": "env1", "extra": "x" }
           }
-        }
-        """
+        ]
+      }
+    }
+    """.trimIndent()
 
         val account = parser.parseAccounts(json).first()
+
         assertEquals("env1", account.environment)
     }
 
@@ -147,14 +136,12 @@ class AccountParserTest {
         }
 
         val json = """
-        {
-          "regions": {
-            "NA": {
-              "users": [$users]
-            }
-          }
-        }
-        """
+    {
+      "NA": {
+        "users": [$users]
+      }
+    }
+    """.trimIndent()
 
         val result = parser.parseAccounts(json)
 
@@ -164,26 +151,24 @@ class AccountParserTest {
     }
 
     @Test
-    fun `AccountsResponse is serializable both ways`() {
+    fun `RegionDto is serializable`() {
         val json = Json { ignoreUnknownKeys = true }
 
-        val original = AccountsResponse(
-            regions = mapOf(
-                "NA" to RegionDto(
-                    users = listOf(
-                        UserDto(
-                            id = "u1",
-                            environment = IdContainer("env"),
-                            device = IdContainer("dev"),
-                            name = NameDto("John", "Doe")
-                        )
+        val original = mapOf(
+            "NA" to RegionDto(
+                users = listOf(
+                    UserDto(
+                        id = "u1",
+                        environment = IdContainer("env"),
+                        device = IdContainer("dev"),
+                        name = NameDto("John", "Doe")
                     )
                 )
             )
         )
 
-        val encoded = json.encodeToString(AccountsResponse.serializer(), original)
-        val decoded = json.decodeFromString(AccountsResponse.serializer(), encoded)
+        val encoded = json.encodeToString(original)
+        val decoded = json.decodeFromString<Map<String, RegionDto>>(encoded)
 
         assertEquals(original, decoded)
     }
@@ -191,7 +176,7 @@ class AccountParserTest {
     @Test
     fun `throws on invalid json`() {
         val result = runCatching {
-            parser.parseAccounts("""{ "regions": "invalid" }""")
+            parser.parseAccounts("""{ "NA": "invalid" }""")
         }
         assertTrue(result.isFailure)
     }

@@ -10,6 +10,7 @@ package com.pingidentity.pingonemfa.push
 import android.content.Context
 import android.os.Parcelable
 import com.pingidentity.pingidsdkv2.NotificationObject
+import com.pingidentity.pingonemfa.commons.PingOneMFAException
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.parcelize.Parcelize
 import java.util.UUID
@@ -38,17 +39,14 @@ data class PushNotification(
                     authenticationMethod,
                     numberChallenge
                 ) { error ->
-                    if (!cont.isActive) return@approve
                     if (error == null) {
                         cont.resume(Result.success(Unit))
                     } else {
-                        cont.resume(Result.failure(Exception(error.userInfo.toString())))
+                        cont.resume(Result.failure(PingOneMFAException(error.message)))
                     }
                 }
             } catch (e: Exception) {
-                if (cont.isActive) {
-                    cont.resume(Result.failure(e))
-                }
+                cont.resume(Result.failure(PingOneMFAException(e.message)))
             }
         }
 
@@ -57,17 +55,14 @@ data class PushNotification(
                 notificationObject.deny(
                     context
                 ) { error ->
-                    if (!cont.isActive) return@deny
                     if (error == null) {
                         cont.resume(Result.success(Unit))
                     } else {
-                        cont.resume(Result.failure(Exception(error.userInfo.toString())))
+                        cont.resume(Result.failure(PingOneMFAException(error.message)))
                     }
                 }
             } catch (e: Exception) {
-                if (cont.isActive) {
-                    cont.resume(Result.failure(e))
-                }
+                cont.resume(Result.failure(PingOneMFAException(e.message)))
             }
         }
 

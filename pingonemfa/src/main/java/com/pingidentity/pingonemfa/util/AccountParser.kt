@@ -18,9 +18,9 @@ internal class AccountParser(
     }
 ) {
     fun parseAccounts(rawJson: String): List<PingOneMfaAccount> {
-        val decoded = json.decodeFromString<AccountsResponse>(rawJson)
+        val decoded: Map<String, RegionDto> = json.decodeFromString(rawJson)
 
-        return decoded.regions.flatMap { (region, regionDto) ->
+        return decoded.flatMap { (region, regionDto) ->
             regionDto.users.map {
                 PingOneMfaAccount(
                     region = region,
@@ -34,10 +34,6 @@ internal class AccountParser(
         }
     }
 }
-@Serializable
-internal data class AccountsResponse(
-    val regions: Map<String, RegionDto>
-)
 
 @Serializable
 internal data class RegionDto(

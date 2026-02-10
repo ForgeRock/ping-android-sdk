@@ -17,6 +17,7 @@ import android.content.Intent
 import android.os.Build
 import android.util.Log
 import androidx.core.app.NotificationCompat
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -29,9 +30,11 @@ import kotlin.coroutines.resumeWithException
  * Service for handling push notifications actions. This service exists to solve ONE specific Android restriction:
  * Android does NOT allow network calls in the background (from notification actions in particular).
  */
-internal class PushApprovalService : Service(){
+internal class PushApprovalService(
+    private val dispatcher: CoroutineDispatcher = Dispatchers.IO
+) : Service(){
 
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val scope = CoroutineScope(SupervisorJob() + dispatcher)
 
     override fun onBind(p0: Intent?) = null
 
