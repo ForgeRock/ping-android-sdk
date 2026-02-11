@@ -256,7 +256,7 @@ open class SQLiteStorage(
      * @param exception The exception that caused the error.
      * @throws StorageException if destructive recovery is not allowed.
      */
-    private suspend fun closeAndCleanupDatabase(exception: Exception? = null) {
+    private suspend fun closeAndCleanupDatabase(exception: Exception) {
         executeOnIO {
             // Attempt to close internalDatabase
             try {
@@ -281,10 +281,8 @@ open class SQLiteStorage(
             // Check if destructive recovery is allowed
             if (!allowDestructiveRecovery) {
                 logger.e("Database initialization failed. Destructive recovery is disabled.")
-                if (exception != null) {
-                    // Notify callback if provided - canRecover = false
-                    onDatabaseError?.invoke(exception, false)
-                }
+                // Notify callback if provided - canRecover = false
+                onDatabaseError?.invoke(exception, false)
                 // Re-throw the exception to prevent database deletion
                 throw StorageException("Database initialization failed and destructive recovery is disabled", exception)
             }
@@ -302,9 +300,7 @@ open class SQLiteStorage(
             }
 
             // Notify callback before deletion - canRecover = true
-            if (exception != null) {
-                onDatabaseError?.invoke(exception, true)
-            }
+            onDatabaseError?.invoke(exception, true)
 
             // Delete the database file
             if (context.deleteDatabase(databaseName)) {
