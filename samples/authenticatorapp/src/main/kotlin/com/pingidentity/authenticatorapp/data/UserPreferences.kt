@@ -51,6 +51,12 @@ class UserPreferences(context: Context) {
     
     private val _themeModeFlow = MutableStateFlow(getThemeMode())
     val themeModeFlow: StateFlow<ThemeMode> = _themeModeFlow
+    
+    private val _destructiveRecoveryFlow = MutableStateFlow(isDestructiveRecoveryEnabled())
+    val destructiveRecoveryFlow: StateFlow<Boolean> = _destructiveRecoveryFlow
+    
+    private val _autoRestoreFromBackupFlow = MutableStateFlow(isAutoRestoreFromBackupEnabled())
+    val autoRestoreFromBackupFlow: StateFlow<Boolean> = _autoRestoreFromBackupFlow
 
     /**
      * Check if copy OTP on tap is enabled.
@@ -200,6 +206,46 @@ class UserPreferences(context: Context) {
         }
     }
     
+    /**
+     * Check if destructive recovery is enabled.
+     * Defaults to false for safety.
+     */
+    fun isDestructiveRecoveryEnabled(): Boolean {
+        return prefs.getBoolean(KEY_DESTRUCTIVE_RECOVERY, false)
+    }
+    
+    /**
+     * Set whether destructive recovery is enabled.
+     */
+    suspend fun setDestructiveRecovery(enabled: Boolean) {
+        withContext(Dispatchers.IO) {
+            prefs.edit {
+                putBoolean(KEY_DESTRUCTIVE_RECOVERY, enabled)
+            }
+            _destructiveRecoveryFlow.value = enabled
+        }
+    }
+    
+    /**
+     * Check if auto-restore from backup is enabled.
+     * Defaults to true for backward compatibility with SDK behavior.
+     */
+    fun isAutoRestoreFromBackupEnabled(): Boolean {
+        return prefs.getBoolean(KEY_AUTO_RESTORE_FROM_BACKUP, true)
+    }
+    
+    /**
+     * Set whether auto-restore from backup is enabled.
+     */
+    suspend fun setAutoRestoreFromBackup(enabled: Boolean) {
+        withContext(Dispatchers.IO) {
+            prefs.edit {
+                putBoolean(KEY_AUTO_RESTORE_FROM_BACKUP, enabled)
+            }
+            _autoRestoreFromBackupFlow.value = enabled
+        }
+    }
+    
     companion object {
         private const val PREFS_NAME = "authenticator_preferences"
         private const val KEY_COPY_OTP = "copy_otp"
@@ -209,6 +255,8 @@ class UserPreferences(context: Context) {
         private const val KEY_TEST_MODE = "test_mode"
         private const val KEY_THEME_MODE = "theme_mode"
         private const val KEY_ACCOUNT_ORDER = "account_order"
+        private const val KEY_DESTRUCTIVE_RECOVERY = "destructive_recovery"
+        private const val KEY_AUTO_RESTORE_FROM_BACKUP = "auto_restore_from_backup"
         private const val ACCOUNT_ORDER_SEPARATOR = "|||"
     }
 }

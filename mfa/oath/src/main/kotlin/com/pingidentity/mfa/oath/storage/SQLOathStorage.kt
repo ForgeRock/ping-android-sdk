@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2025-2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -7,17 +7,13 @@
 
 package com.pingidentity.mfa.oath.storage
 
-import android.content.Context
 import android.database.Cursor
-import com.pingidentity.android.ContextProvider
-import com.pingidentity.logger.Logger
 import com.pingidentity.mfa.commons.exception.MfaStorageException
 import com.pingidentity.mfa.oath.OathAlgorithm
 import com.pingidentity.mfa.oath.OathCredential
 import com.pingidentity.mfa.oath.OathType
-import com.pingidentity.storage.sqlite.passphrase.KeyStorePassphraseProvider
-import com.pingidentity.storage.sqlite.passphrase.PassphraseProvider
 import com.pingidentity.storage.sqlite.SQLiteStorage
+import com.pingidentity.storage.sqlite.SQLiteStorageConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
@@ -28,41 +24,30 @@ import java.util.Date
  * SQLite-based implementation of [OathStorage].
  * This class directly extends [SQLiteStorage] with OATH-specific functionality.
  */
-class SQLOathStorage private constructor(
-    context: Context,
-    databaseName: String,
-    databaseVersion: Int = 1,
-    passphraseProvider: PassphraseProvider,
-    override val logger: Logger = Logger.logger
-) : SQLiteStorage(
-    context = context,
-    databaseName = databaseName,
-    databaseVersion = databaseVersion,
-    passphraseProvider = passphraseProvider,
-    logger = logger
-), OathStorage {
-
-    /**
-     * Builder-style DSL constructor for SQLOathStorage.
-     */
-    constructor(block: Builder.() -> Unit) : this(
-        Builder().apply(block)
-    )
-
-    /**
-     * Internal constructor to support creation from Builder.
-     */
-    private constructor(builder: Builder) : this(
-        builder.context,
-        builder.databaseName,
-        builder.databaseVersion,
-        builder.passphraseProvider,
-        builder.logger
-    )
+class SQLOathStorage(
+    config: SQLiteStorageConfig
+) : SQLiteStorage(config), OathStorage {
 
     companion object {
-        private const val DEFAULT_DATABASE_NAME = "pingidentity_mfa.db"
+        private const val DEFAULT_DATABASE_NAME = "pingidentity_oath.db"
         
+        /**
+         * Invoke operator to create SQLOathStorage with DSL syntax.
+         *
+         * Example usage:
+         * ```
+         * val storage = SQLOathStorage {
+         *     context = applicationContext
+         *     databaseName = "custom_oath.db"
+         *     allowDestructiveRecovery = true
+         * }
+         * ```
+         */
+        operator fun invoke(block: SQLiteStorageConfig.() -> Unit = {}) =
+            SQLOathStorage(SQLiteStorageConfig().apply {
+                databaseName = DEFAULT_DATABASE_NAME
+            }.apply(block))
+
         // OATH credential specific columns
         private const val OATH_COLUMN_ID = "id"
         private const val OATH_COLUMN_USER_ID = "user_id"
@@ -87,18 +72,6 @@ class SQLOathStorage private constructor(
         // Table name for OATH credentials
         private const val TABLE_PREFIX = "mfa_"
         private const val OATH_TABLE = "${TABLE_PREFIX}oath_data"
-    }
-    
-    /**
-     * Builder class for configuring SQLOathStorage.
-     */
-    class Builder {
-        var context: Context = ContextProvider.context
-        var databaseName: String = DEFAULT_DATABASE_NAME
-        var databaseVersion: Int = 1
-        var initialPassphrase: String? = null // Default is null, in case developer does not want to supply their own passphrase
-        var passphraseProvider: PassphraseProvider = KeyStorePassphraseProvider(context, initialPassphrase)
-        var logger: Logger = Logger.logger
     }
     
     init {
@@ -132,6 +105,9 @@ class SQLOathStorage private constructor(
             db.execSQL("CREATE INDEX IF NOT EXISTS idx_oath_issuer ON $OATH_TABLE ($OATH_COLUMN_ISSUER)")
             db.execSQL("CREATE INDEX IF NOT EXISTS idx_oath_user_id ON $OATH_TABLE ($OATH_COLUMN_USER_ID)")
             db.execSQL("CREATE INDEX IF NOT EXISTS idx_oath_resource_id ON $OATH_TABLE ($OATH_COLUMN_RESOURCE_ID)")
+            
+            // Create unique index to prevent duplicate credentials with the same issuer and account name
+            db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS idx_oath_unique_credential ON $OATH_TABLE ($OATH_COLUMN_ISSUER, $OATH_COLUMN_ACCOUNT_NAME)")
         }
         
         logger.d("OATH SQL storage created")
@@ -320,6 +296,36 @@ class SQLOathStorage private constructor(
             throw MfaStorageException("Failed to retrieve OATH credential with ID $credentialId", e)
         }
     }
+
+    /**
+     * Retrieve an OATH credential by issuer and account name.
+     * Performs case-sensitive comparison to detect duplicate credentials.
+     *
+     * @param issuer The issuer of the credential.
+     * @param accountName The account name of the credential.
+     * @return The OATH credential if found, or null if not found.
+     * @throws MfaStorageException if the credential cannot be retrieved.
+     */
+    override suspend fun getCredentialByIssuerAndAccount(issuer: String, accountName: String): OathCredential? = withContext(Dispatchers.IO) {
+        checkDatabase()
+        
+        try {
+            // Use case-sensitive query to find matching credential
+            val results = query(
+                "SELECT * FROM $OATH_TABLE WHERE $OATH_COLUMN_ISSUER = ? AND $OATH_COLUMN_ACCOUNT_NAME = ?",
+                arrayOf(issuer, accountName)
+            ) { cursor ->
+                extractDataFromCursor(cursor)
+            }
+            
+            val data = results.firstOrNull() ?: return@withContext null
+            return@withContext createOathCredentialFromData(data)
+        } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
+            logger.e("Failed to retrieve OATH credential by issuer and account: ${e.message}", e)
+            throw MfaStorageException("Failed to retrieve OATH credential by issuer '$issuer' and account '$accountName'", e)
+        }
+    }
     
     /**
      * Get all OATH credentials.
@@ -330,7 +336,7 @@ class SQLOathStorage private constructor(
     override suspend fun getAllOathCredentials(): List<OathCredential> {
         try {
             val dataList = retrieveAllOathCredentialsData()
-            return dataList.mapNotNull { createOathCredentialFromData(it) }
+            return dataList.map { createOathCredentialFromData(it) }
         } catch (e: Exception) {
             currentCoroutineContext().ensureActive()
             throw MfaStorageException("Failed to retrieve all OATH credentials", e)
@@ -480,7 +486,7 @@ class SQLOathStorage private constructor(
      * @param data The data map to create the credential from.
      * @return The created OATH credential.
      */
-    private fun createOathCredentialFromData(data: Map<String, Any?>): OathCredential? {
+    private fun createOathCredentialFromData(data: Map<String, Any?>): OathCredential {
         try {
             val id = data[OATH_COLUMN_ID] as String
             val userId = data[OATH_COLUMN_USER_ID] as? String
