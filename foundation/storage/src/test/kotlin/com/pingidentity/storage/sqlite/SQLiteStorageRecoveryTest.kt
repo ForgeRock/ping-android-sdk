@@ -291,14 +291,16 @@ class SQLiteStorageRecoveryTest {
         backupOnError: Boolean = true,
         onDatabaseError: (suspend (Exception, Boolean) -> Unit)? = null
     ) : SQLiteStorage(
-        context = context,
-        databaseName = databaseName,
-        passphraseProvider = NonePassphraseProvider(),
-        autoRestoreFromBackup = autoRestoreFromBackup,
-        allowDestructiveRecovery = allowDestructiveRecovery,
-        maxBackupCount = maxBackupCount,
-        backupOnError = backupOnError,
-        onDatabaseError = onDatabaseError
+        SQLiteStorageConfig().apply {
+            this.context = context
+            this.databaseName = databaseName
+            this.passphraseProvider = NonePassphraseProvider()
+            this.autoRestoreFromBackup = autoRestoreFromBackup
+            this.allowDestructiveRecovery = allowDestructiveRecovery
+            this.maxBackupCount = maxBackupCount
+            this.backupOnError = backupOnError
+            this.onDatabaseError = onDatabaseError
+        }
     ) {
         // Expose autoRestoreFromBackup for testing
         val autoRestoreFromBackupValue: Boolean get() = autoRestoreFromBackup

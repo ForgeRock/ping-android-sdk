@@ -29,18 +29,7 @@ import java.util.Date
  */
 class SQLPushStorage(
     config: SQLiteStorageConfig
-) : SQLiteStorage(
-    context = config.context,
-    databaseName = config.databaseName,
-    databaseVersion = config.databaseVersion,
-    passphraseProvider = config.passphraseProvider,
-    autoRestoreFromBackup = config.autoRestoreFromBackup,
-    allowDestructiveRecovery = config.allowDestructiveRecovery,
-    maxBackupCount = config.maxBackupCount,
-    backupOnError = config.backupOnError,
-    onDatabaseError = config.onDatabaseError,
-    logger = config.logger
-), PushStorage {
+) : SQLiteStorage(config), PushStorage {
 
     companion object {
         private const val DEFAULT_DATABASE_NAME = "pingidentity_push.db"

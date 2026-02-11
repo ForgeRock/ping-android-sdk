@@ -11,7 +11,6 @@ import android.content.Context
 import android.database.Cursor
 import com.pingidentity.logger.Logger
 import com.pingidentity.storage.exception.StorageException
-import com.pingidentity.storage.sqlite.passphrase.KeyStorePassphraseProvider
 import com.pingidentity.storage.sqlite.passphrase.PassphraseProvider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
@@ -30,40 +29,24 @@ import net.zetetic.database.sqlcipher.SQLiteOpenHelper
  * This is an abstract base class that provides common SQLite database functionality.
  * Subclasses should implement their specific storage operations based on their table structure.
  *
- * @param context The Android context used to access the database.
- * @param databaseName The name of the database file. Default is "pingidentity_storage.db".
- * @param databaseVersion The version number of the database schema. Used for database migrations.
- * @param passphraseProvider Provider for the database encryption passphrase. Defaults to KeyStore-based provider.
- * @param allowDestructiveRecovery If true, allows the SDK to delete corrupted databases and start fresh.
- *                                  WARNING: This will cause data loss. Only enable if you have external backup strategies.
- *                                  Default is false (safe by default).
- * @param maxBackupCount Maximum number of backup files to retain. Older backups beyond this limit are automatically deleted.
- *                        Set to 0 to disable backup creation entirely. Default is 3.
- * @param backupOnError If true, creates a backup of the database before attempting destructive recovery.
- *                       Only applies when allowDestructiveRecovery is true. Default is true.
- * @param autoRestoreFromBackup If true, automatically attempts to restore from the most recent backup when database
- *                               initialization fails. If false, backup restoration must be triggered manually.
- *                               Default is true.
- * @param onDatabaseError Optional callback invoked when a database error occurs during initialization.
- *                         Receives the exception and a boolean indicating whether recovery will be attempted.
- *                         Useful for logging, telemetry, and custom error handling.
- * @param logger Logger instance for diagnostic output. Defaults to the global Logger instance.
+ * @param config Configuration object containing all database settings. See [SQLiteStorageConfig] for details.
  */
 open class SQLiteStorage(
-    protected val context: Context,
-    protected val databaseName: String = DEFAULT_DATABASE_NAME,
-    protected val databaseVersion: Int = DATABASE_VERSION,
-    protected val passphraseProvider: PassphraseProvider = KeyStorePassphraseProvider(context),
-    protected val allowDestructiveRecovery: Boolean = false,
-    protected val maxBackupCount: Int = 3,
-    protected val backupOnError: Boolean = true,
-    protected val autoRestoreFromBackup: Boolean = true,
-    protected val onDatabaseError: (suspend (Exception, Boolean) -> Unit)? = null,
-    protected open val logger: Logger = Logger.logger
+    config: SQLiteStorageConfig
 ) {
+    // Extract configuration properties for internal use
+    protected val context: Context = config.context
+    protected val databaseName: String = config.databaseName
+    protected val databaseVersion: Int = config.databaseVersion
+    protected val passphraseProvider: PassphraseProvider = config.passphraseProvider
+    protected val allowDestructiveRecovery: Boolean = config.allowDestructiveRecovery
+    protected val maxBackupCount: Int = config.maxBackupCount
+    protected val backupOnError: Boolean = config.backupOnError
+    protected val autoRestoreFromBackup: Boolean = config.autoRestoreFromBackup
+    protected val onDatabaseError: (suspend (Exception, Boolean) -> Unit)? = config.onDatabaseError
+    protected open val logger: Logger = config.logger
+
     companion object {
-        private const val DEFAULT_DATABASE_NAME = "pingidentity_storage.db"
-        private const val DATABASE_VERSION = 1
 
         /**
          * Global mutex map to synchronize database initialization per database name.

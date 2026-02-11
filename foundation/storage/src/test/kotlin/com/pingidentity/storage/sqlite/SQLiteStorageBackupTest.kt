@@ -8,12 +8,14 @@
 package com.pingidentity.storage.sqlite
 
 import android.content.Context
+import com.pingidentity.android.ContextProvider
 import com.pingidentity.logger.Logger
 import com.pingidentity.storage.sqlite.passphrase.NonePassphraseProvider
 import com.pingidentity.testrail.TestRailCase
 import com.pingidentity.testrail.TestRailWatcher
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.mockkObject
 import kotlinx.coroutines.test.runTest
 import org.junit.Rule
 import org.junit.rules.TestWatcher
@@ -47,6 +49,8 @@ class SQLiteStorageBackupTest {
         
         // Mock Android context
         mockContext = mockk(relaxed = true)
+        mockkObject(ContextProvider)
+        every { ContextProvider.context } returns mockContext
         every { mockContext.getDatabasePath(any()) } answers {
             File(tempDir, firstArg())
         }
@@ -173,9 +177,9 @@ class SQLiteStorageBackupTest {
 
         assertEquals(3, backups.size)
         // Should be sorted newest first
-        assertEquals("test_backup_3000000000.db", backups[0].name)
-        assertEquals("test_backup_2000000000.db", backups[1].name)
-        assertEquals("test_backup_1000000000.db", backups[2].name)
+        assertEquals(backup2.name, backups[0].name)
+        assertEquals(backup3.name, backups[1].name)
+        assertEquals(backup1.name, backups[2].name)
     }
 
     @TestRailCase(0) // TODO: Add TestRail case ID
@@ -307,17 +311,19 @@ class SQLiteStorageBackupTest {
         maxBackupCount: Int = 3,
         logger: Logger = mockk(relaxed = true)
     ) : SQLiteStorage(
-        context = context,
-        databaseName = databaseName,
-        passphraseProvider = NonePassphraseProvider(),
-        allowDestructiveRecovery = false,
-        maxBackupCount = maxBackupCount,
-        backupOnError = true,
-        logger = logger
+        SQLiteStorageConfig().apply {
+            this.context = context
+            this.databaseName = databaseName
+            this.passphraseProvider = NonePassphraseProvider()
+            this.allowDestructiveRecovery = false
+            this.maxBackupCount = maxBackupCount
+            this.backupOnError = true
+            this.logger = logger
+        }
     ) {
         // Expose protected methods for testing
-        public override suspend fun createDatabaseBackup() = super.createDatabaseBackup()
-        public override suspend fun listBackupFiles() = super.listBackupFiles()
+        override suspend fun createDatabaseBackup() = super.createDatabaseBackup()
+        override suspend fun listBackupFiles() = super.listBackupFiles()
         public override suspend fun cleanOldBackups() = super.cleanOldBackups()
         public override fun getBackupFileName(timestamp: Long) = super.getBackupFileName(timestamp)
         public override fun parseBackupTimestamp(filename: String) = super.parseBackupTimestamp(filename)
