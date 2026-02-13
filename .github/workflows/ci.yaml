@@ -25,6 +25,12 @@ jobs:
       name: PR Lint
       uses: ./.github/workflows/pr-lint.yaml
 
+  # Copilot review
+  copilot-review:
+      name: PR Lint
+      needs: pr-lint
+      uses: ./.github/workflows/copilot-review.yaml
+
   # Build and run unit tests
   build-and-test:
     name: Build and test
