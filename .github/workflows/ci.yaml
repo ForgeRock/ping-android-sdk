@@ -19,41 +19,31 @@ on:
 
 permissions: write-all
 jobs:
-  # Create TestRail run
-  create-testrail-run:
-      name: Create TestRail Run
-      uses: ./.github/workflows/create-testrail-run.yaml
-      secrets:
-        TESTRAIL_USERNAME: ${{ secrets.TESTRAIL_USERNAME }}
-        TESTRAIL_API_KEY: ${{ secrets.TESTRAIL_API_KEY }}
+
+  # PR Lint
+  pr-lint:
+      name: PR Lint
+      uses: ./.github/workflows/pr-lint.yaml
 
   # Build and run unit tests
   build-and-test:
     name: Build and test
     uses: ./.github/workflows/build-and-test.yaml
-    needs: create-testrail-run
+    needs: pr-lint
     secrets:
       SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-      TESTRAIL_USERNAME: ${{ secrets.TESTRAIL_USERNAME }}
-      TESTRAIL_API_KEY: ${{ secrets.TESTRAIL_API_KEY }}
-    with:
-      testrail-run-id: ${{needs.create-testrail-run.outputs.testrail-run-id}}
 
   # Run integration tests on emulators
   integration-tests:
     name: Integration tests
     uses: ./.github/workflows/integration-tests.yaml
     if: ${{ vars.ENABLE_INTEGRATION_TESTS == 'true' }}
-    needs: create-testrail-run
+    needs: pr-lint
     secrets:
       E2E_CONFIG: ${{ secrets.E2E_CONFIG }}
       SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-      TESTRAIL_USERNAME: ${{ secrets.TESTRAIL_USERNAME }}
-      TESTRAIL_API_KEY: ${{ secrets.TESTRAIL_API_KEY }}
-    with:
-      testrail-run-id: ${{needs.create-testrail-run.outputs.testrail-run-id}}
 
   # Build and sign BrowserStack test artifacts
   # Skip this step for PRs created by dependabot
@@ -164,6 +154,7 @@ jobs:
   mend-sca-scan:
     name: Mend SCA Scan
     uses: ./.github/workflows/mend-sca-scan.yaml
+    needs: pr-lint
     secrets:
       MEND_EMAIL: ${{ secrets.MEND_EMAIL }}
       MEND_USER_KEY: ${{ secrets.MEND_USER_KEY }}
@@ -173,6 +164,7 @@ jobs:
   mend-sast-scan:
     name: Mend SAST Scan
     uses: ./.github/workflows/mend-sast-scan.yaml
+    needs: pr-lint
     secrets:
       MEND_EMAIL: ${{ secrets.MEND_EMAIL }}
       MEND_USER_KEY: ${{ secrets.MEND_USER_KEY }}

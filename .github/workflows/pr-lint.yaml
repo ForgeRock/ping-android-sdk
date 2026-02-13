@@ -1,0 +1,169 @@
+name: PR Lint
+
+on:
+  workflow_call:
+
+jobs:
+  pr-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate PR title + description + commit signatures
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const title = (pr.title || "").trim();
+            const body = (pr.body || "").trim();
+
+            // 1) Title pattern: SDKS-1234 <something>
+            // - allow multiple spaces, but require at least one space after ticket
+            const titleRe = /^SDKS-\d+\s+\S.+/;
+            if (!titleRe.test(title)) {
+              core.setFailed(
+                `PR title must match "SDKS-#### <description>". Got: "${title}"`
+              );
+              return;
+            }
+
+            // 2) Description exists
+            if (!body || body.length < 10) {
+              core.setFailed("PR description must be present and meaningful (>= 10 chars).");
+              return;
+            }
+
+            // 3) All commits are signed (GitHub verification)
+            // Note: "verified" is GitHub's verification result for the commit signature.
+            const { owner, repo } = context.repo;
+
+            // paginate commits in PR
+            const commits = await github.paginate(
+              github.rest.pulls.listCommits,
+              { owner, repo, pull_number: pr.number, per_page: 100 }
+            );
+
+            const failures = [];
+            for (const c of commits) {
+              const sha = c.sha;
+              // Fetch commit detail to reliably get verification state
+              const commitResp = await github.rest.repos.getCommit({ owner, repo, ref: sha });
+              const v = commitResp.data?.commit?.verification;
+
+              const verified = v?.verified === true;
+              const reason = v?.reason || "unknown";
+
+              if (!verified) {
+                failures.push(`${sha.substring(0, 7)} (${reason})`);
+              }
+            }
+
+            if (failures.length) {
+              core.setFailed(
+                `All commits must be signed (Verified). Unsigned/unverified commits:\n- ` +
+                failures.join("\n- ")
+              );
+              return;
+            }
+
+            core.info("PR metadata + commit signature checks passed.");
+
+      - name: Checkout PR head (for copyirght header checks)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Validate copyright headers on changed files
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          YEAR="$(date +'%Y')"
+          echo "Current year: ${YEAR}"
+
+          python3 - << 'PY'
+          import json, os, re, sys, subprocess
+
+          repo = os.environ["REPO"]
+          pr_number = os.environ["PR_NUMBER"]
+          year = subprocess.check_output(["date", "+%Y"], text=True).strip()
+
+          # Fetch changed files JSON (paginated) via gh
+          cmd = [
+            "gh","api",
+            "-H","Accept: application/vnd.github+json",
+            f"/repos/{repo}/pulls/{pr_number}/files?per_page=100",
+            "--paginate"
+          ]
+          raw = subprocess.check_output(cmd, text=True).strip()
+          if not raw:
+            print("❌ gh api returned empty response; cannot validate files.")
+            sys.exit(1)
+
+          files = json.loads(raw)
+
+          skip_ext = {
+            ".png",".jpg",".jpeg",".gif",".webp",".ico",
+            ".pdf",".zip",".jar",".aar",".so",".dylib",
+            ".keystore",".jks",".p12",".mobileprovision",
+            ".ttf",".otf",".mp4",".mov",".wav",".mp3",
+            ".lock"
+          }
+          skip_paths_re = re.compile(
+            r"^(?:\.github/|\.idea/|\.gradle/|build/|dist/|DerivedData/|Pods/|Carthage/|\.swiftpm/|node_modules/)"
+          )
+
+          # Adjust this to your canonical header text.
+          header_re = re.compile(
+            rf"Copyright\s*\(c\)\s*(?:\d{{4}}\s*-\s*)?{re.escape(year)}\s+Ping Identity Corporation\.",
+            re.IGNORECASE
+          )
+
+          bad = []
+          checked = []
+
+          for f in files:
+            status = f.get("status")
+            path = f.get("filename")
+            if status == "removed" or not path:
+              continue
+            if skip_paths_re.search(path):
+              continue
+
+            ext = "." + path.split(".")[-1].lower() if "." in path else ""
+            if ext in skip_ext:
+              continue
+
+            if status not in ("added","modified","renamed"):
+              continue
+
+            try:
+              data = open(path, "rb").read()
+            except FileNotFoundError:
+              # If renamed, the new path should exist; if not, skip.
+              continue
+
+            # Skip binary-ish
+            if b"\x00" in data[:4096]:
+              continue
+
+            text = data.decode("utf-8", errors="replace")
+            head = text[:3000]
+
+            checked.append(path)
+            if not header_re.search(head):
+              bad.append(path)
+
+          if bad:
+            print("\n❌ Copyright header check failed.")
+            print(f"Expected current year {year} in header for these changed files:")
+            for p in bad:
+              print(f" - {p}")
+            print("\nExpected header examples:")
+            print(f"  Copyright (c) {year} Ping Identity Corporation. All rights reserved.")
+            print(f"  Copyright (c) 2024-{year} Ping Identity Corporation. All rights reserved.")
+            sys.exit(1)
+
+          print(f"\n✅ Copyright header check passed for {len(checked)} file(s).")
+          PY
+        shell: bash
