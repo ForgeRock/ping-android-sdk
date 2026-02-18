@@ -82,7 +82,7 @@ class PermissionDetector(
     override suspend fun analyze(context: Context): Double {
         val sdkVersion = androidBuildSdkProvider.getSdkVersion()
         for (line in mountReader()) {
-            val args = line.split(" ")
+            val args = line.trim().split(Regex("\\s+"))
             if (args.size < 4 || args.size < 6) {
                 logger.e("Error formatting mount line: $line")
                 continue
