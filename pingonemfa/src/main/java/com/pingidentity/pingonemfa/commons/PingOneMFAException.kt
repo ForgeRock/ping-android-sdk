@@ -6,7 +6,17 @@
  */
 
 package com.pingidentity.pingonemfa.commons
-/*
- * Wrapper for error message into exception class
+
+/**
+ * Root exception type for all PingOne MFA SDK errors.
+ *
+ * This exception optionally wraps an underlying cause while providing
+ * a domain-specific error type for SDK consumers.
+ *
+ * @param message Human-readable description of the error.
+ * @param cause   The original exception that triggered this failure, if any.
  */
-class PingOneMFAException(message: String?) : Exception(message)
+class PingOneMFAException(
+    message: String?=null,
+    cause: Throwable? = null
+) : Exception(message, cause)

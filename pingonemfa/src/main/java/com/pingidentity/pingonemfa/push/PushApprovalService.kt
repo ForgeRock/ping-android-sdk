@@ -15,8 +15,8 @@ import android.app.NotificationManager
 import android.app.Service
 import android.content.Intent
 import android.os.Build
-import android.util.Log
 import androidx.core.app.NotificationCompat
+import com.pingidentity.logger.Logger
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -35,6 +35,7 @@ internal class PushApprovalService(
 ) : Service(){
 
     private val scope = CoroutineScope(SupervisorJob() + dispatcher)
+    private val logger: Logger = Logger.logger
 
     override fun onBind(p0: Intent?) = null
 
@@ -63,7 +64,7 @@ internal class PushApprovalService(
                     denyNotificationWithAppInBackground(notificationObject)
                 }
             } catch (e: Exception) {
-                Log.e("MfaApprovalService", "approval failed: ${e.message}", e)
+                logger.e("MfaApprovalService: push approval failed", e)
             } finally {
                 stopForeground(STOP_FOREGROUND_REMOVE)
                 stopSelf(startId)
