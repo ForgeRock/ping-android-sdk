@@ -48,9 +48,12 @@ abstract class SystemPropertyDetector : TamperDetector {
      * @return `true` if any suspicious system properties are detected, `false` otherwise
      */
     override suspend fun analyze(context: Context): Double {
+        logger.i("Running SystemPropertyDetector")
         return if (exists(getProperties())) {
+            logger.w("Suspicious system properties found")
             1.0
         } else {
+            logger.d("Suspicious system properties not found")
             0.0
         }
     }
