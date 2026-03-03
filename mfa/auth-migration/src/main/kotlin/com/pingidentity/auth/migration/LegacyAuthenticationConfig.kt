@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2026 Ping Identity Corporation. All rights reserved.
+ *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
  */
@@ -9,6 +10,8 @@ package com.pingidentity.auth.migration
 import android.content.Context
 import com.pingidentity.logger.Logger
 import com.pingidentity.logger.STANDARD
+import com.pingidentity.migration.MigrationProgress
+import kotlinx.coroutines.flow.FlowCollector
 import org.forgerock.android.auth.StorageClient
 
 /**
@@ -29,6 +32,7 @@ import org.forgerock.android.auth.StorageClient
  *   invoked by [StorageClientProvider.cleanUp] unconditionally — pass a no-op (the default) to
  *   skip backup. For custom [LegacyStorageProvider] implementations, the callback is forwarded
  *   via [LegacyStorageProvider.cleanUp] and it is the implementation's responsibility to invoke it.
+ * @property progress An optional [FlowCollector] that receives migration pipeline events.
  *
  * ## Example — default migration (no block needed)
  * ```kotlin
@@ -69,7 +73,8 @@ import org.forgerock.android.auth.StorageClient
  * @see StorageClientProvider
  */
 class LegacyAuthenticationConfig(context: Context) {
-    var legacyStorageProvider: LegacyStorageProvider = StorageClientProvider(context)
+    var legacyStorageProvider: LegacyStorageProvider = DefaultStorageClientProvider(context)
     var logger: Logger = Logger.STANDARD
     var backup: (context: Context) -> Unit = {}
+    var progress: FlowCollector<MigrationProgress>? = null
 }
