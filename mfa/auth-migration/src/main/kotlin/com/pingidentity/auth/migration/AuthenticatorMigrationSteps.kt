@@ -304,7 +304,9 @@ val step3 = MigrationStep(
 
             val pushNotification = PushNotification(
                 id = notificationId,
-                credentialId = notificationData["credentialId"]?.jsonPrimitive?.content ?: "",
+                credentialId = notificationData["credentialId"]?.jsonPrimitive?.content
+                    ?: notificationData["mechanismUID"]?.jsonPrimitive?.content
+                    ?: "",
                 ttl = notificationData["ttl"]?.jsonPrimitive?.content?.toIntOrNull() ?: 120,
                 messageId = notificationData["messageId"]?.jsonPrimitive?.content ?: notificationId,
                 messageText = notificationData["messageText"]?.jsonPrimitive?.content
@@ -368,14 +370,30 @@ val step4 = MigrationStep(
         try {
             val tokenData = json.parseToJsonElement(tokenJson).jsonObject
 
-            val pushDeviceToken = PushDeviceToken(
-                id = tokenData["id"]?.jsonPrimitive?.content ?: "",
-                tokenId = tokenData["deviceToken"]?.jsonPrimitive?.content
-                    ?: tokenData["token"]?.jsonPrimitive?.content
-                    ?: tokenData["tokenId"]?.jsonPrimitive?.content
-                    ?: "",
-                createdAt = Date(tokenData["timeAdded"]?.jsonPrimitive?.content?.toLongOrNull() ?: System.currentTimeMillis()),
-            )
+            // Extract id if present, otherwise let PushDeviceToken generate a UUID
+            val tokenId = tokenData["id"]?.jsonPrimitive?.content
+
+            val pushDeviceToken = if (tokenId != null && tokenId.isNotBlank()) {
+                PushDeviceToken(
+                    id = tokenId,
+                    tokenId = tokenData["deviceToken"]?.jsonPrimitive?.content
+                        ?: tokenData["token"]?.jsonPrimitive?.content
+                        ?: tokenData["tokenId"]?.jsonPrimitive?.content
+                        ?: "",
+                    createdAt = Date(tokenData["timeAdded"]?.jsonPrimitive?.content?.toLongOrNull()
+                        ?: System.currentTimeMillis()),
+                )
+            } else {
+                // Let PushDeviceToken generate a UUID for id (default parameter)
+                PushDeviceToken(
+                    tokenId = tokenData["deviceToken"]?.jsonPrimitive?.content
+                        ?: tokenData["token"]?.jsonPrimitive?.content
+                        ?: tokenData["tokenId"]?.jsonPrimitive?.content
+                        ?: "",
+                    createdAt = Date(tokenData["timeAdded"]?.jsonPrimitive?.content?.toLongOrNull()
+                        ?: System.currentTimeMillis()),
+                )
+            }
 
             pushStorage.storePushDeviceToken(pushDeviceToken)
             logger.i("Migrated device token successfully")
