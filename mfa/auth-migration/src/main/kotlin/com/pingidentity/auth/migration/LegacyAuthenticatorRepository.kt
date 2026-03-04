@@ -13,6 +13,22 @@ import kotlinx.serialization.Serializable
 import java.io.File
 
 /**
+ * Configuration for legacy authenticator data migration.
+ *
+ * @property keyAlias The AndroidKeyStore alias used for encrypting SharedPreferences.
+ *                    Default: "org.forgerock.android.authenticator.KEYS" (ForgeRock SDK default)
+ *                    Custom storage implementations may use different aliases.
+ */
+data class LegacyAuthenticationConfig(
+    val keyAlias: String = DEFAULT_KEY_ALIAS
+) {
+    companion object {
+        /** Default key alias used by ForgeRock Authenticator SDK */
+        const val DEFAULT_KEY_ALIAS = "org.forgerock.android.authenticator.KEYS"
+    }
+}
+
+/**
  * Exported authenticator data from Legacy SDK.
  */
 @Serializable
@@ -43,37 +59,55 @@ private const val AUTH_DATA_DEVICE_TOKEN = "org.forgerock.android.authenticator.
 
 /**
  * Repository for reading and exporting Legacy SDK authenticator data.
+ * Supports both encrypted (default storage) and unencrypted (custom storage) data.
+ *
+ * @param context Android application context
+ * @param config Configuration including custom key alias for encrypted storage
  */
-class LegacyAuthenticationRepository(private val context: Context) {
+class LegacyAuthenticationRepository(
+    private val context: Context,
+    private val config: LegacyAuthenticationConfig = LegacyAuthenticationConfig()
+) {
 
     private val decryptor = LegacyAuthenticationDecryptor(
         context,
-        "org.forgerock.android.authenticator.KEYS"
+        config.keyAlias
     )
 
     /**
-     * Checks if legacy encryption key exists in KeyStore.
+     * Checks if legacy data exists (either encrypted or unencrypted).
      */
     suspend fun isExists(): Boolean = withContext(Dispatchers.IO) {
-        decryptor.keyExists()
+        // Check for encrypted data (has encryption key)
+        if (decryptor.keyExists()) {
+            return@withContext true
+        }
+
+        // Check for unencrypted data (custom storage - plain SharedPreferences)
+        val prefsDir = File(context.applicationInfo.dataDir, "shared_prefs")
+        return@withContext listOf(
+            AUTH_DATA_ACCOUNT,
+            AUTH_DATA_MECHANISM,
+            AUTH_DATA_NOTIFICATIONS,
+            AUTH_DATA_DEVICE_TOKEN
+        ).any { prefName ->
+            File(prefsDir, "$prefName.xml").exists()
+        }
     }
 
     /**
      * Export all FR Authenticator data from Legacy SDK.
-     * Uses standalone decryptor - NO Legacy SDK dependency required!
+     * Supports both encrypted (default) and unencrypted (custom storage) data.
      */
     suspend fun exportAllData(): ExportedData = withContext(Dispatchers.IO) {
-        // Check if legacy data exists
-        if (!decryptor.keyExists()) {
-            return@withContext emptyExport()
-        }
-
         try {
-            // Decrypt all 4 files
-            val accounts = decryptIfExists(AUTH_DATA_ACCOUNT)
-            val mechanisms = decryptIfExists(AUTH_DATA_MECHANISM)
-            val notifications = decryptIfExists(AUTH_DATA_NOTIFICATIONS)
-            val deviceToken = decryptIfExists(AUTH_DATA_DEVICE_TOKEN)
+            // Try encrypted data first (default storage)
+            val isEncrypted = decryptor.keyExists()
+
+            val accounts = readPreferences(AUTH_DATA_ACCOUNT, isEncrypted)
+            val mechanisms = readPreferences(AUTH_DATA_MECHANISM, isEncrypted)
+            val notifications = readPreferences(AUTH_DATA_NOTIFICATIONS, isEncrypted)
+            val deviceToken = readPreferences(AUTH_DATA_DEVICE_TOKEN, isEncrypted)
 
             ExportedData(
                 accounts = accounts,
@@ -94,9 +128,9 @@ class LegacyAuthenticationRepository(private val context: Context) {
     }
 
     /**
-     * Decrypts SharedPreferences file if it exists on disk.
+     * Reads SharedPreferences data, handling both encrypted and unencrypted formats.
      */
-    private fun decryptIfExists(preferenceName: String): Map<String, String> {
+    private fun readPreferences(preferenceName: String, isEncrypted: Boolean): Map<String, String> {
         // Check if file exists
         val prefsDir = File(context.applicationInfo.dataDir, "shared_prefs")
         val prefsFile = File(prefsDir, "$preferenceName.xml")
@@ -106,36 +140,59 @@ class LegacyAuthenticationRepository(private val context: Context) {
         }
 
         return try {
-            decryptor.decryptAll(preferenceName)
+            if (isEncrypted) {
+                // Decrypt encrypted SharedPreferences (default storage)
+                AuthMigration.logger.d("Reading encrypted data from $preferenceName")
+                decryptor.decryptAll(preferenceName)
+            } else {
+                // Read plain SharedPreferences (custom storage)
+                AuthMigration.logger.d("Reading unencrypted data from $preferenceName")
+                readPlainSharedPreferences(preferenceName)
+            }
         } catch (e: Exception) {
-            AuthMigration.logger.e("Failed to decrypt $preferenceName: ${e.message}", e)
+            AuthMigration.logger.e("Failed to read $preferenceName: ${e.message}", e)
             emptyMap()
         }
     }
 
     /**
+     * Reads plain (unencrypted) SharedPreferences used by custom storage.
+     */
+    private fun readPlainSharedPreferences(preferenceName: String): Map<String, String> {
+        val prefs = context.getSharedPreferences(preferenceName, Context.MODE_PRIVATE)
+        val result = mutableMapOf<String, String>()
+
+        prefs.all.forEach { (key, value) ->
+            if (value is String) {
+                result[key] = value
+            }
+        }
+
+        AuthMigration.logger.d("Read ${result.size} entries from plain SharedPreferences: $preferenceName")
+        return result
+    }
+
+    /**
      * Delete legacy data after successful migration.
+     * Handles both encrypted (default storage) and unencrypted (custom storage) data.
      */
     suspend fun deleteLegacyData() = withContext(Dispatchers.IO) {
+        // Delete SharedPreferences files (works for both encrypted and unencrypted)
         context.deleteSharedPreferences(AUTH_DATA_ACCOUNT)
         context.deleteSharedPreferences(AUTH_DATA_MECHANISM)
         context.deleteSharedPreferences(AUTH_DATA_NOTIFICATIONS)
         context.deleteSharedPreferences(AUTH_DATA_DEVICE_TOKEN)
 
-        // Delete encryption key
-        val keyStore = java.security.KeyStore.getInstance("AndroidKeyStore")
-        keyStore.load(null)
-        keyStore.deleteEntry("org.forgerock.android.authenticator.KEYS")
+        // Delete encryption key if it exists (only for default storage)
+        try {
+            if (decryptor.keyExists()) {
+                val keyStore = java.security.KeyStore.getInstance("AndroidKeyStore")
+                keyStore.load(null)
+                keyStore.deleteEntry(config.keyAlias)
+                AuthMigration.logger.d("Deleted legacy encryption key: ${config.keyAlias}")
+            }
+        } catch (e: Exception) {
+            AuthMigration.logger.w("Failed to delete encryption key (may not exist): ${e.message}")
+        }
     }
-
-    /**
-     * Creates an empty export data object.
-     */
-    private fun emptyExport() = ExportedData(
-        accounts = emptyMap(),
-        mechanisms = emptyMap(),
-        notifications = emptyMap(),
-        deviceToken = emptyMap(),
-        metadata = ExportMetadata(0, 0, 0, false)
-    )
 }

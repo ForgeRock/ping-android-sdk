@@ -18,6 +18,13 @@ import com.pingidentity.migration.Migration
 object AuthMigration {
     val logger = Logger.STANDARD
 
+    /**
+     * Configuration for the migration process.
+     * Set this before starting migration if using custom storage with a different key alias.
+     */
+    @Volatile
+    var config: LegacyAuthenticationConfig = LegacyAuthenticationConfig()
+
     /** The migration configuration that defines the sequence of migration steps. */
     val migration = Migration {
         logger = this@AuthMigration.logger
@@ -26,6 +33,28 @@ object AuthMigration {
         step(step3)  // Migrate push notifications to Push storage
         step(step4)  // Migrate device token to Push storage
         step(step5)  // Cleanup legacy authenticator data
+    }
+
+    /**
+     * Configures the migration with custom settings.
+     *
+     * @param keyAlias The AndroidKeyStore alias used for encrypted storage.
+     *                 Default: "org.forgerock.android.authenticator.KEYS"
+     *
+     * ## Example - Custom Storage with Different Key Alias
+     *
+     * ```kotlin
+     * // Before starting migration, configure the key alias
+     * AuthMigration.configure(keyAlias = "com.myapp.custom.KEY_ALIAS")
+     *
+     * lifecycleScope.launch {
+     *     AuthMigration.start(applicationContext)
+     * }
+     * ```
+     */
+    fun configure(keyAlias: String = LegacyAuthenticationConfig.DEFAULT_KEY_ALIAS) {
+        config = LegacyAuthenticationConfig(keyAlias = keyAlias)
+        logger.i("Migration configured with key alias: $keyAlias")
     }
 
     /**

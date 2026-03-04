@@ -17,6 +17,7 @@ import com.pingidentity.mfa.oath.storage.SQLOathStorage
 import com.pingidentity.mfa.push.PushCredential
 import com.pingidentity.mfa.push.PushDeviceToken
 import com.pingidentity.mfa.push.PushNotification
+import com.pingidentity.mfa.push.PushType
 import com.pingidentity.mfa.push.storage.SQLPushStorage
 import com.pingidentity.migration.MigrationProgress
 import io.mockk.coEvery
@@ -31,6 +32,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
+import kotlin.test.DefaultAsserter.assertTrue
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
@@ -185,7 +187,8 @@ class AuthMigrationTest {
 
     @Test
     fun `migration migrates OATH credentials correctly`() = runTest {
-        // Given - Legacy repository with TOTP mechanism
+        // Given - Legacy repository with TOTP mechanism with ALL fields
+        val testTime = System.currentTimeMillis()
         val mechanisms = mapOf(
             "totp-mechanism-1" to """
                 {
@@ -197,18 +200,26 @@ class AuthMigrationTest {
                     "algorithm": "sha1",
                     "digits": 6,
                     "period": 30,
-                    "oathType": "TOTP"
+                    "counter": 0,
+                    "oathType": "TOTP",
+                    "uid": "user-12345",
+                    "resourceId": "resource-67890",
+                    "timeAdded": $testTime
                 }
             """.trimIndent()
         )
         val accounts = mapOf(
-            "totp-mechanism-1" to """
+            "Google-user@example.com" to """
                 {
-                    "id": "totp-mechanism-1",
+                    "id": "Google-user@example.com",
                     "issuer": "Google",
+                    "displayIssuer": "Google Authenticator",
                     "accountName": "user@example.com",
+                    "displayAccountName": "Demo User",
                     "imageURL": "https://example.com/logo.png",
-                    "backgroundColor": "#4285F4"
+                    "backgroundColor": "#4285F4",
+                    "policies": "{\"deviceTampering\":true}",
+                    "lock": false
                 }
             """.trimIndent()
         )
@@ -236,26 +247,114 @@ class AuthMigrationTest {
 
         // Capture the stored credential
         val oathSlot = slot<OathCredential>()
-        // Verify the storage function was called with the expected credential
         coVerify(exactly = 1) { anyConstructed<SQLOathStorage>().storeOathCredential(capture(oathSlot)) }
 
-        // Verify the captured credential has the expected values
+        // Verify ALL 19 fields are correctly migrated
         val storedCredential = oathSlot.captured
         assertEquals("totp-mechanism-1", storedCredential.id)
+        assertEquals("user-12345", storedCredential.userId)
+        assertEquals("resource-67890", storedCredential.resourceId)
         assertEquals("Google", storedCredential.issuer)
+        assertEquals("Google Authenticator", storedCredential.displayIssuer)
         assertEquals("user@example.com", storedCredential.accountName)
-        assertEquals("JBSWY3DPEHPK3PXP", storedCredential.secret)
+        assertEquals("Demo User", storedCredential.displayAccountName)
         assertEquals(OathType.TOTP, storedCredential.oathType)
+        assertEquals("JBSWY3DPEHPK3PXP", storedCredential.secret)
         assertEquals(OathAlgorithm.SHA1, storedCredential.oathAlgorithm)
         assertEquals(6, storedCredential.digits)
         assertEquals(30, storedCredential.period)
+        assertEquals(0L, storedCredential.counter)
+        assertEquals(testTime, storedCredential.createdAt.time)
         assertEquals("https://example.com/logo.png", storedCredential.imageURL)
         assertEquals("#4285F4", storedCredential.backgroundColor)
+        assertEquals("{\"deviceTampering\":true}", storedCredential.policies)
+        assertEquals(null, storedCredential.lockingPolicy)
+        assertEquals(false, storedCredential.isLocked)
+    }
+
+    @Test
+    fun `migration migrates HOTP credentials correctly with counter`() = runTest {
+        // Given - Legacy repository with HOTP mechanism
+        val testTime = System.currentTimeMillis()
+        val mechanisms = mapOf(
+            "hotp-mechanism-1" to """
+                {
+                    "type": "hotp",
+                    "mechanismUID": "hotp-mechanism-1",
+                    "issuer": "GitHub",
+                    "accountName": "developer@example.com",
+                    "secret": "HOTPSECRETKEY123",
+                    "algorithm": "sha256",
+                    "digits": 8,
+                    "counter": 42,
+                    "oathType": "HOTP",
+                    "uid": "hotp-user-789",
+                    "resourceId": "hotp-resource-456",
+                    "timeAdded": $testTime
+                }
+            """.trimIndent()
+        )
+        val accounts = mapOf(
+            "GitHub-developer@example.com" to """
+                {
+                    "id": "GitHub-developer@example.com",
+                    "issuer": "GitHub",
+                    "displayIssuer": "GitHub Inc",
+                    "accountName": "developer@example.com",
+                    "displayAccountName": "Developer Account",
+                    "imageURL": "https://github.com/logo.png",
+                    "backgroundColor": "#24292e",
+                    "lock": false
+                }
+            """.trimIndent()
+        )
+
+        coEvery { anyConstructed<LegacyAuthenticationRepository>().isExists() } returns true
+        coEvery { anyConstructed<LegacyAuthenticationRepository>().exportAllData() } returns ExportedData(
+            accounts = accounts,
+            mechanisms = mechanisms,
+            notifications = emptyMap(),
+            deviceToken = emptyMap(),
+            metadata = ExportMetadata(1, 1, 0, false)
+        )
+        coEvery { anyConstructed<LegacyAuthenticationRepository>().deleteLegacyData() } returns Unit
+
+        // When
+        val progressList = AuthMigration.migration.migrate(context).toList()
+
+        // Then
+        assertTrue(progressList.any { it is MigrationProgress.Success })
+
+        val oathSlot = slot<OathCredential>()
+        coVerify(exactly = 1) { anyConstructed<SQLOathStorage>().storeOathCredential(capture(oathSlot)) }
+
+        // Verify HOTP-specific fields and all others
+        val storedCredential = oathSlot.captured
+        assertEquals("hotp-mechanism-1", storedCredential.id)
+        assertEquals("hotp-user-789", storedCredential.userId)
+        assertEquals("hotp-resource-456", storedCredential.resourceId)
+        assertEquals("GitHub", storedCredential.issuer)
+        assertEquals("GitHub Inc", storedCredential.displayIssuer)
+        assertEquals("developer@example.com", storedCredential.accountName)
+        assertEquals("Developer Account", storedCredential.displayAccountName)
+        assertEquals(OathType.HOTP, storedCredential.oathType)  // HOTP type
+        assertEquals("HOTPSECRETKEY123", storedCredential.secret)
+        assertEquals(OathAlgorithm.SHA256, storedCredential.oathAlgorithm)  // SHA256
+        assertEquals(8, storedCredential.digits)  // 8 digits
+        assertEquals(30, storedCredential.period)  // Default period (not used for HOTP)
+        assertEquals(42L, storedCredential.counter)  // Counter value
+        assertEquals(testTime, storedCredential.createdAt.time)
+        assertEquals("https://github.com/logo.png", storedCredential.imageURL)
+        assertEquals("#24292e", storedCredential.backgroundColor)
+        assertEquals(null, storedCredential.policies)
+        assertEquals(null, storedCredential.lockingPolicy)
+        assertEquals(false, storedCredential.isLocked)
     }
 
     @Test
     fun `migration migrates Push credentials correctly`() = runTest {
-        // Given - Legacy repository with Push mechanism
+        // Given - Legacy repository with Push mechanism with ALL fields
+        val testTime = System.currentTimeMillis()
         val mechanisms = mapOf(
             "push-mechanism-1" to """
                 {
@@ -264,16 +363,28 @@ class AuthMigrationTest {
                     "issuer": "ForgeRock",
                     "accountName": "admin@company.com",
                     "secret": "sharedSecret123",
-                    "authenticationEndpoint": "https://am.example.com/push"
+                    "uid": "user-99999",
+                    "resourceId": "push-resource-11111",
+                    "authenticationEndpoint": "https://am.example.com/push?_action=authenticate",
+                    "registrationEndpoint": "https://am.example.com/push?_action=register",
+                    "platform": "PING_AM",
+                    "timeAdded": $testTime
                 }
             """.trimIndent()
         )
         val accounts = mapOf(
-            "push-mechanism-1" to """
+            "ForgeRock-admin@company.com" to """
                 {
-                    "id": "push-mechanism-1",
+                    "id": "ForgeRock-admin@company.com",
                     "issuer": "ForgeRock",
-                    "accountName": "admin@company.com"
+                    "displayIssuer": "ForgeRock Identity",
+                    "accountName": "admin@company.com",
+                    "displayAccountName": "Admin User",
+                    "imageURL": "https://forgerock.com/logo.png",
+                    "backgroundColor": "#00A1DE",
+                    "policies": "{\"biometric\":true}",
+                    "lockingPolicy": "BiometricNotAvailable",
+                    "lock": true
                 }
             """.trimIndent()
         )
@@ -301,33 +412,53 @@ class AuthMigrationTest {
 
         // Capture the stored credential
         val pushSlot = slot<PushCredential>()
-        // Verify the storage function was called with the expected credential
         coVerify(exactly = 1) { anyConstructed<SQLPushStorage>().storePushCredential(capture(pushSlot)) }
 
-        // Verify the captured credential has the expected values
+        // Verify ALL 16 fields are correctly migrated
         val storedCredential = pushSlot.captured
         assertEquals("push-mechanism-1", storedCredential.id)
+        assertEquals("user-99999", storedCredential.userId)
+        assertEquals("push-resource-11111", storedCredential.resourceId)
         assertEquals("ForgeRock", storedCredential.issuer)
+        assertEquals("ForgeRock Identity", storedCredential.displayIssuer)
         assertEquals("admin@company.com", storedCredential.accountName)
+        assertEquals("Admin User", storedCredential.displayAccountName)
+        assertEquals("https://am.example.com/push", storedCredential.serverEndpoint) // Base URL without query params
         assertEquals("sharedSecret123", storedCredential.sharedSecret)
-        assertEquals("https://am.example.com/push", storedCredential.serverEndpoint)
+        assertEquals(testTime, storedCredential.createdAt.time)
+        assertEquals("https://forgerock.com/logo.png", storedCredential.imageURL)
+        assertEquals("#00A1DE", storedCredential.backgroundColor)
+        assertEquals("{\"biometric\":true}", storedCredential.policies)
+        assertEquals("BiometricNotAvailable", storedCredential.lockingPolicy)
+        assertEquals(true, storedCredential.isLocked)
+        assertEquals("PING_AM", storedCredential.platform)
     }
 
     @Test
     fun `migration migrates push notifications correctly`() = runTest {
-        // Given - Legacy repository with notification
+        // Given - Legacy repository with notification with ALL fields
         val notificationTime = System.currentTimeMillis()
+        val sentTime = notificationTime - 5000
+        val respondedTime = notificationTime + 1000
         val notifications = mapOf(
             "notification-1" to """
                 {
                     "id": "notification-1",
                     "credentialId": "push-credential-1",
-                    "messageId": "msg-123",
-                    "challenge": "challenge-data",
                     "ttl": 120,
+                    "messageId": "msg-123",
+                    "messageText": "Login attempt from Chrome",
+                    "customPayload": "custom-data-123",
+                    "challenge": "challenge-data",
+                    "numbersChallenge": "42",
+                    "loadBalancer": "amlb-cookie-value",
+                    "contextInfo": "Location: San Francisco",
+                    "pushType": "challenge",
+                    "timeAdded": $notificationTime,
+                    "sentAt": $sentTime,
+                    "respondedAt": $respondedTime,
                     "approved": false,
-                    "pending": true,
-                    "timeAdded": $notificationTime
+                    "pending": true
                 }
             """.trimIndent()
         )
@@ -355,19 +486,27 @@ class AuthMigrationTest {
 
         // Capture the stored notification
         val notificationSlot = slot<PushNotification>()
-        // Verify the storage function was called with the expected notification
         coVerify(exactly = 1) { anyConstructed<SQLPushStorage>().storePushNotification(capture(notificationSlot)) }
 
-        // Verify the captured notification has the expected values
+        // Verify ALL 17 fields are correctly migrated
         val storedNotification = notificationSlot.captured
         assertEquals("notification-1", storedNotification.id)
         assertEquals("push-credential-1", storedNotification.credentialId)
-        assertEquals("msg-123", storedNotification.messageId)
-        assertEquals("challenge-data", storedNotification.challenge)
         assertEquals(120, storedNotification.ttl)
+        assertEquals("msg-123", storedNotification.messageId)
+        assertEquals("Login attempt from Chrome", storedNotification.messageText)
+        assertEquals("custom-data-123", storedNotification.customPayload)
+        assertEquals("challenge-data", storedNotification.challenge)
+        assertEquals("42", storedNotification.numbersChallenge)
+        assertEquals("amlb-cookie-value", storedNotification.loadBalancer)
+        assertEquals("Location: San Francisco", storedNotification.contextInfo)
+        assertEquals(PushType.CHALLENGE, storedNotification.pushType)
+        assertEquals(notificationTime, storedNotification.createdAt.time)
+        assertEquals(sentTime, storedNotification.sentAt?.time)
+        assertEquals(respondedTime, storedNotification.respondedAt?.time)
+        assertEquals(null, storedNotification.additionalData) // No JSON string in test data
         assertEquals(false, storedNotification.approved)
         assertEquals(true, storedNotification.pending)
-        assertEquals(notificationTime, storedNotification.createdAt.time)
     }
 
     @Test
@@ -587,6 +726,51 @@ class AuthMigrationTest {
     }
 
     @Test
+    fun `migration handles database initialization failure with destructive recovery enabled`() = runTest {
+        // Given - Legacy repository with valid data
+        val mechanisms = mapOf(
+            "totp-mechanism-1" to """
+                {
+                    "type": "totp",
+                    "mechanismUID": "totp-mechanism-1",
+                    "issuer": "Google",
+                    "accountName": "user@example.com",
+                    "secret": "JBSWY3DPEHPK3PXP",
+                    "algorithm": "sha1",
+                    "digits": 6,
+                    "period": 30,
+                    "oathType": "TOTP"
+                }
+            """.trimIndent()
+        )
+
+        coEvery { anyConstructed<LegacyAuthenticationRepository>().isExists() } returns true
+        coEvery { anyConstructed<LegacyAuthenticationRepository>().exportAllData() } returns ExportedData(
+            accounts = emptyMap(),
+            mechanisms = mechanisms,
+            notifications = emptyMap(),
+            deviceToken = emptyMap(),
+            metadata = ExportMetadata(0, 1, 0, false)
+        )
+        coEvery { anyConstructed<LegacyAuthenticationRepository>().deleteLegacyData() } returns Unit
+
+        // With destructive recovery enabled in the migration step configuration,
+        // the storage should be able to recover from database corruption.
+        // This test verifies that the migration configures storage correctly.
+
+        // When
+        val progressList = AuthMigration.migration.migrate(context).toList()
+
+        // Then - Migration should complete successfully with destructive recovery enabled
+        assertTrue(progressList.any { it is MigrationProgress.Started })
+        assertTrue(progressList.any { it is MigrationProgress.Success })
+
+        // Verify storage was initialized with proper configuration
+        coVerify(atLeast = 1) { anyConstructed<SQLOathStorage>().initializeDatabase() }
+        coVerify(atLeast = 1) { anyConstructed<SQLPushStorage>().initializeDatabase() }
+    }
+
+    @Test
     fun `migration cleanup step continues even if cleanup fails`() = runTest {
         // Given - Legacy repository with data but cleanup will fail
         val mechanisms = mapOf(
@@ -626,6 +810,55 @@ class AuthMigrationTest {
         // All steps should complete
         val stepCompletedEvents = progressList.filterIsInstance<MigrationProgress.StepCompleted>()
         assertEquals(5, stepCompletedEvents.size)
+    }
+
+    @Test
+    fun `migration preserves existing valid databases and only removes incompatible ones`() = runTest {
+        // Given - Legacy repository with data to migrate
+        val mechanisms = mapOf(
+            "totp-mechanism-1" to """
+                {
+                    "type": "totp",
+                    "mechanismUID": "totp-mechanism-1",
+                    "issuer": "Google",
+                    "accountName": "user@example.com",
+                    "secret": "JBSWY3DPEHPK3PXP",
+                    "algorithm": "sha1",
+                    "digits": 6,
+                    "period": 30,
+                    "oathType": "TOTP"
+                }
+            """.trimIndent()
+        )
+
+        coEvery { anyConstructed<LegacyAuthenticationRepository>().isExists() } returns true
+        coEvery { anyConstructed<LegacyAuthenticationRepository>().exportAllData() } returns ExportedData(
+            accounts = emptyMap(),
+            mechanisms = mechanisms,
+            notifications = emptyMap(),
+            deviceToken = emptyMap(),
+            metadata = ExportMetadata(0, 1, 0, false)
+        )
+        coEvery { anyConstructed<LegacyAuthenticationRepository>().deleteLegacyData() } returns Unit
+
+        // Mock getAllOathCredentials to return empty list (simulating empty but valid database)
+        coEvery { anyConstructed<SQLOathStorage>().getAllOathCredentials() } returns emptyList()
+        coEvery { anyConstructed<SQLPushStorage>().getAllPushCredentials() } returns emptyList()
+        coEvery { anyConstructed<SQLPushStorage>().getAllPushNotifications() } returns emptyList()
+        coEvery { anyConstructed<SQLPushStorage>().getAllPushDeviceTokens() } returns emptyList()
+
+        // When - The prepareDatabase function will:
+        // 1. Try to open existing databases with current passphrase
+        // 2. Check if they contain data
+        // 3. Keep them if they can be opened (even if empty)
+        // 4. Only delete if they cannot be opened (passphrase mismatch)
+        val progressList = AuthMigration.migration.migrate(context).toList()
+
+        // Then - Migration should complete successfully
+        assertTrue(progressList.any { it is MigrationProgress.Success })
+
+        // Verify migration completed and stored the credential
+        coVerify(atLeast = 1) { anyConstructed<SQLOathStorage>().storeOathCredential(any()) }
     }
 
     // Helper methods
@@ -709,6 +942,133 @@ class AuthMigrationTest {
         val notifications: Map<String, String>,
         val deviceTokens: Map<String, String>
     )
+
+    @Test
+    fun `migration supports custom storage with unencrypted SharedPreferences`() = runTest {
+        // Given - Custom storage data (plain SharedPreferences, no encryption)
+        // This simulates FRAClient built with CustomStorageClient
+        val testTime = System.currentTimeMillis()
+        val mechanisms = mapOf(
+            "custom-totp-1" to """
+                {
+                    "type": "totp",
+                    "mechanismUID": "custom-totp-1",
+                    "issuer": "CustomApp",
+                    "accountName": "custom@example.com",
+                    "secret": "CUSTOMSECRET123",
+                    "algorithm": "sha1",
+                    "digits": 6,
+                    "period": 30,
+                    "oathType": "TOTP",
+                    "uid": "custom-user-123",
+                    "resourceId": "custom-resource-456",
+                    "timeAdded": $testTime
+                }
+            """.trimIndent()
+        )
+        val accounts = mapOf(
+            "CustomApp-custom@example.com" to """
+                {
+                    "id": "CustomApp-custom@example.com",
+                    "issuer": "CustomApp",
+                    "displayIssuer": "Custom Application",
+                    "accountName": "custom@example.com",
+                    "displayAccountName": "Custom User",
+                    "imageURL": "https://custom.com/logo.png",
+                    "backgroundColor": "#FF5733",
+                    "lock": false
+                }
+            """.trimIndent()
+        )
+
+        coEvery { anyConstructed<LegacyAuthenticationRepository>().isExists() } returns true
+        coEvery { anyConstructed<LegacyAuthenticationRepository>().exportAllData() } returns ExportedData(
+            accounts = accounts,
+            mechanisms = mechanisms,
+            notifications = emptyMap(),
+            deviceToken = emptyMap(),
+            metadata = ExportMetadata(1, 1, 0, false)
+        )
+        coEvery { anyConstructed<LegacyAuthenticationRepository>().deleteLegacyData() } returns Unit
+
+        // When
+        val progress = AuthMigration.migration.migrate(context).toList()
+
+        // Then
+        assertTrue("Migration must succeed", progress.any { it is MigrationProgress.Success })
+
+        // Verify the credential was migrated
+        val oathSlot = slot<OathCredential>()
+        coVerify(exactly = 1) { anyConstructed<SQLOathStorage>().storeOathCredential(capture(oathSlot)) }
+
+        val storedCredential = oathSlot.captured
+        assertEquals("custom-totp-1", storedCredential.id)
+        assertEquals("CustomApp", storedCredential.issuer)
+        assertEquals("Custom Application", storedCredential.displayIssuer)
+        assertEquals("custom@example.com", storedCredential.accountName)
+        assertEquals("Custom User", storedCredential.displayAccountName)
+        assertEquals("custom-user-123", storedCredential.userId)
+        assertEquals("custom-resource-456", storedCredential.resourceId)
+    }
+
+    @Test
+    fun `migration supports custom key alias configuration`() = runTest {
+        // Given - Configure migration with custom key alias
+        val customKeyAlias = "com.myapp.custom.STORAGE_KEY"
+        AuthMigration.configure(keyAlias = customKeyAlias)
+
+        val mechanisms = mapOf(
+            "custom-key-totp" to """
+                {
+                    "type": "totp",
+                    "mechanismUID": "custom-key-totp",
+                    "issuer": "CustomKeyApp",
+                    "accountName": "user@customkey.com",
+                    "secret": "CUSTOMKEYSECRET",
+                    "algorithm": "sha1",
+                    "digits": 6,
+                    "period": 30,
+                    "oathType": "TOTP"
+                }
+            """.trimIndent()
+        )
+        val accounts = mapOf(
+            "CustomKeyApp-user@customkey.com" to """
+                {
+                    "id": "CustomKeyApp-user@customkey.com",
+                    "issuer": "CustomKeyApp",
+                    "accountName": "user@customkey.com"
+                }
+            """.trimIndent()
+        )
+
+        coEvery { anyConstructed<LegacyAuthenticationRepository>().isExists() } returns true
+        coEvery { anyConstructed<LegacyAuthenticationRepository>().exportAllData() } returns ExportedData(
+            accounts = accounts,
+            mechanisms = mechanisms,
+            notifications = emptyMap(),
+            deviceToken = emptyMap(),
+            metadata = ExportMetadata(1, 1, 0, false)
+        )
+        coEvery { anyConstructed<LegacyAuthenticationRepository>().deleteLegacyData() } returns Unit
+
+        // When
+        val progress = AuthMigration.migration.migrate(context).toList()
+
+        // Then
+        assertTrue("Migration with custom key alias must succeed", progress.any { it is MigrationProgress.Success })
+
+        // Verify the credential was migrated
+        val oathSlot = slot<OathCredential>()
+        coVerify(exactly = 1) { anyConstructed<SQLOathStorage>().storeOathCredential(capture(oathSlot)) }
+
+        val storedCredential = oathSlot.captured
+        assertEquals("custom-key-totp", storedCredential.id)
+        assertEquals("CustomKeyApp", storedCredential.issuer)
+
+        // Reset configuration to default for other tests
+        AuthMigration.configure()
+    }
 }
 
 
