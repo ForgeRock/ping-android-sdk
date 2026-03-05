@@ -8,7 +8,8 @@
 package com.pingidentity.protect
 
 import com.pingidentity.android.ContextProvider
-import com.pingidentity.orchestrate.Module
+import com.pingidentity.protect.Protect.config
+import com.pingidentity.protect.Protect.initialize
 import com.pingidentity.signalssdk.sdk.GetDataCallback
 import com.pingidentity.signalssdk.sdk.InitCallback
 import com.pingidentity.signalssdk.sdk.POInitParams

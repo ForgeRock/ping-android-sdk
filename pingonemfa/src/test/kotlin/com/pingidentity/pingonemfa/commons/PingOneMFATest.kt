@@ -1,0 +1,467 @@
+package com.pingidentity.pingonemfa.commons
+
+import android.content.Context
+import androidx.core.content.ContextCompat
+import com.google.firebase.messaging.RemoteMessage
+import com.google.gson.JsonObject
+import com.pingidentity.android.ContextProvider
+import com.pingidentity.pingidsdkv2.NotificationObject
+import com.pingidentity.pingidsdkv2.PingOne
+import com.pingidentity.pingidsdkv2.PingOneSDKError
+import com.pingidentity.pingidsdkv2.types.NotificationProvider
+import com.pingidentity.pingidsdkv2.types.OneTimePasscodeInfo
+import com.pingidentity.pingidsdkv2.types.PairingInfo
+import com.pingidentity.pingonemfa.push.PushNotification
+import io.mockk.MockKAnnotations
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.mockkObject
+import io.mockk.mockkStatic
+import io.mockk.unmockkAll
+import io.mockk.verify
+import kotlinx.coroutines.test.runTest
+import org.junit.After
+import org.junit.Before
+import org.junit.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
+
+class PingOneMFATest {
+    private val mockContext = mockk<Context>(relaxed = true)
+    private val mockRemoteMessage = mockk<RemoteMessage>(relaxed = true)
+    private val mockNotificationObject = mockk<NotificationObject>(relaxed = true)
+    private val mockPairingInfo = mockk<PairingInfo>(relaxed = true)
+    private val mockDeviceInfo = mockk<JsonObject>(relaxed = true)
+    @Before
+    fun setUp() {
+        MockKAnnotations.init(this, relaxed = true)
+
+        // mock ContextProvider object and provide a mock Context
+        mockkObject(ContextProvider)
+        every { ContextProvider.context } returns mockContext
+
+        // mock PingOne static functions (Java class)
+        mockkStatic("com.pingidentity.pingidsdkv2.PingOne")
+
+
+        // default remote message data with APS containing an alert/body
+        every { mockRemoteMessage.data } returns mapOf(
+            "aps" to """
+                {
+                  "alert": {
+                    "title": "mocked title",
+                    "body": "mocked body"
+                  }
+                }
+            """.trimIndent()
+        )
+
+        every{ mockDeviceInfo.toString()} returns """
+            {
+              "NA": {
+                "users": [
+                  {
+                    "id": "user1",
+                    "environment": { "id": "env1" },
+                    "device": { "id": "dev1" },
+                    "name": { "given": "John", "family": "Doe" }
+                  }
+                ]
+              }
+            }
+        """.trimIndent()
+
+    }
+
+    @After
+    fun tearDown() {
+        unmockkAll()
+    }
+
+    @Test
+    fun `initialize configures once and returns success when callback error is null`() = runTest {
+
+        // Reset singleton state FIRST
+        val field = PingOneMFA::class.java.getDeclaredField("isInitialized")
+        field.isAccessible = true
+        field.setBoolean(PingOneMFA, false)
+
+
+        every {
+            PingOne.configure(any(), any(), any())
+        } answers {
+            val callback = arg<PingOne.PingOneSDKCallback>(2)
+            callback.onComplete(null)
+        }
+
+        // ACT
+        val first = PingOneMFA.initialize()
+        val second = PingOneMFA.initialize()
+
+        // ASSERT
+        assertTrue(first.isSuccess)
+        assertTrue(second.isSuccess)
+
+        verify(exactly = 1) {
+            PingOne.configure(any(), any(), any())
+        }
+    }
+
+    @Test
+    fun `initialize configures once and returns error`() = runTest {
+
+        // Reset singleton state FIRST
+        val field = PingOneMFA::class.java.getDeclaredField("isInitialized")
+        field.isAccessible = true
+        field.setBoolean(PingOneMFA, false)
+
+
+        every {
+            PingOne.configure(any(), any(), any())
+        } answers {
+            val callback = arg<PingOne.PingOneSDKCallback>(2)
+            callback.onComplete(PingOneSDKError(100, "mockedError"))
+        }
+
+        // ACT
+        val result = PingOneMFA.initialize()
+
+        // ASSERT
+        assertTrue(result.isFailure)
+        assertTrue { result.exceptionOrNull() is PingOneMFAException }
+        assertTrue { result.exceptionOrNull()?.message == "mockedError" }
+    }
+
+    @Test
+    fun `initialize configures once and throws exception`() = runTest {
+
+        // Reset singleton state FIRST
+        val field = PingOneMFA::class.java.getDeclaredField("isInitialized")
+        field.isAccessible = true
+        field.setBoolean(PingOneMFA, false)
+
+        every {
+            PingOne.configure(any(), any(), any())
+        } throws RuntimeException("Simulated configuration failure")
+
+        // ACT
+        val result = PingOneMFA.initialize()
+
+        // ASSERT
+        assertTrue(result.isFailure)
+        assertTrue { result.exceptionOrNull() is PingOneMFAException }
+        assertTrue { result.exceptionOrNull()?.message == "Simulated configuration failure" }
+
+    }
+
+    @Test
+    fun `register returns success when callback errors is null`() = runTest {
+        every {
+            PingOne.setDeviceToken(any(), any(), any(), any())
+        } answers {
+            val callback = arg<PingOne.PingOneSetDeviceTokenCallback>(3)
+            callback.onComplete(Array(1) { null })
+        }
+
+        val result = PingOneMFA.register("token")
+
+        assertTrue(result.isSuccess)
+        verify {
+            PingOne.setDeviceToken(mockContext, "token", NotificationProvider.FCM, any())
+        }
+    }
+
+    @Test
+    fun `register returns error when callback errors is not null`() = runTest {
+        every {
+            PingOne.setDeviceToken(any(), any(), any(), any())
+        } answers {
+            val callback = arg<PingOne.PingOneSetDeviceTokenCallback>(3)
+            callback.onComplete(Array(1) { PingOneSDKError(10003, "mockedError") })
+        }
+
+        val result = PingOneMFA.register("token")
+
+        assertTrue(result.isFailure)
+        assertTrue { result.exceptionOrNull() is PingOneMFAException }
+        assertTrue { result.exceptionOrNull()?.message == "mockedError" }
+        verify {
+            PingOne.setDeviceToken(mockContext, "token", NotificationProvider.FCM, any())
+        }
+    }
+
+    @Test
+    fun `register returns error when exception is thrown`() = runTest {
+        every {
+            PingOne.setDeviceToken(any(), any(), any(), any())
+        } throws RuntimeException("Simulated network error")
+
+        val result = PingOneMFA.register("token")
+
+        assertTrue(result.isFailure)
+        assertTrue { result.exceptionOrNull() is PingOneMFAException }
+        assertTrue { result.exceptionOrNull()?.message == "Simulated network error" }
+        verify {
+            PingOne.setDeviceToken(mockContext, "token", NotificationProvider.FCM, any())
+        }
+    }
+
+    @Test
+    fun `pair returns success when callback error is null`() = runTest {
+        every {
+            PingOne.pair(any(), any(), any())
+        } answers {
+            val callback = arg<PingOne.PingOneSDKPairingCallback>(2)
+            callback.onComplete(mockPairingInfo, null)
+        }
+
+        val result = PingOneMFA.pair("PAIR-KEY")
+
+        assertTrue(result.isSuccess)
+        verify {
+            PingOne.pair(mockContext, "PAIR-KEY", any())
+        }
+    }
+
+    @Test
+    fun `pair returns error when callback error is not null`() = runTest {
+        every {
+            PingOne.pair(any(), any(), any())
+        } answers {
+            val callback = arg<PingOne.PingOneSDKPairingCallback>(2)
+            callback.onComplete(null, PingOneSDKError(10003, "mockedError"))
+        }
+
+        val result = PingOneMFA.pair("PAIR-KEY")
+
+        assertTrue(result.isFailure)
+        assertTrue { result.exceptionOrNull() is PingOneMFAException }
+        assertTrue { result.exceptionOrNull()?.message == "mockedError" }
+        verify {
+            PingOne.pair(mockContext, "PAIR-KEY", any())
+        }
+    }
+
+    @Test
+    fun `pair returns error when exception is thrown`() = runTest {
+        every {
+            PingOne.pair(any(), any(), any())
+        } throws RuntimeException("Simulated network error")
+
+        val result = PingOneMFA.pair("PAIR-KEY")
+
+        assertTrue(result.isFailure)
+        assertTrue { result.exceptionOrNull() is PingOneMFAException }
+        assertTrue { result.exceptionOrNull()?.message == "Simulated network error" }
+        verify {
+            PingOne.pair(mockContext, "PAIR-KEY", any())
+        }
+    }
+
+    @Test
+    fun `getAccounts returns success when deviceInfo is present`() = runTest {
+        every {
+            PingOne.getInfo(any(), any())
+        } answers {
+            val callback = arg<PingOne.PingOneGetInfoCallback>(1)
+            callback.onComplete(mockDeviceInfo, Array(1) { null })
+        }
+
+        val result = PingOneMFA.getAccounts()
+
+        assertTrue(result.isSuccess)
+
+        val accounts = result.getOrNull()!!
+        assertEquals(1, accounts.size)
+        assertEquals("user1", accounts.first().id)
+        assertEquals("env1", accounts.first().environment)
+        assertEquals("dev1", accounts.first().deviceId)
+        assertEquals("John", accounts.first().name)
+        assertEquals("Doe", accounts.first().family)
+        verify {
+            PingOne.getInfo(mockContext, any())
+        }
+    }
+
+    @Test
+    fun `getAccounts returns error when deviceInfo is not present`() = runTest {
+        every{
+            PingOne.getInfo(any(), any())
+        } answers {
+            val callback = arg<PingOne.PingOneGetInfoCallback>(1)
+            callback.onComplete(null, Array(1){ PingOneSDKError(10003, "mockedError") })
+        }
+        val result = PingOneMFA.getAccounts()
+        assertTrue(result.isFailure)
+        assertTrue { result.exceptionOrNull() is PingOneMFAException }
+        assertTrue { result.exceptionOrNull()?.message == "mockedError" }
+    }
+
+    @Test
+    fun `getAccounts returns error when exception is thrown`() = runTest{
+        every {
+            PingOne.getInfo(any(), any())
+        } throws RuntimeException("Simulated network error")
+        val result = PingOneMFA.getAccounts()
+        assertTrue(result.isFailure)
+        assertTrue { result.exceptionOrNull() is PingOneMFAException }
+        assertTrue { result.exceptionOrNull()?.message == "Simulated network error" }
+    }
+
+
+
+
+    @Test
+    fun `collectOtp returns success when callback error is null`() = runTest {
+        every {
+            PingOne.getOneTimePassCode(any(), any())
+        } answers {
+            val callback = arg<PingOne.PingOneOneTimePasscodeCallback>(1)
+            callback.onComplete(OneTimePasscodeInfo("123456", 100000, 30), null)
+        }
+        val result = PingOneMFA.collectOtp()
+        assertTrue(result.isSuccess)
+        assertEquals(result.getOrNull()?.code, "123456")
+    }
+
+    @Test
+    fun `collectOtp returns error when callback error is not null`() = runTest {
+        every {
+            PingOne.getOneTimePassCode(any(), any())
+        } answers {
+            val callback = arg<PingOne.PingOneOneTimePasscodeCallback>(1)
+            callback.onComplete(null, PingOneSDKError(10003, "mockedError"))
+        }
+        val result = PingOneMFA.collectOtp()
+        assertTrue(result.isFailure)
+        assertTrue { result.exceptionOrNull() is PingOneMFAException }
+        assertTrue { result.exceptionOrNull()?.message == "mockedError" }
+    }
+
+    @Test
+    fun `collectOtp returns error when exception is thrown`() = runTest{
+        every {
+            PingOne.getOneTimePassCode(any(), any())
+        } throws RuntimeException("Simulated network error")
+        val result = PingOneMFA.collectOtp()
+        assertTrue(result.isFailure)
+        assertTrue { result.exceptionOrNull() is PingOneMFAException }
+        assertTrue { result.exceptionOrNull()?.message == "Simulated network error" }
+    }
+
+    @Test
+    fun `collectPush returns success when callback error is null`() = runTest{
+        every {
+            PingOne.processRemoteNotification(any(), any<RemoteMessage>(), any())
+        } answers {
+            val callback = arg<PingOne.PingOneNotificationCallback>(2)
+            callback.onComplete(mockNotificationObject, null)
+        }
+        val result = PingOneMFA.collectPush(mockRemoteMessage)
+        assertTrue(result.isSuccess)
+        assertEquals(result.getOrNull()?.notificationObject, mockNotificationObject)
+        assertEquals("mocked title", result.getOrNull()?.title)
+        assertEquals("mocked body", result.getOrNull()?.message)
+
+        verify {
+            PingOne.processRemoteNotification(mockContext, mockRemoteMessage, any())
+        }
+    }
+
+    @Test
+    fun `collectPush returns error when callback error is not null`() = runTest{
+        every {
+            PingOne.processRemoteNotification(any(), any<RemoteMessage>(), any())
+        } answers {
+            val callback = arg<PingOne.PingOneNotificationCallback>(2)
+            callback.onComplete(null, PingOneSDKError(10003, "mockedError"))
+        }
+        val result = PingOneMFA.collectPush(mockRemoteMessage)
+        assertTrue(result.isFailure)
+        assertTrue { result.exceptionOrNull() is PingOneMFAException }
+        assertTrue { result.exceptionOrNull()?.message == "mockedError" }
+    }
+
+    @Test
+    fun `collectPush returns error when exception is thrown`() = runTest{
+        every {
+            PingOne.processRemoteNotification(any(), any<RemoteMessage>(), any())
+        } throws RuntimeException("Mocked Exception")
+        val result = PingOneMFA.collectPush(mockRemoteMessage)
+        assertTrue(result.isFailure)
+        assertTrue { result.exceptionOrNull() is PingOneMFAException }
+        assertTrue { result.exceptionOrNull()?.message == "Mocked Exception" }
+    }
+
+    @Test
+    fun `collectMobilePayload returns payload when error is null`() = runTest {
+        every {
+            PingOne.generateMobilePayload(any(), any())
+        } answers {
+            val callback = arg<PingOne.PingOneGenerateMobilePayloadCallback>(1)
+            callback.onComplete("mockPayload", null)
+        }
+        val result = PingOneMFA.collectMobilePayload()
+        assertTrue(result.isSuccess)
+        assertEquals(result.getOrNull(), "mockPayload")
+    }
+
+    @Test
+    fun `collectMobilePayload returns error when error is not null`() = runTest {
+        every {
+            PingOne.generateMobilePayload(any(), any())
+        } answers {
+            val callback = arg<PingOne.PingOneGenerateMobilePayloadCallback>(1)
+            callback.onComplete(null, PingOneSDKError(10003, "mockedError"))
+        }
+        val result = PingOneMFA.collectMobilePayload()
+        assertTrue(result.isFailure)
+        assertTrue { result.exceptionOrNull() is PingOneMFAException }
+        assertTrue { result.exceptionOrNull()?.message == "mockedError" }
+    }
+
+    @Test
+    fun `collectMobilePayload returns error when exception is thrown`() = runTest {
+        every {
+            PingOne.generateMobilePayload(any(), any())
+        } throws RuntimeException("Mocked Exception")
+        val result = PingOneMFA.collectMobilePayload()
+        assertTrue(result.isFailure)
+        assertTrue { result.exceptionOrNull() is PingOneMFAException }
+        assertTrue { result.exceptionOrNull()?.message == "Mocked Exception" }
+    }
+
+    @Test
+    fun `approvePushNotificationFromBanner starts foreground service with correct intent`() {
+        val mockNotification = mockk<PushNotification>(relaxed = true)
+        mockkStatic(ContextCompat::class)
+        every {
+            ContextCompat.startForegroundService(any(), any())
+        } returns mockk()
+
+        PingOneMFA.approvePushNotificationFromBanner(mockNotification)
+
+        // verify service start
+        verify(exactly = 1) {
+            ContextCompat.startForegroundService(mockContext, any())
+        }
+    }
+
+    @Test
+    fun `denyPushNotificationFromBanner starts foreground service with intent`() {
+        val mockNotification = mockk<PushNotification>(relaxed = true)
+
+        mockkStatic(ContextCompat::class)
+        every {
+            ContextCompat.startForegroundService(any(), any())
+        } returns mockk()
+
+        // act
+        PingOneMFA.denyPushNotificationFromBanner(mockNotification)
+
+        // verify wiring
+        verify(exactly = 1) {
+            ContextCompat.startForegroundService(mockContext, any())
+        }
+    }
+}
