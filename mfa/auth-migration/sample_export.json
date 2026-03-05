@@ -1,0 +1,79 @@
+{
+  "mechanisms": [
+    {
+      "id": "Forgerock-totp@forgerock.com-otpauth",
+      "issuer": "Forgerock",
+      "accountName": "totp@forgerock.com",
+      "mechanismUID": "e238a4ce-23f4-4f41-9ccd-2ef85fc641d9",
+      "secret": "JBSWY3DPEHPK3PXP",
+      "type": "otpauth",
+      "oathType": "TOTP",
+      "algorithm": "SHA256",
+      "digits": 6,
+      "period": 60,
+      "timeAdded": 1772565130356,
+      "account": {
+        "id": "Forgerock-totp@forgerock.com",
+        "issuer": "Forgerock",
+        "displayIssuer": "Forgerock Display",
+        "accountName": "totp@forgerock.com",
+        "displayAccountName": "TOTP Display User",
+        "imageURL": "http://forgerock.com/logo.jpg",
+        "backgroundColor": "#032b75",
+        "policies": "{\"biometricAvailable\": {}, \"deviceTampering\": {\"score\": 0.8}}",
+        "lock": false
+      }
+    },
+    {
+      "id": "PingIdentity-user@example.com-pushauth",
+      "issuer": "PingIdentity",
+      "accountName": "user@example.com",
+      "mechanismUID": "22752db7-8d03-4181-9f06-f440e46527c1",
+      "secret": "BASE64_ENCODED_SECRET",
+      "type": "pushauth",
+      "registrationEndpoint": "https://example.com/am/push/sns/message?_action=register",
+      "authenticationEndpoint": "https://example.com/am/push/sns/message?_action=authenticate",
+      "platform": "PING_AM",
+      "uid": "user123",
+      "resourceId": "resource-id-123",
+      "timeAdded": 1772565130356,
+      "account": {
+        "id": "PingIdentity-user@example.com",
+        "issuer": "PingIdentity",
+        "displayIssuer": "Ping Identity",
+        "accountName": "user@example.com",
+        "displayAccountName": "Demo User",
+        "imageURL": "https://pingidentity.com/logo.png",
+        "backgroundColor": "#0066cc",
+        "timeAdded": 1772565130356,
+        "lock": false
+      }
+    },
+    {
+      "id": "GitHub-githubuser-otpauth",
+      "issuer": "GitHub",
+      "accountName": "githubuser",
+      "mechanismUID": "fd55819a-808b-4e4f-82b2-8a2d7fa97a3d",
+      "secret": "4LLHTIWVIPBA36SVYW3W4ETRRE",
+      "type": "otpauth",
+      "oathType": "TOTP",
+      "algorithm": "SHA1",
+      "digits": 6,
+      "period": 30,
+      "timeAdded": 1772565130356,
+      "account": {
+        "id": "GitHub-githubuser",
+        "issuer": "GitHub",
+        "accountName": "githubuser",
+        "backgroundColor": "#24292e",
+        "timeAdded": 1772565130356,
+        "lock": false
+      }
+    }
+  ],
+  "metadata": {
+    "totalMechanisms": 3,
+    "exportedAt": 1772565130356
+  }
+}
+

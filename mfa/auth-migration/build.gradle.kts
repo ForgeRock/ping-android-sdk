@@ -21,6 +21,10 @@ dependencies {
     implementation(project(":mfa:oath"))
     implementation(project(":mfa:push"))
 
+    // SQL Cipher for encrypted database
+    compileOnly(libs.sqlcipher)
+    compileOnly(libs.androidx.sqlite)
+
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.androidx.security.crypto)
     implementation(libs.kotlinx.coroutines.core)
@@ -31,4 +35,6 @@ dependencies {
     testImplementation(libs.kotlin.test)
     testImplementation(libs.mockk)
     testImplementation(libs.robolectric)
+    testImplementation(libs.sqlcipher)
+    testImplementation(libs.androidx.sqlite)
 }

@@ -28,33 +28,89 @@ object AuthMigration {
     /** The migration configuration that defines the sequence of migration steps. */
     val migration = Migration {
         logger = this@AuthMigration.logger
-        step(step1)  // Export legacy authenticator data
-        step(step2)  // Migrate mechanisms to OATH and Push storage
-        step(step3)  // Migrate push notifications to Push storage
-        step(step4)  // Migrate device token to Push storage
-        step(step5)  // Cleanup legacy authenticator data
+        step(exportLegacyDataStep)  // Export legacy authenticator data
+        step(migrateMechanismsStep)  // Migrate mechanisms to OATH and Push storage
+        step(cleanupLegacyDataStep)  // Cleanup legacy authenticator data
     }
 
     /**
      * Configures the migration with custom settings.
      *
-     * @param keyAlias The AndroidKeyStore alias used for encrypted storage.
+     * @param migrationType Type of migration to perform (XML, SQL, or AUTO).
+     *                      Default: AUTO (auto-detect based on available data)
+     * @param keyAlias The AndroidKeyStore alias used for encrypted XML storage.
      *                 Default: "org.forgerock.android.authenticator.KEYS"
+     *                 Only used for XML migration type.
+     * @param backupFiles Whether to create backup copies before deletion.
+     *                    Default: false
+     *                    Backups are saved with timestamp suffix.
+     * @param databaseName Name of the SQLCipher database file (for SQL migration).
+     *                     Default: "forgerock_authenticator.db"
+     *                     Only used for SQL migration type.
+     * @param databasePassphrase Optional passphrase for SQLCipher database encryption.
+     *                           If null, will automatically retrieve from KeyStore/DataStore
+     *                           (same method used by Legacy SDK's PassphraseManager).
+     *                           Only used for SQL migration type.
      *
-     * ## Example - Custom Storage with Different Key Alias
+     * ## Example - XML Migration with Custom Key Alias
      *
      * ```kotlin
-     * // Before starting migration, configure the key alias
-     * AuthMigration.configure(keyAlias = "com.myapp.custom.KEY_ALIAS")
+     * AuthMigration.configure(
+     *     migrationType = MigrationType.XML,
+     *     keyAlias = "com.myapp.custom.KEY_ALIAS"
+     * )
+     *
+     * lifecycleScope.launch {
+     *     AuthMigration.start(applicationContext)
+     * }
+     * ```
+     *
+     * ## Example - SQL Migration with Database Configuration
+     *
+     * ```kotlin
+     * AuthMigration.configure(
+     *     migrationType = MigrationType.SQL,
+     *     databaseName = "forgerock_authenticator.db",
+     *     databasePassphrase = "your-secure-passphrase",
+     *     backupFiles = true
+     * )
+     *
+     * lifecycleScope.launch {
+     *     AuthMigration.start(applicationContext)
+     * }
+     * ```
+     *
+     * ## Example - Auto-Detect Migration Type
+     *
+     * ```kotlin
+     * // Automatically detects SQL or XML based on available data
+     * AuthMigration.configure(
+     *     migrationType = MigrationType.AUTO,
+     *     databaseName = "forgerock_authenticator.db",
+     *     databasePassphrase = "your-secure-passphrase",
+     *     backupFiles = true
+     * )
      *
      * lifecycleScope.launch {
      *     AuthMigration.start(applicationContext)
      * }
      * ```
      */
-    fun configure(keyAlias: String = LegacyAuthenticationConfig.DEFAULT_KEY_ALIAS) {
-        config = LegacyAuthenticationConfig(keyAlias = keyAlias)
-        logger.i("Migration configured with key alias: $keyAlias")
+    fun configure(
+        migrationType: MigrationType = MigrationType.AUTO,
+        keyAlias: String = LegacyAuthenticationConfig.DEFAULT_KEY_ALIAS,
+        backupFiles: Boolean = false,
+        databaseName: String = LegacyAuthenticationConfig.DEFAULT_DATABASE_NAME,
+        databasePassphrase: String? = null
+    ) {
+        config = LegacyAuthenticationConfig(
+            migrationType = migrationType,
+            keyAlias = keyAlias,
+            backupFiles = backupFiles,
+            databaseName = databaseName,
+            databasePassphrase = databasePassphrase
+        )
+        logger.i("Migration configured: type=$migrationType, keyAlias=$keyAlias, backupFiles=$backupFiles, databaseName=$databaseName, hasPassphrase=${databasePassphrase != null}")
     }
 
     /**
@@ -106,5 +162,97 @@ object AuthMigration {
                 }
             }
         }
+    }
+
+    /**
+     * Starts migration from a pre-exported JSON file.
+     *
+     * This method is useful for custom storage implementations where the developer
+     * manually exports their legacy data to JSON format and provides it for migration.
+     *
+     * The JSON should contain mechanisms with nested account data.
+     *
+     * @param context The Android context used to access storage services.
+     * @param exportedDataJson JSON string containing the exported legacy data.
+     *
+     * ## Example - Custom Storage Migration
+     *
+     * ```kotlin
+     * // Export from custom storage first
+     * val customStorage = CustomStorageClient(context)
+     * val mechanisms = customStorage.getAllMechanisms()
+     * val accounts = customStorage.getAllAccounts()
+     *
+     * // Build JSON manually or using a converter
+     * val exportedJson = buildLegacyExportJson(mechanisms, accounts)
+     *
+     * // Migrate using the JSON
+     * lifecycleScope.launch {
+     *     AuthMigration.startWithJson(applicationContext, exportedJson)
+     * }
+     * ```
+     *
+     * @see LegacyExportedData
+     */
+    suspend fun startWithJson(context: Context, exportedDataJson: String) {
+        val customMigration = Migration {
+            logger = this@AuthMigration.logger
+            step(importJsonDataStep(exportedDataJson))
+            step(migrateMechanismsStep)
+            step(cleanupLegacyDataStep)
+        }
+
+        customMigration.migrate(context).collect { progress ->
+            when (progress) {
+                is com.pingidentity.migration.MigrationProgress.Started -> {
+                    logger.i("Custom JSON migration started")
+                }
+
+                is com.pingidentity.migration.MigrationProgress.InProgress -> {
+                    logger.i("Migration in progress: Step ${progress.currentStep} of ${progress.totalSteps} - ${progress.message}")
+                }
+
+                is com.pingidentity.migration.MigrationProgress.Error -> {
+                    logger.i("Migration error: ${progress.error.message}")
+                }
+
+                is com.pingidentity.migration.MigrationProgress.Success -> {
+                    logger.i("Migration completed successfully: ${progress.message}")
+                }
+
+                is com.pingidentity.migration.MigrationProgress.StepCompleted -> {
+                    logger.i("Step completed: ${progress.step.description}")
+                }
+            }
+        }
+    }
+
+    /**
+     * Exports legacy data to JSON format for manual migration.
+     *
+     * This is useful when you need to:
+     * - Review the data before migration
+     * - Migrate at a later time
+     * - Transform data from custom storage implementations
+     *
+     * @param context The Android context used to access storage services.
+     * @return JSON string containing all exported legacy data
+     *
+     * ## Example
+     *
+     * ```kotlin
+     * lifecycleScope.launch {
+     *     val exportedJson = AuthMigration.exportToJson(applicationContext)
+     *     // Save to file or process as needed
+     *     File(context.filesDir, "legacy_export.json").writeText(exportedJson)
+     *
+     *     // Later, migrate using the JSON
+     *     AuthMigration.startWithJson(applicationContext, exportedJson)
+     * }
+     * ```
+     */
+    suspend fun exportToJson(context: Context): String {
+        val repo = LegacyAuthenticationRepository(context, config)
+        return repo.exportToJson()
     }
 }

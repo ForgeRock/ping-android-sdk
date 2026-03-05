@@ -13,16 +13,10 @@ import com.pingidentity.mfa.oath.OathCredential
 import com.pingidentity.mfa.oath.OathType
 import com.pingidentity.mfa.oath.storage.SQLOathStorage
 import com.pingidentity.mfa.push.PushCredential
-import com.pingidentity.mfa.push.PushDeviceToken
-import com.pingidentity.mfa.push.PushNotification
-import com.pingidentity.mfa.push.PushType
 import com.pingidentity.mfa.push.storage.SQLPushStorage
 import com.pingidentity.migration.MigrationStep
 import com.pingidentity.migration.MigrationStepResult.CONTINUE
 import com.pingidentity.migration.MigrationStepResult.ABORT
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
 import java.util.Date
 
 private const val OTP_AUTH = "otpauth"
@@ -30,19 +24,38 @@ private const val TOTP = "totp"
 private const val HOTP = "hotp"
 private const val PUSH = "push"
 private const val PUSH_AUTH = "pushauth"
-private const val ACCOUNTS = "accounts"
 private const val MECHANISMS = "mechanisms"
-private const val NOTIFICATIONS = "notifications"
-private const val DEVICE_TOKEN = "deviceToken"
 /** Push storage instance shared across migration steps. */
 private lateinit var pushStorage: SQLPushStorage
 /** OATH storage instance shared across migration steps. */
 private lateinit var oathStorage: SQLOathStorage
-/** Build the json object with non-null fields  */
-private val json = Json {
-    encodeDefaults = false
-    ignoreUnknownKeys = true
-    explicitNulls = false
+
+/**
+ * Creates a migration step that imports data from a JSON string.
+ * Used for custom storage implementations.
+ */
+fun importJsonDataStep(exportedDataJson: String) = MigrationStep(
+    description = "Import legacy data from JSON"
+) {
+    logger.i("Importing legacy data from provided JSON")
+
+    try {
+        val exportedData = legacyJson.decodeFromString<LegacyExportedData>(exportedDataJson)
+        logger.i("Successfully parsed JSON with ${exportedData.mechanisms.size} mechanisms")
+
+        val mechanisms = exportedData.mechanisms
+
+        if (mechanisms.isEmpty()) {
+            logger.i("No mechanisms found in JSON, skipping migration")
+            return@MigrationStep ABORT
+        }
+
+        state[MECHANISMS] = mechanisms
+        CONTINUE
+    } catch (e: Exception) {
+        logger.e("Failed to parse exported JSON: ${e.message}", e)
+        throw IllegalArgumentException("Invalid exported data JSON format", e)
+    }
 }
 
 
@@ -56,35 +69,29 @@ private val json = Json {
  * The repository automatically detects which format is in use.
  * Uses AuthMigration.config for custom key alias configuration.
  */
-val step1 = MigrationStep(
+val exportLegacyDataStep = MigrationStep(
     description = "Export legacy authenticator data"
 ) {
     logger.i("Checking for legacy authenticator data")
     val repo = LegacyAuthenticationRepository(context, AuthMigration.config)
 
     if (!repo.isExists()) {
-        logger.i("No legacy repository found, skipping migration")
+        logger.i("No legacy repository found, skipping legacy XML migration step")
         return@MigrationStep ABORT
     }
     logger.i("Legacy repository exists, proceeding with migration")
 
     val exportedData = repo.exportAllData()
-    logger.i("Successfully exported ${exportedData.accounts.size} accounts, ${exportedData.mechanisms.size} mechanisms, ${exportedData.notifications.size} notifications, ${exportedData.deviceToken.size} device tokens")
+    logger.i("Successfully exported ${exportedData.mechanisms.size} mechanisms")
 
-    val accounts = exportedData.accounts
     val mechanisms = exportedData.mechanisms
-    val notifications = exportedData.notifications
-    val deviceToken = exportedData.deviceToken
 
-    if (accounts.isEmpty() && mechanisms.isEmpty() && notifications.isEmpty() && deviceToken.isEmpty()) {
+    if (mechanisms.isEmpty()) {
         logger.i("No data found in legacy repository, skipping migration")
         return@MigrationStep ABORT
     }
 
-    state[ACCOUNTS] = accounts
     state[MECHANISMS] = mechanisms
-    state[NOTIFICATIONS] = notifications
-    state[DEVICE_TOKEN] = deviceToken
 
     CONTINUE
 }
@@ -92,17 +99,15 @@ val step1 = MigrationStep(
 /**
  * Step 2: Migrate OATH and Push mechanisms to new storage.
  */
-val step2 = MigrationStep(
+val migrateMechanismsStep = MigrationStep(
     description = "Migrate mechanisms to OATH and Push storage"
 ) {
     logger.i("Starting mechanisms migration to new storage")
 
-    val mechanisms = getValue<Map<String, String>>(MECHANISMS) ?: run {
+    val mechanisms = getValue<List<LegacyMechanism>>(MECHANISMS) ?: run {
         logger.w("No mechanisms found in state, skipping")
         return@MigrationStep CONTINUE
     }
-
-    val accounts = getValue<Map<String, String>>(ACCOUNTS) ?: emptyMap()
 
     // Safely check and prepare database environment before migration
     prepareDatabase(
@@ -131,113 +136,53 @@ val step2 = MigrationStep(
     var oathCount = 0
     var pushCount = 0
 
-    mechanisms.forEach { (mechanismId, mechanismJson) ->
+    mechanisms.forEach { mechanism ->
         try {
-            val mechanismData = json.parseToJsonElement(mechanismJson).jsonObject
-            when (val type = mechanismData["type"]?.jsonPrimitive?.content) {
+            when (mechanism.type) {
                 OTP_AUTH, TOTP, HOTP -> {
                     // Migrate OATH/TOTP mechanism
-                    val mechanismIdValue = mechanismData["mechanismUID"]?.jsonPrimitive?.content
-                        ?: mechanismData["id"]?.jsonPrimitive?.content
-                        ?: mechanismId
-
-                    // First extract issuer and accountName from mechanism to construct Account ID
-                    // Account ID format: issuer + "-" + accountName (from legacy Account.java)
-                    val mechanismIssuer = mechanismData["issuer"]?.jsonPrimitive?.content ?: ""
-                    val mechanismAccountName = mechanismData["accountName"]?.jsonPrimitive?.content ?: ""
-                    val accountId = "$mechanismIssuer-$mechanismAccountName"
-
-                    // Find associated account using the constructed Account ID
-                    val accountJson = accounts[accountId]
-                    val accountData = accountJson?.let { json.parseToJsonElement(it).jsonObject }
-
-                    // Account-only fields (no fallback to mechanism)
-                    val issuer = accountData?.get("issuer")?.jsonPrimitive?.content ?: mechanismIssuer
-                    val accountName = accountData?.get("accountName")?.jsonPrimitive?.content ?: mechanismAccountName
-                    val displayIssuer = accountData?.get("displayIssuer")?.jsonPrimitive?.content ?: issuer
-                    val displayAccountName = accountData?.get("displayAccountName")?.jsonPrimitive?.content ?: accountName
-                    val imageURL = accountData?.get("imageURL")?.jsonPrimitive?.content
-                    val backgroundColor = accountData?.get("backgroundColor")?.jsonPrimitive?.content
-                    val policies = accountData?.get("policies")?.jsonPrimitive?.content
-                    val lockingPolicy = accountData?.get("lockingPolicy")?.jsonPrimitive?.content
-                    val isLocked = accountData?.get("lock")?.jsonPrimitive?.content?.toBoolean() ?: false
-                    val createdAt = accountData?.get("timeAdded")?.jsonPrimitive?.content?.toLongOrNull()
-                        ?: mechanismData["timeAdded"]?.jsonPrimitive?.content?.toLongOrNull()
-
-                    // Mechanism-only fields (no fallback to account)
-                    val userId = mechanismData["uid"]?.jsonPrimitive?.content
-                    val resourceId = mechanismData["resourceId"]?.jsonPrimitive?.content
+                    val account = mechanism.account
 
                     val oathCredential = OathCredential(
-                        id = mechanismIdValue,  // Use mechanismUID as the credential ID
-                        userId = userId,
-                        resourceId = resourceId,
-                        issuer = issuer,
-                        displayIssuer = displayIssuer,
-                        accountName = accountName,
-                        displayAccountName = displayAccountName,
-                        oathType = OathType.fromString(mechanismData["oathType"]?.jsonPrimitive?.content ?: TOTP),
-                        secret = mechanismData["secret"]?.jsonPrimitive?.content ?: "",
-                        oathAlgorithm = when (mechanismData["algorithm"]?.jsonPrimitive?.content) {
+                        id = mechanism.mechanismUID,  // Use mechanismUID as the credential ID
+                        userId = mechanism.uid,
+                        resourceId = mechanism.resourceId,
+                        issuer = account?.issuer ?: mechanism.issuer,
+                        displayIssuer = account?.displayIssuer ?: account?.issuer ?: mechanism.issuer,
+                        accountName = account?.accountName ?: mechanism.accountName,
+                        displayAccountName = account?.displayAccountName ?: account?.accountName ?: mechanism.accountName,
+                        oathType = OathType.fromString(mechanism.oathType ?: TOTP),
+                        secret = mechanism.secret,
+                        oathAlgorithm = when (mechanism.algorithm) {
                             "sha256", "SHA256" -> OathAlgorithm.SHA256
                             "sha512", "SHA512" -> OathAlgorithm.SHA512
                             else -> OathAlgorithm.SHA1
                         },
-                        digits = mechanismData["digits"]?.jsonPrimitive?.content?.toIntOrNull() ?: 6,
-                        period = mechanismData["period"]?.jsonPrimitive?.content?.toIntOrNull() ?: 30,
-                        counter = mechanismData["counter"]?.jsonPrimitive?.content?.toLongOrNull() ?: 0L,
-                        createdAt = createdAt?.let { Date(it) } ?: Date(),
-                        imageURL = imageURL,
-                        backgroundColor = backgroundColor,
-                        policies = policies,
-                        lockingPolicy = lockingPolicy,
-                        isLocked = isLocked
+                        digits = mechanism.digits ?: 6,
+                        period = mechanism.period ?: 30,
+                        counter = mechanism.counter ?: 0L,
+                        createdAt = account?.timeAdded?.let { Date(it) }
+                            ?: mechanism.timeAdded?.let { Date(it) }
+                            ?: Date(),
+                        imageURL = account?.imageURL,
+                        backgroundColor = account?.backgroundColor,
+                        policies = account?.policies,
+                        lockingPolicy = account?.lockingPolicy,
+                        isLocked = account?.lock ?: false
                     )
 
                     oathStorage.storeOathCredential(oathCredential)
                     oathCount++
-                    logger.d("Migrated OATH credential: $issuer - $accountName")
+                    logger.d("Migrated OATH credential: ${oathCredential.issuer} - ${oathCredential.accountName}")
                 }
 
                 PUSH, PUSH_AUTH -> {
                     // Migrate Push mechanism
-                    val mechanismIdValue = mechanismData["mechanismUID"]?.jsonPrimitive?.content
-                        ?: mechanismData["id"]?.jsonPrimitive?.content
-                        ?: mechanismId
-
-                    // First extract issuer and accountName from mechanism to construct Account ID
-                    // Account ID format: issuer + "-" + accountName (from legacy Account.java)
-                    val mechanismIssuer = mechanismData["issuer"]?.jsonPrimitive?.content ?: ""
-                    val mechanismAccountName = mechanismData["accountName"]?.jsonPrimitive?.content ?: ""
-                    val accountId = "$mechanismIssuer-$mechanismAccountName"
-
-                    // Find associated account using the constructed Account ID
-                    val accountJson = accounts[accountId]
-                    val accountData = accountJson?.let { json.parseToJsonElement(it).jsonObject }
-
-                    // Account-only fields (no fallback to mechanism)
-                    val issuer = accountData?.get("issuer")?.jsonPrimitive?.content ?: mechanismIssuer
-                    val accountName = accountData?.get("accountName")?.jsonPrimitive?.content ?: mechanismAccountName
-                    val displayIssuer = accountData?.get("displayIssuer")?.jsonPrimitive?.content ?: issuer
-                    val displayAccountName = accountData?.get("displayAccountName")?.jsonPrimitive?.content ?: accountName
-                    val imageURL = accountData?.get("imageURL")?.jsonPrimitive?.content
-                    val backgroundColor = accountData?.get("backgroundColor")?.jsonPrimitive?.content
-                    val policies = accountData?.get("policies")?.jsonPrimitive?.content
-                    val lockingPolicy = accountData?.get("lockingPolicy")?.jsonPrimitive?.content
-                    val isLocked = accountData?.get("lock")?.jsonPrimitive?.content?.toBoolean() ?: false
-                    val createdAt = accountData?.get("timeAdded")?.jsonPrimitive?.content?.toLongOrNull()
-                        ?: mechanismData["timeAdded"]?.jsonPrimitive?.content?.toLongOrNull()
-
-                    // Mechanism-only fields (no fallback to account)
-                    val userId = mechanismData["uid"]?.jsonPrimitive?.content
-                    val resourceId = mechanismData["resourceId"]?.jsonPrimitive?.content
-                        ?: mechanismIdValue  // Fallback to mechanismUID if resourceId not present
-                    val platform = mechanismData["platform"]?.jsonPrimitive?.content ?: "PING_AM"
+                    val account = mechanism.account
 
                     // Extract base endpoint (remove query parameters like ?_action=authenticate)
-                    val rawEndpoint = mechanismData["authenticationEndpoint"]?.jsonPrimitive?.content
-                        ?: mechanismData["registrationEndpoint"]?.jsonPrimitive?.content
-                        ?: mechanismData["endpoint"]?.jsonPrimitive?.content
+                    val rawEndpoint = mechanism.authenticationEndpoint
+                        ?: mechanism.registrationEndpoint
                         ?: ""
                     val serverEndpoint = if (rawEndpoint.contains("?")) {
                         rawEndpoint.substringBefore("?")
@@ -246,35 +191,37 @@ val step2 = MigrationStep(
                     }
 
                     val pushCredential = PushCredential(
-                        id = mechanismIdValue,  // Use mechanismUID as the credential ID
-                        userId = userId,
-                        resourceId = resourceId,
-                        issuer = issuer,
-                        displayIssuer = displayIssuer,
-                        accountName = accountName,
-                        displayAccountName = displayAccountName,
+                        id = mechanism.mechanismUID,  // Use mechanismUID as the credential ID
+                        userId = mechanism.uid,
+                        resourceId = mechanism.resourceId ?: mechanism.mechanismUID,  // Fallback to mechanismUID if resourceId not present
+                        issuer = account?.issuer ?: mechanism.issuer,
+                        displayIssuer = account?.displayIssuer ?: account?.issuer ?: mechanism.issuer,
+                        accountName = account?.accountName ?: mechanism.accountName,
+                        displayAccountName = account?.displayAccountName ?: account?.accountName ?: mechanism.accountName,
                         serverEndpoint = serverEndpoint,
-                        sharedSecret = mechanismData["secret"]?.jsonPrimitive?.content ?: "",
-                        createdAt = createdAt?.let { Date(it) } ?: Date(),
-                        imageURL = imageURL,
-                        backgroundColor = backgroundColor,
-                        policies = policies,
-                        lockingPolicy = lockingPolicy,
-                        isLocked = isLocked,
-                        platform = platform
+                        sharedSecret = mechanism.secret,
+                        createdAt = account?.timeAdded?.let { Date(it) }
+                            ?: mechanism.timeAdded?.let { Date(it) }
+                            ?: Date(),
+                        imageURL = account?.imageURL,
+                        backgroundColor = account?.backgroundColor,
+                        policies = account?.policies,
+                        lockingPolicy = account?.lockingPolicy,
+                        isLocked = account?.lock ?: false,
+                        platform = mechanism.platform ?: "PING_AM"
                     )
 
                     pushStorage.storePushCredential(pushCredential)
                     pushCount++
-                    logger.d("Migrated Push credential: $issuer - $accountName")
+                    logger.d("Migrated Push credential: ${pushCredential.issuer} - ${pushCredential.accountName}")
                 }
 
                 else -> {
-                    logger.w("Unknown mechanism type: $type")
+                    logger.w("Unknown mechanism type: ${mechanism.type}")
                 }
             }
         } catch (e: Exception) {
-            logger.e("Failed to migrate mechanism $mechanismId", e)
+            logger.e("Failed to migrate mechanism ${mechanism.id}", e)
         }
     }
 
@@ -284,113 +231,10 @@ val step2 = MigrationStep(
 }
 
 /**
- * Step 3: Migrate push notifications to Push storage.
+ * Step 3: Cleanup legacy authenticator data.
+ * Keeps a backup of the legacy data in case migration fails.
  */
-val step3 = MigrationStep(
-    description = "Migrate push notifications to Push storage"
-) {
-    logger.i("Starting push notifications migration")
-
-    val notifications = getValue<Map<String, String>>(NOTIFICATIONS) ?: run {
-        logger.w("No notifications found in state, skipping")
-        return@MigrationStep CONTINUE
-    }
-
-    var count = 0
-
-    notifications.forEach { (notificationId, notificationJson) ->
-        try {
-            val notificationData = json.parseToJsonElement(notificationJson).jsonObject
-
-            val pushNotification = PushNotification(
-                id = notificationId,
-                credentialId = notificationData["credentialId"]?.jsonPrimitive?.content ?: "",
-                ttl = notificationData["ttl"]?.jsonPrimitive?.content?.toIntOrNull() ?: 120,
-                messageId = notificationData["messageId"]?.jsonPrimitive?.content ?: notificationId,
-                messageText = notificationData["messageText"]?.jsonPrimitive?.content
-                    ?: notificationData["message"]?.jsonPrimitive?.content,
-                customPayload = notificationData["customPayload"]?.jsonPrimitive?.content,
-                challenge = notificationData["challenge"]?.jsonPrimitive?.content ?: "",
-                numbersChallenge = notificationData["numbersChallenge"]?.jsonPrimitive?.content,
-                loadBalancer = notificationData["loadBalancer"]?.jsonPrimitive?.content
-                    ?: notificationData["amlbCookie"]?.jsonPrimitive?.content,
-                contextInfo = notificationData["contextInfo"]?.jsonPrimitive?.content,
-                pushType = notificationData["pushType"]?.jsonPrimitive?.content?.let { type ->
-                    try {
-                        PushType.fromString(type)
-                    } catch (e: Exception) {
-                        PushType.DEFAULT
-                    }
-                } ?: PushType.DEFAULT,
-                createdAt = Date(notificationData["timeAdded"]?.jsonPrimitive?.content?.toLongOrNull()
-                    ?: notificationData["createdAt"]?.jsonPrimitive?.content?.toLongOrNull()
-                    ?: System.currentTimeMillis()),
-                sentAt = notificationData["sentAt"]?.jsonPrimitive?.content?.toLongOrNull()?.let { Date(it) },
-                respondedAt = notificationData["respondedAt"]?.jsonPrimitive?.content?.toLongOrNull()?.let { Date(it) },
-                additionalData = notificationData["additionalData"]?.jsonPrimitive?.content?.let { dataStr ->
-                    try {
-                        json.decodeFromString<Map<String, Any>>(dataStr)
-                    } catch (e: Exception) {
-                        null
-                    }
-                },
-                approved = notificationData["approved"]?.jsonPrimitive?.content?.toBoolean() ?: false,
-                pending = notificationData["pending"]?.jsonPrimitive?.content?.toBoolean() ?: true
-            )
-
-            pushStorage.storePushNotification(pushNotification)
-            count++
-            logger.d("Migrated push notification: $notificationId")
-        } catch (e: Exception) {
-            logger.e("Failed to migrate notification $notificationId", e)
-        }
-    }
-
-    logger.i("Migrated $count push notifications")
-
-    CONTINUE
-}
-
-/**
- * Step 4: Migrate device token to Push storage.
- */
-val step4 = MigrationStep(
-    description = "Migrate device token to Push storage"
-) {
-    logger.i("Starting device token migration")
-
-    val deviceTokenMap = getValue<Map<String, String>>(DEVICE_TOKEN) ?: run {
-        logger.w("No device token found in state, skipping")
-        return@MigrationStep CONTINUE
-    }
-
-    deviceTokenMap.forEach { (_, tokenJson) ->
-        try {
-            val tokenData = json.parseToJsonElement(tokenJson).jsonObject
-
-            val pushDeviceToken = PushDeviceToken(
-                id = tokenData["id"]?.jsonPrimitive?.content ?: "",
-                tokenId = tokenData["deviceToken"]?.jsonPrimitive?.content
-                    ?: tokenData["token"]?.jsonPrimitive?.content
-                    ?: tokenData["tokenId"]?.jsonPrimitive?.content
-                    ?: "",
-                createdAt = Date(tokenData["timeAdded"]?.jsonPrimitive?.content?.toLongOrNull() ?: System.currentTimeMillis()),
-            )
-
-            pushStorage.storePushDeviceToken(pushDeviceToken)
-            logger.i("Migrated device token successfully")
-        } catch (e: Exception) {
-            logger.e("Failed to migrate device token", e)
-        }
-    }
-
-    CONTINUE
-}
-
-/**
- * Step 5: Cleanup legacy authenticator data.
- */
-val step5 = MigrationStep(
+val cleanupLegacyDataStep = MigrationStep(
     description = "Cleanup legacy authenticator data"
 ) {
     logger.i("Cleaning up legacy authenticator data")
