@@ -22,7 +22,17 @@ import kotlinx.coroutines.launch
  *     implementation(project(":mfa:auth-migration"))
  * }
  * ```
- * This will trigger the automatic migration.
+ * This will trigger the automatic migration. To start automatic migration, please add the following code to your manifest file:
+ * ```xml
+ * <provider
+ *     android:name="androidx.startup.InitializationProvider"
+ *     android:authorities="${applicationId}.androidx-startup"
+ *     android:exported="false">
+ *     <meta-data
+ *         android:name="com.pingidentity.auth.migration.AuthenticationMigrationInitializer"
+ *         android:value="androidx.startup" />
+ * </provider>
+ * ```
  * @see AuthMigration
  */
 class AuthenticationMigrationInitializer : Initializer<Unit> {

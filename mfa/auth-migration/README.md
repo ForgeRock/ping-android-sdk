@@ -2,7 +2,7 @@
 
 # Authenticator Migration
 
-The Authenticator Migration module provides automatic migration capabilities for upgrading legacy FR Authenticator data to the new unified OATH and Push storage format. This module ensures seamless transitions between SDK versions while preserving user accounts, TOTP/HOTP credentials, push notifications, and device tokens.
+The Authenticator Migration module provides automatic migration capabilities for upgrading legacy FR Authenticator data to the new unified OATH and Push storage format. This module ensures seamless transitions between SDK versions while preserving user accounts, TOTP/HOTP credentials, and push credentials.
 
 ---
 
@@ -15,6 +15,7 @@ The Authenticator Migration module provides automatic migration capabilities for
 - [Manual Migration](#manual-migration)
 - [Monitoring Migration Progress](#monitoring-migration-progress)
 - [Error Handling](#error-handling)
+- [Custom Storage Migration](#custom-storage-migration)
 - [Troubleshooting](#troubleshooting)
 
 ---
@@ -37,8 +38,6 @@ The Authenticator Migration module automatically migrates legacy FR Authenticato
 
 - **OATH Credentials**: Migrates TOTP and HOTP mechanisms from legacy format to new SQLOathStorage
 - **Push Credentials**: Migrates Push authentication mechanisms to new SQLPushStorage
-- **Push Notifications**: Migrates pending push notifications and their state
-- **Device Tokens**: Migrates FCM device tokens for push notifications
 - **Cleanup**: Removes legacy storage files and encryption keys after successful migration
 
 ### What Gets Migrated
@@ -48,15 +47,24 @@ The Authenticator Migration module automatically migrates legacy FR Authenticato
 | Legacy Accounts | OATH/Push Credentials | Account metadata (issuer, account name, images) |
 | Legacy TOTP/HOTP Mechanisms | SQLOathStorage | TOTP/HOTP credentials with secrets and configuration |
 | Legacy Push Mechanisms | SQLPushStorage | Push credentials with endpoints and shared secrets |
-| Legacy Notifications | SQLPushStorage | Pending push notifications and their approval state |
-| Legacy Device Token | SQLPushStorage | FCM device registration tokens |
 | Legacy Encryption Keys | - | Cleaned up from AndroidKeyStore after migration |
 
 ---
 
 ## Automatic Migration
 
-The migration process is can be automatically triggered during application startup by importing the module. No manual intervention will be required.
+The migration can be triggered automatically during application startup by calling `AuthMigration.start()`. No further manual intervention is required once configured.
+To start automatic migration, please add the following code to your manifest file
+```xml
+<provider
+    android:name="androidx.startup.InitializationProvider"
+    android:authorities="${applicationId}.androidx-startup"
+    android:exported="false">
+    <meta-data
+        android:name="com.pingidentity.auth.migration.AuthenticationMigrationInitializer"
+        android:value="androidx.startup" />
+</provider>
+```
 
 ### Configuration
 
@@ -68,52 +76,86 @@ dependencies {
 }
 ```
 
+Create a `LegacyAuthenticationConfig` and start the migration, typically in your `Application.onCreate()` or an `AppInitializer`:
+
+```kotlin
+lifecycleScope.launch {
+    AuthMigration.start(context)
+}
+```
+
 The migration will automatically:
 1. Check for legacy FR Authenticator data during app startup
 2. Decrypt and export data from legacy encrypted SharedPreferences
-3. Migrate OATH credentials, Push credentials, notifications, and device tokens
+3. Migrate OATH credentials and Push credentials
 4. Clean up legacy files and encryption keys after successful migration
 5. Skip migration if no legacy data exists
+
+### LegacyAuthenticationConfig
+
+`LegacyAuthenticationConfig` is configured via a DSL block passed to `AuthMigration.start()`. No arguments are required for standard FR Authenticator installations — the empty block (or no block at all) uses sensible defaults.
+
+| Property | Default | Description |
+|----------|---------|-------------|
+| `keyAlias` | `"org.forgerock.android.authenticator.KEYS"` | AndroidKeyStore alias used to decrypt legacy SharedPreferences |
+| `legacyStorageProvider` | `DefaultLegacyStorageProvider` | Override to supply data from a custom storage backend |
+| `logger` | `Logger.STANDARD` | Logger instance used throughout the migration pipeline |
+
+```kotlin
+// Default — no configuration needed
+lifecycleScope.launch {
+    AuthMigration.start(applicationContext)
+}
+
+// Custom key alias
+lifecycleScope.launch {
+    AuthMigration.start(applicationContext) {
+        keyAlias = "com.myapp.custom.STORAGE_KEY"
+    }
+}
+
+// Custom storage provider
+lifecycleScope.launch {
+    AuthMigration.start(applicationContext) {
+        legacyStorageProvider = MyCustomStorageProvider(applicationContext)
+    }
+}
+
+// Custom logger
+lifecycleScope.launch {
+    AuthMigration.start(applicationContext) {
+        logger = Logger.DEBUG
+    }
+}
+```
 
 ---
 
 ## Migration Steps
 
-The migration process consists of five sequential steps:
+The migration process consists of three sequential steps:
 
-### Step 1: Export Legacy Authenticator Data
-- Verifies existence of legacy encryption key in AndroidKeyStore
-- Decrypts data from four legacy SharedPreferences files:
+### Step 1: Import Legacy Data
+- Calls `LegacyStorageProvider.isMigrationRequired()` — aborts early if no migration is needed
+- Calls `LegacyStorageProvider.getMigrationData()` to load `LegacyExportedData`
+- Default implementation (`DefaultLegacyStorageProvider`) decrypts two legacy SharedPreferences files:
   - `org.forgerock.android.authenticator.DATA.ACCOUNT`
   - `org.forgerock.android.authenticator.DATA.MECHANISM`
-  - `org.forgerock.android.authenticator.DATA.NOTIFICATIONS`
-  - `org.forgerock.android.authenticator.DATA.DEVICE_TOKEN`
 - Uses standalone decryptor (no Legacy SDK dependency required)
-- Aborts migration if no legacy data is found
+- Aborts migration if the mechanisms list is empty
 
 ### Step 2: Migrate OATH and Push Mechanisms
-- Parses mechanism JSON data to determine type (TOTP/HOTP/Push)
-- Creates OathCredential objects for TOTP/HOTP mechanisms:
+- Parses mechanism data to determine type (TOTP/HOTP/Push)
+- Creates `OathCredential` objects for TOTP/HOTP mechanisms:
   - Preserves secret, algorithm (SHA1/SHA256/SHA512), digits, period
   - Maintains issuer, account name, and visual customizations
-- Creates PushCredential objects for Push mechanisms:
+- Creates `PushCredential` objects for Push mechanisms:
   - Preserves server endpoint, shared secret
   - Maintains account information and visual customizations
-- Stores credentials in SQLOathStorage and SQLPushStorage respectively
+- Stores credentials in `SQLOathStorage` and `SQLPushStorage` respectively
 
-### Step 3: Migrate Push Notifications
-- Transfers pending push notifications to SQLPushStorage
-- Preserves notification state (approved, pending)
-- Maintains challenge data and message IDs
-- Keeps notification timestamps
-
-### Step 4: Migrate Device Token
-- Migrates FCM device registration token to SQLPushStorage
-- Preserves device ID and token information
-- Maintains communication tokens if present
-
-### Step 5: Cleanup Legacy Data
-- Deletes all four legacy SharedPreferences files
+### Step 3: Cleanup Legacy Data
+- Deletes all legacy SharedPreferences files
 - Removes legacy encryption key from AndroidKeyStore
 - Cleanup failures don't abort the migration (non-critical)
 
@@ -121,42 +163,49 @@ The migration process consists of five sequential steps:
 
 ## Manual Migration
 
-While migration is automatic, you can also trigger it manually:
+You can trigger the migration manually at any point:
 
 ```kotlin
-// Manual migration trigger
+// Default — uses the standard ForgeRock key alias
 lifecycleScope.launch {
-    AuthMigration.start(context)
+    AuthMigration.start(applicationContext)
 }
-```
 
-### Monitoring Migration Progress
-
-```kotlin
-AuthMigration.migration.migrate(context).collect { progress ->
-    when (progress) {
-        is MigrationProgress.Started -> {
-            Log.d("Migration", "Authenticator migration started")
-        }
-        
-        is MigrationProgress.InProgress -> {
-            Log.d("Migration", "Step ${progress.currentStep}/${progress.totalSteps}: ${progress.message}")
-        }
-        
-        is MigrationProgress.StepCompleted -> {
-            Log.d("Migration", "Completed: ${progress.step.description}")
-        }
-        
-        is MigrationProgress.Success -> {
-            Log.d("Migration", "Migration completed successfully")
-        }
-        
-        is MigrationProgress.Error -> {
-            Log.e("Migration", "Migration failed", progress.error)
-        }
+// Custom key alias
+lifecycleScope.launch {
+    AuthMigration.start(applicationContext) {
+        keyAlias = "com.myapp.custom.STORAGE_KEY" // optional, default is the ForgeRock alias
     }
 }
 ```
+
+---
+
+## Monitoring Migration Progress
+
+Pass a collector before calling `start()`, or observe through the migration's own logging. The `start()` function internally collects and logs every `MigrationProgress` event:
+
+```kotlin
+lifecycleScope.launch {
+    AuthMigration.start(context)
+    // Migration is complete when start() returns
+}
+```
+
+`AuthMigration` logs the following events automatically via its `logger`:
+
+```
+Migration started
+Migration in progress: Step 1 of 3 - Import legacy data
+Step completed: Import legacy data
+Migration in progress: Step 2 of 3 - Migrate mechanisms to OATH and Push storage
+Step completed: Migrate mechanisms to OATH and Push storage
+Migration in progress: Step 3 of 3 - Cleanup legacy authenticator data
+Step completed: Cleanup legacy authenticator data
+Migration completed successfully
+```
+
+To observe raw `MigrationProgress` events, use the `Migration` API directly with your own steps.
 
 ---
 
@@ -165,17 +214,6 @@ AuthMigration.migration.migrate(context).collect { progress ->
 The migration framework includes robust error handling:
 
 ### Individual Mechanism Failures
-```kotlin
-try {
-    // Migration logic
-    oathStorage.storeOathCredential(oathCredential)
-    logger.d("Migrated OATH credential: $issuer - $accountName")
-} catch (e: Exception) {
-    logger.e("Failed to migrate mechanism $mechanismId", e)
-    // Continue with other mechanisms even if one fails
-}
-```
-
 - Failures in individual mechanism migration don't stop the entire process
 - Errors are logged for debugging purposes
 - Partial migrations are supported
@@ -188,9 +226,195 @@ The migration uses a standalone decryptor that:
 - Returns empty maps for non-existent files
 
 ### Migration Abortion
-- Migration automatically aborts if no legacy encryption key is found
+- Migration automatically aborts if no legacy data is found
 - No errors are thrown for clean installations
 - Subsequent app starts skip migration checks after successful completion
+
+---
+
+## Custom Storage Migration
+
+If your application stores authenticator data in a custom storage backend (e.g., a different `StorageClient` implementation, an encrypted database, or a remote store), you can supply that data to the migration pipeline by implementing `LegacyStorageProvider`.
+
+### LegacyStorageProvider Interface
+
+```kotlin
+interface LegacyStorageProvider {
+    /** Return true if migration is needed (i.e., legacy data still exists). */
+    suspend fun isMigrationRequired(context: Context): Boolean
+
+    /**
+     * Return the legacy authenticator data as [LegacyExportedData].
+     * The returned object is fed directly into the migration pipeline.
+     */
+    suspend fun getMigrationData(context: Context): LegacyExportedData
+
+    /** Remove legacy data after successful migration. */
+    suspend fun cleanUp(context: Context)
+}
+```
+
+### Option 1: Using a ForgeRock StorageClient
+
+If your custom storage implements the ForgeRock `StorageClient` interface, use the built-in `LegacyDataConverter.convertToLegacyExportedData()` helper. It calls `account.toJson()` and `mechanism.toJson()` on each entry via the SDK's own serialisation — no manual field mapping required:
+
+```kotlin
+class MyStorageProvider(
+    private val context: Context,
+    private val storageClient: StorageClient
+) : LegacyStorageProvider {
+
+    override suspend fun isMigrationRequired(context: Context): Boolean =
+        !storageClient.isEmpty
+
+    override suspend fun getMigrationData(context: Context): LegacyExportedData =
+        withContext(Dispatchers.IO) {
+            LegacyDataConverter.convertToLegacyExportedData(storageClient)
+        }
+
+    override suspend fun cleanUp(context: Context) {
+        // Remove data from your custom storage
+    }
+}
+```
+
+### Option 2: Building from raw JSON strings
+
+If your storage exposes per-entry JSON strings (e.g., the same format ForgeRock uses internally), use `LegacyDataConverter.buildExportJson()`:
+
+```kotlin
+override suspend fun getMigrationData(context: Context): LegacyExportedData =
+    withContext(Dispatchers.IO) {
+        val mechanismsMap = mutableMapOf<String, String>()
+        val accountsMap   = mutableMapOf<String, String>()
+
+        myStorage.getAllMechanisms().forEach { mechanismsMap[it.id] = it.toJson() }
+        myStorage.getAllAccounts().forEach   { accountsMap[it.id]   = it.toJson() }
+
+        LegacyDataConverter.buildExportJson(mechanismsMap, accountsMap)
+    }
+```
+
+### Option 3: Building LegacyExportedData manually
+
+For fully custom storage backends, construct `LegacyExportedData` directly:
+
+```kotlin
+override suspend fun getMigrationData(context: Context): LegacyExportedData =
+    withContext(Dispatchers.IO) {
+        val mechanisms = myStorage.getAllMechanisms().map { m ->
+            LegacyMechanism(
+                id            = m.id,
+                issuer        = m.issuer,
+                accountName   = m.accountName,
+                mechanismUID  = m.uid,
+                secret        = m.secret,
+                type          = m.type,         // "otpauth" or "pushauth"
+                oathType      = m.oathType,     // "TOTP" or "HOTP" (OATH only)
+                algorithm     = m.algorithm,    // "SHA1", "SHA256", "SHA512" (OATH only)
+                digits        = m.digits,
+                period        = m.period,
+                counter       = m.counter,
+                registrationEndpoint   = m.registrationEndpoint,   // Push only
+                authenticationEndpoint = m.authenticationEndpoint, // Push only
+                account = LegacyAccount(
+                    id          = m.accountId,
+                    issuer      = m.issuer,
+                    accountName = m.accountName,
+                    imageURL    = m.imageURL,
+                    backgroundColor = m.backgroundColor
+                )
+            )
+        }
+        LegacyExportedData(
+            mechanisms = mechanisms,
+            metadata   = LegacyExportMetadata(totalMechanisms = mechanisms.size)
+        )
+    }
+```
+
+### Registering a Custom Storage Provider
+
+Pass your implementation via the DSL block in `AuthMigration.start()`:
+
+```kotlin
+lifecycleScope.launch {
+    AuthMigration.start(applicationContext) {
+        legacyStorageProvider = MyStorageProvider(
+            context = applicationContext,
+            storageClient = MyStorageClient()
+        )
+    }
+}
+```
+
+### Expected Data Format
+
+The `LegacyExportedData` your implementation returns must conform to the structure in `sample_export.json`. Key points:
+
+- Each mechanism contains its associated account nested directly (`account` field — 1-to-1 mapping)
+- OATH mechanisms use `type: "otpauth"`, Push mechanisms use `type: "pushauth"`
+- `metadata.exportedAt` is a UTC epoch millisecond timestamp
+
+```json
+{
+  "mechanisms": [
+    {
+      "id": "Forgerock-totp@forgerock.com-otpauth",
+      "issuer": "Forgerock",
+      "accountName": "totp@forgerock.com",
+      "mechanismUID": "e238a4ce-23f4-4f41-9ccd-2ef85fc641d9",
+      "secret": "JBSWY3DPEHPK3PXP",
+      "type": "otpauth",
+      "oathType": "TOTP",
+      "algorithm": "SHA256",
+      "digits": 6,
+      "period": 60,
+      "timeAdded": 1772565130356,
+      "account": {
+        "id": "Forgerock-totp@forgerock.com",
+        "issuer": "Forgerock",
+        "displayIssuer": "Forgerock Display",
+        "accountName": "totp@forgerock.com",
+        "displayAccountName": "TOTP Display User",
+        "imageURL": "http://forgerock.com/logo.jpg",
+        "backgroundColor": "#032b75",
+        "lock": false
+      }
+    },
+    {
+      "id": "PingIdentity-user@example.com-pushauth",
+      "issuer": "PingIdentity",
+      "accountName": "user@example.com",
+      "mechanismUID": "22752db7-8d03-4181-9f06-f440e46527c1",
+      "secret": "BASE64_ENCODED_SECRET",
+      "type": "pushauth",
+      "registrationEndpoint": "https://example.com/am/push/sns/message?_action=register",
+      "authenticationEndpoint": "https://example.com/am/push/sns/message?_action=authenticate",
+      "platform": "PING_AM",
+      "uid": "user123",
+      "resourceId": "resource-id-123",
+      "timeAdded": 1772565130356,
+      "account": {
+        "id": "PingIdentity-user@example.com",
+        "issuer": "PingIdentity",
+        "displayIssuer": "Ping Identity",
+        "accountName": "user@example.com",
+        "displayAccountName": "Demo User",
+        "imageURL": "https://pingidentity.com/logo.png",
+        "backgroundColor": "#0066cc",
+        "lock": false
+      }
+    }
+  ],
+  "metadata": {
+    "totalMechanisms": 2,
+    "exportedAt": 1772565130356
+  }
+}
+```
+
+See `sample_export.json` for a complete three-mechanism example.
 
 ---
 
@@ -231,42 +455,10 @@ The migration decryptor reverses this process without requiring the Legacy SDK.
 |-------------|-----------|-------|
 | `issuer` | `issuer` | Preserved exactly |
 | `accountName` | `accountName` | Preserved exactly |
-| `authenticationEndpoint` | `serverEndpoint` | Server URL for push |
+| `authenticationEndpoint` | `serverEndpoint` | Server URL for push (query params stripped) |
 | `secret` | `sharedSecret` | Cryptographic secret |
 | `imageURL` | `imageURL` | Optional logo URL |
 | `backgroundColor` | `backgroundColor` | Optional UI customization |
-
-### Push Notifications
-
-| Legacy Field | New Field | Notes |
-|-------------|-----------|-------|
-| `messageId` | `messageId` | Unique notification ID |
-| `challenge` | `challenge` | Authentication challenge |
-| `mechanismUID` | `credentialId` | Links to push credential |
-| `ttl` | `ttl` | Time to live in seconds |
-| `approved` | `approved` | User approval status |
-| `pending` | `pending` | Processing state |
-| `timeAdded` | `createdAt` | Notification timestamp |
-
----
-
-## Custom Storage Migration
-
-**If you are using custom storage implementations for OATH or Push authentication, this automatic migration will NOT handle your custom data.**
-
-This migration module only handles the default Ping SDK storage implementations:
-- Default SQLOathStorage (SQLite-based OATH storage)
-- Default SQLPushStorage (SQLite-based Push storage)
-- Legacy FR Authenticator encrypted SharedPreferences
-
-### Custom Storage Requirements
-
-If your application uses custom storage implementations, you must:
-
-1. **Write your own migration logic** to handle your custom data format
-2. **Implement migration before** the automatic migration runs
-3. **Test your custom migration thoroughly** with real user data
-4. **Ensure data integrity** during the migration process
 
 ---
 
@@ -275,13 +467,12 @@ If your application uses custom storage implementations, you must:
 ### Common Issues
 
 **Migration Not Running**
-- Verify the AuthenticationMigrationInitializer is properly configured in AndroidManifest.xml
-- Check that the auth-migration dependency is included
-- Ensure app has proper file system permissions
+- Ensure `AuthMigration.start(context)` is called on app startup
+- Check that the `auth-migration` dependency is included in your build
 
 **Legacy Data Not Found**
 - This is normal for new installations or users who never used FR Authenticator
-- Migration will abort with ABORT result (not an error)
+- Migration will abort with `ABORT` result (not an error)
 - No action required
 
 **Decryption Failures**
@@ -290,7 +481,7 @@ If your application uses custom storage implementations, you must:
 - Ensure the app hasn't been reinstalled (encryption keys are lost on reinstall)
 
 **Storage Initialization Errors**
-- Verify SQLOathStorage and SQLPushStorage are properly initialized
+- Verify `SQLOathStorage` and `SQLPushStorage` are properly initialized
 - Check database permissions and storage availability
 - Review SQLite database version compatibility
 
@@ -307,15 +498,11 @@ Check logs for migration status:
 ```
 Ping SDK: Checking for legacy authenticator data
 Ping SDK: Legacy repository exists, proceeding with migration
-Ping SDK: Successfully exported 3 accounts, 5 mechanisms, 2 notifications, 1 device tokens
+Ping SDK: Successfully exported 3 mechanisms
 Ping SDK: Starting mechanisms migration to new storage
 Ping SDK: Migrated OATH credential: ForgeRock - user@example.com
 Ping SDK: Migrated Push credential: PingAM - admin@company.com
 Ping SDK: Migrated 3 OATH credentials and 2 Push credentials
-Ping SDK: Starting push notifications migration
-Ping SDK: Migrated 2 push notifications
-Ping SDK: Starting device token migration
-Ping SDK: Migrated device token successfully
 Ping SDK: Cleaning up legacy authenticator data
 Ping SDK: Successfully deleted legacy authenticator data
 Ping SDK: Migration completed successfully
@@ -335,9 +522,9 @@ The migration maintains state between steps:
 
 The migration process is designed to be safe and non-destructive:
 
-- **Backup Approach**: Legacy data is read before any modifications
+- **Backup Approach**: `DefaultLegacyStorageProvider` always backs up legacy SharedPreferences files before deleting them. Custom implementations of `LegacyStorageProvider.cleanUp()` can perform their own backup logic.
 - **Rollback Safety**: Original data remains until migration succeeds
-- **Idempotent**: Can be run multiple times safely (only runs once)
+- **Idempotent**: Can be run multiple times safely (only runs once per install)
 - **Partial Recovery**: Individual mechanism failures don't affect others
 - **Cleanup Safety**: Legacy data is only deleted after successful migration
 
@@ -351,7 +538,7 @@ The migration process is designed to be safe and non-destructive:
 
 ### Performance Considerations
 
-- Migration runs on background thread (Dispatchers.Default)
+- Migration runs on a background thread (`Dispatchers.IO`)
 - Doesn't block app startup
 - Typically completes in 1-5 seconds for normal datasets
 - Scales linearly with number of accounts/mechanisms
@@ -366,14 +553,10 @@ Legacy SharedPreferences:
 ├── org.forgerock.android.authenticator.DATA.ACCOUNT
 │   ├── "ForgeRock-user@example.com"
 │   └── "PingAM-admin@company.com"
-├── org.forgerock.android.authenticator.DATA.MECHANISM
-│   ├── "ForgeRock-user@example.com-totp"
-│   ├── "ForgeRock-user@example.com-push"
-│   └── "PingAM-admin@company.com-totp"
-├── org.forgerock.android.authenticator.DATA.NOTIFICATIONS
-│   └── "notification-uuid-123"
-└── org.forgerock.android.authenticator.DATA.DEVICE_TOKEN
-    └── "deviceToken"
+└── org.forgerock.android.authenticator.DATA.MECHANISM
+    ├── "ForgeRock-user@example.com-totp"
+    ├── "ForgeRock-user@example.com-push"
+    └── "PingAM-admin@company.com-totp"
 
 AndroidKeyStore:
 └── "org.forgerock.android.authenticator.KEYS"
@@ -386,9 +569,7 @@ SQLOathStorage (SQLite):
 └── OathCredential(issuer="PingAM", account="admin@company.com", type=TOTP)
 
 SQLPushStorage (SQLite):
-├── PushCredential(issuer="ForgeRock", account="user@example.com")
-├── PushNotification(messageId="notification-uuid-123", pending=true)
-└── PushDeviceToken(tokenId="fcm-token-xyz")
+└── PushCredential(issuer="ForgeRock", account="user@example.com")
 
 Legacy Files: [Deleted]
 Legacy KeyStore Entry: [Deleted]
@@ -403,7 +584,6 @@ Legacy KeyStore Entry: [Deleted]
   - `mfa:push` - Push credential and notification storage
   - `foundation:migration` - Migration framework
   - `foundation:legacy-migration` - Legacy decryption utilities
-  - AndroidX Startup library
 
 ---
 
@@ -420,4 +600,3 @@ Legacy KeyStore Entry: [Deleted]
 This module is part of the Ping Identity SDK for Android and is subject to the MIT License. See the LICENSE file for details.
 
 ---
-

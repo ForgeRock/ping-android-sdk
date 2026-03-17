@@ -10,99 +10,84 @@ import android.content.Context
 import com.pingidentity.logger.Logger
 import com.pingidentity.logger.STANDARD
 import com.pingidentity.migration.Migration
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 /**
  * Main object for FR Authenticator data migration.
- * Orchestrates the migration of accounts, mechanisms, notifications, and device tokens.
+ * Orchestrates the migration of accounts and mechanisms.
  */
 object AuthMigration {
-    val logger = Logger.STANDARD
-
-    /**
-     * Configuration for the migration process.
-     * Set this before starting migration if using custom storage with a different key alias.
-     */
-    @Volatile
-    var config: LegacyAuthenticationConfig = LegacyAuthenticationConfig()
-
-    /** The migration configuration that defines the sequence of migration steps. */
-    val migration = Migration {
-        logger = this@AuthMigration.logger
-        step(step1)  // Export legacy authenticator data
-        step(step2)  // Migrate mechanisms to OATH and Push storage
-        step(step3)  // Migrate push notifications to Push storage
-        step(step4)  // Migrate device token to Push storage
-        step(step5)  // Cleanup legacy authenticator data
-    }
-
-    /**
-     * Configures the migration with custom settings.
-     *
-     * @param keyAlias The AndroidKeyStore alias used for encrypted storage.
-     *                 Default: "org.forgerock.android.authenticator.KEYS"
-     *
-     * ## Example - Custom Storage with Different Key Alias
-     *
-     * ```kotlin
-     * // Before starting migration, configure the key alias
-     * AuthMigration.configure(keyAlias = "com.myapp.custom.KEY_ALIAS")
-     *
-     * lifecycleScope.launch {
-     *     AuthMigration.start(applicationContext)
-     * }
-     * ```
-     */
-    fun configure(keyAlias: String = LegacyAuthenticationConfig.DEFAULT_KEY_ALIAS) {
-        config = LegacyAuthenticationConfig(keyAlias = keyAlias)
-        logger.i("Migration configured with key alias: $keyAlias")
-    }
+    var logger: Logger = Logger.STANDARD
+    private val mutex = Mutex()
 
     /**
      * Starts the authenticator migration process.
      *
-     * This suspending function executes all configured migration steps in sequence,
-     * emitting progress updates through a Flow. Each step is executed only once and
-     * will be skipped on subsequent invocations.
-     *
+     * This suspending function executes all configured migration steps in sequence.
      * The migration is idempotent and safe to run multiple times.
      *
      * @param context The Android context used to access storage services.
-     * ## Example
+     * @param block Optional DSL block to configure [LegacyAuthenticationConfig].
      *
+     * ## Example — default migration (no configuration needed)
      * ```kotlin
      * lifecycleScope.launch {
      *     AuthMigration.start(applicationContext)
+     * }
+     * ```
+     *
+     * ## Example — custom key alias
+     * ```kotlin
+     * lifecycleScope.launch {
+     *     AuthMigration.start(applicationContext) {
+     *         keyAlias = "com.myapp.custom.STORAGE_KEY"
+     *     }
+     * }
+     * ```
+     *
+     * ## Example — custom storage provider
+     * ```kotlin
+     * lifecycleScope.launch {
+     *     AuthMigration.start(applicationContext) {
+     *         legacyStorageProvider = MyCustomStorageProvider(applicationContext)
+     *     }
      * }
      * ```
      *
      * @see com.pingidentity.migration.MigrationProgress
      */
-    suspend fun start(context: Context) {
-        migration.migrate(context).collect { progress ->
-            when (progress) {
-                is com.pingidentity.migration.MigrationProgress.Started -> {
-                    // Handle migration started
-                    logger.i("Migration started")
-                }
+    suspend fun start(context: Context, block: LegacyAuthenticationConfig.() -> Unit = {}) {
+        mutex.withLock {
+            val config = LegacyAuthenticationConfig().apply(block)
+            val provider = config.legacyStorageProvider
+                ?: DefaultLegacyStorageProvider(context)
+            this.logger = config.logger
 
-                is com.pingidentity.migration.MigrationProgress.InProgress -> {
-                    // Handle migration in progress
-                    logger.i("Migration in progress: Step ${progress.currentStep} of ${progress.totalSteps} - ${progress.message}")
-                }
+            val migration = Migration {
+                logger = config.logger
+                step(startMigrationStep(provider))    // Import legacy authenticator data
+                step(migrateMechanismsStep)           // Migrate mechanisms to OATH and Push storage
+                step(cleanupLegacyDataStep(provider)) // Cleanup legacy authenticator data
+            }
 
-                is com.pingidentity.migration.MigrationProgress.Error -> {
-                    // Handle migration error
-                    logger.i("Migration error: ${progress.error.message}")
-                }
-
-                is com.pingidentity.migration.MigrationProgress.Success -> {
-                    // Handle migration completed
-                    logger.i("Migration completed successfully: ${progress.message}")
-                }
-
-                is com.pingidentity.migration.MigrationProgress.StepCompleted -> {
-                    // Handle step completed
-                    logger.i("Step completed: ${progress.step.description}")
+            migration.migrate(context).collect { progress ->
+                when (progress) {
+                    is com.pingidentity.migration.MigrationProgress.Started -> {
+                        logger.i("Migration started")
+                    }
+                    is com.pingidentity.migration.MigrationProgress.InProgress -> {
+                        logger.i("Migration in progress: Step ${progress.currentStep} of ${progress.totalSteps} - ${progress.message}")
+                    }
+                    is com.pingidentity.migration.MigrationProgress.Error -> {
+                        logger.i("Migration error: ${progress.error.message}")
+                    }
+                    is com.pingidentity.migration.MigrationProgress.Success -> {
+                        logger.i("Migration completed successfully: ${progress.message}")
+                    }
+                    is com.pingidentity.migration.MigrationProgress.StepCompleted -> {
+                        logger.i("Step completed: ${progress.step.description}")
+                    }
                 }
             }
         }

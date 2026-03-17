@@ -5,7 +5,7 @@ targetSdk = "36"
 minSdk = "29"
 jvmTarget = "17"
 
-forgerockAuth = "4.8.2"
+forgerockAuth = "4.8.3"
 activityCompose = "1.10.1"
 agp = "8.12.2"
 coreSplashscreen = "1.0.1"
@@ -93,6 +93,7 @@ androidx-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview
 coil-compose = { module = "io.coil-kt:coil-compose", version.ref = "coilCompose" }
 coil-svg = { module = "io.coil-kt:coil-svg", version.ref = "coilSvg" }
 forgerock-auth = { module = "org.forgerock:forgerock-auth", version.ref = "forgerockAuth" }
+forgerock-authenticator = { module = "org.forgerock:forgerock-authenticator", version.ref = "forgerockAuth" }
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
 compose-ui = { module = "androidx.compose.ui:ui", version.ref = "compose" }
 compose-foundation = { module = "androidx.compose.foundation:foundation", version.ref = "compose" }

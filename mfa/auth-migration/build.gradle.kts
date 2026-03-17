@@ -14,12 +14,11 @@ android {
 }
 
 dependencies {
-    implementation(project(":foundation:android"))
     implementation(project(":foundation:logger"))
     implementation(project(":foundation:migration"))
-    implementation(project(":foundation:storage"))
     implementation(project(":mfa:oath"))
     implementation(project(":mfa:push"))
+    compileOnly(libs.forgerock.authenticator)
 
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.androidx.security.crypto)
@@ -31,4 +30,5 @@ dependencies {
     testImplementation(libs.kotlin.test)
     testImplementation(libs.mockk)
     testImplementation(libs.robolectric)
+    testImplementation(project(":foundation:android"))
 }
