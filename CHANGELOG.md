@@ -1,6 +1,6 @@
 ## [2.0.0]
 #### Added
-- Added new `network` module [SDKS-3917]
+- Added new `network` module [SDKS-4505]
 - Added new `journey` module [SDKS-3917]
 - Added new `mfa-commons` module [SDKS-4106]
 - Added new `mfa-oath` module [SDKS-4021]

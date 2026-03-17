@@ -7,7 +7,7 @@
 The Ping External IDP library empowers your Android applications to seamlessly authenticate users
 through various
 external Identity Providers (IDPs) such as Google, Facebook, and Apple. Acting as a plugin for
-the `ping-davinci` and `ping-journey` modules, it streamlines the integration process by providing
+the `davinci` and `journey` modules, it streamlines the integration process by providing
 the necessary
 configurations and functionalities to initiate and manage authentication flows with these external
 services.
