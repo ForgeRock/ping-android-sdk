@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2025-2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -794,5 +794,41 @@ class SharedPrefsPushStorageTest {
         // Verify credential2 still has 2 notifications
         val cred2Count = storage.countPushNotifications(credential2.id)
         assertEquals("Credential2 should still have 2 notifications", 2, cred2Count)
+    }
+
+    /**
+     * Test getting a credential by issuer and account name
+     */
+    @Test
+    fun testGetCredentialByIssuerAndAccount() = runTest {
+        // Create and store multiple test credentials
+        val credential1 = createTestPushCredential(issuer = "Issuer1", accountName = "user1@example.com")
+        val credential2 = createTestPushCredential(issuer = "Issuer2", accountName = "user2@example.com")
+        val credential3 = createTestPushCredential(issuer = "Issuer1", accountName = "user3@example.com")
+
+        storage.storePushCredential(credential1)
+        storage.storePushCredential(credential2)
+        storage.storePushCredential(credential3)
+
+        // Test retrieving by exact issuer and account name
+        val retrieved1 = storage.getCredentialByIssuerAndAccount("Issuer1", "user1@example.com")
+        assertNotNull("Should find credential1", retrieved1)
+        assertEquals("Should return correct credential", credential1.id, retrieved1?.id)
+
+        // Test retrieving different combinations
+        val retrieved2 = storage.getCredentialByIssuerAndAccount("Issuer2", "user2@example.com")
+        assertNotNull("Should find credential2", retrieved2)
+        assertEquals("Should return correct credential", credential2.id, retrieved2?.id)
+
+        // Test non-existent combination
+        val retrievedNonExistent = storage.getCredentialByIssuerAndAccount("NonExistent", "none@example.com")
+        assertNull("Should return null for non-existent combination", retrievedNonExistent)
+
+        // Test case sensitivity
+        val retrievedCaseMismatch = storage.getCredentialByIssuerAndAccount("issuer1", "user1@example.com")
+        assertNull("Should be case-sensitive for issuer", retrievedCaseMismatch)
+
+        val retrievedAccountCaseMismatch = storage.getCredentialByIssuerAndAccount("Issuer1", "USER1@EXAMPLE.COM")
+        assertNull("Should be case-sensitive for account name", retrievedAccountCaseMismatch)
     }
 }

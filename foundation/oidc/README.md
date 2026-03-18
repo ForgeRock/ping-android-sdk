@@ -102,7 +102,7 @@ Basic Configuration, use `discoveryEndpoint` to lookup OIDC endpoints
 ```kotlin
 
 // Create an OIDC client with the discovery endpoint, and other configurations
-val web = OidcWeb {
+val web = OidcWebClient {
     logger = Logger.STANDARD
     module(com.pingidentity.oidc.module.Oidc) {
         discoveryEndpoint =
@@ -152,7 +152,7 @@ however developers can override the storage and logger settings.
 Basic Configuration with custom `storage` and `logger`
 
 ```kotlin
-val web = OidcWeb {
+val web = OidcWebClient {
     logger = Logger.STANDARD
     module(com.pingidentity.oidc.module.Oidc) {
         discoveryEndpoint =
@@ -169,7 +169,7 @@ More OidcClient configuration, configurable attribute can be found under
 [OIDC Spec](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest)
 
 ```kotlin
-val web = OidcWeb {
+val web = OidcWebClient {
     module(com.pingidentity.oidc.module.Oidc) {
         discoveryEndpoint =
             "https://example.com/envId/as/.well-known/openid-configuration"

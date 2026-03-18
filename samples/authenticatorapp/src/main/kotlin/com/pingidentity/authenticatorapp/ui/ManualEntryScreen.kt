@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2025-2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -173,7 +173,19 @@ fun ManualEntryScreen(
                 label = { Text("Digits") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.fillMaxWidth(),
-                singleLine = true
+                singleLine = true,
+                supportingText = {
+                    val digitsValue = digits.toIntOrNull()
+                    if (digitsValue != null && digitsValue != 6 && digitsValue != 8) {
+                        Text(
+                            text = "Digits must be 6 or 8 (RFC 4226/6238)",
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    } else {
+                        Text("Number of digits in the generated OTP code (6 or 8)")
+                    }
+                },
+                isError = digits.toIntOrNull()?.let { it != 6 && it != 8 } ?: false
             )
 
             // Period selection (only for TOTP)
@@ -184,7 +196,19 @@ fun ManualEntryScreen(
                     label = { Text(stringResource(id = R.string.manual_entry_period_label)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
+                    singleLine = true,
+                    supportingText = {
+                        val periodValue = period.toIntOrNull()
+                        if (periodValue != null && periodValue <= 0) {
+                            Text(
+                                text = "Period must be greater than 0",
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        } else {
+                            Text("Time in seconds for code validity (typically 30)")
+                        }
+                    },
+                    isError = period.toIntOrNull()?.let { it <= 0 } ?: false
                 )
             }
 
@@ -207,7 +231,11 @@ fun ManualEntryScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = 16.dp),
-                enabled = issuer.isNotBlank() && accountName.isNotBlank() && secret.isNotBlank()
+                enabled = issuer.isNotBlank() && 
+                         accountName.isNotBlank() && 
+                         secret.isNotBlank() &&
+                         digits.toIntOrNull()?.let { it == 6 || it == 8 } ?: false &&
+                         (oathType == OathType.HOTP || period.toIntOrNull()?.let { it > 0 } ?: false)
             ) {
                 Text(stringResource(id = R.string.manual_entry_add_account_button))
             }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2025-2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -231,6 +231,25 @@ class SharedPrefsPushStorage(context: Context, prefName: String = DEFAULT_PREFS_
         } catch (e: Exception) {
             Log.e(TAG, "Failed to get all credentials", e)
             throw MfaStorageException("Failed to get all credentials: ${e.message}", e)
+        }
+    }
+    
+    override suspend fun getCredentialByIssuerAndAccount(
+        issuer: String,
+        accountName: String
+    ): PushCredential? {
+        try {
+            checkInitialized()
+            
+            // For SharedPreferences, we need to get all credentials and filter
+            // This is less efficient than SQL-based storage, but works for testing
+            val allCredentials = getAllPushCredentials()
+            return allCredentials.firstOrNull { 
+                it.issuer == issuer && it.accountName == accountName 
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to get credential by issuer and account", e)
+            throw MfaStorageException("Failed to get credential by issuer and account: ${e.message}", e)
         }
     }
 

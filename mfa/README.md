@@ -70,7 +70,6 @@ Each MFA client can be configured using a DSL-style approach:
 ```kotlin
 // Using the DSL-style pattern
 val config = PushConfiguration {
-    encryptionEnabled = true
     timeoutMs = 30000L
     enableCredentialCache = false
     logger = customLogger
@@ -78,10 +77,17 @@ val config = PushConfiguration {
 
 // Using the DSL-style pattern with client directly
 val pushClient = PushClient {
-    encryptionEnabled = true
     timeoutMs = 30000L
     enableCredentialCache = false
     logger = customLogger
+}
+
+// Encryption is configured at the storage level:
+val pushClient = PushClient {
+    storage = SQLPushStorage {
+        context = applicationContext
+        passphraseProvider = NonePassphraseProvider() // For unencrypted storage
+    }
 }
 ```
 
@@ -209,5 +215,5 @@ For detailed documentation, visit the [Ping SDKs](https://docs.pingidentity.com/
 
 ## License
 
-Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+Copyright (c) 2026 Ping Identity Corporation. All rights reserved.
 This software may be modified and distributed under the terms of the MIT license. See the [LICENSE](../LICENSE) file for details.

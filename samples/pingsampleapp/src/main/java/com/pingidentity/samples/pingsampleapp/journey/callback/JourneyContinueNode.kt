@@ -11,10 +11,12 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.pingidentity.device.binding.journey.DeviceBindingCallback
@@ -41,6 +43,10 @@ import com.pingidentity.journey.callback.TextOutputCallback
 import com.pingidentity.journey.callback.ValidatedPasswordCallback
 import com.pingidentity.journey.callback.ValidatedUsernameCallback
 import com.pingidentity.journey.plugin.callbacks
+import com.pingidentity.journey.plugin.description
+import com.pingidentity.journey.plugin.header
+import com.pingidentity.journey.plugin.pageFooter
+import com.pingidentity.journey.plugin.submitButtonText
 import com.pingidentity.orchestrate.ContinueNode
 import com.pingidentity.protect.journey.PingOneProtectEvaluationCallback
 import com.pingidentity.protect.journey.PingOneProtectInitializeCallback
@@ -58,6 +64,31 @@ fun JourneyContinueNode(
                 .padding(4.dp)
                 .fillMaxWidth(),
     ) {
+        // Display header if available
+        if (continueNode.header.isNotEmpty()) {
+            Text(
+                text = continueNode.header,
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 8.dp)
+            )
+        }
+
+        // Display description if available
+        if (continueNode.description.isNotEmpty()) {
+            Text(
+                text = continueNode.description,
+                style = MaterialTheme.typography.bodyMedium,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp)
+            )
+        }
+
         var showNext = true
 
         continueNode.callbacks.forEach {
@@ -141,12 +172,26 @@ fun JourneyContinueNode(
                 }
             }
         }
+
+        // Display footer if available
+        if (continueNode.pageFooter.isNotEmpty()) {
+            Text(
+                text = continueNode.pageFooter,
+                style = MaterialTheme.typography.bodySmall,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 16.dp, bottom = 8.dp)
+            )
+        }
+
         if (showNext) {
+            val buttonText = continueNode.submitButtonText.ifEmpty { "Next" }
             Button(
                 modifier = Modifier.align(Alignment.End),
                 onClick = onNext,
             ) {
-                Text("Next")
+                Text(buttonText)
             }
         }
     }

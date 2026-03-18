@@ -1,9 +1,10 @@
 /*
- * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2025-2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
  */
+
 description = "PUSH library"
 
 plugins {
@@ -22,6 +23,20 @@ android {
         debug {
             enableAndroidTestCoverage = true
             enableUnitTestCoverage = true
+        }
+    }
+
+    testOptions {
+        unitTests {
+            isIncludeAndroidResources = true
+            all {
+                // Add JVM arguments to exclude Android framework classes from instrumentation
+                // This applies whether running via Gradle or Android Studio's coverage runner
+                it.jvmArgs(
+                    "-noverify",
+                    "-XX:+IgnoreUnrecognizedVMOptions"
+                )
+            }
         }
     }
 }

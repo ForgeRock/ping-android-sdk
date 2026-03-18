@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2025-2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -14,6 +14,9 @@ import android.content.Intent
 import androidx.core.app.NotificationManagerCompat
 import com.pingidentity.authenticatorapp.AuthenticatorApp
 import com.pingidentity.authenticatorapp.data.DiagnosticLogger
+import com.pingidentity.mfa.commons.exception.CredentialNotFoundException
+import com.pingidentity.mfa.push.exception.NotificationExpiredException
+import com.pingidentity.mfa.push.exception.NotificationNotFoundException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -66,6 +69,15 @@ class NotificationActionReceiver : BroadcastReceiver() {
                 val applicationContext = context.applicationContext
                 val pushClient = AuthenticatorApp.getPushClient(applicationContext as Application)
                 pushClient.approveNotification(notificationId)
+            } catch (e: NotificationExpiredException) {
+                diagnosticLogger.w("Notification expired: ${e.message}", e)
+                // Notification has expired - user may see it was removed or marked expired in the app
+            } catch (e: NotificationNotFoundException) {
+                diagnosticLogger.w("Notification not found: ${e.message}", e)
+                // Notification was not found - may have been deleted
+            } catch (e: CredentialNotFoundException) {
+                diagnosticLogger.w("Credential not found: ${e.message}", e)
+                // Credential was not found - user needs to re-register
             } catch (e: Exception) {
                 diagnosticLogger.e("Error approving notification: ${e.message}", e)
             }
@@ -81,6 +93,15 @@ class NotificationActionReceiver : BroadcastReceiver() {
                 val applicationContext = context.applicationContext
                 val pushClient = AuthenticatorApp.getPushClient(applicationContext as Application)
                 pushClient.denyNotification(notificationId)
+            } catch (e: NotificationExpiredException) {
+                diagnosticLogger.w("Notification expired: ${e.message}", e)
+                // Notification has expired - user may see it was removed or marked expired in the app
+            } catch (e: NotificationNotFoundException) {
+                diagnosticLogger.w("Notification not found: ${e.message}", e)
+                // Notification was not found - may have been deleted
+            } catch (e: CredentialNotFoundException) {
+                diagnosticLogger.w("Credential not found: ${e.message}", e)
+                // Credential was not found - user needs to re-register
             } catch (e: Exception) {
                 diagnosticLogger.e("Error denying notification: ${e.message}", e)
             }

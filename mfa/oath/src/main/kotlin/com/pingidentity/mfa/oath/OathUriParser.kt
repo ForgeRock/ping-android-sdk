@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2025-2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -85,8 +85,31 @@ object OathUriParser : UriParser() {
             val algorithmStr = parsedUri.getQueryParameter(ALGORITHM_PARAM)?.uppercase() ?: DEFAULT_ALGORITHM
             val algorithm = OathAlgorithm.fromString(algorithmStr)
             val digits = parsedUri.getQueryParameter(DIGITS_PARAM)?.toIntOrNull() ?: DEFAULT_DIGITS
+            
+            // Validate digits parameter (RFC 4226/6238 specifies 6 or 8 digits)
+            if (digits != 6 && digits != 8) {
+                throw IllegalArgumentException(
+                    "Invalid digits value: $digits. Digits must be 6 or 8."
+                )
+            }
+            
             val period = parsedUri.getQueryParameter(PERIOD_PARAM)?.toIntOrNull() ?: DEFAULT_PERIOD
+            
+            // Validate period for TOTP
+            if (type == OathType.TOTP && period <= 0) {
+                throw IllegalArgumentException(
+                    "Invalid period value: $period. Period must be greater than 0."
+                )
+            }
+            
             val counter = parsedUri.getQueryParameter(COUNTER_PARAM)?.toLongOrNull() ?: DEFAULT_COUNTER
+            
+            // Validate counter for HOTP
+            if (type == OathType.HOTP && counter < 0) {
+                throw IllegalArgumentException(
+                    "Invalid counter value: $counter. Counter must be non-negative."
+                )
+            }
             
             // Parse the additional parameters and decode base64-encoded values
             

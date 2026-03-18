@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2025-2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -7,13 +7,19 @@
 
 package com.pingidentity.authenticatorapp.ui
 
+import android.content.Intent
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.pingidentity.authenticatorapp.data.AuthenticatorViewModel
 import com.pingidentity.authenticatorapp.data.LoginViewModel
+import com.pingidentity.authenticatorapp.notification.BiometricPromptActivity
+import com.pingidentity.authenticatorapp.notification.NotificationActionReceiver.Companion.EXTRA_NOTIFICATION_ID
 import com.pingidentity.authenticatorapp.util.NavigationAnimations
 
 /**
@@ -25,6 +31,18 @@ fun AuthenticatorNavHost(
     loginViewModel: LoginViewModel = viewModel(),
     initialDestination: String = "accounts"
 ) {
+    // Check for initialization errors
+    val uiState by authenticatorViewModel.uiState.collectAsState()
+    
+    // If there's an initialization error, show the error screen instead
+    if (uiState.initializationError != null) {
+        InitializationErrorScreen(
+            viewModel = authenticatorViewModel,
+            initializationError = uiState.initializationError!!
+        )
+        return
+    }
+    
     // Create the NavController
     val navController = rememberNavController()
 
@@ -137,6 +155,7 @@ fun AuthenticatorNavHost(
             popEnterTransition = NavigationAnimations.popEnterTransition,
             popExitTransition = NavigationAnimations.popExitTransition
         ) { backStackEntry ->
+            val context = LocalContext.current
             val notificationId = backStackEntry.arguments?.getString("notificationId") ?: ""
             authenticatorViewModel.getNotificationItemById(notificationId)?.let { notificationItem ->
                 NotificationResponseScreen(
@@ -144,6 +163,14 @@ fun AuthenticatorNavHost(
                     onDismiss = { navController.popBackStack() },
                     onApprove = {
                         authenticatorViewModel.approveNotification(notificationId)
+                        navController.popBackStack()
+                    },
+                    onBiometricApprove = {
+                        // Launch BiometricPromptActivity for biometric authentication
+                        val intent = Intent(context, BiometricPromptActivity::class.java).apply {
+                            putExtra(EXTRA_NOTIFICATION_ID, notificationId)
+                        }
+                        context.startActivity(intent)
                         navController.popBackStack()
                     },
                     onDeny = {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2025-2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -32,6 +32,9 @@ import com.pingidentity.authenticatorapp.data.createPushNotificationItem
 import com.pingidentity.authenticatorapp.notification.NotificationActionReceiver.Companion.EXTRA_NOTIFICATION_ID
 import com.pingidentity.authenticatorapp.ui.NotificationResponseScreen
 import com.pingidentity.authenticatorapp.ui.theme.PingIdentityAuthenticatorTheme
+import com.pingidentity.mfa.commons.exception.CredentialNotFoundException
+import com.pingidentity.mfa.push.exception.NotificationExpiredException
+import com.pingidentity.mfa.push.exception.NotificationNotFoundException
 import com.pingidentity.mfa.push.PushClient
 import kotlinx.coroutines.launch
 
@@ -113,11 +116,21 @@ class PushNotificationActivity : ComponentActivity() {
                                                 .onSuccess { finish() }
                                                 .onFailure { e ->
                                                     diagnosticLogger.e("Error approving notification: ${e.message}", e)
-                                                    errorMessage = "Failed to approve: ${e.message}"
+                                                    errorMessage = when (e) {
+                                                        is NotificationExpiredException -> "This notification has expired and can no longer be approved."
+                                                        is NotificationNotFoundException -> "This notification is no longer available."
+                                                        is CredentialNotFoundException -> "Credential not found. Please register again."
+                                                        else -> "Failed to approve: ${e.message}"
+                                                    }
                                                 }
                                         } catch (e: Exception) {
                                             diagnosticLogger.e("Error approving notification: ${e.message}", e)
-                                            errorMessage = "Failed to approve: ${e.message}"
+                                            errorMessage = when (e) {
+                                                is NotificationExpiredException -> "This notification has expired and can no longer be approved."
+                                                is NotificationNotFoundException -> "This notification is no longer available."
+                                                is CredentialNotFoundException -> "Credential not found. Please register again."
+                                                else -> "Failed to approve: ${e.message}"
+                                            }
                                         }
                                     }
                                 },
@@ -131,11 +144,21 @@ class PushNotificationActivity : ComponentActivity() {
                                                 .onSuccess { finish() }
                                                 .onFailure { e ->
                                                     diagnosticLogger.e("Error denying notification: ${e.message}", e)
-                                                    errorMessage = "Failed to deny: ${e.message}"
+                                                    errorMessage = when (e) {
+                                                        is NotificationExpiredException -> "This notification has expired and can no longer be denied."
+                                                        is NotificationNotFoundException -> "This notification is no longer available."
+                                                        is CredentialNotFoundException -> "Credential not found. Please register again."
+                                                        else -> "Failed to deny: ${e.message}"
+                                                    }
                                                 }
                                         } catch (e: Exception) {
                                             diagnosticLogger.e("Error denying notification: ${e.message}", e)
-                                            errorMessage = "Failed to deny: ${e.message}"
+                                            errorMessage = when (e) {
+                                                is NotificationExpiredException -> "This notification has expired and can no longer be denied."
+                                                is NotificationNotFoundException -> "This notification is no longer available."
+                                                is CredentialNotFoundException -> "Credential not found. Please register again."
+                                                else -> "Failed to deny: ${e.message}"
+                                            }
                                         }
                                     }
                                 },
@@ -149,11 +172,21 @@ class PushNotificationActivity : ComponentActivity() {
                                                 finish()
                                             }.onFailure { e ->
                                                 diagnosticLogger.e("Error approving with challenge: ${e.message}", e)
-                                                errorMessage = "Failed to approve: ${e.message}"
+                                                errorMessage = when (e) {
+                                                    is NotificationExpiredException -> "This notification has expired and can no longer be approved."
+                                                    is NotificationNotFoundException -> "This notification is no longer available."
+                                                    is CredentialNotFoundException -> "Credential not found. Please register again."
+                                                    else -> "Failed to approve: ${e.message}"
+                                                }
                                             }
                                         } catch (e: Exception) {
                                             diagnosticLogger.e("Error approving with challenge: ${e.message}", e)
-                                            errorMessage = "Failed to approve: ${e.message}"
+                                            errorMessage = when (e) {
+                                                is NotificationExpiredException -> "This notification has expired and can no longer be approved."
+                                                is NotificationNotFoundException -> "This notification is no longer available."
+                                                is CredentialNotFoundException -> "Credential not found. Please register again."
+                                                else -> "Failed to approve: ${e.message}"
+                                            }
                                         }
                                     }
                                 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2025-2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -45,13 +45,20 @@ class OathClient internal constructor(
          * @param block The configuration block to customize the client configuration.
          * @return An initialized OathClient instance.
          *
+         * Example with default encrypted storage:
          * ```
          * val oathClient = OathClient {
          *     enableCredentialCache = true
-         *     timeoutMs = 60000
-         *     encryptionEnabled = false
          *     logger = CustomLogger()
-         *     storage = SQLOathStorage()
+         * }
+         * ```
+         *
+         * Example with custom unencrypted storage:
+         * ```
+         * val oathClient = OathClient {
+         *     storage = SQLOathStorage {
+         *         passphraseProvider = NonePassphraseProvider()
+         *     }
          * }
          * ```
          */
@@ -67,18 +74,24 @@ class OathClient internal constructor(
 
         /**
          * Creates a default OathStorage implementation with the appropriate configuration.
+         * Uses encrypted storage by default (KeyStorePassphraseProvider).
+         *
+         * To use unencrypted storage, provide a custom storage implementation:
+         * ```
+         * OathClient {
+         *     storage = SQLOathStorage {
+         *         passphraseProvider = NonePassphraseProvider()
+         *     }
+         * }
+         * ```
          *
          * @param config The OATH configuration to use for the storage.
-         * @return A configured OathStorage implementation.
+         * @return A configured OathStorage implementation with encryption enabled.
          */
         private fun defaultStorage(config: OathConfiguration): OathStorage {
             return SQLOathStorage {
                 context = config.context
-                passphraseProvider = if (config.encryptionEnabled) {
-                    KeyStorePassphraseProvider(config.context, logger = config.logger)
-                } else {
-                    NonePassphraseProvider()
-                }
+                passphraseProvider = KeyStorePassphraseProvider(config.context, logger = config.logger)
                 logger = config.logger
             }
         }

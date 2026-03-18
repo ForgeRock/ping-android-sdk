@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2025-2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -89,14 +89,16 @@ class OathPolicyIntegrationTest {
      * Creates a test OATH credential with optional policies
      */
     private fun createTestOathCredential(
+        issuer: String = "Example Corp",
+        accountName: String = "test@example.com",
         policies: String? = null,
         isLocked: Boolean = false,
         lockingPolicy: String? = null
     ): OathCredential {
         return OathCredential(
             id = UUID.randomUUID().toString(),
-            issuer = "Example Corp",
-            accountName = "test@example.com",
+            issuer = issuer,
+            accountName = accountName,
             secret = "JBSWY3DPEHPK3PXP",
             oathType = OathType.TOTP,
             oathAlgorithm = OathAlgorithm.SHA1,
@@ -257,11 +259,16 @@ class OathPolicyIntegrationTest {
     fun testCredentialRetrievalWithPolicyConfiguration() = runTest {
         val client = createTestClientWithPolicies()
 
-        // Create multiple test credentials with different policy configurations
+        // Create multiple test credentials with different policy configurations and unique identifiers
         val credential1 = createTestOathCredential(
+            issuer = "Example Corp 1",
+            accountName = "user1@example.com",
             policies = """{"biometricAvailable":{}}"""
         )
-        val credential2 = createTestOathCredential()
+        val credential2 = createTestOathCredential(
+            issuer = "Example Corp 2",
+            accountName = "user2@example.com"
+        )
 
         // Store the credentials
         client.saveCredential(credential1).getOrThrow()

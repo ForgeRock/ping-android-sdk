@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2025-2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -12,6 +12,7 @@ import org.junit.Assert.assertNotNull
 import org.junit.Test
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
+import org.junit.Assert.fail
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
@@ -156,6 +157,84 @@ class OathUriParserTest {
         assert(credential.resourceId == reparsedCredential.resourceId) { 
             "Resource IDs don't match. Original: ${credential.resourceId}, Reparsed: ${reparsedCredential.resourceId}" 
         }
+    }
+
+    @Test
+    fun `test parse URI with invalid digits`() = runTest {
+        val invalidDigitsValues = listOf(0, -1, 7, 10)
+        
+        invalidDigitsValues.forEach { invalidDigits ->
+            val uri = "otpauth://totp/Example:alice@example.com?secret=JBSWY3DPEHPK3PXP&issuer=Example&digits=$invalidDigits"
+            try {
+                OathUriParser.parse(uri)
+                fail("Expected IllegalArgumentException for digits=$invalidDigits")
+            } catch (e: IllegalArgumentException) {
+                // Expected - test passes for this value
+                assert(e.message?.contains("digits") == true)
+            }
+        }
+    }
+
+    @Test
+    fun `test parse URI with valid digits`() = runTest {
+        val validDigitsValues = listOf(6, 8)
+        
+        validDigitsValues.forEach { validDigits ->
+            val uri = "otpauth://totp/Example:alice@example.com?secret=JBSWY3DPEHPK3PXP&issuer=Example&digits=$validDigits"
+            val credential = OathUriParser.parse(uri)
+            assertEquals(validDigits, credential.digits)
+        }
+    }
+
+    @Test
+    fun `test parse TOTP URI with invalid period`() = runTest {
+        val invalidPeriodValues = listOf(0, -1)
+        
+        invalidPeriodValues.forEach { invalidPeriod ->
+            val uri = "otpauth://totp/Example:alice@example.com?secret=JBSWY3DPEHPK3PXP&issuer=Example&period=$invalidPeriod"
+            try {
+                OathUriParser.parse(uri)
+                fail("Expected IllegalArgumentException for period=$invalidPeriod")
+            } catch (e: IllegalArgumentException) {
+                // Expected - test passes for this value
+                assert(e.message?.contains("period") == true)
+            }
+        }
+    }
+
+    @Test
+    fun `test parse TOTP URI with valid period - minimum`() = runTest {
+        val uri = "otpauth://totp/Example:alice@example.com?secret=JBSWY3DPEHPK3PXP&issuer=Example&period=1"
+        val credential = OathUriParser.parse(uri)
+        assertEquals(1, credential.period)
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun `test parse HOTP URI with invalid counter - negative`() = runTest {
+        val uri = "otpauth://hotp/Example:alice@example.com?secret=JBSWY3DPEHPK3PXP&issuer=Example&counter=-1"
+        OathUriParser.parse(uri)
+    }
+
+    @Test
+    fun `test parse HOTP URI with valid counter - zero`() = runTest {
+        val uri = "otpauth://hotp/Example:alice@example.com?secret=JBSWY3DPEHPK3PXP&issuer=Example&counter=0"
+        val credential = OathUriParser.parse(uri)
+        assertEquals(0L, credential.counter)
+    }
+
+    @Test
+    fun `test parse HOTP URI with valid counter - positive`() = runTest {
+        val uri = "otpauth://hotp/Example:alice@example.com?secret=JBSWY3DPEHPK3PXP&issuer=Example&counter=100"
+        val credential = OathUriParser.parse(uri)
+        assertEquals(100L, credential.counter)
+    }
+
+    @Test
+    fun `test parse URI with all valid edge case parameters`() = runTest {
+        val uri = "otpauth://totp/Example:alice@example.com?secret=JBSWY3DPEHPK3PXP&issuer=Example&digits=6&period=1"
+        val credential = OathUriParser.parse(uri)
+        assertEquals(6, credential.digits)
+        assertEquals(1, credential.period)
     }
     
 }

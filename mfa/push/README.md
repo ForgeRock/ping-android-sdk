@@ -395,10 +395,9 @@ val pushClient = PushClient {
 The custom storage options include:
 
 - **context**: Android application context (required)
-- **encryptionEnabled**: Whether to encrypt the database (default: true)
 - **databaseName**: Custom database name for the SQLite database (optional)
 - **databaseVersion**: Custom database version (default: 1)
-- **passphraseProvider**: Custom passphrase provider for database encryption (default: uses Android KeyStore)
+- **passphraseProvider**: Custom passphrase provider for database encryption (default: KeyStorePassphraseProvider for encrypted storage, use NonePassphraseProvider() for unencrypted storage)
 
 ## Advanced Usage
 
@@ -552,7 +551,6 @@ class PushMainActivity : AppCompatActivity() {
         lifecycleScope.launch {
             try {
                 pushClient = PushClient {
-                    encryptionEnabled = true
                     enableCredentialCache = true
                 }
                 
@@ -952,5 +950,5 @@ class AuthenticationActivity : AppCompatActivity() {
 
 ## License
 
-Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+Copyright (c) 2026 Ping Identity Corporation. All rights reserved.
 This software may be modified and distributed under the terms of the MIT license. See the LICENSE file for details.

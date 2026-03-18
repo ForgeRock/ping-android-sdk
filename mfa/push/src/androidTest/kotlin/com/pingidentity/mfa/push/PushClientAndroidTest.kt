@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2025-2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -700,6 +700,59 @@ class PushClientAndroidTest {
         val cleanedCount = client.cleanupNotifications(credentialId).getOrThrow()
         assertTrue("Cleanup should remove some notifications", cleanedCount >= 0)
 
+        client.close()
+    }
+    
+    @Test
+    fun testDuplicateCredentialDetection() = runTest {
+        val client = createTestClient()
+        
+        val testIssuer = "Test Issuer"
+        val testAccountName = "testuser@example.com"
+        
+        // 1. Add a Push credential
+        val credential = PushCredential(
+            id = UUID.randomUUID().toString(),
+            issuer = testIssuer,
+            accountName = testAccountName,
+            sharedSecret = testSharedSecret,
+            serverEndpoint = testServerEndpoint
+        )
+        
+        val savedCredential = client.saveCredential(credential).getOrThrow()
+        assertNotNull("First credential should be saved successfully", savedCredential)
+        
+        // 2. Try to add the same credential again with the same issuer and accountName
+        val duplicateCredential = PushCredential(
+            id = UUID.randomUUID().toString(),
+            issuer = testIssuer,
+            accountName = testAccountName,
+            sharedSecret = "different-secret",
+            serverEndpoint = testServerEndpoint
+        )
+        
+        val duplicateResult = client.saveCredential(duplicateCredential)
+        
+        // 3. Verify that adding the duplicate credential failed
+        assertTrue("Duplicate credential should fail", duplicateResult.isFailure)
+        
+        val exception = duplicateResult.exceptionOrNull()
+        assertNotNull("Exception should not be null", exception)
+        
+        // The exception message should mention that the credential already exists
+        // Check both the exception message and the cause message since DuplicateCredentialException may be wrapped
+        val errorMessage = exception?.message ?: ""
+        val causeMessage = exception?.cause?.message ?: ""
+        assertTrue(
+            "Error message should mention duplicate credential",
+            errorMessage.contains("already exists") || errorMessage.contains("duplicate", ignoreCase = true) ||
+            causeMessage.contains("already exists") || causeMessage.contains("duplicate", ignoreCase = true)
+        )
+        
+        // 4. Verify we still only have one credential
+        val allCredentials = client.getCredentials().getOrThrow()
+        assertEquals("Should only have one credential", 1, allCredentials.size)
+        
         client.close()
     }
 }

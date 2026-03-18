@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2025-2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -31,6 +31,9 @@ import androidx.core.content.ContextCompat
 import com.pingidentity.authenticatorapp.AuthenticatorApp
 import com.pingidentity.authenticatorapp.data.DiagnosticLogger
 import com.pingidentity.authenticatorapp.ui.theme.PingIdentityAuthenticatorTheme
+import com.pingidentity.mfa.commons.exception.CredentialNotFoundException
+import com.pingidentity.mfa.push.exception.NotificationExpiredException
+import com.pingidentity.mfa.push.exception.NotificationNotFoundException
 import com.pingidentity.mfa.push.PushClient
 import kotlinx.coroutines.launch
 
@@ -149,6 +152,15 @@ class BiometricPromptActivity : AppCompatActivity() {
                         val authMethod = getBiometricMethodName()
                         approveBiometricNotification(notificationId, authMethod)
                         finish()
+                    } catch (e: NotificationExpiredException) {
+                        diagnosticLogger.e("Notification expired: ${e.message}", e)
+                        onFailure("This notification has expired and can no longer be approved.")
+                    } catch (e: NotificationNotFoundException) {
+                        diagnosticLogger.e("Notification not found: ${e.message}", e)
+                        onFailure("This notification is no longer available.")
+                    } catch (e: CredentialNotFoundException) {
+                        diagnosticLogger.e("Credential not found: ${e.message}", e)
+                        onFailure("Credential not found. Please register again.")
                     } catch (e: Exception) {
                         diagnosticLogger.e("Failed to process approval: ${e.message}", e)
                         onFailure("Failed to approve notification: ${e.message}")

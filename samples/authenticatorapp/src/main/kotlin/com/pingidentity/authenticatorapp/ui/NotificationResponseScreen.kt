@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2025-2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -80,6 +80,7 @@ import com.pingidentity.authenticatorapp.data.NotificationStatus
 import com.pingidentity.authenticatorapp.data.PushNotificationItem
 import com.pingidentity.authenticatorapp.service.LocationService
 import com.pingidentity.authenticatorapp.ui.components.AccountAvatar
+import com.pingidentity.authenticatorapp.ui.components.StatusIndicator
 import com.pingidentity.mfa.commons.policy.BiometricAvailablePolicy
 import com.pingidentity.mfa.commons.policy.DeviceTamperingPolicy
 import com.pingidentity.mfa.push.PushType
@@ -183,8 +184,10 @@ fun NotificationResponseScreen(
                         .fillMaxWidth()
                         .padding(16.dp)
                 ) {
+                    // Status indicator and account header
                     Row(
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth()
                     ) {
                         AccountAvatar(
                             issuer = notificationItem.credential?.issuer ?: stringResource(id = R.string.notification_response_unknown_issuer),
@@ -192,8 +195,11 @@ fun NotificationResponseScreen(
                             imageUrl = notificationItem.credential?.imageURL,
                             size = 36.dp
                         )
+
                         Spacer(modifier = Modifier.width(16.dp))
-                        Column {
+
+                        // Issuer and account name
+                        Column(modifier = Modifier.weight(1f)) {
                             val issuer = notificationItem.credential?.issuer ?: stringResource(id = R.string.notification_response_unknown_issuer)
                             val accountName = notificationItem.credential?.accountName ?: stringResource(id = R.string.notification_response_unknown_account)
 
@@ -207,6 +213,9 @@ fun NotificationResponseScreen(
                                 style = MaterialTheme.typography.bodyLarge
                             )
                         }
+
+                        // Status indicator
+                        StatusIndicator(status = notificationItem.status)
                     }
 
                     // Divider
@@ -223,22 +232,23 @@ fun NotificationResponseScreen(
                         style = MaterialTheme.typography.bodyLarge,
                     )
 
-                    Spacer(modifier = Modifier.height(8.dp))
-
                     // Time sent
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.Alarm,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = notificationItem.notification.sentAt.toString(),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                    notificationItem.notification.sentAt?.let { sentAt ->
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.Alarm,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = sentAt.toString(),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
 
                     // Response time
@@ -516,11 +526,11 @@ fun NotificationResponseScreen(
                             modifier = Modifier.size(20.dp)
                         )
                         Spacer(modifier = Modifier.width(12.dp))
-                        val lockMessage = when (notificationItem.credential?.lockingPolicy?.lowercase()) {
+                        val lockMessage = when (notificationItem.credential.lockingPolicy?.lowercase()) {
                             BiometricAvailablePolicy.POLICY_NAME -> stringResource(id = R.string.account_locked_biometric_available)
                             DeviceTamperingPolicy.POLICY_NAME -> stringResource(id = R.string.account_locked_device_tampering)
                             null -> stringResource(id = R.string.account_locked_unknown_policy)
-                            else -> stringResource(id = R.string.account_locked_generic_policy, notificationItem.credential?.lockingPolicy!!)
+                            else -> stringResource(id = R.string.account_locked_generic_policy, notificationItem.credential.lockingPolicy!!)
                         }
                         Text(
                             text = lockMessage,

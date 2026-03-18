@@ -100,6 +100,30 @@ jobs:
         env:
           BUILD_TOOLS_VERSION: "35.0.0"
 
+      # Sign oath-debug-androidTest.apk
+      - name: Sign oath-debug-androidTest.apk
+        uses: r0adkll/sign-android-release@v1
+        with:
+          releaseDirectory: mfa/oath/build/outputs/apk/androidTest/debug
+          signingKeyBase64: ${{ secrets.SIGNING_KEYSTORE }}
+          alias: ${{ secrets.SIGNING_ALIAS }}
+          keyStorePassword: ${{ secrets.SIGNING_KEYSTORE_PASSWORD }}
+          keyPassword: ${{ secrets.SIGNING_KEY_PASSWORD }}
+        env:
+          BUILD_TOOLS_VERSION: "35.0.0"
+
+      # Sign push-debug-androidTest.apk
+      - name: Sign push-debug-androidTest.apk
+        uses: r0adkll/sign-android-release@v1
+        with:
+          releaseDirectory: mfa/push/build/outputs/apk/androidTest/debug
+          signingKeyBase64: ${{ secrets.SIGNING_KEYSTORE }}
+          alias: ${{ secrets.SIGNING_ALIAS }}
+          keyStorePassword: ${{ secrets.SIGNING_KEYSTORE_PASSWORD }}
+          keyPassword: ${{ secrets.SIGNING_KEY_PASSWORD }}
+        env:
+          BUILD_TOOLS_VERSION: "35.0.0"
+
       # Publish the signed APKs as build artifacts
       - name: Publish app-debug.apk
         uses: actions/upload-artifact@v4
@@ -121,6 +145,20 @@ jobs:
         with:
           name: journey-debug-androidTest-signed.apk
           path: journey/build/outputs/apk/androidTest/debug/journey-debug-androidTest-signed.apk
+
+      - name: Publish oath-debug-androidTest.apk
+        uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: oath-debug-androidTest-signed.apk
+          path: mfa/oath/build/outputs/apk/androidTest/debug/oath-debug-androidTest-signed.apk
+
+      - name: Publish push-debug-androidTest.apk
+        uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: push-debug-androidTest-signed.apk
+          path: mfa/push/build/outputs/apk/androidTest/debug/push-debug-androidTest-signed.apk
 
       # Send slack notification ONLY if any of the steps above fail
       - name: Send slack notification

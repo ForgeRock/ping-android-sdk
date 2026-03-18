@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2025-2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -17,9 +17,9 @@ import com.pingidentity.mfa.push.storage.SQLPushStorage
 import com.pingidentity.storage.sqlite.passphrase.KeyStorePassphraseProvider
 import com.pingidentity.storage.sqlite.passphrase.NonePassphraseProvider
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
-import kotlin.coroutines.coroutineContext
 
 /**
  * Implementation of PushClient that provides Push notification functionality.
@@ -52,10 +52,9 @@ class PushClient internal constructor(
          * 
          * ```
          * val pushClient = PushClient {
-         *     encryptionEnabled = true
          *     timeoutMs = 60000
          *     logger = Logger.STANDARD
-         *     storage = SQLPushStorage()
+         *     storage = SQLPushStorage()  // Uses encrypted storage by default
          *     // Add custom push handlers
          *     addPushHandler("CUSTOM_PLATFORM", CustomPushHandler())
          * }
@@ -73,18 +72,24 @@ class PushClient internal constructor(
 
         /**
          * Creates a default PushStorage implementation with the appropriate configuration.
+         * Uses encrypted storage by default (KeyStorePassphraseProvider).
+         *
+         * To use unencrypted storage, provide a custom storage implementation:
+         * ```
+         * PushClient {
+         *     storage = SQLPushStorage {
+         *         passphraseProvider = NonePassphraseProvider()
+         *     }
+         * }
+         * ```
          *
          * @param config The Push configuration to use for the storage.
-         * @return A configured PushStorage implementation.
+         * @return A configured PushStorage implementation with encryption enabled.
          */
         internal fun defaultStorage(config: PushConfiguration): PushStorage {
             return SQLPushStorage {
                 context = config.context
-                passphraseProvider = if (config.encryptionEnabled) {
-                    KeyStorePassphraseProvider(config.context, logger = config.logger)
-                } else {
-                    NonePassphraseProvider()
-                }
+                passphraseProvider = KeyStorePassphraseProvider(config.context, logger = config.logger)
                 logger = config.logger
             }
         }
@@ -142,7 +147,7 @@ class PushClient internal constructor(
             checkInitialized()
             Result.success(pushService.addCredentialFromUri(uri))
         } catch (e: Exception) {
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
             logger.e("Failed to add credential from URI: ${e.message}", e)
             Result.failure(e)
         }
@@ -159,7 +164,7 @@ class PushClient internal constructor(
             checkInitialized()
             Result.success(pushService.addCredential(credential))
         } catch (e: Exception) {
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
             logger.e("Failed to save credential: ${e.message}", e)
             Result.failure(e)
         }
@@ -175,7 +180,7 @@ class PushClient internal constructor(
             checkInitialized()
             Result.success(pushService.getCredentials())
         } catch (e: Exception) {
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
             logger.e("Failed to get credentials: ${e.message}", e)
             Result.failure(e)
         }
@@ -192,7 +197,7 @@ class PushClient internal constructor(
             checkInitialized()
             Result.success(pushService.getCredential(credentialId))
         } catch (e: Exception) {
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
             logger.e("Failed to get credential: ${e.message}", e)
             Result.failure(e)
         }
@@ -210,7 +215,7 @@ class PushClient internal constructor(
             checkInitialized()
             Result.success(pushService.removeCredential(credentialId))
         } catch (e: Exception) {
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
             logger.e("Failed to delete credential: ${e.message}", e)
             Result.failure(e)
         }
@@ -237,7 +242,7 @@ class PushClient internal constructor(
 
             Result.success(success)
         } catch (e: Exception) {
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
             if (credentialId != null) {
                 logger.e("Failed to update device token for credential $credentialId: ${e.message}", e)
             } else {
@@ -257,7 +262,7 @@ class PushClient internal constructor(
             checkInitialized()
             Result.success(pushService.getDeviceToken())
         } catch (e: Exception) {
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
             logger.e("Failed to get device token: ${e.message}", e)
             Result.failure(e)
         }
@@ -282,7 +287,7 @@ class PushClient internal constructor(
 
             Result.success(notification)
         } catch (e: Exception) {
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
             logger.e("Failed to process notification: ${e.message}", e)
             Result.failure(e)
         }
@@ -307,7 +312,7 @@ class PushClient internal constructor(
 
             Result.success(notification)
         } catch (e: Exception) {
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
             logger.e("Failed to process notification from string: ${e.message}", e)
             Result.failure(e)
         }
@@ -337,7 +342,7 @@ class PushClient internal constructor(
             val count = cleanupManager.runCleanup(credentialId)
             Result.success(count)
         } catch (e: Exception) {
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
             logger.e("Failed to clean up notifications: ${e.message}", e)
             Result.failure(e)
         }
@@ -367,7 +372,7 @@ class PushClient internal constructor(
             }
         } catch (e: Exception) {
             // Just log errors during auto-cleanup but don't throw
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
             logger.w("Auto-cleanup failed: ${e.message}", e)
         }
     }
@@ -384,7 +389,7 @@ class PushClient internal constructor(
             checkInitialized()
             Result.success(pushService.approveNotification(notificationId, emptyMap()))
         } catch (e: Exception) {
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
             logger.e("Failed to approve notification: ${e.message}", e)
             Result.failure(e)
         }
@@ -405,7 +410,7 @@ class PushClient internal constructor(
             val params = mapOf("challengeResponse" to challengeResponse)
             Result.success(pushService.approveNotification(notificationId, params))
         } catch (e: Exception) {
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
             logger.e("Failed to approve challenge notification: ${e.message}", e)
             Result.failure(e)
         }
@@ -429,7 +434,7 @@ class PushClient internal constructor(
             val params = mapOf("authenticationMethod" to authenticationMethod)
             Result.success(pushService.approveNotification(notificationId, params))
         } catch (e: Exception) {
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
             logger.e("Failed to approve biometric notification: ${e.message}", e)
             Result.failure(e)
         }
@@ -447,7 +452,7 @@ class PushClient internal constructor(
             checkInitialized()
             Result.success(pushService.denyNotification(notificationId, emptyMap()))
         } catch (e: Exception) {
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
             logger.e("Failed to deny notification: ${e.message}", e)
             Result.failure(e)
         }
@@ -464,7 +469,7 @@ class PushClient internal constructor(
             checkInitialized()
             Result.success(pushService.getPendingNotifications())
         } catch (e: Exception) {
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
             logger.e("Failed to get pending notifications: ${e.message}", e)
             Result.failure(e)
         }
@@ -481,7 +486,7 @@ class PushClient internal constructor(
             checkInitialized()
             Result.success(pushService.getAllNotifications())
         } catch (e: Exception) {
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
             logger.e("Failed to get all notifications: ${e.message}", e)
             Result.failure(e)
         }
@@ -498,7 +503,7 @@ class PushClient internal constructor(
             checkInitialized()
             Result.success(pushService.getNotification(notificationId))
         } catch (e: Exception) {
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
             logger.e("Failed to get notification: ${e.message}", e)
             Result.failure(e)
         }
@@ -515,7 +520,7 @@ class PushClient internal constructor(
                 pushService.clearCache()
                 logger.d("Push client cache cleared")
             } catch (e: Exception) {
-                coroutineContext.ensureActive()
+                currentCoroutineContext().ensureActive()
                 // Just log any errors during cache clearing, but continue with closing
                 logger.w("Error clearing Push client cache: ${e.message}", e)
             }

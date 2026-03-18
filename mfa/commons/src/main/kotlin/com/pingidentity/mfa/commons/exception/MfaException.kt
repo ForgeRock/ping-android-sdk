@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2025-2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -95,3 +95,45 @@ class MfaPolicyViolationException(
     val policy: com.pingidentity.mfa.commons.policy.MfaPolicy? = null,
     cause: Throwable? = null
 ) : MfaException(message, cause)
+
+/**
+ * Exception thrown when attempting to register a credential that already exists.
+ * 
+ * This exception is thrown when a credential with the same issuer and account name
+ * combination already exists in storage, preventing duplicate credential registration.
+ * 
+ * @param issuer The issuer of the duplicate credential.
+ * @param accountName The account name of the duplicate credential.
+ * @param cause The underlying cause of the exception.
+ */
+class DuplicateCredentialException(
+    val issuer: String,
+    val accountName: String,
+    cause: Throwable? = null
+) : MfaException(
+    message = "Credential already exists for issuer '$issuer' and account '$accountName'",
+    cause = cause
+)
+
+/**
+ * Exception thrown when attempting to operate on a credential that does not exist.
+ * 
+ * This exception is a cross-module exception that applies to all MFA credential types
+ * (Push, OATH, etc.). It is thrown when a credential cannot be found in storage, which may occur if:
+ * - The credential was deleted or removed
+ * - The credential ID is invalid or corrupted
+ * - There's a data integrity issue between notification and credential storage
+ * 
+ * Applications should handle this by prompting the user to re-register the credential
+ * or navigate to a credential setup flow.
+ * 
+ * @param credentialId The ID of the credential that was not found.
+ * @param cause The underlying cause of the exception.
+ */
+class CredentialNotFoundException(
+    val credentialId: String,
+    cause: Throwable? = null
+) : MfaException(
+    message = "Credential not found: $credentialId",
+    cause = cause
+)

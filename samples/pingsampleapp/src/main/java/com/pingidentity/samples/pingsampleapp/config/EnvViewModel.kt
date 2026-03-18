@@ -1,5 +1,6 @@
 /*
- * Copyright (c) 2026 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2026 - 2026 Ping Identity Corporation. All rights reserved.
+ *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
  */
@@ -18,16 +19,12 @@ import androidx.lifecycle.ViewModel
 import com.pingidentity.android.ContextProvider
 import com.pingidentity.davinci.DaVinci
 import com.pingidentity.davinci.plugin.DaVinci
-import com.pingidentity.davinci.user as daVinciUser
 import com.pingidentity.journey.Journey
-import com.pingidentity.journey.module.Oidc as JourneyOidc
-import com.pingidentity.davinci.module.Oidc as DaVinciOidc
-import com.pingidentity.journey.user as journeyUser
 import com.pingidentity.logger.Logger
 import com.pingidentity.logger.STANDARD
 import com.pingidentity.oidc.OidcClient
 import com.pingidentity.oidc.OidcClientConfig
-import com.pingidentity.oidc.OidcWeb
+import com.pingidentity.oidc.OidcWebClient
 import com.pingidentity.oidc.module.Web
 import com.pingidentity.orchestrate.Workflow
 import com.pingidentity.samples.pingsampleapp.settingDataStore
@@ -36,6 +33,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlin.time.Duration.Companion.seconds
+import com.pingidentity.davinci.module.Oidc as DaVinciOidc
+import com.pingidentity.davinci.user as daVinciUser
+import com.pingidentity.journey.module.Oidc as JourneyOidc
+import com.pingidentity.journey.user as journeyUser
 
 val testDaVinci by lazy {
     DaVinci {
@@ -134,7 +135,7 @@ val social by lazy {
 
 // Standalone OIDC configurations (not tied to Journey or DaVinci)
 val oidcForgeBlock by lazy {
-    OidcWeb {
+    OidcWebClient {
         logger = Logger.STANDARD
         module(com.pingidentity.oidc.module.Oidc) {
             clientId = "AndroidTest"
@@ -155,7 +156,7 @@ val oidcForgeBlock by lazy {
 }
 
 val oidcPingOne by lazy {
-    OidcWeb {
+    OidcWebClient {
         logger = Logger.STANDARD
         module(com.pingidentity.oidc.module.Oidc) {
             clientId = "dummy"
@@ -179,7 +180,7 @@ val oidcPingOne by lazy {
 var journey = journeyTest
 var oidcClient: OidcClient? = null
 var daVinci: DaVinci? = null
-var web: OidcWeb? = null
+var web: OidcWebClient? = null
 lateinit var redirectUri: Uri //For Social Login redirect parameter using Auth Tab
 
 
@@ -210,11 +211,11 @@ class EnvViewModel : ViewModel() {
 
 
     /**
-     * Creates an OidcWeb instance with the provided OIDC configuration.
+     * Creates an OidcWebClient instance with the provided OIDC configuration.
      * This is used to initialize centralized OIDC login for all authentication types.
      */
-    private fun createOidcWeb(oidcConfig: OidcClientConfig): OidcWeb {
-        return OidcWeb {
+    private fun createOidcWeb(oidcConfig: OidcClientConfig): OidcWebClient {
+        return OidcWebClient {
             logger = Logger.STANDARD
             module(com.pingidentity.oidc.module.Oidc) {
                 clientId = oidcConfig.clientId
@@ -355,9 +356,9 @@ private fun Workflow.oidcConfig(): OidcClientConfig {
 }
 
 /**
- * Get the current [OidcClientConfig] from an OidcWeb instance.
+ * Get the current [OidcClientConfig] from an OidcWebClient instance.
  */
-private fun OidcWeb.oidcConfig(): OidcClientConfig {
+private fun OidcWebClient.oidcConfig(): OidcClientConfig {
     return config.modules.first { it.config is OidcClientConfig }.config as OidcClientConfig
 }
 

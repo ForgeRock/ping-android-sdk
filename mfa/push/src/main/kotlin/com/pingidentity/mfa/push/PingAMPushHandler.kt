@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2025-2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -27,7 +27,7 @@ import com.pingidentity.mfa.push.PushConstants.KEY_PUSH_TYPE
 import com.pingidentity.mfa.push.PushConstants.KEY_RAW_JWT
 import com.pingidentity.mfa.push.PushConstants.KEY_TIME_INTERVAL
 import com.pingidentity.mfa.push.PushConstants.KEY_TTL
-import com.pingidentity.mfa.push.PushConstants.KEY_USER_ID
+import com.pingidentity.mfa.push.PushConstants.KEY_USERNAME
 import com.pingidentity.network.HttpClient
 
 /**
@@ -203,7 +203,7 @@ internal class PingAMPushHandler(
             numbersChallenge?.let { result[KEY_NUMBERS_CHALLENGE] = it }
             contextInfo?.let { result[KEY_CONTEXT_INFO] = it }
             pushType?.let { result[KEY_PUSH_TYPE] = it }
-            userId?.let { result[KEY_USER_ID] = it }
+            userId?.let { result[KEY_USERNAME] = it }
             
             timeIntervalString?.let { currentIntervalString ->
                 try {

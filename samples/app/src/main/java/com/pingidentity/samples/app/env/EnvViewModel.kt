@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 - 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2024 - 2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -23,7 +23,7 @@ import com.pingidentity.davinci.plugin.DaVinci
 import com.pingidentity.logger.Logger
 import com.pingidentity.logger.STANDARD
 import com.pingidentity.oidc.OidcClientConfig
-import com.pingidentity.oidc.OidcWeb
+import com.pingidentity.oidc.OidcWebClient
 import com.pingidentity.oidc.module.Web
 import com.pingidentity.samples.app.User
 import com.pingidentity.samples.app.settingDataStore
@@ -74,7 +74,7 @@ val social by lazy {
 }
 
 lateinit var daVinci: DaVinci
-lateinit var web: OidcWeb
+lateinit var web: OidcWebClient
 lateinit var redirectUri: Uri //For Social Login redirect parameter using Auth Tab
 
 class EnvViewModel : ViewModel() {
@@ -100,7 +100,7 @@ class EnvViewModel : ViewModel() {
         val oidcConfig = server.oidcConfig()
         redirectUri = oidcConfig.redirectUri.toUri()
 
-        web = OidcWeb {
+        web = OidcWebClient {
             logger = Logger.STANDARD
             module(com.pingidentity.oidc.module.Oidc) {
                 clientId = oidcConfig.clientId

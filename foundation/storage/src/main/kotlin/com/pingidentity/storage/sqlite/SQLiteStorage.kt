@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2025-2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -11,11 +11,12 @@ import android.content.Context
 import android.database.Cursor
 import com.pingidentity.logger.Logger
 import com.pingidentity.storage.exception.StorageException
-import com.pingidentity.storage.sqlite.passphrase.KeyStorePassphraseProvider
 import com.pingidentity.storage.sqlite.passphrase.PassphraseProvider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import net.zetetic.database.sqlcipher.SQLiteDatabase
 import net.zetetic.database.sqlcipher.SQLiteOpenHelper
@@ -27,18 +28,44 @@ import net.zetetic.database.sqlcipher.SQLiteOpenHelper
  *
  * This is an abstract base class that provides common SQLite database functionality.
  * Subclasses should implement their specific storage operations based on their table structure.
+ *
+ * @param config Configuration object containing all database settings. See [SQLiteStorageConfig] for details.
  */
 open class SQLiteStorage(
-    protected val context: Context,
-    protected val databaseName: String = DEFAULT_DATABASE_NAME,
-    protected val databaseVersion: Int = DATABASE_VERSION,
-    protected val passphraseProvider: PassphraseProvider = KeyStorePassphraseProvider(context),
-    protected open val logger: Logger = Logger.logger
+    config: SQLiteStorageConfig
 ) {
+    // Extract configuration properties for internal use
+    protected val context: Context = config.context
+    protected val databaseName: String = config.databaseName
+    protected val databaseVersion: Int = config.databaseVersion
+    protected val passphraseProvider: PassphraseProvider = config.passphraseProvider
+    protected val allowDestructiveRecovery: Boolean = config.allowDestructiveRecovery
+    protected val maxBackupCount: Int = config.maxBackupCount
+    protected val backupOnError: Boolean = config.backupOnError
+    protected val autoRestoreFromBackup: Boolean = config.autoRestoreFromBackup
+    protected val onDatabaseError: (suspend (Exception, Boolean) -> Unit)? = config.onDatabaseError
+    protected open val logger: Logger = config.logger
+
     companion object {
-        private const val DEFAULT_DATABASE_NAME = "pingidentity_storage.db"
-        private const val DATABASE_VERSION = 1
+
+        /**
+         * Global mutex map to synchronize database initialization per database name.
+         * This prevents multiple parallel calls to initializeDatabase() for the same database,
+         * which is critical when SQLOathStorage and SQLPushStorage share the same database.
+         */
+        private val initializationMutexes = mutableMapOf<String, Mutex>()
+        private val mutexMapLock = Any()
+
+        /**
+         * Get or create a mutex for the given database name.
+         */
+        private fun getMutexForDatabase(databaseName: String): Mutex {
+            return synchronized(mutexMapLock) {
+                initializationMutexes.getOrPut(databaseName) { Mutex() }
+            }
+        }
     }
+
 
     // List of table creator functions
     private val tableCreators = mutableListOf<(SQLiteDatabase) -> Unit>()
@@ -57,59 +84,125 @@ open class SQLiteStorage(
     /**
      * Initialize the SQL database storage.
      * This method creates the database and tables if they don't exist.
+     * If the database cannot be opened, it will attempt to restore from backup if available.
+     *
+     * This method is globally synchronized per database name to prevent multiple parallel
+     * initializations of the same database, which is critical when SQLOathStorage and
+     * SQLPushStorage share the same database file.
      *
      * @throws StorageException if the database cannot be opened or the tables cannot be created.
      */
     suspend fun initializeDatabase() = executeOnIO {
-        try {
-            // Load SQLCipher libraries
-            System.loadLibrary("sqlcipher")
-
-            // Create database helper
-            dbHelper = createDatabaseHelper(context, databaseName, databaseVersion)
-
-            // Get the passphrase from the provider
-            val passphrase = passphraseProvider.getPassphrase()
-            logger.d("Using passphrase from provider for database initialization")
+        // Acquire database-specific mutex to prevent parallel initialization
+        val mutex = getMutexForDatabase(databaseName)
+        mutex.withLock {
+            // Check if already initialized to avoid redundant work
+            if (::internalDatabase.isInitialized && internalDatabase.isOpen) {
+                logger.d("Database $databaseName is already initialized and open, skipping re-initialization")
+                return@executeOnIO
+            }
 
             try {
-                // Open or create the database
-                internalDatabase = SQLiteDatabase.openOrCreateDatabase(
-                    context.getDatabasePath(databaseName).absolutePath,
-                    passphrase,
-                    null,
-                    null,
-                )
-            } catch (e: Exception) {
-                currentCoroutineContext().ensureActive()
-                
-                // If opening fails, try to recover
-                logger.e("Database initialization failed: ${e.message}", e)
-                closeAndCleanupDatabase()
-                
-                // Create a new helper and try again
+                // Load SQLCipher libraries
+                System.loadLibrary("sqlcipher")
+
+                // Create database helper
                 dbHelper = createDatabaseHelper(context, databaseName, databaseVersion)
-                internalDatabase = dbHelper.writableDatabase
-            }
 
-            logger.d("SQL storage initialized successfully")
+                // Get the passphrase from the provider
+                val passphrase = passphraseProvider.getPassphrase()
+                logger.d("Using passphrase from provider for database initialization")
 
-            // Validate database is properly initialized by testing a simple query
-            validateDatabaseInitialization()
-            
-            // Call all registered table creators
-            tableCreators.forEach { creator ->
                 try {
-                    creator(internalDatabase)
+                    // Open or create the database
+                    internalDatabase = SQLiteDatabase.openOrCreateDatabase(
+                        context.getDatabasePath(databaseName).absolutePath,
+                        passphrase,
+                        null,
+                        null,
+                    )
                 } catch (e: Exception) {
                     currentCoroutineContext().ensureActive()
-                    logger.e("Failed to create table: ${e.message}", e)
+
+                    logger.e("Database initialization failed: ${e.message}", e)
+
+                    // Attempt to restore from backup only if auto-restore is enabled
+                    if (autoRestoreFromBackup) {
+                        logger.i("Attempting to restore from backup")
+                        val restored = attemptBackupRestoration()
+
+                        if (restored) {
+                            logger.i("Backup restoration successful, retrying database initialization")
+                            // Retry opening the restored database
+                            try {
+                                internalDatabase = SQLiteDatabase.openOrCreateDatabase(
+                                    context.getDatabasePath(databaseName).absolutePath,
+                                    passphrase,
+                                    null,
+                                    null,
+                                )
+                                logger.d("Database opened successfully after restoration")
+                            } catch (retryException: Exception) {
+                                currentCoroutineContext().ensureActive()
+                                logger.e("Failed to open database after restoration: ${retryException.message}", retryException)
+                                closeAndCleanupDatabase(retryException)
+
+                                // Create a new encrypted database with the passphrase
+                                dbHelper = createDatabaseHelper(context, databaseName, databaseVersion)
+                                internalDatabase = SQLiteDatabase.openOrCreateDatabase(
+                                    context.getDatabasePath(databaseName).absolutePath,
+                                    passphrase,
+                                    null,
+                                    null,
+                                )
+                            }
+                        } else {
+                            logger.w("Backup restoration failed or no backups available")
+                            closeAndCleanupDatabase(e)
+
+                            // Create a new encrypted database with the passphrase
+                            dbHelper = createDatabaseHelper(context, databaseName, databaseVersion)
+                            internalDatabase = SQLiteDatabase.openOrCreateDatabase(
+                                context.getDatabasePath(databaseName).absolutePath,
+                                passphrase,
+                                null,
+                                null,
+                            )
+                        }
+                    } else {
+                        // Already attempted restoration, proceed with cleanup
+                        closeAndCleanupDatabase(e)
+
+                        // Create a new encrypted database with the passphrase
+                        dbHelper = createDatabaseHelper(context, databaseName, databaseVersion)
+                        internalDatabase = SQLiteDatabase.openOrCreateDatabase(
+                            context.getDatabasePath(databaseName).absolutePath,
+                            passphrase,
+                            null,
+                            null,
+                        )
+                    }
                 }
+
+                logger.d("SQL storage initialized successfully")
+
+                // Validate database is properly initialized by testing a simple query
+                validateDatabaseInitialization()
+
+                // Call all registered table creators
+                tableCreators.forEach { creator ->
+                    try {
+                        creator(internalDatabase)
+                    } catch (e: Exception) {
+                        currentCoroutineContext().ensureActive()
+                        logger.e("Failed to create table: ${e.message}", e)
+                    }
+                }
+            } catch (e: Exception) {
+                currentCoroutineContext().ensureActive()
+                logger.e("Failed to initialize database: ${e.message}", e)
+                throw StorageException("Failed to initialize database", e)
             }
-        } catch (e: Exception) {
-            currentCoroutineContext().ensureActive()
-            logger.e("Failed to initialize database: ${e.message}", e)
-            throw StorageException("Failed to initialize database", e)
         }
     }
 
@@ -150,7 +243,7 @@ open class SQLiteStorage(
             } catch (e: Exception) {
                 currentCoroutineContext().ensureActive()
                 logger.e("Database validation query failed: ${e.message}", e)
-                closeAndCleanupDatabase()
+                closeAndCleanupDatabase(e)
                 throw e
             }
         }
@@ -158,8 +251,12 @@ open class SQLiteStorage(
 
     /**
      * Close and cleanup database resources.
+     * Respects the allowDestructiveRecovery flag and creates backups when enabled.
+     *
+     * @param exception The exception that caused the error.
+     * @throws StorageException if destructive recovery is not allowed.
      */
-    private suspend fun closeAndCleanupDatabase() {
+    private suspend fun closeAndCleanupDatabase(exception: Exception) {
         executeOnIO {
             // Attempt to close internalDatabase
             try {
@@ -181,38 +278,115 @@ open class SQLiteStorage(
                 logger.e("Error during dbHelper.close(): ${e.message}", e)
             }
 
-            // Delete the database file
-            try {
-                context.deleteDatabase(databaseName)
-                logger.d("Database file deleted successfully")
-            } catch (e: Exception) {
-                currentCoroutineContext().ensureActive()
-                logger.e("Failed to delete database file: ${e.message}", e)
+            // Check if destructive recovery is allowed
+            if (!allowDestructiveRecovery) {
+                logger.e("Database initialization failed. Destructive recovery is disabled.")
+                // Notify callback if provided - canRecover = false
+                onDatabaseError?.invoke(exception, false)
+                // Re-throw the exception to prevent database deletion
+                throw StorageException("Database initialization failed and destructive recovery is disabled", exception)
             }
 
-            // Re-initialize the properties - we need to be careful to set up new instances
-            // since these are now lateinit
-            initializeEmptyInstances()
+            logger.w("Destructive recovery enabled. Proceeding with database cleanup.")
+
+            // Create backup before deletion if enabled
+            if (backupOnError) {
+                val backupFile = createDatabaseBackup()
+                if (backupFile != null) {
+                    logger.i("Created backup before database deletion: ${backupFile.name}")
+                } else {
+                    logger.w("Failed to create backup before deletion")
+                }
+            }
+
+            // Notify callback before deletion - canRecover = true
+            onDatabaseError?.invoke(exception, true)
+
+            // Delete the database file
+            if (context.deleteDatabase(databaseName)) {
+                logger.d("Database file deleted successfully")
+            } else {
+                logger.w("Failed to delete database file")
+            }
+
+            // Log backup preservation info
+            // We preserve backups because they remain valid with the existing passphrase
+            // and provide a safety net for potential manual recovery
+            val backups = listBackupFiles()
+            logger.i("Preserved ${backups.size} backup file(s) for potential recovery")
         }
     }
 
     /**
-     * Initialize empty instances for lateinit properties after cleanup.
-     * This is needed because we can't directly set lateinit properties to null.
+     * Attempt to restore the database from the most recent backup.
+     *
+     * @return true if restoration was successful, false otherwise.
      */
-    private suspend fun initializeEmptyInstances() {
-        executeOnIO {
-            // Create temporary instances to satisfy lateinit requirements
-            dbHelper = createDatabaseHelper(context, databaseName, databaseVersion)
+    open suspend fun attemptBackupRestoration(): Boolean = executeOnIO {
+        try {
+            val backups = listBackupFiles()
+            if (backups.isEmpty()) {
+                logger.w("No backup files found for restoration")
+                return@executeOnIO false
+            }
+
+            val latestBackup = backups.first()
+            logger.i("Attempting to restore from backup: ${latestBackup.name}")
+
+            // Validate backup can be opened with current passphrase
+            val dbFile = context.getDatabasePath(databaseName)
+            val passphrase = passphraseProvider.getPassphrase()
+
             try {
-                internalDatabase = dbHelper.readableDatabase
-                internalDatabase.close()
+                // Test opening the backup with current passphrase
+                val testDb = SQLiteDatabase.openDatabase(
+                    latestBackup.absolutePath,
+                    passphrase,
+                    null,
+                    SQLiteDatabase.OPEN_READONLY,
+                    null
+                )
+                testDb.close()
+                logger.d("Backup validation successful")
             } catch (e: Exception) {
                 currentCoroutineContext().ensureActive()
-                logger.e("Failed to create temporary database instance: ${e.message}", e)
+                logger.e("Backup validation failed: ${e.message}", e)
+                return@executeOnIO false
             }
+
+            // Copy backup to main database location
+            try {
+                // If database file exists and is read-only, make it writable or delete it
+                if (dbFile.exists()) {
+                    if (!dbFile.canWrite()) {
+                        logger.w("Database file is read-only, making it writable for restoration")
+                        dbFile.setWritable(true)
+                    }
+                    // Delete the existing (potentially corrupted/read-only) database
+                    if (!dbFile.delete()) {
+                        logger.w("Failed to delete existing database file, attempting to overwrite")
+                    }
+                }
+                
+                latestBackup.inputStream().use { input ->
+                    dbFile.outputStream().use { output ->
+                        input.copyTo(output)
+                    }
+                }
+                logger.i("Database restored successfully from backup: ${latestBackup.name}")
+                return@executeOnIO true
+            } catch (e: Exception) {
+                currentCoroutineContext().ensureActive()
+                logger.e("Failed to copy backup to database location: ${e.message}", e)
+                return@executeOnIO false
+            }
+        } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
+            logger.e("Error during backup restoration: ${e.message}", e)
+            return@executeOnIO false
         }
     }
+
 
     /**
      * Close the database connection.
@@ -224,9 +398,6 @@ open class SQLiteStorage(
             
             logger.d("SQL storage closed")
         }
-        
-        // Reinitialize with empty instances to satisfy lateinit requirements
-        initializeEmptyInstances()
     }
 
     /**
@@ -359,6 +530,133 @@ open class SQLiteStorage(
     protected suspend fun <T> executeOnIO(operation: suspend () -> T): T {
         return withContext(Dispatchers.IO) {
             operation()
+        }
+    }
+
+    /**
+     * Create a backup of the current database file.
+     * The backup file will be encrypted with the same passphrase as the original database.
+     *
+     * @return The backup file if successfully created, null otherwise.
+     */
+    open suspend fun createDatabaseBackup(): java.io.File? = executeOnIO {
+        try {
+            val dbFile = context.getDatabasePath(databaseName)
+            if (!dbFile.exists()) {
+                logger.w("Database file does not exist, cannot create backup")
+                return@executeOnIO null
+            }
+
+            val timestamp = System.currentTimeMillis()
+            val backupFileName = getBackupFileName(timestamp)
+            val backupFile = java.io.File(dbFile.parent, backupFileName)
+
+            // Copy the database file to backup location
+            dbFile.inputStream().use { input ->
+                backupFile.outputStream().use { output ->
+                    input.copyTo(output)
+                }
+            }
+
+            logger.i("Database backup created: ${backupFile.name} (${backupFile.length()} bytes)")
+            
+            // Clean up old backups after creating new one
+            cleanOldBackups()
+            
+            backupFile
+        } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
+            logger.e("Failed to create database backup: ${e.message}", e)
+            null
+        }
+    }
+
+    /**
+     * List all backup files for the current database, sorted by timestamp (newest first).
+     *
+     * @return List of backup files sorted by timestamp (newest first).
+     */
+    open suspend fun listBackupFiles(): List<java.io.File> = executeOnIO {
+        try {
+            val dbFile = context.getDatabasePath(databaseName)
+            val dbDir = dbFile.parentFile ?: return@executeOnIO emptyList()
+
+            val baseNameWithoutExtension = databaseName.substringBeforeLast('.')
+            val backupPrefix = "${baseNameWithoutExtension}_backup_"
+
+            dbDir.listFiles { file ->
+                file.name.startsWith(backupPrefix) && file.name.endsWith(".db")
+            }?.sortedByDescending { file ->
+                parseBackupTimestamp(file.name) ?: 0L
+            } ?: emptyList()
+        } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
+            logger.e("Failed to list backup files: ${e.message}", e)
+            emptyList()
+        }
+    }
+
+    /**
+     * Remove old backup files exceeding the configured maximum backup count.
+     */
+    protected open suspend fun cleanOldBackups() = executeOnIO {
+        try {
+            val backups = listBackupFiles()
+            if (backups.size > maxBackupCount) {
+                val backupsToDelete = backups.drop(maxBackupCount)
+                backupsToDelete.forEach { backup ->
+                    if (backup.delete()) {
+                        logger.d("Deleted old backup: ${backup.name}")
+                    } else {
+                        logger.w("Failed to delete old backup: ${backup.name}")
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
+            logger.e("Failed to clean old backups: ${e.message}", e)
+        }
+    }
+
+    /**
+     * Generate a backup filename with timestamp.
+     * Format: {databaseName}_backup_{timestamp}.db
+     *
+     * @param timestamp The timestamp to include in the filename.
+     * @return The generated backup filename.
+     */
+    protected open fun getBackupFileName(timestamp: Long): String {
+        val baseNameWithoutExtension = databaseName.substringBeforeLast('.')
+        val extension = if (databaseName.contains('.')) ".${databaseName.substringAfterLast('.')}" else ""
+        
+        // Format: databaseName_backup_timestamp.db
+        // Example: pingidentity_oath_backup_1738172425000.db
+        return "${baseNameWithoutExtension}_backup_${timestamp}${extension}"
+    }
+
+    /**
+     * Parse the timestamp from a backup filename.
+     *
+     * @param filename The backup filename to parse.
+     * @return The timestamp if successfully parsed, null otherwise.
+     */
+    protected open fun parseBackupTimestamp(filename: String): Long? {
+        return try {
+            val baseNameWithoutExtension = databaseName.substringBeforeLast('.')
+            val backupPrefix = "${baseNameWithoutExtension}_backup_"
+            val extension = if (databaseName.contains('.')) ".${databaseName.substringAfterLast('.')}" else ""
+            
+            if (filename.startsWith(backupPrefix) && filename.endsWith(extension)) {
+                val timestampStr = filename
+                    .removePrefix(backupPrefix)
+                    .removeSuffix(extension)
+                timestampStr.toLongOrNull()
+            } else {
+                null
+            }
+        } catch (e: Exception) {
+            logger.e("Failed to parse backup timestamp from filename: $filename", e)
+            null
         }
     }
 

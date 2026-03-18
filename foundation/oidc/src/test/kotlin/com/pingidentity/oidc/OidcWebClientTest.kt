@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2025 - 2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -38,7 +38,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
-class OidcWebTest {
+class OidcWebClientTest {
 
     private lateinit var mockEngine: MockEngine
 
@@ -94,7 +94,7 @@ class OidcWebTest {
 
         every { mockUri.getQueryParameter(Constants.CODE) } returns "test-code"
 
-        val web = OidcWeb {
+        val web = OidcWebClient {
             httpClient = KtorHttpClient(HttpClient(mockEngine))
             logger = Logger.CONSOLE
             module(Oidc) {
@@ -136,7 +136,7 @@ class OidcWebTest {
             BrowserCanceledException()
         )
 
-        val web = OidcWeb {
+        val web = OidcWebClient {
             httpClient = KtorHttpClient(HttpClient(mockEngine))
             logger = Logger.CONSOLE
             module(Oidc) {
@@ -160,7 +160,7 @@ class OidcWebTest {
 
         every { mockUri.getQueryParameter(Constants.CODE) } returns null
 
-        val web = OidcWeb {
+        val web = OidcWebClient {
             httpClient = KtorHttpClient(HttpClient(mockEngine))
             logger = Logger.CONSOLE
             module(Oidc) {
@@ -184,7 +184,7 @@ class OidcWebTest {
         coEvery { BrowserLauncher.launch(capture(urlSlot)) } returns Result.success(mockUri)
         every { mockUri.getQueryParameter(Constants.CODE) } returns "test-code"
 
-        val web = OidcWeb {
+        val web = OidcWebClient {
             httpClient = KtorHttpClient(HttpClient(mockEngine))
             logger = Logger.CONSOLE
             module(Oidc) {

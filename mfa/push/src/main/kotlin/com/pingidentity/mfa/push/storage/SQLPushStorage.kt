@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2025-2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -8,18 +8,14 @@
 package com.pingidentity.mfa.push.storage
 
 import android.content.ContentValues
-import android.content.Context
 import android.database.Cursor
-import com.pingidentity.android.ContextProvider
-import com.pingidentity.logger.Logger
 import com.pingidentity.mfa.commons.exception.MfaStorageException
 import com.pingidentity.mfa.push.PushCredential
 import com.pingidentity.mfa.push.PushDeviceToken
 import com.pingidentity.mfa.push.PushNotification
 import com.pingidentity.mfa.push.PushType
-import com.pingidentity.storage.sqlite.passphrase.KeyStorePassphraseProvider
-import com.pingidentity.storage.sqlite.passphrase.PassphraseProvider
 import com.pingidentity.storage.sqlite.SQLiteStorage
+import com.pingidentity.storage.sqlite.SQLiteStorageConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
@@ -31,41 +27,30 @@ import java.util.Date
  * SQLite-based implementation of [PushStorage].
  * This class directly extends [SQLiteStorage] with Push-specific functionality.
  */
-class SQLPushStorage private constructor(
-    context: Context,
-    databaseName: String,
-    databaseVersion: Int = 1,
-    passphraseProvider: PassphraseProvider,
-    override val logger: Logger = Logger.logger
-) : SQLiteStorage(
-    context = context,
-    databaseName = databaseName,
-    databaseVersion = databaseVersion,
-    passphraseProvider = passphraseProvider,
-    logger = logger
-), PushStorage {
-
-    /**
-     * Builder-style DSL constructor for SQLPushStorage.
-     */
-    constructor(block: Builder.() -> Unit) : this(
-        Builder().apply(block)
-    )
-
-    /**
-     * Internal constructor to support creation from Builder.
-     */
-    private constructor(builder: Builder) : this(
-        builder.context,
-        builder.databaseName,
-        builder.databaseVersion,
-        builder.passphraseProvider,
-        builder.logger
-    )
+class SQLPushStorage(
+    config: SQLiteStorageConfig
+) : SQLiteStorage(config), PushStorage {
 
     companion object {
-        private const val DEFAULT_DATABASE_NAME = "pingidentity_mfa.db"
+        private const val DEFAULT_DATABASE_NAME = "pingidentity_push.db"
         
+        /**
+         * Invoke operator to create SQLPushStorage with DSL syntax.
+         *
+         * Example usage:
+         * ```
+         * val storage = SQLPushStorage {
+         *     context = applicationContext
+         *     databaseName = "custom_push.db"
+         *     allowDestructiveRecovery = true
+         * }
+         * ```
+         */
+        operator fun invoke(block: SQLiteStorageConfig.() -> Unit = {}) =
+            SQLPushStorage(SQLiteStorageConfig().apply {
+                databaseName = DEFAULT_DATABASE_NAME
+            }.apply(block))
+
         // Push credential specific columns
         private const val PUSH_COLUMN_ID = "id"
         private const val PUSH_COLUMN_USER_ID = "user_id"
@@ -115,18 +100,7 @@ class SQLPushStorage private constructor(
         private const val NOTIFICATION_TABLE = "${TABLE_PREFIX}push_notifications"
         private const val DEVICE_TOKEN_TABLE = "${TABLE_PREFIX}push_device_tokens"
     }
-    
-    /**
-     * Builder class for configuring SQLPushStorage.
-     */
-    class Builder {
-        var context: Context = ContextProvider.context
-        var databaseName: String = DEFAULT_DATABASE_NAME
-        var databaseVersion: Int = 1
-        var initialPassphrase: String? = null // Default is null, in case developer does not want to supply their own passphrase
-        var passphraseProvider: PassphraseProvider = KeyStorePassphraseProvider(context, initialPassphrase)
-        var logger: Logger = Logger.logger
-    }
+
 
     init {
         // Register the Push table creator
@@ -191,6 +165,9 @@ class SQLPushStorage private constructor(
             db.execSQL("CREATE INDEX IF NOT EXISTS idx_push_issuer ON $PUSH_TABLE ($PUSH_COLUMN_ISSUER)")
             db.execSQL("CREATE INDEX IF NOT EXISTS idx_push_user_id ON $PUSH_TABLE ($PUSH_COLUMN_USER_ID)")
             db.execSQL("CREATE INDEX IF NOT EXISTS idx_push_resource_id ON $PUSH_TABLE ($PUSH_COLUMN_RESOURCE_ID)")
+            
+            // Create unique index to prevent duplicate credentials with the same issuer and account name
+            db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS idx_push_unique_credential ON $PUSH_TABLE ($PUSH_COLUMN_ISSUER, $PUSH_COLUMN_ACCOUNT_NAME)")
             
             // Create Notification indexes
             db.execSQL("CREATE INDEX IF NOT EXISTS idx_notification_credential_id ON $NOTIFICATION_TABLE ($NOTIFICATION_COLUMN_CREDENTIAL_ID)")
@@ -411,6 +388,35 @@ class SQLPushStorage private constructor(
             currentCoroutineContext().ensureActive()
             logger.e("Failed to retrieve Push credential with ID $credentialId: ${e.message}", e)
             throw MfaStorageException("Failed to retrieve Push credential with ID $credentialId", e)
+        }
+    }
+
+    /**
+     * Retrieve a push credential by issuer and account name.
+     * Performs case-sensitive comparison to detect duplicate credentials.
+     *
+     * @param issuer The issuer of the credential.
+     * @param accountName The account name of the credential.
+     * @return The Push credential if found, or null if not found.
+     * @throws MfaStorageException if the credential cannot be retrieved.
+     */
+    override suspend fun getCredentialByIssuerAndAccount(issuer: String, accountName: String): PushCredential? = withContext(Dispatchers.IO) {
+        checkDatabase()
+        
+        try {
+            // Use case-sensitive query to find matching credential
+            val sql = "SELECT * FROM $PUSH_TABLE WHERE $PUSH_COLUMN_ISSUER = ? AND $PUSH_COLUMN_ACCOUNT_NAME = ?"
+            val args = arrayOf(issuer, accountName)
+            val results = query(sql, args) { cursor ->
+                extractDataFromCursor(cursor)
+            }
+            
+            val data = results.firstOrNull() ?: return@withContext null
+            return@withContext createPushCredentialFromData(data)
+        } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
+            logger.e("Failed to retrieve Push credential by issuer and account: ${e.message}", e)
+            throw MfaStorageException("Failed to retrieve Push credential by issuer '$issuer' and account '$accountName'", e)
         }
     }
     
@@ -1221,7 +1227,7 @@ class SQLPushStorage private constructor(
             // Parse pushType from string
             val pushType = try {
                 PushType.fromString(pushTypeStr)
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 PushType.DEFAULT
             }
 

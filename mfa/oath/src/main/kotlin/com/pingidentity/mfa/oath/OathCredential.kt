@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2025-2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -73,6 +73,26 @@ data class OathCredential(
     @EncodeDefault
     var isLocked: Boolean = false
 ) {
+    init {
+        // Validate digits parameter (RFC 4226/6238 specifies 6 or 8 digits)
+        require(digits == 6 || digits == 8) {
+            "Invalid digits value: $digits. Digits must be 6 or 8."
+        }
+        
+        // Validate period for TOTP
+        if (oathType == OathType.TOTP) {
+            require(period > 0) {
+                "Invalid period value: $period. Period must be greater than 0."
+            }
+        }
+        
+        // Validate counter for HOTP
+        if (oathType == OathType.HOTP) {
+            require(counter >= 0) {
+                "Invalid counter value: $counter. Counter must be non-negative."
+            }
+        }
+    }
     /**
      * The type of credential (TOTP or HOTP) as String.
      */

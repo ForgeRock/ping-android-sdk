@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2025 - 2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -22,7 +22,7 @@ import com.pingidentity.orchestrate.WorkflowConfig
  * OIDC Web configuration class.
  * Provide configuration for the OIDC web module.
  */
-class OidcWebConfig : WorkflowConfig() {
+class OidcWebClientConfig : WorkflowConfig() {
     // additional configuration for example browser settings
 }
 
@@ -32,7 +32,7 @@ class OidcWebConfig : WorkflowConfig() {
  *
  * @param config The OIDC web configuration.
  */
-class OidcWeb(val config: OidcWebConfig) {
+class OidcWebClient(val config: OidcWebClientConfig) {
 
     private var oidcFlow = OidcFlow(config)
 
@@ -66,18 +66,18 @@ class OidcWeb(val config: OidcWebConfig) {
 
     companion object {
         /**
-         * Creates an instance of [OidcWeb] with the provided configuration block.
+         * Creates an instance of [OidcWebClient] with the provided configuration block.
          *
          * @param block The configuration block to apply to the OIDC web configuration.
-         * @return An instance of [OidcWeb].
+         * @return An instance of [OidcWebClient].
          */
-        operator fun invoke(block: OidcWebConfig.() -> Unit = {}): OidcWeb {
-            val config = OidcWebConfig()
+        operator fun invoke(block: OidcWebClientConfig.() -> Unit = {}): OidcWebClient {
+            val config = OidcWebClientConfig()
             config.apply {
                 config.module(Web) // register the web module
             }
             config.apply(block) // apply the configuration block
-            return OidcWeb(config)
+            return OidcWebClient(config)
         }
     }
 }

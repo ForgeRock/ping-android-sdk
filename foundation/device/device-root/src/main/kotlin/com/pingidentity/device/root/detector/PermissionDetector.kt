@@ -80,9 +80,10 @@ class PermissionDetector(
      *         - `0.0` indicates all critical directories are properly read-only
      */
     override suspend fun analyze(context: Context): Double {
+        logger.i("Running PermissionDetector")
         val sdkVersion = androidBuildSdkProvider.getSdkVersion()
         for (line in mountReader()) {
-            val args = line.split(" ")
+            val args = line.trim().split(Regex("\\s+"))
             if (args.size < 4 || args.size < 6) {
                 logger.e("Error formatting mount line: $line")
                 continue

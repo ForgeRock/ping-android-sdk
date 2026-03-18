@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2025-2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -68,29 +68,27 @@ class OathClientAndroidTest {
     private fun cleanupExistingCredentials() {
         println("Cleaning up existing credentials before test")
         
-        // First try with encryption disabled
-        cleanupWithClient(encryptionEnabled = false)
+        // First try with no encryption
+        cleanupWithClient(testPassphraseProvider = NonePassphraseProvider())
         
-        // Then try with encryption enabled to catch any credentials stored with encryption
-        cleanupWithClient(encryptionEnabled = true)
+        // Then try with encryption to catch any credentials stored with encryption
+        cleanupWithClient(testPassphraseProvider = testPassphraseProvider)
     }
     
     /**
-     * Helper method to clean up credentials with a specific configuration.
+     * Helper method to clean up credentials with a specific passphrase provider.
      */
-    private fun cleanupWithClient(encryptionEnabled: Boolean) {
+    private fun cleanupWithClient(testPassphraseProvider: PassphraseProvider) {
         try {
-            // Create storage with appropriate passphrase provider based on encryption setting
+            // Create storage with the specified passphrase provider
             val testStorage = SQLOathStorage {
                 context = appContext
-                // Use TestPassphraseProvider for encrypted storage, NonePassphraseProvider for non-encrypted
-                passphraseProvider = if (encryptionEnabled) testPassphraseProvider else NonePassphraseProvider()
+                passphraseProvider = testPassphraseProvider
             }
             
             // Create a client with the specified configuration
             runTest {
                 val client = OathClient {
-                    this.encryptionEnabled = encryptionEnabled
                     this.storage = testStorage
                     logger = Logger.STANDARD
                 }
@@ -118,7 +116,6 @@ class OathClientAndroidTest {
         val config = OathConfiguration {
             enableCredentialCache = true
             timeout = 60.toDuration(DurationUnit.SECONDS)
-            encryptionEnabled = false
             storage = SQLOathStorage {
                 context = appContext
                 passphraseProvider = NonePassphraseProvider() // No encryption for this test
@@ -413,7 +410,6 @@ class OathClientAndroidTest {
         val config = OathConfiguration {
             enableCredentialCache = true
             timeout = 60.toDuration(DurationUnit.SECONDS)
-            encryptionEnabled = false
         }
 
         val client = OathClient(config)
@@ -510,11 +506,14 @@ class OathClientAndroidTest {
         )
         assertTrue("URI should contain correct OTP type", exportedUri.contains("otpauth://totp/"))
 
-        // Create a new client and import the credential
-        val newClient = createTestClient()
+        // Generate code from original credential
+        val originalCode = client.generateCode(credential.id).getOrThrow()
+        
+        // Remove the original credential before importing to avoid duplicate constraint
+        client.deleteCredential(credential.id).getOrThrow()
 
-        // Import the exported credential
-        val importedCredential = newClient.addCredentialFromUri(exportedUri).getOrThrow()
+        // Import the exported credential back
+        val importedCredential = client.addCredentialFromUri(exportedUri).getOrThrow()
 
         // Verify the imported credential matches the original
         assertNotNull("Imported credential should not be null", importedCredential)
@@ -532,20 +531,18 @@ class OathClientAndroidTest {
         assertEquals("Digits should match", credential.digits, importedCredential.digits)
         assertEquals("Period should match", credential.period, importedCredential.period)
 
-        // Generate codes from both clients to ensure they produce the same OTP
-        val originalCode = client.generateCode(credential.id).getOrThrow()
-        val importedCode = newClient.generateCode(importedCredential.id).getOrThrow()
+        // Generate code from imported credential
+        val importedCode = client.generateCode(importedCredential.id).getOrThrow()
 
-        // For the same time period, both should generate identical codes
+        // Both should generate identical codes (same secret, same time period)
         assertEquals(
             "Original and imported credential should generate same code",
             originalCode,
             importedCode
         )
 
-        // Close the clients when done
+        // Close the client when done
         client.close()
-        newClient.close()
     }
 
 
@@ -691,9 +688,11 @@ class OathClientAndroidTest {
     fun testDifferentOathAlgorithms() = runTest {
         // Create an OathClient with NonePassphraseProvider for non-encrypted storage
         val client = OathClient {
-            encryptionEnabled = false
+            storage = SQLOathStorage {
+                context = appContext
+                passphraseProvider = NonePassphraseProvider()
+            }
             logger = Logger.STANDARD
-            // Storage will be created with NonePassphraseProvider due to encryptionEnabled = false
         }
 
         // Create test URIs with different algorithms
@@ -746,9 +745,11 @@ class OathClientAndroidTest {
     fun testCredentialWithCustomDigits() = runTest(timeout = 30.minutes) {
         // Create an OathClient with NonePassphraseProvider for non-encrypted storage
         val client = OathClient {
-            encryptionEnabled = false
+            storage = SQLOathStorage {
+                context = appContext
+                passphraseProvider = NonePassphraseProvider()
+            }
             logger = Logger.STANDARD
-            // Storage will be created with NonePassphraseProvider due to encryptionEnabled = false
         }
 
         // Create URIs with different digit lengths
@@ -781,9 +782,11 @@ class OathClientAndroidTest {
     fun testReinitializeClient() = runTest {
         // Create an OathClient with NonePassphraseProvider for non-encrypted storage
         val client = OathClient {
-            encryptionEnabled = false
+            storage = SQLOathStorage {
+                context = appContext
+                passphraseProvider = NonePassphraseProvider()
+            }
             logger = Logger.STANDARD
-            // Storage will be created with NonePassphraseProvider due to encryptionEnabled = false
         }
 
         // Add a credential
@@ -825,9 +828,11 @@ class OathClientAndroidTest {
     fun testCredentialMetadata() = runTest {
         // Create an OathClient with NonePassphraseProvider for non-encrypted storage
         val client = OathClient {
-            encryptionEnabled = false
+            storage = SQLOathStorage {
+                context = appContext
+                passphraseProvider = NonePassphraseProvider()
+            }
             logger = Logger.STANDARD
-            // Storage will be created with NonePassphraseProvider due to encryptionEnabled = false
         }
 
         // Add a credential with creation time that we can verify
@@ -853,26 +858,63 @@ class OathClientAndroidTest {
         // Close the client when done
         client.close()
     }
+    
+    @Test
+    fun testDuplicateCredentialDetection() = runTest {
+        val client = createTestClient()
+        
+        // Create a test URI
+        val uri = "otpauth://totp/Example:test@example.com?secret=JBSWY3DPEHPK3PXP&issuer=Example"
+        
+        // Add a credential from the URI
+        val credential = client.addCredentialFromUri(uri).getOrThrow()
+        assertNotNull("First credential should be added successfully", credential)
+        
+        // Try to add the same credential again (same issuer and accountName)
+        val duplicateResult = client.addCredentialFromUri(uri)
+        
+        // Verify that adding the duplicate credential failed
+        assertTrue("Duplicate credential should fail", duplicateResult.isFailure)
+        
+        val exception = duplicateResult.exceptionOrNull()
+        assertNotNull("Exception should not be null", exception)
+        
+        // The exception message or cause should mention that the credential already exists
+        val errorMessage = exception?.message ?: ""
+        val causeMessage = exception?.cause?.message ?: ""
+        val hasDuplicateMessage = errorMessage.contains("already exists", ignoreCase = true) || 
+                                  errorMessage.contains("duplicate", ignoreCase = true) ||
+                                  causeMessage.contains("already exists", ignoreCase = true) ||
+                                  causeMessage.contains("duplicate", ignoreCase = true)
+        
+        assertTrue(
+            "Error message should mention duplicate credential. Got: $errorMessage, cause: $causeMessage",
+            hasDuplicateMessage
+        )
+        
+        // Verify we still only have one credential
+        val allCredentials = client.getCredentials().getOrThrow()
+        assertEquals("Should only have one credential", 1, allCredentials.size)
+        
+        client.close()
+    }
 
     /**
      * Helper method to create a consistent OathClient with test configuration.
      */
 
     private suspend fun createTestClient(
-        encryptionEnabled: Boolean = false,
-        enableCredentialCache: Boolean = false
+        enableCredentialCache: Boolean = false,
+        testPassphraseProvider: PassphraseProvider = NonePassphraseProvider()
     ): OathClient {
-        // Create storage with appropriate passphrase provider based on encryption setting
+        // Create storage with the specified passphrase provider
         val testStorage = SQLOathStorage {
             context = appContext
-            // Use appropriate passphrase provider based on encryption setting
-            passphraseProvider =
-                if (encryptionEnabled) testPassphraseProvider else NonePassphraseProvider()
+            passphraseProvider = testPassphraseProvider
         }
 
         // Create client with the configuration
         val client = OathClient {
-            this.encryptionEnabled = encryptionEnabled
             this.enableCredentialCache = enableCredentialCache
             this.storage = testStorage
             this.logger = Logger.STANDARD

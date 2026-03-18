@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2025-2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -47,7 +47,7 @@ object PushConstants {
     const val KEY_MESSAGE_TEXT = "messageText"
     const val KEY_CREDENTIAL_ID = "credentialId"
     const val KEY_PUSH_TYPE = "pushType"
-    const val KEY_USER_ID = "userId"
+    const val KEY_USERNAME = "username"
     const val KEY_ADDITIONAL_DATA = "additionalData"
     const val KEY_TIME_INTERVAL = "timeInterval"
 

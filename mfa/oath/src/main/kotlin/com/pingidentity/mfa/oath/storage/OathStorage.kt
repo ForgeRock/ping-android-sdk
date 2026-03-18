@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 - 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2025 - 2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -50,6 +50,17 @@ interface OathStorage : MfaStorage {
      * @throws MfaStorageException if the credential cannot be removed.
      */
     suspend fun removeOathCredential(credentialId: String): Boolean
+
+    /**
+     * Retrieve an OATH credential by issuer and account name.
+     * This method performs a case-sensitive lookup to detect duplicate credentials.
+     *
+     * @param issuer The issuer of the credential.
+     * @param accountName The account name of the credential.
+     * @return The OATH credential if found, or null if not found.
+     * @throws MfaStorageException if the credential cannot be retrieved.
+     */
+    suspend fun getCredentialByIssuerAndAccount(issuer: String, accountName: String): OathCredential?
 
     /**
      * Clear all OATH credentials from the storage.
