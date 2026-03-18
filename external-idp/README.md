@@ -420,3 +420,5 @@ more streamlined and
 user-friendly authentication experience when users choose to log in with Google or Facebook. The
 Ping External IDP
 library intelligently handles the integration with these native SDKs when they are present.
+
+© Copyright 2025-2026 Ping Identity Corporation. All Rights Reserved

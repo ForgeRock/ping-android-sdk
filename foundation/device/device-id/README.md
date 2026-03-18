@@ -121,3 +121,5 @@ val customId = CustomDeviceIdentifier.id
 - **Handle gracefully**: Be prepared to handle cases where the device identifier changes.
 - **Combine with other factors**: For authentication purposes, combine device identifiers with other
   factors like user credentials.
+
+© Copyright 2025-2026 Ping Identity Corporation. All Rights Reserved

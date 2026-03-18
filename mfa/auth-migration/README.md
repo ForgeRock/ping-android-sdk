@@ -421,3 +421,5 @@ This module is part of the Ping Identity SDK for Android and is subject to the M
 
 ---
 
+
+© Copyright 2025-2026 Ping Identity Corporation. All Rights Reserved
