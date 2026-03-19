@@ -112,10 +112,10 @@ val migrateMechanismsStep = MigrationStep(
                     val oathCredential = OathCredential(
                         userId = mechanism.uid,
                         resourceId = mechanism.resourceId,
-                        issuer = account?.issuer ?: mechanism.issuer,
-                        displayIssuer = account?.displayIssuer ?: account?.issuer ?: mechanism.issuer,
-                        accountName = account?.accountName ?: mechanism.accountName,
-                        displayAccountName = account?.displayAccountName ?: account?.accountName ?: mechanism.accountName,
+                        issuer = account.issuer,
+                        displayIssuer = account.displayIssuer ?: account.issuer,
+                        accountName = account.accountName,
+                        displayAccountName = account.displayAccountName ?: account.accountName,
                         oathType = OathType.fromString(mechanism.oathType ?: TOTP),
                         secret = mechanism.secret,
                         oathAlgorithm = when (mechanism.algorithm) {
@@ -126,14 +126,14 @@ val migrateMechanismsStep = MigrationStep(
                         digits = mechanism.digits ?: 6,
                         period = mechanism.period ?: 30,
                         counter = mechanism.counter ?: 0L,
-                        createdAt = account?.timeAdded?.let { Date(it) }
+                        createdAt = account.timeAdded?.let { Date(it) }
                             ?: mechanism.timeAdded?.let { Date(it) }
                             ?: Date(),
-                        imageURL = account?.imageURL,
-                        backgroundColor = account?.backgroundColor,
-                        policies = account?.policies,
-                        lockingPolicy = account?.lockingPolicy,
-                        isLocked = account?.lock ?: false
+                        imageURL = account.imageURL,
+                        backgroundColor = account.backgroundColor,
+                        policies = account.policies,
+                        lockingPolicy = account.lockingPolicy,
+                        isLocked = account.lock
                     )
 
                     oathStorage.storeOathCredential(oathCredential)
@@ -158,21 +158,21 @@ val migrateMechanismsStep = MigrationStep(
                     val pushCredential = PushCredential(
                         id = mechanism.mechanismUID,
                         userId = mechanism.uid,
-                        resourceId = mechanism.resourceId ?: mechanism.mechanismUID,  // Fallback to mechanismUID if resourceId not present
-                        issuer = account?.issuer ?: mechanism.issuer,
-                        displayIssuer = account?.displayIssuer ?: account?.issuer ?: mechanism.issuer,
-                        accountName = account?.accountName ?: mechanism.accountName,
-                        displayAccountName = account?.displayAccountName ?: account?.accountName ?: mechanism.accountName,
+                        resourceId = mechanism.resourceId ?: "",
+                        issuer = account.issuer,
+                        displayIssuer = account.displayIssuer ?: account.issuer,
+                        accountName = account.accountName,
+                        displayAccountName = account.displayAccountName ?: account.accountName,
                         serverEndpoint = serverEndpoint,
                         sharedSecret = mechanism.secret,
-                        createdAt = account?.timeAdded?.let { Date(it) }
+                        createdAt = account.timeAdded?.let { Date(it) }
                             ?: mechanism.timeAdded?.let { Date(it) }
                             ?: Date(),
-                        imageURL = account?.imageURL,
-                        backgroundColor = account?.backgroundColor,
-                        policies = account?.policies,
-                        lockingPolicy = account?.lockingPolicy,
-                        isLocked = account?.lock ?: false,
+                        imageURL = account.imageURL,
+                        backgroundColor = account.backgroundColor,
+                        policies = account.policies,
+                        lockingPolicy = account.lockingPolicy,
+                        isLocked = account.lock,
                         platform = mechanism.platform ?: "PING_AM"
                     )
 

@@ -6,7 +6,6 @@
 
 package com.pingidentity.auth.migration
 
-import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.forgerock.android.auth.StorageClient
@@ -67,55 +66,62 @@ object LegacyDataConverter {
     /**
      * Build mechanisms list with nested account data from raw JSON strings.
      */
-    private fun buildMechanismsList(
+    fun buildMechanismsList(
         mechanismsMap: Map<String, String>,
         accountsMap: Map<String, String>
     ): List<LegacyMechanism> {
-        val parseJson = Json {
-            ignoreUnknownKeys = true
-            isLenient = true
-        }
-
         return mechanismsMap.mapNotNull { (mechanismId, mechanismJson) ->
             try {
-                val mechanismData = parseJson.parseToJsonElement(mechanismJson).jsonObject
+                val mechanismData = legacyJson.parseToJsonElement(mechanismJson).jsonObject
 
                 // Extract mechanism fields
-                val mechanismIssuer = mechanismData["issuer"]?.jsonPrimitive?.content ?: ""
-                val mechanismAccountName = mechanismData["accountName"]?.jsonPrimitive?.content ?: ""
+                val mechanismIssuer = mechanismData["issuer"]?.jsonPrimitive?.content ?: run {
+                    AuthMigration.logger.w("Skipping mechanism $mechanismId: no issuer found")
+                    return@mapNotNull null
+                }
+                val mechanismAccountName = mechanismData["accountName"]?.jsonPrimitive?.content ?: run {
+                    AuthMigration.logger.w("Skipping mechanism $mechanismId: no accountName found")
+                    return@mapNotNull null
+                }
+                val mechanismUID = mechanismData["mechanismUID"]?.jsonPrimitive?.content ?: run {
+                    AuthMigration.logger.w("Skipping mechanism $mechanismId: no mechanismUID found")
+                    return@mapNotNull null
+                }
 
                 // Find associated account (Account ID format: issuer + "-" + accountName)
                 val accountId = "$mechanismIssuer-$mechanismAccountName"
                 val accountJson = accountsMap[accountId]
                 val accountData = accountJson?.let {
-                    parseJson.parseToJsonElement(it).jsonObject
+                    legacyJson.parseToJsonElement(it).jsonObject
+                }
+
+                // Build nested account — skip mechanism if no account is found
+                if (accountData == null) {
+                    AuthMigration.logger.w("Skipping mechanism $mechanismId: no associated account found for '$accountId'")
+                    return@mapNotNull null
                 }
 
                 // Build nested account
-                val account = accountData?.let {
-                    LegacyAccount(
-                        id = it["id"]?.jsonPrimitive?.content ?: accountId,
-                        issuer = it["issuer"]?.jsonPrimitive?.content ?: mechanismIssuer,
-                        displayIssuer = it["displayIssuer"]?.jsonPrimitive?.content,
-                        accountName = it["accountName"]?.jsonPrimitive?.content ?: mechanismAccountName,
-                        displayAccountName = it["displayAccountName"]?.jsonPrimitive?.content,
-                        imageURL = it["imageURL"]?.jsonPrimitive?.content,
-                        backgroundColor = it["backgroundColor"]?.jsonPrimitive?.content,
-                        timeAdded = it["timeAdded"]?.jsonPrimitive?.content?.toLongOrNull(),
-                        policies = it["policies"]?.jsonPrimitive?.content,
-                        lockingPolicy = it["lockingPolicy"]?.jsonPrimitive?.content,
-                        lock = it["lock"]?.jsonPrimitive?.content?.toBoolean() ?: false
-                    )
-                }
+                val account = LegacyAccount(
+                    id = accountData["id"]?.jsonPrimitive?.content ?: accountId,
+                    issuer = accountData["issuer"]?.jsonPrimitive?.content ?: mechanismIssuer,
+                    displayIssuer = accountData["displayIssuer"]?.jsonPrimitive?.content,
+                    accountName = accountData["accountName"]?.jsonPrimitive?.content ?: mechanismAccountName,
+                    displayAccountName = accountData["displayAccountName"]?.jsonPrimitive?.content,
+                    imageURL = accountData["imageURL"]?.jsonPrimitive?.content,
+                    backgroundColor = accountData["backgroundColor"]?.jsonPrimitive?.content,
+                    timeAdded = accountData["timeAdded"]?.jsonPrimitive?.content?.toLongOrNull(),
+                    policies = accountData["policies"]?.jsonPrimitive?.content,
+                    lockingPolicy = accountData["lockingPolicy"]?.jsonPrimitive?.content,
+                    lock = accountData["lock"]?.jsonPrimitive?.content?.toBoolean() ?: false
+                )
 
                 // Build mechanism with all fields
                 LegacyMechanism(
                     id = mechanismData["id"]?.jsonPrimitive?.content ?: mechanismId,
                     issuer = mechanismIssuer,
                     accountName = mechanismAccountName,
-                    mechanismUID = mechanismData["mechanismUID"]?.jsonPrimitive?.content
-                        ?: mechanismData["id"]?.jsonPrimitive?.content
-                        ?: mechanismId,
+                    mechanismUID = mechanismUID,
                     secret = mechanismData["secret"]?.jsonPrimitive?.content ?: "",
                     type = mechanismData["type"]?.jsonPrimitive?.content ?: "",
 
@@ -133,13 +139,14 @@ object LegacyDataConverter {
 
                     // Common fields
                     uid = mechanismData["uid"]?.jsonPrimitive?.content,
-                    resourceId = mechanismData["resourceId"]?.jsonPrimitive?.content,
+                    resourceId = mechanismData["resourceId"]?.jsonPrimitive?.content ?: mechanismUID,
                     timeAdded = mechanismData["timeAdded"]?.jsonPrimitive?.content?.toLongOrNull(),
 
                     // Nested account
                     account = account
                 )
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                AuthMigration.logger.e("Failed to parse mechanism $mechanismId: ${e.message}", e)
                 null
             }
         }

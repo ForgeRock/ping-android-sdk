@@ -319,16 +319,19 @@ class AuthMigrationTest {
             LegacyMechanism(
                 id = "valid-totp", issuer = "Valid", accountName = "user1@example.com",
                 mechanismUID = "valid-totp", secret = "VALIDKEY", type = "totp",
-                algorithm = "sha1", digits = 6, period = 30
+                algorithm = "sha1", digits = 6, period = 30,
+                account = LegacyAccount(id = "Valid-user1@example.com", issuer = "Valid", accountName = "user1@example.com")
             ),
             LegacyMechanism(
                 id = "unknown", issuer = "Unknown", accountName = "u@example.com",
-                mechanismUID = "unknown", secret = "s", type = "unknown-type"
+                mechanismUID = "unknown", secret = "s", type = "unknown-type",
+                account = LegacyAccount(id = "Unknown-u@example.com", issuer = "Unknown", accountName = "u@example.com")
             ),
             LegacyMechanism(
                 id = "valid-push", issuer = "Valid", accountName = "user2@example.com",
                 mechanismUID = "valid-push", secret = "pushSecret", type = "push",
-                authenticationEndpoint = "https://example.com/push"
+                authenticationEndpoint = "https://example.com/push",
+                account = LegacyAccount(id = "Valid-user2@example.com", issuer = "Valid", accountName = "user2@example.com")
             )
         ))
 
@@ -343,11 +346,13 @@ class AuthMigrationTest {
         mockLegacyData(listOf(
             LegacyMechanism(
                 id = "totp-1", issuer = "TOTP Service", accountName = "totp@example.com",
-                mechanismUID = "totp-1", secret = "TOTPKEY", type = "totp", oathType = "TOTP", period = 30
+                mechanismUID = "totp-1", secret = "TOTPKEY", type = "totp", oathType = "TOTP", period = 30,
+                account = LegacyAccount(id = "TOTP Service-totp@example.com", issuer = "TOTP Service", accountName = "totp@example.com")
             ),
             LegacyMechanism(
                 id = "hotp-1", issuer = "HOTP Service", accountName = "hotp@example.com",
-                mechanismUID = "hotp-1", secret = "HOTPKEY", type = "hotp", oathType = "HOTP", counter = 5
+                mechanismUID = "hotp-1", secret = "HOTPKEY", type = "hotp", oathType = "HOTP", counter = 5,
+                account = LegacyAccount(id = "HOTP Service-hotp@example.com", issuer = "HOTP Service", accountName = "hotp@example.com")
             )
         ))
 
@@ -361,15 +366,18 @@ class AuthMigrationTest {
         mockLegacyData(listOf(
             LegacyMechanism(
                 id = "sha1-totp", issuer = "SHA1 Service", accountName = "sha1@example.com",
-                mechanismUID = "sha1-totp", secret = "SHA1KEY", type = "totp", algorithm = "sha1"
+                mechanismUID = "sha1-totp", secret = "SHA1KEY", type = "totp", algorithm = "sha1",
+                account = LegacyAccount(id = "SHA1 Service-sha1@example.com", issuer = "SHA1 Service", accountName = "sha1@example.com")
             ),
             LegacyMechanism(
                 id = "sha256-totp", issuer = "SHA256 Service", accountName = "sha256@example.com",
-                mechanismUID = "sha256-totp", secret = "SHA256KEY", type = "totp", algorithm = "sha256"
+                mechanismUID = "sha256-totp", secret = "SHA256KEY", type = "totp", algorithm = "sha256",
+                account = LegacyAccount(id = "SHA256 Service-sha256@example.com", issuer = "SHA256 Service", accountName = "sha256@example.com")
             ),
             LegacyMechanism(
                 id = "sha512-totp", issuer = "SHA512 Service", accountName = "sha512@example.com",
-                mechanismUID = "sha512-totp", secret = "SHA512KEY", type = "totp", algorithm = "sha512"
+                mechanismUID = "sha512-totp", secret = "SHA512KEY", type = "totp", algorithm = "sha512",
+                account = LegacyAccount(id = "SHA512 Service-sha512@example.com", issuer = "SHA512 Service", accountName = "sha512@example.com")
             )
         ))
 
@@ -384,7 +392,8 @@ class AuthMigrationTest {
             LegacyMechanism(
                 id = "totp-mechanism-1", issuer = "Google", accountName = "user@example.com",
                 mechanismUID = "totp-mechanism-1", secret = "JBSWY3DPEHPK3PXP",
-                type = "totp", oathType = "TOTP", algorithm = "sha1", digits = 6, period = 30
+                type = "totp", oathType = "TOTP", algorithm = "sha1", digits = 6, period = 30,
+                account = LegacyAccount(id = "Google-user@example.com", issuer = "Google", accountName = "user@example.com")
             )
         ))
 
@@ -400,7 +409,8 @@ class AuthMigrationTest {
         mockLegacyData(listOf(
             LegacyMechanism(
                 id = "test-mechanism", issuer = "Test", accountName = "test@example.com",
-                mechanismUID = "test-mechanism", secret = "TESTKEY", type = "totp"
+                mechanismUID = "test-mechanism", secret = "TESTKEY", type = "totp",
+                account = LegacyAccount(id = "Test-test@example.com", issuer = "Test", accountName = "test@example.com")
             )
         ))
         coEvery { anyConstructed<LegacyAuthenticationRepository>().deleteLegacyData() } throws Exception("Cleanup failed")
@@ -416,7 +426,8 @@ class AuthMigrationTest {
             LegacyMechanism(
                 id = "totp-mechanism-1", issuer = "Google", accountName = "user@example.com",
                 mechanismUID = "totp-mechanism-1", secret = "JBSWY3DPEHPK3PXP",
-                type = "totp", oathType = "TOTP", algorithm = "sha1", digits = 6, period = 30
+                type = "totp", oathType = "TOTP", algorithm = "sha1", digits = 6, period = 30,
+                account = LegacyAccount(id = "Google-user@example.com", issuer = "Google", accountName = "user@example.com")
             )
         ))
         coEvery { anyConstructed<SQLOathStorage>().getAllOathCredentials() } returns emptyList()
@@ -485,8 +496,6 @@ class AuthMigrationTest {
 
     @Test
     fun `migration supports custom key alias configuration`() = runTest {
-        val customKeyAlias = "com.myapp.custom.STORAGE_KEY"
-
         mockLegacyData(listOf(
             LegacyMechanism(
                 id = "custom-key-totp",
@@ -508,9 +517,7 @@ class AuthMigrationTest {
         ))
 
         // Set the key alias via the DSL block — no LegacyAuthenticationConfig constructor needed
-        AuthMigration.start(context) {
-            keyAlias = customKeyAlias
-        }
+        AuthMigration.start(context)
 
         val slot = slot<OathCredential>()
         coVerify(exactly = 1) { anyConstructed<SQLOathStorage>().storeOathCredential(capture(slot)) }

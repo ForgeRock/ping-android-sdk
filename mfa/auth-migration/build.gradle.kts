@@ -31,4 +31,5 @@ dependencies {
     testImplementation(libs.mockk)
     testImplementation(libs.robolectric)
     testImplementation(project(":foundation:android"))
+    testImplementation(libs.forgerock.authenticator)
 }

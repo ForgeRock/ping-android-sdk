@@ -97,7 +97,6 @@ The migration will automatically:
 
 | Property | Default | Description |
 |----------|---------|-------------|
-| `keyAlias` | `"org.forgerock.android.authenticator.KEYS"` | AndroidKeyStore alias used to decrypt legacy SharedPreferences |
 | `legacyStorageProvider` | `DefaultLegacyStorageProvider` | Override to supply data from a custom storage backend |
 | `logger` | `Logger.STANDARD` | Logger instance used throughout the migration pipeline |
 
@@ -105,13 +104,6 @@ The migration will automatically:
 // Default — no configuration needed
 lifecycleScope.launch {
     AuthMigration.start(applicationContext)
-}
-
-// Custom key alias
-lifecycleScope.launch {
-    AuthMigration.start(applicationContext) {
-        keyAlias = "com.myapp.custom.STORAGE_KEY"
-    }
 }
 
 // Custom storage provider
@@ -171,11 +163,11 @@ lifecycleScope.launch {
     AuthMigration.start(applicationContext)
 }
 
-// Custom key alias
+// Custom Storage implementation
 lifecycleScope.launch {
-    AuthMigration.start(applicationContext) {
-        keyAlias = "com.myapp.custom.STORAGE_KEY" // optional, default is the ForgeRock alias
-    }
+  AuthMigration.start(applicationContext) {
+    legacyStorageProvider = MyCustomStorageProvider(applicationContext)
+  }
 }
 ```
 

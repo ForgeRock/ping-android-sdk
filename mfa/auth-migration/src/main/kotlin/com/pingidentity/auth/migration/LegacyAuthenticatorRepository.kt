@@ -7,13 +7,10 @@
 package com.pingidentity.auth.migration
 
 import android.content.Context
-import com.pingidentity.auth.migration.LegacyAuthenticationConfig.Companion.DEFAULT_KEY_ALIAS
 import com.pingidentity.logger.Logger
 import com.pingidentity.logger.STANDARD
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
 import java.io.File
 
 /**
@@ -22,10 +19,6 @@ import java.io.File
  * Configure via the DSL block passed to [AuthMigration.start]. All properties have sensible
  * defaults for standard FR Authenticator installations — no block is required for most apps.
  *
- * @property keyAlias AndroidKeyStore alias of the master key used to decrypt the legacy
- *   encrypted SharedPreferences. Defaults to [DEFAULT_KEY_ALIAS], which is the alias used
- *   by the ForgeRock Authenticator SDK. Only change this if your application stored legacy
- *   data under a different key alias.
  * @property legacyStorageProvider Defines how the migration pipeline sources legacy data and
  *   performs cleanup. If not set, [DefaultLegacyStorageProvider] is used, which reads directly
  *   from the legacy encrypted SharedPreferences. Override when your application stores
@@ -40,15 +33,6 @@ import java.io.File
  * }
  * ```
  *
- * ## Example — custom key alias
- * ```kotlin
- * lifecycleScope.launch {
- *     AuthMigration.start(applicationContext) {
- *         keyAlias = "com.myapp.custom.STORAGE_KEY"
- *     }
- * }
- * ```
- *
  * ## Example — custom storage provider
  * ```kotlin
  * lifecycleScope.launch {
@@ -58,23 +42,28 @@ import java.io.File
  * }
  * ```
  *
- * @see AuthMigration.start
+ * ## Example — logger
+ *  ```kotlin
+ * lifecycleScope.launch {
+ *     AuthMigration.start(applicationContext) {
+ *        logger = Logger.WARN
+ *    }
+ * }
+ *  * ```
+ *
+ * @see AuthMigration
  * @see LegacyStorageProvider
  * @see DefaultLegacyStorageProvider
  */
 class LegacyAuthenticationConfig {
-    var keyAlias: String = DEFAULT_KEY_ALIAS
     var legacyStorageProvider: LegacyStorageProvider? = null
     var logger: Logger = Logger.STANDARD
-
-    companion object {
-        /** Default key alias used by the ForgeRock Authenticator SDK. */
-        const val DEFAULT_KEY_ALIAS = "org.forgerock.android.authenticator.KEYS"
-    }
 }
 
 private const val AUTH_DATA_ACCOUNT = "org.forgerock.android.authenticator.DATA.ACCOUNT"
 private const val AUTH_DATA_MECHANISM = "org.forgerock.android.authenticator.DATA.MECHANISM"
+/** Default key alias used by the ForgeRock Authenticator SDK. */
+private const val DEFAULT_KEY_ALIAS = "org.forgerock.android.authenticator.KEYS"
 
 
 /**
@@ -86,7 +75,6 @@ private const val AUTH_DATA_MECHANISM = "org.forgerock.android.authenticator.DAT
 class LegacyAuthenticationRepository(
     private val context: Context
 ) {
-
     private val decryptor = LegacyAuthenticationDecryptor(
         context,
         DEFAULT_KEY_ALIAS
@@ -124,7 +112,7 @@ class LegacyAuthenticationRepository(
             val mechanismsMap = readPreferences(AUTH_DATA_MECHANISM, isEncrypted)
 
             // Build mechanisms list with nested account data
-            val mechanisms = buildMechanismsList(mechanismsMap, accountsMap)
+            val mechanisms = LegacyDataConverter.buildMechanismsList(mechanismsMap, accountsMap)
 
             LegacyExportedData(
                 mechanisms = mechanisms,
@@ -139,25 +127,14 @@ class LegacyAuthenticationRepository(
     }
 
     /**
-     * Delete legacy data after successful migration.
+     * Delete legacy data files after successful migration.
      * Handles both encrypted (default storage) and unencrypted (custom storage) data.
      */
     suspend fun deleteLegacyData() = withContext(Dispatchers.IO) {
         // Delete SharedPreferences files (works for both encrypted and unencrypted)
         context.deleteSharedPreferences(AUTH_DATA_ACCOUNT)
         context.deleteSharedPreferences(AUTH_DATA_MECHANISM)
-
-        // Delete encryption key if it exists (only for default storage)
-        try {
-            if (decryptor.keyExists()) {
-                val keyStore = java.security.KeyStore.getInstance("AndroidKeyStore")
-                keyStore.load(null)
-                keyStore.deleteEntry(DEFAULT_KEY_ALIAS)
-                AuthMigration.logger.d("Deleted legacy encryption key: $DEFAULT_KEY_ALIAS")
-            }
-        } catch (e: Exception) {
-            AuthMigration.logger.w("Failed to delete encryption key (may not exist): ${e.message}")
-        }
+        return@withContext
     }
 
 
@@ -188,83 +165,6 @@ class LegacyAuthenticationRepository(
 
         AuthMigration.logger.i("Created ${backupPaths.size} backup file(s)")
         backupPaths
-    }
-
-    /**
-     * Build mechanisms list with nested account data.
-     */
-    private fun buildMechanismsList(
-        mechanismsMap: Map<String, String>,
-        accountsMap: Map<String, String>
-    ): List<LegacyMechanism> {
-        return mechanismsMap.mapNotNull { (mechanismId, mechanismJson) ->
-            try {
-                val mechanismData = legacyJson.parseToJsonElement(mechanismJson).jsonObject
-
-                // Extract mechanism fields
-                val mechanismIssuer = mechanismData["issuer"]?.jsonPrimitive?.content ?: ""
-                val mechanismAccountName = mechanismData["accountName"]?.jsonPrimitive?.content ?: ""
-
-                // Find associated account (Account ID format: issuer + "-" + accountName)
-                val accountId = "$mechanismIssuer-$mechanismAccountName"
-                val accountJson = accountsMap[accountId]
-                val accountData = accountJson?.let {
-                    legacyJson.parseToJsonElement(it).jsonObject
-                }
-
-                // Build nested account
-                val account = accountData?.let {
-                    LegacyAccount(
-                        id = it["id"]?.jsonPrimitive?.content ?: accountId,
-                        issuer = it["issuer"]?.jsonPrimitive?.content ?: mechanismIssuer,
-                        displayIssuer = it["displayIssuer"]?.jsonPrimitive?.content,
-                        accountName = it["accountName"]?.jsonPrimitive?.content ?: mechanismAccountName,
-                        displayAccountName = it["displayAccountName"]?.jsonPrimitive?.content,
-                        imageURL = it["imageURL"]?.jsonPrimitive?.content,
-                        backgroundColor = it["backgroundColor"]?.jsonPrimitive?.content,
-                        timeAdded = it["timeAdded"]?.jsonPrimitive?.content?.toLongOrNull(),
-                        policies = it["policies"]?.jsonPrimitive?.content,
-                        lockingPolicy = it["lockingPolicy"]?.jsonPrimitive?.content,
-                        lock = it["lock"]?.jsonPrimitive?.content?.toBoolean() ?: false
-                    )
-                }
-
-                // Build mechanism with all fields
-                LegacyMechanism(
-                    id = mechanismData["id"]?.jsonPrimitive?.content ?: mechanismId,
-                    issuer = mechanismIssuer,
-                    accountName = mechanismAccountName,
-                    mechanismUID = mechanismData["mechanismUID"]?.jsonPrimitive?.content
-                        ?: mechanismData["id"]?.jsonPrimitive?.content
-                        ?: mechanismId,
-                    secret = mechanismData["secret"]?.jsonPrimitive?.content ?: "",
-                    type = mechanismData["type"]?.jsonPrimitive?.content ?: "",
-
-                    // OATH fields
-                    oathType = mechanismData["oathType"]?.jsonPrimitive?.content,
-                    algorithm = mechanismData["algorithm"]?.jsonPrimitive?.content,
-                    digits = mechanismData["digits"]?.jsonPrimitive?.content?.toIntOrNull(),
-                    period = mechanismData["period"]?.jsonPrimitive?.content?.toIntOrNull(),
-                    counter = mechanismData["counter"]?.jsonPrimitive?.content?.toLongOrNull(),
-
-                    // Push fields
-                    registrationEndpoint = mechanismData["registrationEndpoint"]?.jsonPrimitive?.content,
-                    authenticationEndpoint = mechanismData["authenticationEndpoint"]?.jsonPrimitive?.content,
-                    platform = mechanismData["platform"]?.jsonPrimitive?.content,
-
-                    // Common fields
-                    uid = mechanismData["uid"]?.jsonPrimitive?.content,
-                    resourceId = mechanismData["resourceId"]?.jsonPrimitive?.content,
-                    timeAdded = mechanismData["timeAdded"]?.jsonPrimitive?.content?.toLongOrNull(),
-
-                    // Nested account
-                    account = account
-                )
-            } catch (e: Exception) {
-                AuthMigration.logger.e("Failed to parse mechanism $mechanismId: ${e.message}", e)
-                null
-            }
-        }
     }
 
     /**

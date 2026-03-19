@@ -59,7 +59,7 @@ data class LegacyMechanism(
     val timeAdded: Long? = null,
 
     // Nested account data
-    val account: LegacyAccount? = null
+    val account: LegacyAccount
 )
 
 /**
