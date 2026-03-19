@@ -197,14 +197,15 @@ val migrateMechanismsStep = MigrationStep(
 
 /**
  * Step 3: Cleanup legacy authenticator data via the provided [LegacyStorageProvider].
+ * @param allowBackup Allows the backup of the SharedPreferences files.
  */
-fun cleanupLegacyDataStep(provider: LegacyStorageProvider) = MigrationStep(
+fun cleanupLegacyDataStep(provider: LegacyStorageProvider, allowBackup: Boolean) = MigrationStep(
     description = "Cleanup legacy authenticator data"
 ) {
     logger.i("Cleaning up legacy authenticator data")
 
     try {
-        provider.cleanUp(context)
+        provider.cleanUp(context, allowBackup)
         logger.i("Successfully cleaned up legacy authenticator data")
         oathStorage.closeDatabase()
         logger.i("Successfully closed oath storage database")

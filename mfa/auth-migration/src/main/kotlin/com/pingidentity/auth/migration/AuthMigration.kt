@@ -37,15 +37,6 @@ object AuthMigration {
      * }
      * ```
      *
-     * ## Example — custom key alias
-     * ```kotlin
-     * lifecycleScope.launch {
-     *     AuthMigration.start(applicationContext) {
-     *         keyAlias = "com.myapp.custom.STORAGE_KEY"
-     *     }
-     * }
-     * ```
-     *
      * ## Example — custom storage provider
      * ```kotlin
      * lifecycleScope.launch {
@@ -63,12 +54,12 @@ object AuthMigration {
             val provider = config.legacyStorageProvider
                 ?: DefaultLegacyStorageProvider(context)
             this.logger = config.logger
-
+            config.restore(context)
             val migration = Migration {
                 logger = config.logger
                 step(startMigrationStep(provider))    // Import legacy authenticator data
                 step(migrateMechanismsStep)           // Migrate mechanisms to OATH and Push storage
-                step(cleanupLegacyDataStep(provider)) // Cleanup legacy authenticator data
+                step(cleanupLegacyDataStep(provider, config.allowBackup)) // Cleanup legacy authenticator data
             }
 
             migration.migrate(context).collect { progress ->

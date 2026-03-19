@@ -7,58 +7,11 @@
 package com.pingidentity.auth.migration
 
 import android.content.Context
-import com.pingidentity.logger.Logger
-import com.pingidentity.logger.STANDARD
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.security.KeyStore
 
-/**
- * Configuration for the legacy FR Authenticator data migration.
- *
- * Configure via the DSL block passed to [AuthMigration.start]. All properties have sensible
- * defaults for standard FR Authenticator installations — no block is required for most apps.
- *
- * @property legacyStorageProvider Defines how the migration pipeline sources legacy data and
- *   performs cleanup. If not set, [DefaultLegacyStorageProvider] is used, which reads directly
- *   from the legacy encrypted SharedPreferences. Override when your application stores
- *   authenticator data in a custom backend (e.g. a different
- *   [org.forgerock.android.auth.StorageClient], an encrypted database, or a remote store).
- * @property logger Logger instance to use for logging. Defaults to [Logger.Companion.STANDARD].
- *
- * ## Example — default migration (no block needed)
- * ```kotlin
- * lifecycleScope.launch {
- *     AuthMigration.start(applicationContext)
- * }
- * ```
- *
- * ## Example — custom storage provider
- * ```kotlin
- * lifecycleScope.launch {
- *     AuthMigration.start(applicationContext) {
- *         legacyStorageProvider = MyCustomStorageProvider(applicationContext)
- *     }
- * }
- * ```
- *
- * ## Example — logger
- *  ```kotlin
- * lifecycleScope.launch {
- *     AuthMigration.start(applicationContext) {
- *        logger = Logger.WARN
- *    }
- * }
- *  * ```
- *
- * @see AuthMigration
- * @see LegacyStorageProvider
- * @see DefaultLegacyStorageProvider
- */
-class LegacyAuthenticationConfig {
-    var legacyStorageProvider: LegacyStorageProvider? = null
-    var logger: Logger = Logger.STANDARD
-}
 
 private const val AUTH_DATA_ACCOUNT = "org.forgerock.android.authenticator.DATA.ACCOUNT"
 private const val AUTH_DATA_MECHANISM = "org.forgerock.android.authenticator.DATA.MECHANISM"
@@ -129,11 +82,25 @@ class LegacyAuthenticationRepository(
     /**
      * Delete legacy data files after successful migration.
      * Handles both encrypted (default storage) and unencrypted (custom storage) data.
+     * @param allowBackup Allows the backup of the SharedPreferences files.
      */
-    suspend fun deleteLegacyData() = withContext(Dispatchers.IO) {
+    suspend fun deleteLegacyData(allowBackup: Boolean) = withContext(Dispatchers.IO) {
         // Delete SharedPreferences files (works for both encrypted and unencrypted)
         context.deleteSharedPreferences(AUTH_DATA_ACCOUNT)
         context.deleteSharedPreferences(AUTH_DATA_MECHANISM)
+        if (!allowBackup) {
+            // Delete the key if the backup is not allowed.
+            try {
+                if (decryptor.keyExists()) {
+                    val keyStore = KeyStore.getInstance("AndroidKeyStore")
+                    keyStore.load(null)
+                    keyStore.deleteEntry(DEFAULT_KEY_ALIAS)
+                    AuthMigration.logger.d("Deleted legacy encryption key: $DEFAULT_KEY_ALIAS")
+                }
+            } catch (e: Exception) {
+                AuthMigration.logger.w("Failed to delete encryption key (may not exist): ${e.message}")
+            }
+        }
         return@withContext
     }
 

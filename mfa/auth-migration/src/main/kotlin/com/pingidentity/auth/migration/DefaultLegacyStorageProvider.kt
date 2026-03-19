@@ -35,8 +35,8 @@ import android.content.Context
  *             LegacyDataConverter.convertToLegacyExportedData(storageClient)
  *         }
  *
- *     override suspend fun cleanUp(context: Context, backupFiles: Boolean) {
- *         if (backupFiles) {
+ *     override suspend fun cleanUp(context: Context, allowBackup: Boolean) {
+ *         if (allowBackup) {
  *             // perform your own backup logic here
  *         }
  *         storageClient.clear()
@@ -85,8 +85,11 @@ interface LegacyStorageProvider {
      * your backend uses.
      *
      * @param context The Android application context.
+     * @param allowBackup Allows the backup of the SharedPreferences files. Default is `false`. For
+     * custom implementations of the [org.forgerock.android.auth.StorageClient], the
+     * [LegacyAuthenticationConfig.restore] can be used to restore the data.
      */
-    suspend fun cleanUp(context: Context)
+    suspend fun cleanUp(context: Context, allowBackup: Boolean = false)
 }
 
 /**
@@ -95,7 +98,7 @@ interface LegacyStorageProvider {
  * Reads from the legacy ForgeRock encrypted SharedPreferences
  * (`org.forgerock.android.authenticator.DATA.ACCOUNT` and
  * `org.forgerock.android.authenticator.DATA.MECHANISM`), decrypts the data using the
- * AndroidKeyStore key identified by [LegacyAuthenticationConfig.keyAlias], and always
+ * AndroidKeyStore key identified by [DEFAULT_KEY_ALIAS], and always
  * creates a backup before deleting the original files.
  *
  * This implementation is used automatically when no custom configuration is supplied to
@@ -124,10 +127,13 @@ class DefaultLegacyStorageProvider(
     /**
      * Backs up and then permanently deletes the legacy SharedPreferences files.
      * @param context The Android application context.
+     * @param allowBackup Allows the backup of the SharedPreferences files.
      */
-    override suspend fun cleanUp(context: Context) {
-        // We will back up the preferences in default mode.
-        legacyAuthenticationRepository.backupSharedPreferences()
-        legacyAuthenticationRepository.deleteLegacyData()
+    override suspend fun cleanUp(context: Context, allowBackup: Boolean) {
+        if (allowBackup) {
+            // We will back up the preferences in default mode.
+            legacyAuthenticationRepository.backupSharedPreferences()
+        }
+        legacyAuthenticationRepository.deleteLegacyData(allowBackup)
     }
 }

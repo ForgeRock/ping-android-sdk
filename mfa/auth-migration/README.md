@@ -85,11 +85,12 @@ lifecycleScope.launch {
 ```
 
 The migration will automatically:
-1. Check for legacy FR Authenticator data during app startup
-2. Decrypt and export data from legacy encrypted SharedPreferences
-3. Migrate OATH credentials and Push credentials
-4. Clean up legacy files and encryption keys after successful migration
-5. Skip migration if no legacy data exists
+1. Invoke `restore(context)` if provided, allowing you to restore backup data before migration runs
+2. Check for legacy FR Authenticator data during app startup
+3. Decrypt and export data from legacy encrypted SharedPreferences
+4. Migrate OATH credentials and Push credentials
+5. Clean up legacy files and encryption keys after successful migration
+6. Skip migration if no legacy data exists
 
 ### LegacyAuthenticationConfig
 
@@ -99,6 +100,8 @@ The migration will automatically:
 |----------|---------|-------------|
 | `legacyStorageProvider` | `DefaultLegacyStorageProvider` | Override to supply data from a custom storage backend |
 | `logger` | `Logger.STANDARD` | Logger instance used throughout the migration pipeline |
+| `allowBackup` | `false` | When `true`, backs up legacy SharedPreferences files before deletion and preserves the AndroidKeyStore encryption key |
+| `restore` | `{}` | Optional lambda invoked with `context` before migration starts, allowing you to restore backup data prior to the migration pipeline running |
 
 ```kotlin
 // Default — no configuration needed
@@ -119,6 +122,24 @@ lifecycleScope.launch {
         logger = Logger.DEBUG
     }
 }
+
+// Allow backup of legacy SharedPreferences before deletion
+lifecycleScope.launch {
+    AuthMigration.start(applicationContext) {
+        allowBackup = true
+    }
+}
+
+// Restore backup data before migration runs (e.g. after a failed previous migration)
+lifecycleScope.launch {
+    AuthMigration.start(applicationContext) {
+        allowBackup = true
+        restore = { ctx ->
+            // Restore your backup here before migration starts
+            MyBackupHelper.restore(ctx)
+        }
+    }
+}
 ```
 
 ---
@@ -128,6 +149,7 @@ lifecycleScope.launch {
 The migration process consists of three sequential steps:
 
 ### Step 1: Import Legacy Data
+- Invokes `restore(context)` from `LegacyAuthenticationConfig` if provided
 - Calls `LegacyStorageProvider.isMigrationRequired()` — aborts early if no migration is needed
 - Calls `LegacyStorageProvider.getMigrationData()` to load `LegacyExportedData`
 - Default implementation (`DefaultLegacyStorageProvider`) decrypts two legacy SharedPreferences files:
@@ -137,18 +159,25 @@ The migration process consists of three sequential steps:
 - Aborts migration if the mechanisms list is empty
 
 ### Step 2: Migrate OATH and Push Mechanisms
+- **Database Preparation**: Before migrating, checks for existing OATH and Push SQLite databases:
+  - If a database exists and contains credentials, it is preserved (migration skips re-creating it)
+  - If a database exists but is empty, it is deleted to avoid passphrase conflicts
+  - If a database cannot be opened (e.g., encrypted with a different passphrase), it is deleted and recreated
+- Initialises `SQLOathStorage` and `SQLPushStorage` with `allowDestructiveRecovery = true` and `backupOnError = true` for resilience during migration
 - Parses mechanism data to determine type (TOTP/HOTP/Push)
 - Creates `OathCredential` objects for TOTP/HOTP mechanisms:
   - Preserves secret, algorithm (SHA1/SHA256/SHA512), digits, period
   - Maintains issuer, account name, and visual customizations
 - Creates `PushCredential` objects for Push mechanisms:
-  - Preserves server endpoint, shared secret
+  - Preserves server endpoint, shared secret (query parameters stripped from endpoint URL)
   - Maintains account information and visual customizations
 - Stores credentials in `SQLOathStorage` and `SQLPushStorage` respectively
 
 ### Step 3: Cleanup Legacy Data
-- Deletes all legacy SharedPreferences files
-- Removes legacy encryption key from AndroidKeyStore
+- Calls `LegacyStorageProvider.cleanUp(context, allowBackup)`
+- When `allowBackup = true`: creates timestamped backup copies of legacy SharedPreferences XML files in the same directory before deleting them, and preserves the AndroidKeyStore encryption key
+- When `allowBackup = false` (default): deletes legacy SharedPreferences files and removes the encryption key from AndroidKeyStore
+- Closes both `SQLOathStorage` and `SQLPushStorage` database connections
 - Cleanup failures don't abort the migration (non-critical)
 
 ---
@@ -217,6 +246,13 @@ The migration uses a standalone decryptor that:
 - Gracefully handles corrupted or missing data
 - Returns empty maps for non-existent files
 
+### Database Recovery
+Before migration begins, the framework inspects any existing SQLite databases:
+- Databases with existing credentials are preserved unchanged
+- Empty databases are removed to prevent passphrase conflicts
+- Databases that cannot be opened (e.g., encrypted with a different passphrase) are deleted and recreated
+- Storage instances are initialised with `allowDestructiveRecovery = true` so that a force-close during migration does not leave the database in an unrecoverable state
+
 ### Migration Abortion
 - Migration automatically aborts if no legacy data is found
 - No errors are thrown for clean installations
@@ -241,8 +277,12 @@ interface LegacyStorageProvider {
      */
     suspend fun getMigrationData(context: Context): LegacyExportedData
 
-    /** Remove legacy data after successful migration. */
-    suspend fun cleanUp(context: Context)
+    /**
+     * Remove legacy data after successful migration.
+     * @param allowBackup When true, back up data before deletion.
+     *   Use [LegacyAuthenticationConfig.restore] to restore the backup on the next run if needed.
+     */
+    suspend fun cleanUp(context: Context, allowBackup: Boolean = false)
 }
 ```
 
@@ -264,8 +304,12 @@ class MyStorageProvider(
             LegacyDataConverter.convertToLegacyExportedData(storageClient)
         }
 
-    override suspend fun cleanUp(context: Context) {
+    override suspend fun cleanUp(context: Context, allowBackup: Boolean) {
+        if (allowBackup) {
+            // perform your own backup logic here
+        }
         // Remove data from your custom storage
+        storageClient.clear()
     }
 }
 ```
@@ -336,6 +380,24 @@ lifecycleScope.launch {
             context = applicationContext,
             storageClient = MyStorageClient()
         )
+    }
+}
+```
+
+### Using `restore` with a Custom Provider
+
+If your backup logic requires restoring data before migration begins, use the `restore` lambda:
+
+```kotlin
+lifecycleScope.launch {
+    AuthMigration.start(applicationContext) {
+        allowBackup = true
+        legacyStorageProvider = MyStorageProvider(applicationContext)
+        restore = { ctx ->
+            // This runs before the migration pipeline starts.
+            // Restore your backup here so getMigrationData() can find it.
+            MyBackupHelper.restore(ctx)
+        }
     }
 }
 ```
@@ -477,6 +539,11 @@ The migration decryptor reverses this process without requiring the Legacy SDK.
 - Check database permissions and storage availability
 - Review SQLite database version compatibility
 
+**Existing Database Conflicts**
+- The migration automatically detects and resolves database passphrase conflicts
+- Empty databases are deleted and recreated; databases with existing data are preserved
+- If a database cannot be opened, it is deleted so migration can proceed with a fresh database
+
 ### Debug Logging
 
 Enable debug logging to monitor migration progress:
@@ -491,12 +558,13 @@ Check logs for migration status:
 Ping SDK: Checking for legacy authenticator data
 Ping SDK: Legacy repository exists, proceeding with migration
 Ping SDK: Successfully exported 3 mechanisms
+Ping SDK: Checking existing databases before migration
 Ping SDK: Starting mechanisms migration to new storage
 Ping SDK: Migrated OATH credential: ForgeRock - user@example.com
 Ping SDK: Migrated Push credential: PingAM - admin@company.com
 Ping SDK: Migrated 3 OATH credentials and 2 Push credentials
 Ping SDK: Cleaning up legacy authenticator data
-Ping SDK: Successfully deleted legacy authenticator data
+Ping SDK: Successfully cleaned up legacy authenticator data
 Ping SDK: Migration completed successfully
 ```
 
@@ -504,7 +572,7 @@ Ping SDK: Migration completed successfully
 
 The migration maintains state between steps:
 - Exported data is stored in migration context
-- Storage instances are initialized once and reused
+- Storage instances are initialized once and reused across steps
 - Failed migrations can be retried on next app start
 - Successful migrations are marked complete to prevent re-running
 
@@ -514,7 +582,9 @@ The migration maintains state between steps:
 
 The migration process is designed to be safe and non-destructive:
 
-- **Backup Approach**: `DefaultLegacyStorageProvider` always backs up legacy SharedPreferences files before deleting them. Custom implementations of `LegacyStorageProvider.cleanUp()` can perform their own backup logic.
+- **Backup Approach**: When `allowBackup = true` is set in `LegacyAuthenticationConfig`, `DefaultLegacyStorageProvider` creates timestamped backup copies of the legacy SharedPreferences files before deleting them, and retains the AndroidKeyStore encryption key. By default (`allowBackup = false`), legacy files and the key are deleted without backup. Custom `LegacyStorageProvider` implementations receive the `allowBackup` flag via `cleanUp(context, allowBackup)` and can implement their own backup logic accordingly.
+- **Restore Hook**: The `restore` lambda in `LegacyAuthenticationConfig` is called before the migration pipeline starts, giving you a chance to reinstate backup data if a previous migration was interrupted.
+- **Database Safety**: Before migrating, existing OATH and Push databases are inspected. Databases containing credentials are preserved; empty or incompatible databases are removed to ensure a clean migration.
 - **Rollback Safety**: Original data remains until migration succeeds
 - **Idempotent**: Can be run multiple times safely (only runs once per install)
 - **Partial Recovery**: Individual mechanism failures don't affect others
@@ -563,8 +633,8 @@ SQLOathStorage (SQLite):
 SQLPushStorage (SQLite):
 └── PushCredential(issuer="ForgeRock", account="user@example.com")
 
-Legacy Files: [Deleted]
-Legacy KeyStore Entry: [Deleted]
+Legacy Files: [Deleted]  (backed up if allowBackup = true)
+Legacy KeyStore Entry: [Deleted]  (preserved if allowBackup = true)
 ```
 
 ---

@@ -52,7 +52,7 @@ class AuthMigrationTest {
         // Mock LegacyAuthenticationRepository
         mockkConstructor(LegacyAuthenticationRepository::class)
         coEvery { anyConstructed<LegacyAuthenticationRepository>().backupSharedPreferences() } returns emptyList()
-        coEvery { anyConstructed<LegacyAuthenticationRepository>().deleteLegacyData() } returns Unit
+        coEvery { anyConstructed<LegacyAuthenticationRepository>().deleteLegacyData(false) } returns Unit
 
         // Mock SQLOathStorage
         mockkConstructor(SQLOathStorage::class)
@@ -130,7 +130,21 @@ class AuthMigrationTest {
 
         coVerify(atLeast = 1) { anyConstructed<SQLOathStorage>().storeOathCredential(any()) }
         coVerify(atLeast = 1) { anyConstructed<SQLPushStorage>().storePushCredential(any()) }
-        coVerify(atLeast = 1) { anyConstructed<LegacyAuthenticationRepository>().deleteLegacyData() }
+        coVerify(atLeast = 1) { anyConstructed<LegacyAuthenticationRepository>().deleteLegacyData(false) }
+    }
+
+    @Test
+    fun `migration with legacy data completes all three steps successfully with backup enabled`() = runTest {
+        mockLegacyData(createTestLegacyData().mechanisms)
+        val allowBackup = true
+        AuthMigration.start(context) {
+            this.allowBackup = allowBackup
+        }
+
+        coVerify(atLeast = 1) { anyConstructed<SQLOathStorage>().storeOathCredential(any()) }
+        coVerify(atLeast = 1) { anyConstructed<SQLPushStorage>().storePushCredential(any()) }
+        coVerify(atLeast = 1) { anyConstructed<LegacyAuthenticationRepository>().backupSharedPreferences() }
+        coVerify(atLeast = 1) { anyConstructed<LegacyAuthenticationRepository>().deleteLegacyData(allowBackup) }
     }
 
     // ── OATH migration ────────────────────────────────────────────────────────
@@ -413,7 +427,7 @@ class AuthMigrationTest {
                 account = LegacyAccount(id = "Test-test@example.com", issuer = "Test", accountName = "test@example.com")
             )
         ))
-        coEvery { anyConstructed<LegacyAuthenticationRepository>().deleteLegacyData() } throws Exception("Cleanup failed")
+        coEvery { anyConstructed<LegacyAuthenticationRepository>().deleteLegacyData(false) } throws Exception("Cleanup failed")
 
         AuthMigration.start(context)
 
@@ -477,7 +491,7 @@ class AuthMigrationTest {
                     mechanisms = listOf(customMechanism),
                     metadata = LegacyExportMetadata(totalMechanisms = 1)
                 )
-                override suspend fun cleanUp(context: Context) = Unit
+                override suspend fun cleanUp(context: Context, allowBackup: Boolean) = Unit
             }
         }
 
