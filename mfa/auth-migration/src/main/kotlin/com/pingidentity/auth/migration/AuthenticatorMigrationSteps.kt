@@ -156,6 +156,7 @@ val migrateMechanismsStep = MigrationStep(
                     }
 
                     val pushCredential = PushCredential(
+                        id = mechanism.mechanismUID,
                         userId = mechanism.uid,
                         resourceId = mechanism.resourceId ?: mechanism.mechanismUID,  // Fallback to mechanismUID if resourceId not present
                         issuer = account?.issuer ?: mechanism.issuer,
