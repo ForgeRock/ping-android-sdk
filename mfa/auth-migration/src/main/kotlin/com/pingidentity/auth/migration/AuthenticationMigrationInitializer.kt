@@ -36,7 +36,7 @@ import kotlinx.coroutines.launch
  * @see AuthMigration
  */
 class AuthenticationMigrationInitializer : Initializer<Unit> {
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     /**
      * Triggers migration in a background coroutine.

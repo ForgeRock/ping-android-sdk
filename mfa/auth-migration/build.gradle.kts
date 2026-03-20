@@ -18,7 +18,7 @@ dependencies {
     implementation(project(":foundation:migration"))
     implementation(project(":mfa:oath"))
     implementation(project(":mfa:push"))
-    compileOnly(libs.forgerock.authenticator)
+    implementation(libs.forgerock.authenticator)
 
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.androidx.security.crypto)

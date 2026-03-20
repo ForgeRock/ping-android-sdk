@@ -54,12 +54,11 @@ object AuthMigration {
             val provider = config.legacyStorageProvider
                 ?: DefaultLegacyStorageProvider(context)
             this.logger = config.logger
-            config.restore(context)
             val migration = Migration {
                 logger = config.logger
-                step(startMigrationStep(provider))    // Import legacy authenticator data
-                step(migrateMechanismsStep)           // Migrate mechanisms to OATH and Push storage
-                step(cleanupLegacyDataStep(provider, config.allowBackup)) // Cleanup legacy authenticator data
+                step(startMigrationStep(provider, config.restore))
+                step(migrateMechanismsStep)
+                step(cleanupLegacyDataStep(provider, config.allowBackup))
             }
 
             migration.migrate(context).collect { progress ->

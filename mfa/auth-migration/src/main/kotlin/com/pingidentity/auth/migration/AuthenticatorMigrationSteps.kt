@@ -25,15 +25,18 @@ private const val HOTP = "hotp"
 private const val PUSH = "push"
 private const val PUSH_AUTH = "pushauth"
 private const val MECHANISMS = "mechanisms"
-/** Push storage instance shared across migration steps. */
-private lateinit var pushStorage: SQLPushStorage
-/** OATH storage instance shared across migration steps. */
-private lateinit var oathStorage: SQLOathStorage
+private const val OATH_STORAGE = "oathStorage"
+private const val PUSH_STORAGE = "pushStorage"
 
 /**
  * Creates a migration step that imports data using the provided [LegacyStorageProvider].
+ * @param provider The [LegacyStorageProvider] to use for data import.
+ * @param restore Allows the option to do a restore of the backup files.
  */
-fun startMigrationStep(provider: LegacyStorageProvider) = MigrationStep(
+fun startMigrationStep(
+    provider: LegacyStorageProvider,
+    restore: (context: Context) -> Unit,
+) = MigrationStep(
     description = "Import legacy data"
 ) {
     logger.i("Importing legacy data")
@@ -43,6 +46,9 @@ fun startMigrationStep(provider: LegacyStorageProvider) = MigrationStep(
             logger.i("Migration is not required as defined in the provider")
             return@MigrationStep ABORT
         }
+
+        logger.i("Restoring backup files")
+        restore(context)
 
         val exportedData = provider.getMigrationData(context)
         logger.i("Successfully loaded data with ${exportedData.mechanisms.size} mechanisms")
@@ -83,14 +89,14 @@ val migrateMechanismsStep = MigrationStep(
 
     // Create storage instances with destructive recovery enabled for migration
     // This allows recovery from corrupted databases that may occur if app is force-closed during migration
-    oathStorage = SQLOathStorage {
+    val oathStorage = SQLOathStorage {
         context = this@MigrationStep.context
         allowDestructiveRecovery = true
         backupOnError = true
         autoRestoreFromBackup = true
     }
     oathStorage.initializeDatabase()
-    pushStorage = SQLPushStorage {
+    val pushStorage = SQLPushStorage {
         context = this@MigrationStep.context
         allowDestructiveRecovery = true
         backupOnError = true
@@ -192,6 +198,9 @@ val migrateMechanismsStep = MigrationStep(
 
     logger.i("Migrated $oathCount OATH credentials and $pushCount Push credentials")
 
+    state[OATH_STORAGE] = oathStorage
+    state[PUSH_STORAGE] = pushStorage
+
     CONTINUE
 }
 
@@ -207,10 +216,16 @@ fun cleanupLegacyDataStep(provider: LegacyStorageProvider, allowBackup: Boolean)
     try {
         provider.cleanUp(context, allowBackup)
         logger.i("Successfully cleaned up legacy authenticator data")
-        oathStorage.closeDatabase()
-        logger.i("Successfully closed oath storage database")
-        pushStorage.closeDatabase()
-        logger.i("Successfully closed push storage database")
+        val oathStorage = getValue<SQLOathStorage>(OATH_STORAGE)
+        if (oathStorage != null) {
+            oathStorage.closeDatabase()
+            logger.i("Successfully closed oath storage database")
+        }
+        val pushStorage = getValue<SQLPushStorage>(PUSH_STORAGE)
+        if (pushStorage != null) {
+            pushStorage.closeDatabase()
+            logger.i("Successfully closed push storage database")
+        }
     } catch (e: Exception) {
         logger.e("Failed to cleanup legacy data", e)
         // Don't fail the migration if cleanup fails
@@ -233,92 +248,77 @@ private suspend fun prepareDatabase(
     logger: Logger,
 ) {
     logger.i("Checking existing databases before migration")
-
-    // Check OATH database
-    val oathDbPath = context.getDatabasePath("pingidentity_oath.db")
-    if (oathDbPath.exists()) {
-        logger.i("Found existing OATH database at: ${oathDbPath.absolutePath}")
-
-        val shouldDeleteOath = try {
-            // Try to open the database with current passphrase to check if it's valid
-            val testOathStorage = SQLOathStorage {
-                this.context = context
-                allowDestructiveRecovery = false // Don't allow auto-recovery during check
-            }
-
-            testOathStorage.initializeDatabase()
-            val existingCredentials = testOathStorage.getAllOathCredentials()
-            testOathStorage.closeDatabase()
-
-            if (existingCredentials.isNotEmpty()) {
-                logger.i("OATH database contains ${existingCredentials.size} existing credentials - preserving database")
-                false // Keep database with existing data
-            } else {
-                logger.i("OATH database is empty - deleting to avoid passphrase conflicts")
-                true // Delete empty database to avoid conflicts
-            }
-        } catch (e: Exception) {
-            // Database exists but cannot be opened with current passphrase
-            logger.w("OATH database exists but cannot be opened (likely encrypted with different passphrase): ${e.message}")
-            logger.i("Will delete incompatible OATH database to allow migration to proceed")
-            true // Delete incompatible database
+    prepareDatabaseFile(context, logger, "pingidentity_oath.db", "OATH") { dbContext ->
+        val storage = SQLOathStorage {
+            this.context = dbContext
+            allowDestructiveRecovery = false
         }
-
-        if (shouldDeleteOath) {
-            try {
-                context.deleteDatabase("pingidentity_oath.db")
-                logger.i("Deleted incompatible OATH database")
-            } catch (e: Exception) {
-                logger.e("Failed to delete OATH database: ${e.message}", e)
-            }
+        storage.initializeDatabase()
+        val count = storage.getAllOathCredentials().size
+        storage.closeDatabase()
+        count
+    }
+    prepareDatabaseFile(context, logger, "pingidentity_push.db", "Push") { dbContext ->
+        val storage = SQLPushStorage {
+            this.context = dbContext
+            allowDestructiveRecovery = false
         }
-    } else {
-        logger.i("No existing OATH database found - will create fresh database")
+        storage.initializeDatabase()
+        val count = storage.getAllPushCredentials().size +
+                storage.getAllPushNotifications().size +
+                storage.getAllPushDeviceTokens().size
+        storage.closeDatabase()
+        count
+    }
+}
+
+/**
+ * Prepares a specific database file for migration by checking if it exists, reading its contents,
+ * and deleting it if it is empty or incompatible (e.g., encrypted with a different passphrase).
+ *
+ * @param context The Android context used to access database paths and storage APIs.
+ * @param logger The logger instance for tracking database operations and decisions.
+ * @param dbName The name of the database file to prepare.
+ * @param label A human-readable label for the database type (e.g., "OATH" or "Push"), used in log messages.
+ * @param countItems A suspending function that opens the database and returns the number of existing items.
+ *                   If this throws an exception, the database is considered incompatible and will be deleted.
+ */
+private suspend fun prepareDatabaseFile(
+    context: Context,
+    logger: Logger,
+    dbName: String,
+    label: String,
+    countItems: suspend (Context) -> Int,
+) {
+    val dbPath = context.getDatabasePath(dbName)
+    if (!dbPath.exists()) {
+        logger.i("No existing $label database found - will create fresh database")
+        return
     }
 
-    // Check Push database
-    val pushDbPath = context.getDatabasePath("pingidentity_push.db")
-    if (pushDbPath.exists()) {
-        logger.i("Found existing Push database at: ${pushDbPath.absolutePath}")
+    logger.i("Found existing $label database at: ${dbPath.absolutePath}")
 
-        val shouldDeletePush = try {
-            // Try to open the database with current passphrase to check if it's valid
-            val testPushStorage = SQLPushStorage {
-                this.context = context
-                allowDestructiveRecovery = false // Don't allow auto-recovery during check
-            }
+    val shouldDelete = try {
+        val count = countItems(context)
+        if (count > 0) {
+            logger.i("$label database contains $count existing item(s) - preserving database")
+            false
+        } else {
+            logger.i("$label database is empty - deleting to avoid passphrase conflicts")
+            true
+        }
+    } catch (e: Exception) {
+        logger.w("$label database exists but cannot be opened (likely encrypted with different passphrase): ${e.message}")
+        logger.i("Will delete incompatible $label database to allow migration to proceed")
+        true
+    }
 
-            testPushStorage.initializeDatabase()
-            val existingCredentials = testPushStorage.getAllPushCredentials()
-            val existingNotifications = testPushStorage.getAllPushNotifications()
-            val existingTokens = testPushStorage.getAllPushDeviceTokens()
-            testPushStorage.closeDatabase()
-
-            val totalItems = existingCredentials.size + existingNotifications.size + existingTokens.size
-
-            if (totalItems > 0) {
-                logger.i("Push database contains existing data (${existingCredentials.size} credentials, ${existingNotifications.size} notifications, ${existingTokens.size} tokens) - preserving database")
-                false // Keep database with existing data
-            } else {
-                logger.i("Push database is empty - deleting to avoid passphrase conflicts")
-                true // Delete empty database to avoid conflicts
-            }
+    if (shouldDelete) {
+        try {
+            context.deleteDatabase(dbName)
+            logger.i("Deleted incompatible $label database")
         } catch (e: Exception) {
-            // Database exists but cannot be opened with current passphrase
-            logger.w("Push database exists but cannot be opened (likely encrypted with different passphrase): ${e.message}")
-            logger.i("Will delete incompatible Push database to allow migration to proceed")
-            true // Delete incompatible database
+            logger.e("Failed to delete $label database: ${e.message}", e)
         }
-
-        if (shouldDeletePush) {
-            try {
-                context.deleteDatabase("pingidentity_push.db")
-                logger.i("Deleted incompatible Push database")
-            } catch (e: Exception) {
-                logger.e("Failed to delete Push database: ${e.message}", e)
-            }
-        }
-    } else {
-        logger.i("No existing Push database found - will create fresh database")
     }
 }

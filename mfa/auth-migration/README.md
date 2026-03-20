@@ -119,7 +119,7 @@ lifecycleScope.launch {
 // Custom logger
 lifecycleScope.launch {
     AuthMigration.start(applicationContext) {
-        logger = Logger.DEBUG
+        logger = Logger.WARN
     }
 }
 
@@ -316,7 +316,7 @@ class MyStorageProvider(
 
 ### Option 2: Building from raw JSON strings
 
-If your storage exposes per-entry JSON strings (e.g., the same format ForgeRock uses internally), use `LegacyDataConverter.buildExportJson()`:
+If your storage exposes per-entry JSON strings (e.g., the same format ForgeRock uses internally), use `LegacyDataConverter.buildMechanismsList()`:
 
 ```kotlin
 override suspend fun getMigrationData(context: Context): LegacyExportedData =
@@ -327,7 +327,11 @@ override suspend fun getMigrationData(context: Context): LegacyExportedData =
         myStorage.getAllMechanisms().forEach { mechanismsMap[it.id] = it.toJson() }
         myStorage.getAllAccounts().forEach   { accountsMap[it.id]   = it.toJson() }
 
-        LegacyDataConverter.buildExportJson(mechanismsMap, accountsMap)
+        val mechanisms = LegacyDataConverter.buildMechanismsList(mechanismsMap, accountsMap)
+        LegacyExportedData(
+            mechanisms = mechanisms,
+            metadata = LegacyExportMetadata(totalMechanisms = mechanisms.size)
+        )
     }
 ```
 
