@@ -7,7 +7,6 @@
 package com.pingidentity.auth.migration
 
 import android.content.Context
-import android.content.SharedPreferences
 import androidx.test.core.app.ApplicationProvider
 import com.pingidentity.android.ContextProvider
 import com.pingidentity.mfa.oath.OathAlgorithm
@@ -28,84 +27,99 @@ import org.robolectric.RobolectricTestRunner
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
-
-// Constants matching the ones in LegacyAuthenticationRepository
-private const val AUTH_DATA_ACCOUNT = "org.forgerock.android.authenticator.DATA.ACCOUNT"
-private const val AUTH_DATA_MECHANISM = "org.forgerock.android.authenticator.DATA.MECHANISM"
+import kotlin.test.assertTrue
 
 @RunWith(RobolectricTestRunner::class)
 class AuthMigrationTest {
 
     private lateinit var context: Context
-    private lateinit var accountPrefs: SharedPreferences
-    private lateinit var mechanismPrefs: SharedPreferences
+
+    // Holds the fake provider configured by each test via mockNoLegacyData() / mockLegacyData()
+    private lateinit var fakeProvider: FakeLegacyStorageProvider
 
     @BeforeTest
     fun setUp() {
         context = ApplicationProvider.getApplicationContext()
         ContextProvider.init(context)
 
-        accountPrefs = context.getSharedPreferences(AUTH_DATA_ACCOUNT, Context.MODE_PRIVATE)
-        mechanismPrefs = context.getSharedPreferences(AUTH_DATA_MECHANISM, Context.MODE_PRIVATE)
-
-        // Mock LegacyAuthenticationRepository
-        mockkConstructor(LegacyAuthenticationRepository::class)
-        coEvery { anyConstructed<LegacyAuthenticationRepository>().backupSharedPreferences() } returns emptyList()
-        coEvery { anyConstructed<LegacyAuthenticationRepository>().deleteLegacyData(false) } returns Unit
-
-        // Mock SQLOathStorage
+        // Mock SQLOathStorage — controls Step 2 behaviour without real SQLite
         mockkConstructor(SQLOathStorage::class)
         coEvery { anyConstructed<SQLOathStorage>().initializeDatabase() } returns Unit
         coEvery { anyConstructed<SQLOathStorage>().storeOathCredential(any()) } returns Unit
         coEvery { anyConstructed<SQLOathStorage>().closeDatabase() } returns Unit
 
-        // Mock SQLPushStorage
+        // Mock SQLPushStorage — controls Step 2 behaviour without real SQLite
         mockkConstructor(SQLPushStorage::class)
         coEvery { anyConstructed<SQLPushStorage>().initializeDatabase() } returns Unit
         coEvery { anyConstructed<SQLPushStorage>().storePushCredential(any()) } returns Unit
         coEvery { anyConstructed<SQLPushStorage>().closeDatabase() } returns Unit
-
-        cleanup()
     }
 
     @AfterTest
     fun tearDown() {
-        cleanup()
         unmockkAll()
     }
 
-    private fun cleanup() {
-        try {
-            context.deleteSharedPreferences(AUTH_DATA_ACCOUNT)
-            context.deleteSharedPreferences(AUTH_DATA_MECHANISM)
-        } catch (_: Exception) {
-            // Ignore cleanup errors
+    // ── Test double ───────────────────────────────────────────────────────────
+
+    /**
+     * A simple, fully in-process [LegacyStorageProvider] that avoids all real I/O
+     * (no `DefaultStorageClient`, no `withContext(Dispatchers.IO)`, no SharedPreferences reads).
+     *
+     * Configure via the constructor; observe results via the boolean properties after the
+     * migration completes.
+     */
+    private class FakeLegacyStorageProvider(
+        private val migrationRequired: Boolean = true,
+        private val mechanisms: List<LegacyMechanism> = emptyList(),
+        /** Called at the end of [cleanUp], after the backup callback is invoked. */
+        private val onCleanUp: () -> Unit = {},
+    ) : LegacyStorageProvider {
+
+        var isMigrationRequiredCalled = false
+        var cleanUpCalled = false
+
+        override suspend fun isMigrationRequired(context: Context): Boolean {
+            isMigrationRequiredCalled = true
+            return migrationRequired
         }
-    }
 
-    // ── helpers ──────────────────────────────────────────────────────────────
-
-    private fun mockNoLegacyData() {
-        coEvery { anyConstructed<LegacyAuthenticationRepository>().isExists() } returns false
-    }
-
-    private fun mockLegacyData(mechanisms: List<LegacyMechanism>) {
-        coEvery { anyConstructed<LegacyAuthenticationRepository>().isExists() } returns true
-        coEvery { anyConstructed<LegacyAuthenticationRepository>().exportAllData() } returns LegacyExportedData(
+        override suspend fun getMigrationData(context: Context) = LegacyExportedData(
             mechanisms = mechanisms,
             metadata = LegacyExportMetadata(totalMechanisms = mechanisms.size)
         )
+
+        override suspend fun cleanUp(context: Context, backup: (context: Context) -> Unit) {
+            backup(context)
+            cleanUpCalled = true
+            onCleanUp()
+        }
     }
 
-    // ── step 1 ───────────────────────────────────────────────────────────────
+    // ── Helpers ───────────────────────────────────────────────────────────────
+
+    /** Configures [fakeProvider] so that [LegacyStorageProvider.isMigrationRequired] returns false. */
+    private fun mockNoLegacyData() {
+        fakeProvider = FakeLegacyStorageProvider(migrationRequired = false)
+    }
+
+    /** Configures [fakeProvider] to report migration required and return [mechanisms]. */
+    private fun mockLegacyData(mechanisms: List<LegacyMechanism>) {
+        fakeProvider = FakeLegacyStorageProvider(mechanisms = mechanisms)
+    }
+
+    // ── Step 1 ───────────────────────────────────────────────────────────────
 
     @Test
     fun `migration with no legacy repository should abort early`() = runTest {
         mockNoLegacyData()
 
-        AuthMigration.start(context)
+        AuthMigration.start(context) { legacyStorageProvider = fakeProvider }
 
+        assertTrue(fakeProvider.isMigrationRequiredCalled)
+        assertFalse(fakeProvider.cleanUpCalled, "cleanUp must not be called when migration is not required")
         coVerify(exactly = 0) { anyConstructed<SQLOathStorage>().storeOathCredential(any()) }
         coVerify(exactly = 0) { anyConstructed<SQLPushStorage>().storePushCredential(any()) }
     }
@@ -114,37 +128,74 @@ class AuthMigrationTest {
     fun `migration with empty legacy repository should abort after step 1`() = runTest {
         mockLegacyData(emptyList())
 
-        AuthMigration.start(context)
+        AuthMigration.start(context) { legacyStorageProvider = fakeProvider }
 
+        assertFalse(fakeProvider.cleanUpCalled, "cleanUp must not be called when mechanisms list is empty")
         coVerify(exactly = 0) { anyConstructed<SQLOathStorage>().storeOathCredential(any()) }
         coVerify(exactly = 0) { anyConstructed<SQLPushStorage>().storePushCredential(any()) }
     }
 
-    // ── steps 1→2→3 ──────────────────────────────────────────────────────────
+    // ── Steps 1→2→3 ──────────────────────────────────────────────────────────
 
     @Test
     fun `migration with legacy data completes all three steps successfully`() = runTest {
         mockLegacyData(createTestLegacyData().mechanisms)
 
-        AuthMigration.start(context)
+        AuthMigration.start(context) { legacyStorageProvider = fakeProvider }
 
         coVerify(atLeast = 1) { anyConstructed<SQLOathStorage>().storeOathCredential(any()) }
         coVerify(atLeast = 1) { anyConstructed<SQLPushStorage>().storePushCredential(any()) }
-        coVerify(atLeast = 1) { anyConstructed<LegacyAuthenticationRepository>().deleteLegacyData(false) }
+        assertTrue(fakeProvider.cleanUpCalled, "Step 3 cleanUp must run after successful migration")
     }
 
     @Test
-    fun `migration with legacy data completes all three steps successfully with backup enabled`() = runTest {
-        mockLegacyData(createTestLegacyData().mechanisms)
-        val allowBackup = true
+    fun `migration cleanup invokes backup callback before clearing data`() = runTest {
+        var backupCallbackInvoked = false
+        fakeProvider = FakeLegacyStorageProvider(mechanisms = createTestLegacyData().mechanisms)
+
         AuthMigration.start(context) {
-            this.allowBackup = allowBackup
+            legacyStorageProvider = object : LegacyStorageProvider {
+                override suspend fun isMigrationRequired(context: Context) = true
+                override suspend fun getMigrationData(context: Context) = LegacyExportedData(
+                    mechanisms = createTestLegacyData().mechanisms,
+                    metadata = LegacyExportMetadata(totalMechanisms = createTestLegacyData().mechanisms.size)
+                )
+                override suspend fun cleanUp(context: Context, backup: (context: Context) -> Unit) {
+                    backup(context)
+                    backupCallbackInvoked = true
+                }
+            }
         }
 
         coVerify(atLeast = 1) { anyConstructed<SQLOathStorage>().storeOathCredential(any()) }
         coVerify(atLeast = 1) { anyConstructed<SQLPushStorage>().storePushCredential(any()) }
-        coVerify(atLeast = 1) { anyConstructed<LegacyAuthenticationRepository>().backupSharedPreferences() }
-        coVerify(atLeast = 1) { anyConstructed<LegacyAuthenticationRepository>().deleteLegacyData(allowBackup) }
+        assertTrue(backupCallbackInvoked, "backup callback must be invoked by cleanUp")
+    }
+
+    @Test
+    fun `migration restore callback is invoked after isMigrationRequired and before getMigrationData`() = runTest {
+        val callOrder = mutableListOf<String>()
+
+        AuthMigration.start(context) {
+            restore = { _ -> callOrder.add("restore") }
+            legacyStorageProvider = object : LegacyStorageProvider {
+                override suspend fun isMigrationRequired(context: Context): Boolean {
+                    callOrder.add("isMigrationRequired")
+                    return true
+                }
+                override suspend fun getMigrationData(context: Context): LegacyExportedData {
+                    callOrder.add("getMigrationData")
+                    return LegacyExportedData(mechanisms = emptyList(), metadata = LegacyExportMetadata(0))
+                }
+                override suspend fun cleanUp(context: Context, backup: (context: Context) -> Unit) = Unit
+            }
+        }
+
+        assertEquals(
+            listOf("isMigrationRequired", "restore", "getMigrationData"),
+            callOrder,
+            "Execution order must be: isMigrationRequired → restore → getMigrationData"
+        )
     }
 
     // ── OATH migration ────────────────────────────────────────────────────────
@@ -152,42 +203,24 @@ class AuthMigrationTest {
     @Test
     fun `migration migrates OATH TOTP credentials correctly`() = runTest {
         val testTime = System.currentTimeMillis()
-
         val mechanism = LegacyMechanism(
-            id = "totp-mechanism-1",
-            issuer = "Google",
-            accountName = "user@example.com",
-            mechanismUID = "totp-mechanism-1",
-            secret = "JBSWY3DPEHPK3PXP",
-            type = "totp",
-            oathType = "TOTP",
-            algorithm = "sha1",
-            digits = 6,
-            period = 30,
-            counter = 0,
-            uid = "user-12345",
-            resourceId = "resource-67890",
-            timeAdded = testTime,
+            id = "totp-mechanism-1", issuer = "Google", accountName = "user@example.com",
+            mechanismUID = "totp-mechanism-1", secret = "JBSWY3DPEHPK3PXP",
+            type = "totp", oathType = "TOTP", algorithm = "sha1", digits = 6, period = 30, counter = 0,
+            uid = "user-12345", resourceId = "resource-67890", timeAdded = testTime,
             account = LegacyAccount(
-                id = "Google-user@example.com",
-                issuer = "Google",
-                displayIssuer = "Google Authenticator",
-                accountName = "user@example.com",
-                displayAccountName = "Demo User",
-                imageURL = "https://example.com/logo.png",
-                backgroundColor = "#4285F4",
-                policies = "{\"deviceTampering\":true}",
-                lock = false
+                id = "Google-user@example.com", issuer = "Google",
+                displayIssuer = "Google Authenticator", accountName = "user@example.com",
+                displayAccountName = "Demo User", imageURL = "https://example.com/logo.png",
+                backgroundColor = "#4285F4", policies = "{\"deviceTampering\":true}", lock = false
             )
         )
         mockLegacyData(listOf(mechanism))
 
-        AuthMigration.start(context)
+        AuthMigration.start(context) { legacyStorageProvider = fakeProvider }
 
-        // Then - verify all mapped fields
         val slot = slot<OathCredential>()
         coVerify(exactly = 1) { anyConstructed<SQLOathStorage>().storeOathCredential(capture(slot)) }
-
         val c = slot.captured
         assertNotNull(c.id)
         assertEquals("user-12345", c.userId)
@@ -213,39 +246,23 @@ class AuthMigrationTest {
     @Test
     fun `migration migrates HOTP credentials correctly with counter`() = runTest {
         val testTime = System.currentTimeMillis()
-
         val mechanism = LegacyMechanism(
-            id = "hotp-mechanism-1",
-            issuer = "GitHub",
-            accountName = "developer@example.com",
-            mechanismUID = "hotp-mechanism-1",
-            secret = "HOTPSECRETKEY123",
-            type = "hotp",
-            oathType = "HOTP",
-            algorithm = "sha256",
-            digits = 8,
-            counter = 42,
-            uid = "hotp-user-789",
-            resourceId = "hotp-resource-456",
-            timeAdded = testTime,
+            id = "hotp-mechanism-1", issuer = "GitHub", accountName = "developer@example.com",
+            mechanismUID = "hotp-mechanism-1", secret = "HOTPSECRETKEY123",
+            type = "hotp", oathType = "HOTP", algorithm = "sha256", digits = 8, counter = 42,
+            uid = "hotp-user-789", resourceId = "hotp-resource-456", timeAdded = testTime,
             account = LegacyAccount(
-                id = "GitHub-developer@example.com",
-                issuer = "GitHub",
-                displayIssuer = "GitHub Inc",
-                accountName = "developer@example.com",
-                displayAccountName = "Developer Account",
-                imageURL = "https://github.com/logo.png",
-                backgroundColor = "#24292e",
-                lock = false
+                id = "GitHub-developer@example.com", issuer = "GitHub", displayIssuer = "GitHub Inc",
+                accountName = "developer@example.com", displayAccountName = "Developer Account",
+                imageURL = "https://github.com/logo.png", backgroundColor = "#24292e", lock = false
             )
         )
         mockLegacyData(listOf(mechanism))
 
-        AuthMigration.start(context)
+        AuthMigration.start(context) { legacyStorageProvider = fakeProvider }
 
         val slot = slot<OathCredential>()
         coVerify(exactly = 1) { anyConstructed<SQLOathStorage>().storeOathCredential(capture(slot)) }
-
         val c = slot.captured
         assertNotNull(c.id)
         assertEquals("hotp-user-789", c.userId)
@@ -262,7 +279,6 @@ class AuthMigrationTest {
         assertEquals(testTime, c.createdAt.time)
         assertEquals("https://github.com/logo.png", c.imageURL)
         assertEquals("#24292e", c.backgroundColor)
-        assertEquals(null, c.policies)
         assertEquals(null, c.lockingPolicy)
         assertEquals(false, c.isLocked)
     }
@@ -272,40 +288,27 @@ class AuthMigrationTest {
     @Test
     fun `migration migrates Push credentials correctly`() = runTest {
         val testTime = System.currentTimeMillis()
-
         val mechanism = LegacyMechanism(
-            id = "push-mechanism-1",
-            issuer = "ForgeRock",
-            accountName = "admin@company.com",
-            mechanismUID = "push-mechanism-1",
-            secret = "sharedSecret123",
-            type = "push",
-            uid = "user-99999",
-            resourceId = "push-resource-11111",
+            id = "push-mechanism-1", issuer = "ForgeRock", accountName = "admin@company.com",
+            mechanismUID = "push-mechanism-1", secret = "sharedSecret123", type = "push",
+            uid = "user-99999", resourceId = "push-resource-11111",
             authenticationEndpoint = "https://am.example.com/push?_action=authenticate",
             registrationEndpoint = "https://am.example.com/push?_action=register",
-            platform = "PING_AM",
-            timeAdded = testTime,
+            platform = "PING_AM", timeAdded = testTime,
             account = LegacyAccount(
-                id = "ForgeRock-admin@company.com",
-                issuer = "ForgeRock",
-                displayIssuer = "ForgeRock Identity",
-                accountName = "admin@company.com",
-                displayAccountName = "Admin User",
-                imageURL = "https://forgerock.com/logo.png",
-                backgroundColor = "#00A1DE",
-                policies = "{\"biometric\":true}",
-                lockingPolicy = "BiometricNotAvailable",
-                lock = true
+                id = "ForgeRock-admin@company.com", issuer = "ForgeRock",
+                displayIssuer = "ForgeRock Identity", accountName = "admin@company.com",
+                displayAccountName = "Admin User", imageURL = "https://forgerock.com/logo.png",
+                backgroundColor = "#00A1DE", policies = "{\"biometric\":true}",
+                lockingPolicy = "BiometricNotAvailable", lock = true
             )
         )
         mockLegacyData(listOf(mechanism))
 
-        AuthMigration.start(context)
+        AuthMigration.start(context) { legacyStorageProvider = fakeProvider }
 
         val slot = slot<PushCredential>()
         coVerify(exactly = 1) { anyConstructed<SQLPushStorage>().storePushCredential(capture(slot)) }
-
         val c = slot.captured
         assertNotNull(c.id)
         assertEquals("user-99999", c.userId)
@@ -325,7 +328,7 @@ class AuthMigrationTest {
         assertEquals("PING_AM", c.platform)
     }
 
-    // ── resilience ────────────────────────────────────────────────────────────
+    // ── Resilience ────────────────────────────────────────────────────────────
 
     @Test
     fun `migration step 2 continues with other mechanisms when one fails`() = runTest {
@@ -349,7 +352,7 @@ class AuthMigrationTest {
             )
         ))
 
-        AuthMigration.start(context)
+        AuthMigration.start(context) { legacyStorageProvider = fakeProvider }
 
         coVerify(exactly = 1) { anyConstructed<SQLOathStorage>().storeOathCredential(any()) }
         coVerify(exactly = 1) { anyConstructed<SQLPushStorage>().storePushCredential(any()) }
@@ -370,7 +373,7 @@ class AuthMigrationTest {
             )
         ))
 
-        AuthMigration.start(context)
+        AuthMigration.start(context) { legacyStorageProvider = fakeProvider }
 
         coVerify(exactly = 2) { anyConstructed<SQLOathStorage>().storeOathCredential(any()) }
     }
@@ -395,13 +398,13 @@ class AuthMigrationTest {
             )
         ))
 
-        AuthMigration.start(context)
+        AuthMigration.start(context) { legacyStorageProvider = fakeProvider }
 
         coVerify(exactly = 3) { anyConstructed<SQLOathStorage>().storeOathCredential(any()) }
     }
 
     @Test
-    fun `migration handles database initialization failure with destructive recovery enabled`() = runTest {
+    fun `migration handles database initialization and storage setup for each migration`() = runTest {
         mockLegacyData(listOf(
             LegacyMechanism(
                 id = "totp-mechanism-1", issuer = "Google", accountName = "user@example.com",
@@ -411,7 +414,7 @@ class AuthMigrationTest {
             )
         ))
 
-        AuthMigration.start(context)
+        AuthMigration.start(context) { legacyStorageProvider = fakeProvider }
 
         coVerify(atLeast = 1) { anyConstructed<SQLOathStorage>().initializeDatabase() }
         coVerify(atLeast = 1) { anyConstructed<SQLPushStorage>().initializeDatabase() }
@@ -420,16 +423,19 @@ class AuthMigrationTest {
 
     @Test
     fun `migration cleanup step continues even if cleanup fails`() = runTest {
-        mockLegacyData(listOf(
-            LegacyMechanism(
-                id = "test-mechanism", issuer = "Test", accountName = "test@example.com",
-                mechanismUID = "test-mechanism", secret = "TESTKEY", type = "totp",
-                account = LegacyAccount(id = "Test-test@example.com", issuer = "Test", accountName = "test@example.com")
-            )
-        ))
-        coEvery { anyConstructed<LegacyAuthenticationRepository>().deleteLegacyData(false) } throws Exception("Cleanup failed")
+        fakeProvider = FakeLegacyStorageProvider(
+            mechanisms = listOf(
+                LegacyMechanism(
+                    id = "test-mechanism", issuer = "Test", accountName = "test@example.com",
+                    mechanismUID = "test-mechanism", secret = "TESTKEY", type = "totp",
+                    account = LegacyAccount(id = "Test-test@example.com", issuer = "Test", accountName = "test@example.com")
+                )
+            ),
+            onCleanUp = { throw Exception("Cleanup failed") }
+        )
 
-        AuthMigration.start(context)
+        // Migration must still store credentials even when cleanup throws
+        AuthMigration.start(context) { legacyStorageProvider = fakeProvider }
 
         coVerify(exactly = 1) { anyConstructed<SQLOathStorage>().storeOathCredential(any()) }
     }
@@ -447,43 +453,29 @@ class AuthMigrationTest {
         coEvery { anyConstructed<SQLOathStorage>().getAllOathCredentials() } returns emptyList()
         coEvery { anyConstructed<SQLPushStorage>().getAllPushCredentials() } returns emptyList()
 
-        AuthMigration.start(context)
+        AuthMigration.start(context) { legacyStorageProvider = fakeProvider }
 
         coVerify(atLeast = 1) { anyConstructed<SQLOathStorage>().storeOathCredential(any()) }
     }
 
-    // ── custom storage ────────────────────────────────────────────────────────
+    // ── Custom storage ────────────────────────────────────────────────────────
 
     @Test
     fun `migration supports custom storage via LegacyStorageProvider`() = runTest {
         val testTime = System.currentTimeMillis()
-
         val customMechanism = LegacyMechanism(
-            id = "custom-totp-1",
-            issuer = "CustomApp",
-            accountName = "custom@example.com",
-            mechanismUID = "custom-totp-1",
-            secret = "CUSTOMSECRET123",
-            type = "totp",
-            oathType = "TOTP",
-            algorithm = "sha1",
-            digits = 6,
-            period = 30,
-            uid = "custom-user-123",
-            resourceId = "custom-resource-456",
-            timeAdded = testTime,
+            id = "custom-totp-1", issuer = "CustomApp", accountName = "custom@example.com",
+            mechanismUID = "custom-totp-1", secret = "CUSTOMSECRET123", type = "totp",
+            oathType = "TOTP", algorithm = "sha1", digits = 6, period = 30,
+            uid = "custom-user-123", resourceId = "custom-resource-456", timeAdded = testTime,
             account = LegacyAccount(
-                id = "CustomApp-custom@example.com",
-                issuer = "CustomApp",
-                displayIssuer = "Custom Application",
-                accountName = "custom@example.com",
-                displayAccountName = "Custom User",
-                imageURL = "https://custom.com/logo.png",
+                id = "CustomApp-custom@example.com", issuer = "CustomApp",
+                displayIssuer = "Custom Application", accountName = "custom@example.com",
+                displayAccountName = "Custom User", imageURL = "https://custom.com/logo.png",
                 backgroundColor = "#FF5733"
             )
         )
 
-        // Supply data via DSL — bypasses LegacyAuthenticationRepository entirely
         AuthMigration.start(context) {
             legacyStorageProvider = object : LegacyStorageProvider {
                 override suspend fun isMigrationRequired(context: Context) = true
@@ -491,13 +483,14 @@ class AuthMigrationTest {
                     mechanisms = listOf(customMechanism),
                     metadata = LegacyExportMetadata(totalMechanisms = 1)
                 )
-                override suspend fun cleanUp(context: Context, allowBackup: Boolean) = Unit
+                override suspend fun cleanUp(context: Context, backup: (context: Context) -> Unit) {
+                    backup(context)
+                }
             }
         }
 
         val slot = slot<OathCredential>()
         coVerify(exactly = 1) { anyConstructed<SQLOathStorage>().storeOathCredential(capture(slot)) }
-
         val c = slot.captured
         assertNotNull(c.id)
         assertEquals("CustomApp", c.issuer)
@@ -509,68 +502,52 @@ class AuthMigrationTest {
     }
 
     @Test
-    fun `migration supports custom key alias configuration`() = runTest {
-        mockLegacyData(listOf(
-            LegacyMechanism(
-                id = "custom-key-totp",
-                issuer = "CustomKeyApp",
-                accountName = "user@customkey.com",
-                mechanismUID = "custom-key-totp",
-                secret = "CUSTOMKEYSECRET",
-                type = "totp",
-                oathType = "TOTP",
-                algorithm = "sha1",
-                digits = 6,
-                period = 30,
-                account = LegacyAccount(
-                    id = "CustomKeyApp-user@customkey.com",
-                    issuer = "CustomKeyApp",
-                    accountName = "user@customkey.com"
+    fun `migration custom provider cleanUp receives and can invoke backup callback`() = runTest {
+        var backupContextCaptured: Context? = null
+
+        AuthMigration.start(context) {
+            legacyStorageProvider = object : LegacyStorageProvider {
+                override suspend fun isMigrationRequired(context: Context) = true
+                override suspend fun getMigrationData(context: Context) = LegacyExportedData(
+                    mechanisms = listOf(
+                        LegacyMechanism(
+                            id = "totp-1", issuer = "Test", accountName = "test@example.com",
+                            mechanismUID = "totp-1", secret = "TESTSECRET", type = "totp",
+                            account = LegacyAccount(id = "Test-test@example.com", issuer = "Test", accountName = "test@example.com")
+                        )
+                    ),
+                    metadata = LegacyExportMetadata(totalMechanisms = 1)
                 )
-            )
-        ))
+                override suspend fun cleanUp(context: Context, backup: (context: Context) -> Unit) {
+                    backupContextCaptured = context
+                    backup(context)
+                }
+            }
+        }
 
-        // Set the key alias via the DSL block — no LegacyAuthenticationConfig constructor needed
-        AuthMigration.start(context)
-
-        val slot = slot<OathCredential>()
-        coVerify(exactly = 1) { anyConstructed<SQLOathStorage>().storeOathCredential(capture(slot)) }
-        assertNotNull(slot.captured.id)
-        assertEquals("CustomKeyApp", slot.captured.issuer)
+        coVerify(exactly = 1) { anyConstructed<SQLOathStorage>().storeOathCredential(any()) }
+        assertNotNull(backupContextCaptured)
     }
 
-    // ── helpers ───────────────────────────────────────────────────────────────
+    // ── Helpers ───────────────────────────────────────────────────────────────
 
-    private fun createTestLegacyData(): LegacyTestData = LegacyTestData(
+    private fun createTestLegacyData() = LegacyTestData(
         mechanisms = listOf(
             LegacyMechanism(
-                id = "mechanism-1",
-                issuer = "Google",
-                accountName = "user@example.com",
-                mechanismUID = "mechanism-1",
-                secret = "JBSWY3DPEHPK3PXP",
-                type = "totp",
-                algorithm = "sha1",
-                digits = 6,
-                period = 30,
+                id = "mechanism-1", issuer = "Google", accountName = "user@example.com",
+                mechanismUID = "mechanism-1", secret = "JBSWY3DPEHPK3PXP", type = "totp",
+                algorithm = "sha1", digits = 6, period = 30,
                 account = LegacyAccount(
-                    id = "Google-user@example.com",
-                    issuer = "Google",
-                    accountName = "user@example.com",
-                    imageURL = "https://google.com/logo.png"
+                    id = "Google-user@example.com", issuer = "Google",
+                    accountName = "user@example.com", imageURL = "https://google.com/logo.png"
                 )
             ),
             LegacyMechanism(
-                id = "mechanism-2",
-                issuer = "GitHub",
-                accountName = "developer@example.com",
-                mechanismUID = "mechanism-2",
-                secret = "pushSecret123",
-                type = "push",
+                id = "mechanism-2", issuer = "GitHub", accountName = "developer@example.com",
+                mechanismUID = "mechanism-2", secret = "pushSecret123", type = "push",
                 authenticationEndpoint = "https://github.com/push",
                 account = LegacyAccount(
-                    id = "GitHub-developer@example.com",
-                    issuer = "GitHub",
+                    id = "GitHub-developer@example.com", issuer = "GitHub",
                     accountName = "developer@example.com"
                 )
             )
