@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.dp
  * A reusable setting item component that displays an icon, title, description,
  * and either a toggle switch or a navigation arrow.
  *
+ * @param modifier Optional modifier to apply to the entire setting item.
  * @param icon The icon to display on the left side of the setting item.
  * @param title The title text of the setting item.
  * @param description The description text of the setting item.
@@ -39,18 +40,17 @@ import androidx.compose.ui.unit.dp
  * @param hasNavigation Whether to show a navigation arrow instead of a toggle switch.
  * @param onToggle Optional callback invoked when the toggle switch is changed.
  * @param onNavigate Optional callback invoked when the item is clicked for navigation.
- * @param modifier Optional modifier to apply to the entire setting item.
  */
 @Composable
 fun SettingItem(
+    modifier: Modifier = Modifier,
     icon: ImageVector,
     title: String,
     description: String,
     checked: Boolean = false,
     hasNavigation: Boolean = false,
     onToggle: ((Boolean) -> Unit)? = null,
-    onNavigate: (() -> Unit)? = null,
-    modifier: Modifier = Modifier
+    onNavigate: (() -> Unit)? = null
 ) {
     Column(modifier = modifier) {
         Row(
