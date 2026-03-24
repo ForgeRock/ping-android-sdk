@@ -14,6 +14,7 @@ The Authenticator Migration module provides automatic migration capabilities for
 - [Migration Steps](#migration-steps)
 - [Manual Migration](#manual-migration)
 - [Monitoring Migration Progress](#monitoring-migration-progress)
+- [Awaiting Migration Completion](#awaiting-migration-completion)
 - [Error Handling](#error-handling)
 - [Custom Storage Migration](#custom-storage-migration)
 - [Troubleshooting](#troubleshooting)
@@ -53,7 +54,10 @@ The Authenticator Migration module automatically migrates legacy FR Authenticato
 
 ## Automatic Migration
 
-The migration can be triggered automatically during application startup by calling `AuthMigration.start()`. No further manual intervention is required once configured.
+The migration can be triggered automatically during application startup by declaring `AuthenticationMigrationInitializer` in your manifest. The initializer launches `AuthMigration.start()` in a background coroutine — no further manual intervention is required.
+
+Other parts of the application that need to read credentials only after migration has finished (for example, a screen that lists authenticator accounts) should call `AuthMigration.awaitMigration()`. See [Awaiting Migration Completion](#awaiting-migration-completion) for details.
+
 To start automatic migration, please add the following code to your manifest file
 ```xml
 <provider
@@ -180,19 +184,29 @@ The migration process consists of three sequential steps:
 
 ## Manual Migration
 
-You can trigger the migration manually at any point:
+You can trigger the migration manually at any point. `AuthMigration.start()` **suspends** until the pipeline is fully complete (or cleanly aborted) and **throws** if the pipeline fails, so you can handle errors with a standard `try/catch`:
 
 ```kotlin
 // Default — uses the standard ForgeRock key alias
 lifecycleScope.launch {
-    AuthMigration.start(applicationContext)
+    try {
+        AuthMigration.start(applicationContext)
+        // Migration complete — safe to read credentials
+    } catch (e: Exception) {
+        // Pipeline failed — notify the user; credentials may not have been migrated
+        showError("Migration failed: ${e.message}")
+    }
 }
 
 // Custom Storage implementation
 lifecycleScope.launch {
-  AuthMigration.start(applicationContext) {
-    legacyStorageProvider = MyCustomStorageProvider(applicationContext)
-  }
+    try {
+        AuthMigration.start(applicationContext) {
+            legacyStorageProvider = MyCustomStorageProvider(applicationContext)
+        }
+    } catch (e: Exception) {
+        showError("Migration failed: ${e.message}")
+    }
 }
 ```
 
@@ -226,9 +240,91 @@ To observe raw `MigrationProgress` events, use the `Migration` API directly with
 
 ---
 
+## Awaiting Migration Completion
+
+`AuthMigration` exposes two ways to wait for the migration pipeline to finish. Both are primarily useful in **automatic migration mode**, where `AuthenticationMigrationInitializer` launches `start()` in the background and the rest of the application needs a signal before it can safely read credentials.
+
+### `awaitMigration()` — suspend function
+
+```kotlin
+// In a ViewModel or any coroutine that needs credentials to be ready
+viewModelScope.launch {
+    try {
+        AuthMigration.awaitMigration()   // suspends until done; throws on failure
+        loadCredentials()
+    } catch (e: Exception) {
+        // Pipeline failed — surface the error to the user
+        showError("Your accounts could not be migrated: ${e.message}")
+    }
+}
+```
+
+### `migrationResult` — `Deferred<Unit>`
+
+For callers that need to hold a reference to the signal and pass it around:
+
+```kotlin
+val deferred: Deferred<Unit> = AuthMigration.migrationResult
+
+// Elsewhere…
+viewModelScope.launch {
+    try {
+        deferred.await()
+        loadCredentials()
+    } catch (e: Exception) {
+        showError("Migration failed: ${e.message}")
+    }
+}
+```
+
+### Behaviour summary
+
+| Outcome | `awaitMigration()` / `migrationResult.await()` |
+|---|---|
+| Migration succeeded | Returns normally |
+| No migration needed (clean install / already done) | Returns normally |
+| Pipeline step threw an exception | Throws the causing exception |
+
+> **Note:** `migrationResult` is a one-shot signal per process lifetime. Once resolved it never resets, so subsequent `await()` calls return (or rethrow) immediately without suspending.
+>
+> In **manual migration mode** — where the caller invokes `AuthMigration.start()` directly — the exception is thrown straight from `start()`. A `try/catch` around `start()` is sufficient and `awaitMigration()` is not needed.
+
+---
+
 ## Error Handling
 
-The migration framework includes robust error handling:
+The migration framework includes robust error handling across two propagation channels.
+
+### Error Propagation
+
+When a pipeline step fails, the error travels through **both channels simultaneously** so neither call mode is left in the dark:
+
+| Channel | Who observes it |
+|---|---|
+| `start()` throws | Direct (manual-mode) callers wrapping `start()` in `try/catch` |
+| `migrationResult` completed exceptionally | Automatic-mode callers awaiting `AuthMigration.awaitMigration()` |
+
+```kotlin
+// Manual mode — error thrown directly from start()
+lifecycleScope.launch {
+    try {
+        AuthMigration.start(applicationContext)
+    } catch (e: Exception) {
+        showError("Migration failed: ${e.message}")  // ✓ always fires on failure
+    }
+}
+
+// Automatic mode — error observed through the Deferred
+viewModelScope.launch {
+    try {
+        AuthMigration.awaitMigration()
+    } catch (e: Exception) {
+        showError("Migration failed: ${e.message}")  // ✓ always fires on failure
+    }
+}
+```
+
+The `AuthenticationMigrationInitializer` catches the rethrown exception from `start()` only to prevent it from propagating as an unhandled coroutine failure that would crash the app. The error is already captured in `migrationResult` for `awaitMigration()` callers.
 
 ### Individual Mechanism Failures
 - Failures in individual mechanism migration don't stop the entire process

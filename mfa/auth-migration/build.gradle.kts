@@ -8,6 +8,16 @@ plugins {
     alias(libs.plugins.kotlinAndroid)
     alias(libs.plugins.kotlinSerialization)
 }
+// Resolve duplicate .so files from multiple sources:
+// 1. Local device-root NDK build (libtool-file.so)
+// 2. Transitive forgerock-core-4.8.4-beta1 AAR from forgerock-auth dependency
+// Pick the first occurrence when duplicates are found
+androidComponents {
+    onVariants { variant ->
+        // Apply to androidTest variants
+        variant.androidTest?.packaging?.jniLibs?.pickFirsts?.add("**/*.so")
+    }
+}
 
 android {
     namespace = "com.pingidentity.auth.migration"

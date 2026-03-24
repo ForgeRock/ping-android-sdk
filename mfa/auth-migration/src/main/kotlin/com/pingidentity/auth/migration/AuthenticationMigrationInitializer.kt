@@ -46,7 +46,10 @@ class AuthenticationMigrationInitializer : Initializer<Unit> {
             try {
                 AuthMigration.start(context)
             } catch (e: Exception) {
-                // Ignore migration errors
+                // start() rethrows after completing AuthMigration.migrationResult exceptionally,
+                // so awaitMigration() callers will receive this error. We catch here only to
+                // prevent the exception from propagating as an unhandled coroutine failure
+                // that would crash the app.
                 AuthMigration.logger.e("Authentication migration failed", e)
             }
         }
