@@ -14,7 +14,6 @@ The Authenticator Migration module provides automatic migration capabilities for
 - [Migration Steps](#migration-steps)
 - [Manual Migration](#manual-migration)
 - [Monitoring Migration Progress](#monitoring-migration-progress)
-- [Awaiting Migration Completion](#awaiting-migration-completion)
 - [Error Handling](#error-handling)
 - [Custom Storage Migration](#custom-storage-migration)
 - [Troubleshooting](#troubleshooting)
@@ -39,7 +38,7 @@ The Authenticator Migration module automatically migrates legacy FR Authenticato
 
 - **OATH Credentials**: Migrates TOTP and HOTP mechanisms from legacy format to new SQLOathStorage
 - **Push Credentials**: Migrates Push authentication mechanisms to new SQLPushStorage
-- **Cleanup**: Removes legacy storage files and encryption keys after successful migration
+- **Cleanup**: Removes legacy storage files after successful migration via the `StorageClient` API
 
 ### What Gets Migrated
 
@@ -48,7 +47,6 @@ The Authenticator Migration module automatically migrates legacy FR Authenticato
 | Legacy Accounts | OATH/Push Credentials | Account metadata (issuer, account name, images) |
 | Legacy TOTP/HOTP Mechanisms | SQLOathStorage | TOTP/HOTP credentials with secrets and configuration |
 | Legacy Push Mechanisms | SQLPushStorage | Push credentials with endpoints and shared secrets |
-| Legacy Encryption Keys | - | Cleaned up from AndroidKeyStore after migration |
 
 ---
 
@@ -56,7 +54,6 @@ The Authenticator Migration module automatically migrates legacy FR Authenticato
 
 The migration can be triggered automatically during application startup by declaring `AuthenticationMigrationInitializer` in your manifest. The initializer launches `AuthMigration.start()` in a background coroutine — no further manual intervention is required.
 
-Other parts of the application that need to read credentials only after migration has finished (for example, a screen that lists authenticator accounts) should call `AuthMigration.awaitMigration()`. See [Awaiting Migration Completion](#awaiting-migration-completion) for details.
 
 To start automatic migration, please add the following code to your manifest file
 ```xml
@@ -89,12 +86,11 @@ lifecycleScope.launch {
 ```
 
 The migration will automatically:
-1. Check for legacy FR Authenticator data during app startup
-2. If migration is required, invoke `restore(context)` if provided — allowing you to restore backup data before `getMigrationData()` is called
-3. Decrypt and export data from legacy encrypted SharedPreferences
-4. Migrate OATH credentials and Push credentials
-5. Clean up legacy files and encryption keys after successful migration
-6. Skip migration if no legacy data exists
+1. Check for legacy FR Authenticator data during app startup via `StorageClient`
+2. Read and export data from legacy encrypted SharedPreferences (decryption handled by `StorageClient` internally)
+3. Migrate OATH credentials and Push credentials
+4. Clean up legacy storage via the `StorageClient` API after successful migration
+5. Skip migration if no legacy data exists
 
 ### LegacyAuthenticationConfig
 
@@ -105,7 +101,6 @@ The migration will automatically:
 | `legacyStorageProvider` | `StorageClientProvider` | Override to supply data from a custom storage backend |
 | `logger` | `Logger.STANDARD` | Logger instance used throughout the migration pipeline |
 | `backup` | `{}` (no-op) | Callback forwarded to `LegacyStorageProvider.cleanUp` and invoked before legacy data is cleared. Pass a real implementation to persist data before deletion |
-| `restore` | `{}` (no-op) | Callback invoked **after** `isMigrationRequired()` returns `true` and **before** `getMigrationData()` is called, allowing you to restore backup data before the read phase |
 
 ```kotlin
 // Default — no configuration needed
@@ -133,17 +128,6 @@ lifecycleScope.launch {
         backup = { ctx -> MyBackupHelper.backup(ctx) }
     }
 }
-
-// Backup and restore
-lifecycleScope.launch {
-    AuthMigration.start(applicationContext) {
-        backup  = { ctx -> MyBackupHelper.backup(ctx) }
-        restore = { ctx ->
-            // Called after isMigrationRequired() returns true, before getMigrationData()
-            MyBackupHelper.restore(ctx)
-        }
-    }
-}
 ```
 
 ---
@@ -154,8 +138,7 @@ The migration process consists of three sequential steps:
 
 ### Step 1: Import Legacy Data
 - Calls `LegacyStorageProvider.isMigrationRequired()` — aborts early if no migration is needed
-- If migration is required, invokes `restore(context)` from `LegacyAuthenticationConfig` if provided (allowing backup data to be reinstated before reading from storage)
-- Calls `LegacyStorageProvider.getMigrationData()` to load `LegacyExportedData`
+- If migration is required, calls `LegacyStorageProvider.getMigrationData()` to load `LegacyExportedData`
 - Default implementation (`StorageClientProvider`) reads accounts and mechanisms from the legacy `StorageClient` and serialises them using the ForgeRock SDK's own `toJson()` methods
 - Aborts migration if the mechanisms list is empty
 
@@ -184,28 +167,19 @@ The migration process consists of three sequential steps:
 
 ## Manual Migration
 
-You can trigger the migration manually at any point. `AuthMigration.start()` **suspends** until the pipeline is fully complete (or cleanly aborted) and **throws** if the pipeline fails, so you can handle errors with a standard `try/catch`:
+You can trigger the migration manually at any point. `AuthMigration.start()` **suspends** until the pipeline is fully complete (or cleanly aborted). Pipeline errors are logged via the configured `logger` and do not propagate as exceptions to the caller:
 
 ```kotlin
 // Default — uses the standard ForgeRock key alias
 lifecycleScope.launch {
-    try {
-        AuthMigration.start(applicationContext)
-        // Migration complete — safe to read credentials
-    } catch (e: Exception) {
-        // Pipeline failed — notify the user; credentials may not have been migrated
-        showError("Migration failed: ${e.message}")
-    }
+    AuthMigration.start(applicationContext)
+    // Migration complete (or cleanly aborted) when start() returns
 }
 
 // Custom Storage implementation
 lifecycleScope.launch {
-    try {
-        AuthMigration.start(applicationContext) {
-            legacyStorageProvider = MyCustomStorageProvider(applicationContext)
-        }
-    } catch (e: Exception) {
-        showError("Migration failed: ${e.message}")
+    AuthMigration.start(applicationContext) {
+        legacyStorageProvider = MyCustomStorageProvider(applicationContext)
     }
 }
 ```
@@ -240,103 +214,30 @@ To observe raw `MigrationProgress` events, use the `Migration` API directly with
 
 ---
 
-## Awaiting Migration Completion
-
-`AuthMigration` exposes two ways to wait for the migration pipeline to finish. Both are primarily useful in **automatic migration mode**, where `AuthenticationMigrationInitializer` launches `start()` in the background and the rest of the application needs a signal before it can safely read credentials.
-
-### `awaitMigration()` — suspend function
-
-```kotlin
-// In a ViewModel or any coroutine that needs credentials to be ready
-viewModelScope.launch {
-    try {
-        AuthMigration.awaitMigration()   // suspends until done; throws on failure
-        loadCredentials()
-    } catch (e: Exception) {
-        // Pipeline failed — surface the error to the user
-        showError("Your accounts could not be migrated: ${e.message}")
-    }
-}
-```
-
-### `migrationResult` — `Deferred<Unit>`
-
-For callers that need to hold a reference to the signal and pass it around:
-
-```kotlin
-val deferred: Deferred<Unit> = AuthMigration.migrationResult
-
-// Elsewhere…
-viewModelScope.launch {
-    try {
-        deferred.await()
-        loadCredentials()
-    } catch (e: Exception) {
-        showError("Migration failed: ${e.message}")
-    }
-}
-```
-
-### Behaviour summary
-
-| Outcome | `awaitMigration()` / `migrationResult.await()` |
-|---|---|
-| Migration succeeded | Returns normally |
-| No migration needed (clean install / already done) | Returns normally |
-| Pipeline step threw an exception | Throws the causing exception |
-
-> **Note:** `migrationResult` is a one-shot signal per process lifetime. Once resolved it never resets, so subsequent `await()` calls return (or rethrow) immediately without suspending.
->
-> In **manual migration mode** — where the caller invokes `AuthMigration.start()` directly — the exception is thrown straight from `start()`. A `try/catch` around `start()` is sufficient and `awaitMigration()` is not needed.
-
----
 
 ## Error Handling
 
-The migration framework includes robust error handling across two propagation channels.
+The migration framework includes robust error handling. Pipeline step failures are logged at `error` level via the configured `logger` and do not propagate as exceptions — `start()` always returns normally regardless of whether a step failed.
 
-### Error Propagation
+```
+Migration failed at step 'Import legacy data': <cause message>
+```
 
-When a pipeline step fails, the error travels through **both channels simultaneously** so neither call mode is left in the dark:
-
-| Channel | Who observes it |
-|---|---|
-| `start()` throws | Direct (manual-mode) callers wrapping `start()` in `try/catch` |
-| `migrationResult` completed exceptionally | Automatic-mode callers awaiting `AuthMigration.awaitMigration()` |
+To observe failures in your own code, configure a custom `logger` in the DSL block:
 
 ```kotlin
-// Manual mode — error thrown directly from start()
 lifecycleScope.launch {
-    try {
-        AuthMigration.start(applicationContext)
-    } catch (e: Exception) {
-        showError("Migration failed: ${e.message}")  // ✓ always fires on failure
-    }
-}
-
-// Automatic mode — error observed through the Deferred
-viewModelScope.launch {
-    try {
-        AuthMigration.awaitMigration()
-    } catch (e: Exception) {
-        showError("Migration failed: ${e.message}")  // ✓ always fires on failure
+    AuthMigration.start(applicationContext) {
+        logger = MyAppLogger()   // receives error events including MigrationProgress.Error
     }
 }
 ```
-
-The `AuthenticationMigrationInitializer` catches the rethrown exception from `start()` only to prevent it from propagating as an unhandled coroutine failure that would crash the app. The error is already captured in `migrationResult` for `awaitMigration()` callers.
 
 ### Individual Mechanism Failures
 - Failures in individual mechanism migration don't stop the entire process
 - Errors are logged for debugging purposes
 - Partial migrations are supported
 
-### Decryption Failures
-The migration uses a standalone decryptor that:
-- Handles both AES symmetric and RSA-wrapped keys
-- Verifies MAC signatures for data integrity
-- Gracefully handles corrupted or missing data
-- Returns empty maps for non-existent files
 
 ### Database Recovery
 Before migration begins, the framework inspects any existing SQLite databases:
@@ -478,22 +379,6 @@ lifecycleScope.launch {
 }
 ```
 
-### Using `restore` with a Custom Provider
-
-If your backup logic requires restoring data before migration begins, use the `restore` lambda:
-
-```kotlin
-lifecycleScope.launch {
-    AuthMigration.start(applicationContext) {
-        backup = { ctx -> MyBackupHelper.backup(ctx) }
-        legacyStorageProvider = MyStorageProvider(applicationContext)
-        restore = { ctx ->
-            // Called after isMigrationRequired() returns true, before getMigrationData()
-            MyBackupHelper.restore(ctx)
-        }
-    }
-}
-```
 
 ### Expected Data Format
 
@@ -565,20 +450,6 @@ See `sample_export.json` for a complete three-mechanism example.
 
 ---
 
-## Legacy Encryption Format
-
-The Legacy SDK's FR Authenticator used a custom encryption format:
-
-1. **Data Wrapping**: Values stored as `{"type": X, "value": Y}` JSON
-2. **Encryption**: AES/GCM with 12-byte IV and 128-bit authentication tag
-3. **MAC**: HMAC-SHA256 for additional integrity verification
-4. **Key Storage**: Master key in AndroidKeyStore with alias `org.forgerock.android.authenticator.KEYS`
-5. **Encoding**: Base64 encoding for storage in SharedPreferences
-
-The migration decryptor reverses this process without requiring the Legacy SDK.
-
----
-
 ## Data Mapping
 
 ### OATH Credentials
@@ -622,10 +493,6 @@ The migration decryptor reverses this process without requiring the Legacy SDK.
 - Migration will abort with `ABORT` result (not an error)
 - No action required
 
-**Decryption Failures**
-- Check if the legacy encryption key exists in AndroidKeyStore
-- Verify SharedPreferences files are not corrupted
-- Ensure the app hasn't been reinstalled (encryption keys are lost on reinstall)
 
 **Storage Initialization Errors**
 - Verify `SQLOathStorage` and `SQLPushStorage` are properly initialized
@@ -676,7 +543,6 @@ The migration maintains state between steps:
 The migration process is designed to be safe and non-destructive:
 
 - **Backup Approach**: The `backup` callback in `LegacyAuthenticationConfig` is forwarded to `LegacyStorageProvider.cleanUp` and invoked before data is cleared. `StorageClientProvider` calls it unconditionally — pass a no-op (the default) to skip backup. Custom `LegacyStorageProvider` implementations receive the same callback via `cleanUp(context, backup)` and are responsible for invoking it before clearing their storage.
-- **Restore Hook**: The `restore` lambda in `LegacyAuthenticationConfig` is called **after** `isMigrationRequired()` returns `true` and **before** `getMigrationData()` is called, giving you a chance to reinstate backup data if a previous migration was interrupted.
 - **Database Safety**: Before migrating, existing OATH and Push databases are inspected. Databases containing credentials are preserved; empty or incompatible databases are removed to ensure a clean migration.
 - **Rollback Safety**: Original data remains until migration succeeds
 - **Idempotent**: Can be run multiple times safely (only runs once per install)
@@ -689,7 +555,7 @@ The migration process is designed to be safe and non-destructive:
 - User authentication credentials are preserved exactly
 - Account associations remain intact
 - No data is lost during migration process
-- Encryption keys are properly managed throughout
+- Key management is handled internally by the `StorageClient` (legacy) and SQLCipher (new storage)
 
 ### Performance Considerations
 
@@ -704,7 +570,7 @@ The migration process is designed to be safe and non-destructive:
 
 ### Before Migration (Legacy SDK)
 ```
-Legacy SharedPreferences:
+Legacy SharedPreferences (read via StorageClient):
 ├── org.forgerock.android.authenticator.DATA.ACCOUNT
 │   ├── "ForgeRock-user@example.com"
 │   └── "PingAM-admin@company.com"
@@ -712,9 +578,6 @@ Legacy SharedPreferences:
     ├── "ForgeRock-user@example.com-totp"
     ├── "ForgeRock-user@example.com-push"
     └── "PingAM-admin@company.com-totp"
-
-AndroidKeyStore:
-└── "org.forgerock.android.authenticator.KEYS"
 ```
 
 ### After Migration (New SDK)
@@ -726,8 +589,7 @@ SQLOathStorage (SQLite):
 SQLPushStorage (SQLite):
 └── PushCredential(issuer="ForgeRock", account="user@example.com")
 
-Legacy Files: [Deleted]  (backed up if backup callback was provided)
-Legacy KeyStore Entry: [Deleted]  (backed up if backup callback was provided)
+Legacy Files: [Deleted via StorageClient]  (backed up if backup callback was provided)
 ```
 
 ---
@@ -738,7 +600,6 @@ Legacy KeyStore Entry: [Deleted]  (backed up if backup callback was provided)
   - `mfa:oath` - OATH credential storage
   - `mfa:push` - Push credential and notification storage
   - `foundation:migration` - Migration framework
-  - `foundation:legacy-migration` - Legacy decryption utilities
 
 ---
 

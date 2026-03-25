@@ -172,31 +172,6 @@ class AuthMigrationTest {
         assertTrue(backupCallbackInvoked, "backup callback must be invoked by cleanUp")
     }
 
-    @Test
-    fun `migration restore callback is invoked after isMigrationRequired and before getMigrationData`() = runTest {
-        val callOrder = mutableListOf<String>()
-
-        AuthMigration.start(context) {
-            restore = { _ -> callOrder.add("restore") }
-            legacyStorageProvider = object : LegacyStorageProvider {
-                override suspend fun isMigrationRequired(context: Context): Boolean {
-                    callOrder.add("isMigrationRequired")
-                    return true
-                }
-                override suspend fun getMigrationData(context: Context): LegacyExportedData {
-                    callOrder.add("getMigrationData")
-                    return LegacyExportedData(mechanisms = emptyList(), metadata = LegacyExportMetadata(0))
-                }
-                override suspend fun cleanUp(context: Context, backup: (context: Context) -> Unit) = Unit
-            }
-        }
-
-        assertEquals(
-            listOf("isMigrationRequired", "restore", "getMigrationData"),
-            callOrder,
-            "Execution order must be: isMigrationRequired → restore → getMigrationData"
-        )
-    }
 
     // ── OATH migration ────────────────────────────────────────────────────────
 

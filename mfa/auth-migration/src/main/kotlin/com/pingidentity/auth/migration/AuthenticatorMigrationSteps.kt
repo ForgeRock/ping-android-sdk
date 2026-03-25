@@ -35,10 +35,8 @@ private const val PUSH_STORAGE = "pushStorage"
  * **Execution order within this step:**
  * 1. Calls [LegacyStorageProvider.isMigrationRequired] — returns [ABORT] immediately if `false`
  *    (clean install or already migrated).
- * 2. Invokes [restore] with the current [android.content.Context] so that backup data can be
- *    reinstated before reading from storage.
- * 3. Calls [LegacyStorageProvider.getMigrationData] to load [LegacyExportedData].
- * 4. Returns [ABORT] if the mechanisms list is empty; otherwise stores the list in the
+ * 2. Calls [LegacyStorageProvider.getMigrationData] to load [LegacyExportedData].
+ * 3. Returns [ABORT] if the mechanisms list is empty; otherwise stores the list in the
  *    migration state and returns [CONTINUE].
  *
  * Any exception thrown by [LegacyStorageProvider.getMigrationData] is wrapped in an
@@ -47,17 +45,11 @@ private const val PUSH_STORAGE = "pushStorage"
  *
  * @param provider The [LegacyStorageProvider] used to check whether migration is needed
  *   and to retrieve the legacy data.
- * @param restore A callback invoked **after** [LegacyStorageProvider.isMigrationRequired]
- *   returns `true` and **before** [LegacyStorageProvider.getMigrationData] is called.
- *   Use this to restore a backup of the legacy data so the provider can find it.
- *   Defaults to a no-op in [LegacyAuthenticationConfig].
  *
  * @see LegacyStorageProvider
- * @see LegacyAuthenticationConfig.restore
  */
 fun startMigrationStep(
     provider: LegacyStorageProvider,
-    restore: (context: Context) -> Unit,
 ) = MigrationStep(
     description = "Import legacy data"
 ) {
@@ -68,9 +60,6 @@ fun startMigrationStep(
             logger.i("Migration is not required as defined in the provider")
             return@MigrationStep ABORT
         }
-
-        logger.i("Restoring backup files")
-        restore(context)
 
         val exportedData = provider.getMigrationData(context)
         logger.i("Successfully loaded data with ${exportedData.mechanisms.size} mechanisms")

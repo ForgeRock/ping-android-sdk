@@ -29,10 +29,6 @@ import org.forgerock.android.auth.StorageClient
  *   invoked by [StorageClientProvider.cleanUp] unconditionally — pass a no-op (the default) to
  *   skip backup. For custom [LegacyStorageProvider] implementations, the callback is forwarded
  *   via [LegacyStorageProvider.cleanUp] and it is the implementation's responsibility to invoke it.
- * @property restore An optional callback invoked **after**
- *   [LegacyStorageProvider.isMigrationRequired] returns `true` and **before**
- *   [LegacyStorageProvider.getMigrationData] is called. Use this to reinstate backup data so the
- *   provider can find it. Defaults to a no-op.
  *
  * ## Example — default migration (no block needed)
  * ```kotlin
@@ -68,16 +64,6 @@ import org.forgerock.android.auth.StorageClient
  * }
  * ```
  *
- * ## Example — restore before reading legacy data
- * ```kotlin
- * lifecycleScope.launch {
- *     AuthMigration.start(applicationContext) {
- *         backup  = { ctx -> MyBackupHelper.backup(ctx) }
- *         restore = { ctx -> MyBackupHelper.restore(ctx) }
- *     }
- * }
- * ```
- *
  * @see AuthMigration
  * @see LegacyStorageProvider
  * @see StorageClientProvider
@@ -85,6 +71,5 @@ import org.forgerock.android.auth.StorageClient
 class LegacyAuthenticationConfig(context: Context) {
     var legacyStorageProvider: LegacyStorageProvider = StorageClientProvider(context)
     var logger: Logger = Logger.STANDARD
-    val backup: (context: Context) -> Unit = {}
-    var restore: (context: Context) -> Unit = {}
+    var backup: (context: Context) -> Unit = {}
 }
