@@ -13,16 +13,10 @@ import com.pingidentity.mfa.oath.OathCredential
 import com.pingidentity.mfa.oath.OathType
 import com.pingidentity.mfa.oath.storage.SQLOathStorage
 import com.pingidentity.mfa.push.PushCredential
-import com.pingidentity.mfa.push.PushDeviceToken
-import com.pingidentity.mfa.push.PushNotification
-import com.pingidentity.mfa.push.PushType
 import com.pingidentity.mfa.push.storage.SQLPushStorage
 import com.pingidentity.migration.MigrationStep
 import com.pingidentity.migration.MigrationStepResult.CONTINUE
 import com.pingidentity.migration.MigrationStepResult.ABORT
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
 import java.util.Date
 
 private const val OTP_AUTH = "otpauth"
@@ -30,79 +24,100 @@ private const val TOTP = "totp"
 private const val HOTP = "hotp"
 private const val PUSH = "push"
 private const val PUSH_AUTH = "pushauth"
-private const val ACCOUNTS = "accounts"
 private const val MECHANISMS = "mechanisms"
-private const val NOTIFICATIONS = "notifications"
-private const val DEVICE_TOKEN = "deviceToken"
-/** Push storage instance shared across migration steps. */
-private lateinit var pushStorage: SQLPushStorage
-/** OATH storage instance shared across migration steps. */
-private lateinit var oathStorage: SQLOathStorage
-/** Build the json object with non-null fields  */
-private val json = Json {
-    encodeDefaults = false
-    ignoreUnknownKeys = true
-    explicitNulls = false
-}
-
+private const val OATH_STORAGE = "oathStorage"
+private const val PUSH_STORAGE = "pushStorage"
 
 /**
- * Step 1: Export legacy authenticator data from Legacy SDK.
+ * Creates the first migration step, which imports legacy authenticator data through the
+ * provided [LegacyStorageProvider].
  *
- * Supports both:
- * - Default storage (encrypted SharedPreferences)
- * - Custom storage (unencrypted SharedPreferences)
+ * **Execution order within this step:**
+ * 1. Calls [LegacyStorageProvider.isMigrationRequired] — returns [ABORT] immediately if `false`
+ *    (clean install or already migrated).
+ * 2. Calls [LegacyStorageProvider.getMigrationData] to load [LegacyExportedData].
+ * 3. Returns [ABORT] if the mechanisms list is empty; otherwise stores the list in the
+ *    migration state and returns [CONTINUE].
  *
- * The repository automatically detects which format is in use.
- * Uses AuthMigration.config for custom key alias configuration.
+ * Any exception thrown by [LegacyStorageProvider.getMigrationData] is wrapped in an
+ * [IllegalArgumentException] and re-thrown, which causes the migration framework to emit a
+ * [com.pingidentity.migration.MigrationProgress.Error] event and stop the pipeline.
+ *
+ * @param provider The [LegacyStorageProvider] used to check whether migration is needed
+ *   and to retrieve the legacy data.
+ *
+ * @see LegacyStorageProvider
  */
-val step1 = MigrationStep(
-    description = "Export legacy authenticator data"
+fun startMigrationStep(
+    provider: LegacyStorageProvider,
+) = MigrationStep(
+    description = "Import legacy data"
 ) {
-    logger.i("Checking for legacy authenticator data")
-    val repo = LegacyAuthenticationRepository(context, AuthMigration.config)
+    logger.i("Importing legacy data")
 
-    if (!repo.isExists()) {
-        logger.i("No legacy repository found, skipping migration")
-        return@MigrationStep ABORT
+    try {
+        if (!provider.isMigrationRequired(context)) {
+            logger.i("Migration is not required as defined in the provider")
+            return@MigrationStep ABORT
+        }
+
+        val exportedData = provider.getMigrationData(context)
+        logger.i("Successfully loaded data with ${exportedData.mechanisms.size} mechanisms")
+
+        val mechanisms = exportedData.mechanisms
+
+        if (mechanisms.isEmpty()) {
+            logger.i("No mechanisms found in data, skipping migration")
+            return@MigrationStep ABORT
+        }
+
+        state[MECHANISMS] = mechanisms
+        CONTINUE
+    } catch (e: Exception) {
+        logger.e("Failed to load legacy exported data: ${e.message}", e)
+        throw IllegalArgumentException("Failed to load legacy exported data", e)
     }
-    logger.i("Legacy repository exists, proceeding with migration")
-
-    val exportedData = repo.exportAllData()
-    logger.i("Successfully exported ${exportedData.accounts.size} accounts, ${exportedData.mechanisms.size} mechanisms, ${exportedData.notifications.size} notifications, ${exportedData.deviceToken.size} device tokens")
-
-    val accounts = exportedData.accounts
-    val mechanisms = exportedData.mechanisms
-    val notifications = exportedData.notifications
-    val deviceToken = exportedData.deviceToken
-
-    if (accounts.isEmpty() && mechanisms.isEmpty() && notifications.isEmpty() && deviceToken.isEmpty()) {
-        logger.i("No data found in legacy repository, skipping migration")
-        return@MigrationStep ABORT
-    }
-
-    state[ACCOUNTS] = accounts
-    state[MECHANISMS] = mechanisms
-    state[NOTIFICATIONS] = notifications
-    state[DEVICE_TOKEN] = deviceToken
-
-    CONTINUE
 }
 
 /**
- * Step 2: Migrate OATH and Push mechanisms to new storage.
+ * The second migration step, which converts legacy [LegacyMechanism] entries (loaded by
+ * [startMigrationStep]) into modern OATH and Push credentials and persists them to SQLite.
+ *
+ * **Execution order within this step:**
+ * 1. Retrieves the mechanisms list from the migration state; returns [CONTINUE] immediately
+ *    if the list is absent (defensive guard).
+ * 2. Calls `prepareDatabase` to inspect any pre-existing OATH (`pingidentity_oath.db`) and
+ *    Push (`pingidentity_push.db`) SQLite databases:
+ *    - Databases with existing credentials are **preserved**.
+ *    - Empty databases are **deleted** to prevent passphrase conflicts.
+ *    - Databases that cannot be opened (e.g., encrypted with a different passphrase) are
+ *      **deleted** so migration can create fresh ones.
+ * 3. Initialises [com.pingidentity.mfa.oath.storage.SQLOathStorage] and
+ *    [com.pingidentity.mfa.push.storage.SQLPushStorage] with `allowDestructiveRecovery = true`,
+ *    `backupOnError = true`, and `autoRestoreFromBackup = true` for resilience against
+ *    force-closes during migration.
+ * 4. Iterates each mechanism and routes it by [LegacyMechanism.type]:
+ *    - `"otpauth"`, `"totp"`, `"hotp"` → [com.pingidentity.mfa.oath.OathCredential] stored via
+ *      [com.pingidentity.mfa.oath.storage.SQLOathStorage.storeOathCredential].
+ *    - `"push"`, `"pushauth"` → [com.pingidentity.mfa.push.PushCredential] stored via
+ *      [com.pingidentity.mfa.push.storage.SQLPushStorage.storePushCredential]. Query parameters
+ *      are stripped from `authenticationEndpoint` to produce the `serverEndpoint`.
+ *    - Unknown types are logged as warnings and skipped.
+ *    - Per-mechanism exceptions are caught and logged; remaining mechanisms continue.
+ * 5. Stores the storage instances in the migration state for [cleanupLegacyDataStep].
+ *
+ * @see startMigrationStep
+ * @see cleanupLegacyDataStep
  */
-val step2 = MigrationStep(
+val migrateMechanismsStep = MigrationStep(
     description = "Migrate mechanisms to OATH and Push storage"
 ) {
     logger.i("Starting mechanisms migration to new storage")
 
-    val mechanisms = getValue<Map<String, String>>(MECHANISMS) ?: run {
+    val mechanisms = getValue<List<LegacyMechanism>>(MECHANISMS) ?: run {
         logger.w("No mechanisms found in state, skipping")
         return@MigrationStep CONTINUE
     }
-
-    val accounts = getValue<Map<String, String>>(ACCOUNTS) ?: emptyMap()
 
     // Safely check and prepare database environment before migration
     prepareDatabase(
@@ -112,14 +127,14 @@ val step2 = MigrationStep(
 
     // Create storage instances with destructive recovery enabled for migration
     // This allows recovery from corrupted databases that may occur if app is force-closed during migration
-    oathStorage = SQLOathStorage {
+    val oathStorage = SQLOathStorage {
         context = this@MigrationStep.context
         allowDestructiveRecovery = true
         backupOnError = true
         autoRestoreFromBackup = true
     }
     oathStorage.initializeDatabase()
-    pushStorage = SQLPushStorage {
+    val pushStorage = SQLPushStorage {
         context = this@MigrationStep.context
         allowDestructiveRecovery = true
         backupOnError = true
@@ -131,113 +146,52 @@ val step2 = MigrationStep(
     var oathCount = 0
     var pushCount = 0
 
-    mechanisms.forEach { (mechanismId, mechanismJson) ->
+    mechanisms.forEach { mechanism ->
         try {
-            val mechanismData = json.parseToJsonElement(mechanismJson).jsonObject
-            when (val type = mechanismData["type"]?.jsonPrimitive?.content) {
+            when (mechanism.type) {
                 OTP_AUTH, TOTP, HOTP -> {
                     // Migrate OATH/TOTP mechanism
-                    val mechanismIdValue = mechanismData["mechanismUID"]?.jsonPrimitive?.content
-                        ?: mechanismData["id"]?.jsonPrimitive?.content
-                        ?: mechanismId
-
-                    // First extract issuer and accountName from mechanism to construct Account ID
-                    // Account ID format: issuer + "-" + accountName (from legacy Account.java)
-                    val mechanismIssuer = mechanismData["issuer"]?.jsonPrimitive?.content ?: ""
-                    val mechanismAccountName = mechanismData["accountName"]?.jsonPrimitive?.content ?: ""
-                    val accountId = "$mechanismIssuer-$mechanismAccountName"
-
-                    // Find associated account using the constructed Account ID
-                    val accountJson = accounts[accountId]
-                    val accountData = accountJson?.let { json.parseToJsonElement(it).jsonObject }
-
-                    // Account-only fields (no fallback to mechanism)
-                    val issuer = accountData?.get("issuer")?.jsonPrimitive?.content ?: mechanismIssuer
-                    val accountName = accountData?.get("accountName")?.jsonPrimitive?.content ?: mechanismAccountName
-                    val displayIssuer = accountData?.get("displayIssuer")?.jsonPrimitive?.content ?: issuer
-                    val displayAccountName = accountData?.get("displayAccountName")?.jsonPrimitive?.content ?: accountName
-                    val imageURL = accountData?.get("imageURL")?.jsonPrimitive?.content
-                    val backgroundColor = accountData?.get("backgroundColor")?.jsonPrimitive?.content
-                    val policies = accountData?.get("policies")?.jsonPrimitive?.content
-                    val lockingPolicy = accountData?.get("lockingPolicy")?.jsonPrimitive?.content
-                    val isLocked = accountData?.get("lock")?.jsonPrimitive?.content?.toBoolean() ?: false
-                    val createdAt = accountData?.get("timeAdded")?.jsonPrimitive?.content?.toLongOrNull()
-                        ?: mechanismData["timeAdded"]?.jsonPrimitive?.content?.toLongOrNull()
-
-                    // Mechanism-only fields (no fallback to account)
-                    val userId = mechanismData["uid"]?.jsonPrimitive?.content
-                    val resourceId = mechanismData["resourceId"]?.jsonPrimitive?.content
+                    val account = mechanism.account
 
                     val oathCredential = OathCredential(
-                        id = mechanismIdValue,  // Use mechanismUID as the credential ID
-                        userId = userId,
-                        resourceId = resourceId,
-                        issuer = issuer,
-                        displayIssuer = displayIssuer,
-                        accountName = accountName,
-                        displayAccountName = displayAccountName,
-                        oathType = OathType.fromString(mechanismData["oathType"]?.jsonPrimitive?.content ?: TOTP),
-                        secret = mechanismData["secret"]?.jsonPrimitive?.content ?: "",
-                        oathAlgorithm = when (mechanismData["algorithm"]?.jsonPrimitive?.content) {
+                        userId = mechanism.uid,
+                        resourceId = mechanism.resourceId,
+                        issuer = account.issuer,
+                        displayIssuer = account.displayIssuer ?: account.issuer,
+                        accountName = account.accountName,
+                        displayAccountName = account.displayAccountName ?: account.accountName,
+                        oathType = OathType.fromString(mechanism.oathType ?: TOTP),
+                        secret = mechanism.secret,
+                        oathAlgorithm = when (mechanism.algorithm) {
                             "sha256", "SHA256" -> OathAlgorithm.SHA256
                             "sha512", "SHA512" -> OathAlgorithm.SHA512
                             else -> OathAlgorithm.SHA1
                         },
-                        digits = mechanismData["digits"]?.jsonPrimitive?.content?.toIntOrNull() ?: 6,
-                        period = mechanismData["period"]?.jsonPrimitive?.content?.toIntOrNull() ?: 30,
-                        counter = mechanismData["counter"]?.jsonPrimitive?.content?.toLongOrNull() ?: 0L,
-                        createdAt = createdAt?.let { Date(it) } ?: Date(),
-                        imageURL = imageURL,
-                        backgroundColor = backgroundColor,
-                        policies = policies,
-                        lockingPolicy = lockingPolicy,
-                        isLocked = isLocked
+                        digits = mechanism.digits ?: 6,
+                        period = mechanism.period ?: 30,
+                        counter = mechanism.counter ?: 0L,
+                        createdAt = account.timeAdded?.let { Date(it) }
+                            ?: mechanism.timeAdded?.let { Date(it) }
+                            ?: Date(),
+                        imageURL = account.imageURL,
+                        backgroundColor = account.backgroundColor,
+                        policies = account.policies,
+                        lockingPolicy = account.lockingPolicy,
+                        isLocked = account.lock
                     )
 
                     oathStorage.storeOathCredential(oathCredential)
                     oathCount++
-                    logger.d("Migrated OATH credential: $issuer - $accountName")
+                    logger.d("Migrated OATH credential: ${oathCredential.issuer} - ${oathCredential.accountName}")
                 }
 
                 PUSH, PUSH_AUTH -> {
                     // Migrate Push mechanism
-                    val mechanismIdValue = mechanismData["mechanismUID"]?.jsonPrimitive?.content
-                        ?: mechanismData["id"]?.jsonPrimitive?.content
-                        ?: mechanismId
-
-                    // First extract issuer and accountName from mechanism to construct Account ID
-                    // Account ID format: issuer + "-" + accountName (from legacy Account.java)
-                    val mechanismIssuer = mechanismData["issuer"]?.jsonPrimitive?.content ?: ""
-                    val mechanismAccountName = mechanismData["accountName"]?.jsonPrimitive?.content ?: ""
-                    val accountId = "$mechanismIssuer-$mechanismAccountName"
-
-                    // Find associated account using the constructed Account ID
-                    val accountJson = accounts[accountId]
-                    val accountData = accountJson?.let { json.parseToJsonElement(it).jsonObject }
-
-                    // Account-only fields (no fallback to mechanism)
-                    val issuer = accountData?.get("issuer")?.jsonPrimitive?.content ?: mechanismIssuer
-                    val accountName = accountData?.get("accountName")?.jsonPrimitive?.content ?: mechanismAccountName
-                    val displayIssuer = accountData?.get("displayIssuer")?.jsonPrimitive?.content ?: issuer
-                    val displayAccountName = accountData?.get("displayAccountName")?.jsonPrimitive?.content ?: accountName
-                    val imageURL = accountData?.get("imageURL")?.jsonPrimitive?.content
-                    val backgroundColor = accountData?.get("backgroundColor")?.jsonPrimitive?.content
-                    val policies = accountData?.get("policies")?.jsonPrimitive?.content
-                    val lockingPolicy = accountData?.get("lockingPolicy")?.jsonPrimitive?.content
-                    val isLocked = accountData?.get("lock")?.jsonPrimitive?.content?.toBoolean() ?: false
-                    val createdAt = accountData?.get("timeAdded")?.jsonPrimitive?.content?.toLongOrNull()
-                        ?: mechanismData["timeAdded"]?.jsonPrimitive?.content?.toLongOrNull()
-
-                    // Mechanism-only fields (no fallback to account)
-                    val userId = mechanismData["uid"]?.jsonPrimitive?.content
-                    val resourceId = mechanismData["resourceId"]?.jsonPrimitive?.content
-                        ?: mechanismIdValue  // Fallback to mechanismUID if resourceId not present
-                    val platform = mechanismData["platform"]?.jsonPrimitive?.content ?: "PING_AM"
+                    val account = mechanism.account
 
                     // Extract base endpoint (remove query parameters like ?_action=authenticate)
-                    val rawEndpoint = mechanismData["authenticationEndpoint"]?.jsonPrimitive?.content
-                        ?: mechanismData["registrationEndpoint"]?.jsonPrimitive?.content
-                        ?: mechanismData["endpoint"]?.jsonPrimitive?.content
+                    val rawEndpoint = mechanism.authenticationEndpoint
+                        ?: mechanism.registrationEndpoint
                         ?: ""
                     val serverEndpoint = if (rawEndpoint.contains("?")) {
                         rawEndpoint.substringBefore("?")
@@ -246,163 +200,91 @@ val step2 = MigrationStep(
                     }
 
                     val pushCredential = PushCredential(
-                        id = mechanismIdValue,  // Use mechanismUID as the credential ID
-                        userId = userId,
-                        resourceId = resourceId,
-                        issuer = issuer,
-                        displayIssuer = displayIssuer,
-                        accountName = accountName,
-                        displayAccountName = displayAccountName,
+                        id = mechanism.mechanismUID,
+                        userId = mechanism.uid,
+                        resourceId = mechanism.resourceId ?: "",
+                        issuer = account.issuer,
+                        displayIssuer = account.displayIssuer ?: account.issuer,
+                        accountName = account.accountName,
+                        displayAccountName = account.displayAccountName ?: account.accountName,
                         serverEndpoint = serverEndpoint,
-                        sharedSecret = mechanismData["secret"]?.jsonPrimitive?.content ?: "",
-                        createdAt = createdAt?.let { Date(it) } ?: Date(),
-                        imageURL = imageURL,
-                        backgroundColor = backgroundColor,
-                        policies = policies,
-                        lockingPolicy = lockingPolicy,
-                        isLocked = isLocked,
-                        platform = platform
+                        sharedSecret = mechanism.secret,
+                        createdAt = account.timeAdded?.let { Date(it) }
+                            ?: mechanism.timeAdded?.let { Date(it) }
+                            ?: Date(),
+                        imageURL = account.imageURL,
+                        backgroundColor = account.backgroundColor,
+                        policies = account.policies,
+                        lockingPolicy = account.lockingPolicy,
+                        isLocked = account.lock,
+                        platform = mechanism.platform ?: "PING_AM"
                     )
 
                     pushStorage.storePushCredential(pushCredential)
                     pushCount++
-                    logger.d("Migrated Push credential: $issuer - $accountName")
+                    logger.d("Migrated Push credential: ${pushCredential.issuer} - ${pushCredential.accountName}")
                 }
 
                 else -> {
-                    logger.w("Unknown mechanism type: $type")
+                    logger.w("Unknown mechanism type: ${mechanism.type}")
                 }
             }
         } catch (e: Exception) {
-            logger.e("Failed to migrate mechanism $mechanismId", e)
+            logger.e("Failed to migrate mechanism ${mechanism.id}", e)
         }
     }
 
     logger.i("Migrated $oathCount OATH credentials and $pushCount Push credentials")
 
-    CONTINUE
-}
-
-/**
- * Step 3: Migrate push notifications to Push storage.
- */
-val step3 = MigrationStep(
-    description = "Migrate push notifications to Push storage"
-) {
-    logger.i("Starting push notifications migration")
-
-    val notifications = getValue<Map<String, String>>(NOTIFICATIONS) ?: run {
-        logger.w("No notifications found in state, skipping")
-        return@MigrationStep CONTINUE
-    }
-
-    var count = 0
-
-    notifications.forEach { (notificationId, notificationJson) ->
-        try {
-            val notificationData = json.parseToJsonElement(notificationJson).jsonObject
-
-            val pushNotification = PushNotification(
-                id = notificationId,
-                credentialId = notificationData["credentialId"]?.jsonPrimitive?.content ?: "",
-                ttl = notificationData["ttl"]?.jsonPrimitive?.content?.toIntOrNull() ?: 120,
-                messageId = notificationData["messageId"]?.jsonPrimitive?.content ?: notificationId,
-                messageText = notificationData["messageText"]?.jsonPrimitive?.content
-                    ?: notificationData["message"]?.jsonPrimitive?.content,
-                customPayload = notificationData["customPayload"]?.jsonPrimitive?.content,
-                challenge = notificationData["challenge"]?.jsonPrimitive?.content ?: "",
-                numbersChallenge = notificationData["numbersChallenge"]?.jsonPrimitive?.content,
-                loadBalancer = notificationData["loadBalancer"]?.jsonPrimitive?.content
-                    ?: notificationData["amlbCookie"]?.jsonPrimitive?.content,
-                contextInfo = notificationData["contextInfo"]?.jsonPrimitive?.content,
-                pushType = notificationData["pushType"]?.jsonPrimitive?.content?.let { type ->
-                    try {
-                        PushType.fromString(type)
-                    } catch (e: Exception) {
-                        PushType.DEFAULT
-                    }
-                } ?: PushType.DEFAULT,
-                createdAt = Date(notificationData["timeAdded"]?.jsonPrimitive?.content?.toLongOrNull()
-                    ?: notificationData["createdAt"]?.jsonPrimitive?.content?.toLongOrNull()
-                    ?: System.currentTimeMillis()),
-                sentAt = notificationData["sentAt"]?.jsonPrimitive?.content?.toLongOrNull()?.let { Date(it) },
-                respondedAt = notificationData["respondedAt"]?.jsonPrimitive?.content?.toLongOrNull()?.let { Date(it) },
-                additionalData = notificationData["additionalData"]?.jsonPrimitive?.content?.let { dataStr ->
-                    try {
-                        json.decodeFromString<Map<String, Any>>(dataStr)
-                    } catch (e: Exception) {
-                        null
-                    }
-                },
-                approved = notificationData["approved"]?.jsonPrimitive?.content?.toBoolean() ?: false,
-                pending = notificationData["pending"]?.jsonPrimitive?.content?.toBoolean() ?: true
-            )
-
-            pushStorage.storePushNotification(pushNotification)
-            count++
-            logger.d("Migrated push notification: $notificationId")
-        } catch (e: Exception) {
-            logger.e("Failed to migrate notification $notificationId", e)
-        }
-    }
-
-    logger.i("Migrated $count push notifications")
+    state[OATH_STORAGE] = oathStorage
+    state[PUSH_STORAGE] = pushStorage
 
     CONTINUE
 }
 
 /**
- * Step 4: Migrate device token to Push storage.
+ * Creates the third and final migration step, which removes legacy authenticator data via the
+ * provided [LegacyStorageProvider] and closes the SQLite storage connections.
+ *
+ * **Execution order within this step:**
+ * 1. Calls [LegacyStorageProvider.cleanUp] passing the [backup] callback.
+ *    [StorageClientProvider] always invokes the callback first, then iterates and removes
+ *    all accounts and mechanisms via the [org.forgerock.android.auth.StorageClient] API.
+ *    Pass a no-op callback (the default) to skip backup.
+ * 2. Retrieves `SQLOathStorage` from the migration state and calls `closeDatabase()`.
+ * 3. Retrieves `SQLPushStorage` from the migration state and calls `closeDatabase()`.
+ *
+ * Any exception during cleanup is caught and logged — cleanup failures are **non-critical**
+ * and do not abort the migration or prevent the pipeline from emitting a success event.
+ *
+ * @param provider The same [LegacyStorageProvider] passed to [startMigrationStep], used here
+ *   to perform the actual cleanup of the legacy storage backend.
+ * @param backup Forwarded from [LegacyAuthenticationConfig.backup]. Passed directly to
+ *   [LegacyStorageProvider.cleanUp] so the provider can invoke it before clearing data.
+ *   Defaults to a no-op, which skips backup.
+ *
+ * @see startMigrationStep
+ * @see migrateMechanismsStep
+ * @see LegacyStorageProvider.cleanUp
  */
-val step4 = MigrationStep(
-    description = "Migrate device token to Push storage"
-) {
-    logger.i("Starting device token migration")
-
-    val deviceTokenMap = getValue<Map<String, String>>(DEVICE_TOKEN) ?: run {
-        logger.w("No device token found in state, skipping")
-        return@MigrationStep CONTINUE
-    }
-
-    deviceTokenMap.forEach { (_, tokenJson) ->
-        try {
-            val tokenData = json.parseToJsonElement(tokenJson).jsonObject
-
-            val pushDeviceToken = PushDeviceToken(
-                id = tokenData["id"]?.jsonPrimitive?.content ?: "",
-                tokenId = tokenData["deviceToken"]?.jsonPrimitive?.content
-                    ?: tokenData["token"]?.jsonPrimitive?.content
-                    ?: tokenData["tokenId"]?.jsonPrimitive?.content
-                    ?: "",
-                createdAt = Date(tokenData["timeAdded"]?.jsonPrimitive?.content?.toLongOrNull() ?: System.currentTimeMillis()),
-            )
-
-            pushStorage.storePushDeviceToken(pushDeviceToken)
-            logger.i("Migrated device token successfully")
-        } catch (e: Exception) {
-            logger.e("Failed to migrate device token", e)
-        }
-    }
-
-    CONTINUE
-}
-
-/**
- * Step 5: Cleanup legacy authenticator data.
- */
-val step5 = MigrationStep(
+fun cleanupLegacyDataStep(provider: LegacyStorageProvider, backup: (context: Context) -> Unit = {}) = MigrationStep(
     description = "Cleanup legacy authenticator data"
 ) {
     logger.i("Cleaning up legacy authenticator data")
 
     try {
-        val repo = LegacyAuthenticationRepository(context, AuthMigration.config)
-        repo.deleteLegacyData()
-        logger.i("Successfully deleted legacy authenticator data")
-        oathStorage.closeDatabase()
-        logger.i("Successfully closed oath storage database")
-        pushStorage.closeDatabase()
-        logger.i("Successfully closed push storage database")
+        provider.cleanUp(context, backup)
+        logger.i("Successfully cleaned up legacy authenticator data")
+        val oathStorage = getValue<SQLOathStorage>(OATH_STORAGE)
+        if (oathStorage != null) {
+            oathStorage.closeDatabase()
+            logger.i("Successfully closed oath storage database")
+        }
+        val pushStorage = getValue<SQLPushStorage>(PUSH_STORAGE)
+        if (pushStorage != null) {
+            pushStorage.closeDatabase()
+            logger.i("Successfully closed push storage database")
+        }
     } catch (e: Exception) {
         logger.e("Failed to cleanup legacy data", e)
         // Don't fail the migration if cleanup fails
@@ -425,92 +307,77 @@ private suspend fun prepareDatabase(
     logger: Logger,
 ) {
     logger.i("Checking existing databases before migration")
-
-    // Check OATH database
-    val oathDbPath = context.getDatabasePath("pingidentity_oath.db")
-    if (oathDbPath.exists()) {
-        logger.i("Found existing OATH database at: ${oathDbPath.absolutePath}")
-
-        val shouldDeleteOath = try {
-            // Try to open the database with current passphrase to check if it's valid
-            val testOathStorage = SQLOathStorage {
-                this.context = context
-                allowDestructiveRecovery = false // Don't allow auto-recovery during check
-            }
-
-            testOathStorage.initializeDatabase()
-            val existingCredentials = testOathStorage.getAllOathCredentials()
-            testOathStorage.closeDatabase()
-
-            if (existingCredentials.isNotEmpty()) {
-                logger.i("OATH database contains ${existingCredentials.size} existing credentials - preserving database")
-                false // Keep database with existing data
-            } else {
-                logger.i("OATH database is empty - deleting to avoid passphrase conflicts")
-                true // Delete empty database to avoid conflicts
-            }
-        } catch (e: Exception) {
-            // Database exists but cannot be opened with current passphrase
-            logger.w("OATH database exists but cannot be opened (likely encrypted with different passphrase): ${e.message}")
-            logger.i("Will delete incompatible OATH database to allow migration to proceed")
-            true // Delete incompatible database
+    prepareDatabaseFile(context, logger, "pingidentity_oath.db", "OATH") { dbContext ->
+        val storage = SQLOathStorage {
+            this.context = dbContext
+            allowDestructiveRecovery = false
         }
-
-        if (shouldDeleteOath) {
-            try {
-                context.deleteDatabase("pingidentity_oath.db")
-                logger.i("Deleted incompatible OATH database")
-            } catch (e: Exception) {
-                logger.e("Failed to delete OATH database: ${e.message}", e)
-            }
+        storage.initializeDatabase()
+        val count = storage.getAllOathCredentials().size
+        storage.closeDatabase()
+        count
+    }
+    prepareDatabaseFile(context, logger, "pingidentity_push.db", "Push") { dbContext ->
+        val storage = SQLPushStorage {
+            this.context = dbContext
+            allowDestructiveRecovery = false
         }
-    } else {
-        logger.i("No existing OATH database found - will create fresh database")
+        storage.initializeDatabase()
+        val count = storage.getAllPushCredentials().size +
+                storage.getAllPushNotifications().size +
+                storage.getAllPushDeviceTokens().size
+        storage.closeDatabase()
+        count
+    }
+}
+
+/**
+ * Prepares a specific database file for migration by checking if it exists, reading its contents,
+ * and deleting it if it is empty or incompatible (e.g., encrypted with a different passphrase).
+ *
+ * @param context The Android context used to access database paths and storage APIs.
+ * @param logger The logger instance for tracking database operations and decisions.
+ * @param dbName The name of the database file to prepare.
+ * @param label A human-readable label for the database type (e.g., "OATH" or "Push"), used in log messages.
+ * @param countItems A suspending function that opens the database and returns the number of existing items.
+ *                   If this throws an exception, the database is considered incompatible and will be deleted.
+ */
+private suspend fun prepareDatabaseFile(
+    context: Context,
+    logger: Logger,
+    dbName: String,
+    label: String,
+    countItems: suspend (Context) -> Int,
+) {
+    val dbPath = context.getDatabasePath(dbName)
+    if (!dbPath.exists()) {
+        logger.i("No existing $label database found - will create fresh database")
+        return
     }
 
-    // Check Push database
-    val pushDbPath = context.getDatabasePath("pingidentity_push.db")
-    if (pushDbPath.exists()) {
-        logger.i("Found existing Push database at: ${pushDbPath.absolutePath}")
+    logger.i("Found existing $label database at: ${dbPath.absolutePath}")
 
-        val shouldDeletePush = try {
-            // Try to open the database with current passphrase to check if it's valid
-            val testPushStorage = SQLPushStorage {
-                this.context = context
-                allowDestructiveRecovery = false // Don't allow auto-recovery during check
-            }
+    val shouldDelete = try {
+        val count = countItems(context)
+        if (count > 0) {
+            logger.i("$label database contains $count existing item(s) - preserving database")
+            false
+        } else {
+            logger.i("$label database is empty - deleting to avoid passphrase conflicts")
+            true
+        }
+    } catch (e: Exception) {
+        logger.w("$label database exists but cannot be opened (likely encrypted with different passphrase): ${e.message}")
+        logger.i("Will delete incompatible $label database to allow migration to proceed")
+        true
+    }
 
-            testPushStorage.initializeDatabase()
-            val existingCredentials = testPushStorage.getAllPushCredentials()
-            val existingNotifications = testPushStorage.getAllPushNotifications()
-            val existingTokens = testPushStorage.getAllPushDeviceTokens()
-            testPushStorage.closeDatabase()
-
-            val totalItems = existingCredentials.size + existingNotifications.size + existingTokens.size
-
-            if (totalItems > 0) {
-                logger.i("Push database contains existing data (${existingCredentials.size} credentials, ${existingNotifications.size} notifications, ${existingTokens.size} tokens) - preserving database")
-                false // Keep database with existing data
-            } else {
-                logger.i("Push database is empty - deleting to avoid passphrase conflicts")
-                true // Delete empty database to avoid conflicts
-            }
+    if (shouldDelete) {
+        try {
+            context.deleteDatabase(dbName)
+            logger.i("Deleted incompatible $label database")
         } catch (e: Exception) {
-            // Database exists but cannot be opened with current passphrase
-            logger.w("Push database exists but cannot be opened (likely encrypted with different passphrase): ${e.message}")
-            logger.i("Will delete incompatible Push database to allow migration to proceed")
-            true // Delete incompatible database
+            logger.e("Failed to delete $label database: ${e.message}", e)
         }
-
-        if (shouldDeletePush) {
-            try {
-                context.deleteDatabase("pingidentity_push.db")
-                logger.i("Deleted incompatible Push database")
-            } catch (e: Exception) {
-                logger.e("Failed to delete Push database: ${e.message}", e)
-            }
-        }
-    } else {
-        logger.i("No existing Push database found - will create fresh database")
     }
 }
