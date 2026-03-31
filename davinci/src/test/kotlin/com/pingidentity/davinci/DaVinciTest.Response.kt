@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 - 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2024 - 2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -16,14 +16,18 @@ val headers = headersOf(HttpHeaders.ContentType, "application/json")
 
 fun openIdConfigurationResponse() =
     ByteReadChannel(
-        "{\n" +
-                "  \"authorization_endpoint\" : \"http://auth.test-one-pingone.com/authorize\",\n" +
-                "  \"token_endpoint\" : \"https://auth.test-one-pingone.com/token\",\n" +
-                "  \"userinfo_endpoint\" : \"https://auth.test-one-pingone.com/userinfo\",\n" +
-                "  \"end_session_endpoint\" : \"https://auth.test-one-pingone.com/signoff\",\n" +
-                "  \"revocation_endpoint\" : \"https://auth.test-one-pingone.com/revoke\"\n" +
-                "}",
+        """
+        {
+          "authorization_endpoint" : "http://auth.test-one-pingone.com/authorize",
+          "token_endpoint" : "https://auth.test-one-pingone.com/token",
+          "userinfo_endpoint" : "https://auth.test-one-pingone.com/userinfo",
+          "end_session_endpoint" : "https://auth.test-one-pingone.com/signoff",
+          "revocation_endpoint" : "https://auth.test-one-pingone.com/revoke",
+          "pushed_authorization_request_endpoint" : "https://auth.test-one-pingone.com/par"
+        }
+        """,
     )
+
 
 fun tokeResponse() =
     ByteReadChannel(
