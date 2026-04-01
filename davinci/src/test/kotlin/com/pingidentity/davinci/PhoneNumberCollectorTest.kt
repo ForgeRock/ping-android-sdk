@@ -174,4 +174,20 @@ class PhoneNumberCollectorTest {
         assertEquals("CA", collector.countryCode)
     }
 
+    @Test
+    fun `init with phone number and extension`() {
+        val input = buildJsonObject {
+            put("phoneNumber", "CA-1-+17783186380-7783186380")
+            put("countryCode", "CA")
+            put("extension", "1234")
+            put("extensionLabel", "Extension")
+        }
+        val collector = PhoneNumberCollector()
+        collector.init(input as JsonElement)
+
+        assertEquals("CA-1-+17783186380-7783186380", collector.phoneNumber)
+        assertEquals("CA", collector.countryCode)
+        assertEquals("1234", collector.extension)
+        assertEquals("Extension", collector.extensionLabel)
+    }
 }

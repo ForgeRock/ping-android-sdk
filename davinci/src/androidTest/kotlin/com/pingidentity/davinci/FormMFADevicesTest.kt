@@ -69,6 +69,7 @@ class FormMFADevicesTest {
     private lateinit var email2: String
     private lateinit var phoneNumber1: String
     private lateinit var phoneNumber2: String
+    private lateinit var extension: String
 
     @JvmField
     @Rule
@@ -85,6 +86,7 @@ class FormMFADevicesTest {
         email2 = usernamePrefix + System.currentTimeMillis() + "@example.net"
         phoneNumber1 = "888123456"
         phoneNumber2 = "888123457"
+        extension = "100"
 
         // Make sure to start with a clean session
         daVinci.user()?.logout()
@@ -404,7 +406,7 @@ class FormMFADevicesTest {
         assertEquals("Enter phone number", node.description)
 
         // Assert the collectors
-        assertTrue(node.collectors.size == 4)
+        assertEquals(4, node.collectors.size)
         assertTrue(node.collectors[0] is LabelCollector)
         assertTrue(node.collectors[1] is SingleSelectCollector)
         assertTrue(node.collectors[2] is PhoneNumberCollector)
@@ -437,10 +439,12 @@ class FormMFADevicesTest {
         assertTrue(phoneNumberCollector.required)
         assertFalse(phoneNumberCollector.validatePhoneNumber)
         assertEquals("IN", phoneNumberCollector.defaultCountryCode)
+        assertTrue(phoneNumberCollector.showExtension)
 
         // Select a country code and enter a valid phone number:...
         phoneNumberCollector.countryCode = "CA"  // Select Canada...
         phoneNumberCollector.phoneNumber = "7783177183" // Enter a valid phone number...
+        phoneNumberCollector.extension = "100" // Enter extension
 
         // Submit the form
         (node.collectors[3] as? SubmitCollector)?.value = "click"

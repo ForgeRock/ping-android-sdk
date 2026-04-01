@@ -45,6 +45,7 @@ fun PhoneNumber(field: PhoneNumberCollector, onNodeUpdated: () -> Unit) {
         )
     }
     var phone by remember(field) { mutableStateOf(field.phoneNumber) }
+    var extension by remember(field) { mutableStateOf(field.extension) }
 
     var isValid by remember(field) {
         mutableStateOf(true)
@@ -52,7 +53,8 @@ fun PhoneNumber(field: PhoneNumberCollector, onNodeUpdated: () -> Unit) {
 
     LaunchedEffect(true) {
         field.countryCode = selectedCountryCode.countryCode
-        field.phoneNumber = field.phoneNumber
+        field.phoneNumber = phone
+        field.extension = extension
     }
 
     Column(
@@ -120,6 +122,24 @@ fun PhoneNumber(field: PhoneNumberCollector, onNodeUpdated: () -> Unit) {
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                 modifier = Modifier.weight(1f)
+            )
+        }
+        
+        // Extension
+        if (field.showExtension) {
+            OutlinedTextField(
+                value = extension,
+                onValueChange = { value ->
+                    val extensionValue = value.take(10).filter { it.isDigit() }
+                    extension = extensionValue
+                    field.extension = extension
+                },
+                label = { androidx.compose.material3.Text(field.extensionLabel) },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
             )
         }
     }
