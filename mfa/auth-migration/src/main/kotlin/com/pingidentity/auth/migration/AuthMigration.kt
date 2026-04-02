@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2026 Ping Identity Corporation. All rights reserved.
+ *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
  */
@@ -7,10 +8,13 @@
 package com.pingidentity.auth.migration
 
 import android.content.Context
+import com.pingidentity.auth.migration.AuthMigration.logger
+import com.pingidentity.auth.migration.AuthMigration.start
 import com.pingidentity.logger.Logger
 import com.pingidentity.logger.STANDARD
 import com.pingidentity.migration.Migration
 import com.pingidentity.migration.MigrationProgress
+import kotlinx.coroutines.flow.FlowCollector
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
@@ -112,7 +116,7 @@ object AuthMigration {
                 step(cleanupLegacyDataStep(config.legacyStorageProvider, config.backup))
             }
 
-            migration.migrate(context).collect { progress ->
+            val collector = config.progress ?: FlowCollector { progress ->
                 when (progress) {
                     is MigrationProgress.Started -> {
                         logger.i("Migration started")
@@ -134,6 +138,8 @@ object AuthMigration {
                     }
                 }
             }
+
+            migration.migrate(context).collect(collector)
         }
     }
 }
