@@ -177,3 +177,13 @@ jobs:
       MEND_EMAIL: ${{ secrets.MEND_EMAIL }}
       MEND_USER_KEY: ${{ secrets.MEND_USER_KEY }}
       SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+
+#  # Run dokka
+#  generate-docs:
+#    name: Generate API docs
+#    uses: ./.github/workflows/generate-docs.yaml
+
+  publish-docs:
+    name: Publish API docs
+    uses: ./.github/workflows/publish-docs.yaml
+#    needs: generate-docs
