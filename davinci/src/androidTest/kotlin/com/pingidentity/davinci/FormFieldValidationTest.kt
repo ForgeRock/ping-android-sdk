@@ -87,7 +87,7 @@ class FormFieldValidationTest {
         // Validate should return list with 2 validation errors since the value is empty
         // and does not match the configured regex
         var usernameValidationResult = username.validate()
-        assertEquals(usernameValidationResult.size, 2)
+        assertEquals(2, usernameValidationResult.size)
         assertEquals("Required", usernameValidationResult[0].toString())
         assertEquals("Must be alphanumeric", (usernameValidationResult[1] as RegexError).message)
 
@@ -119,7 +119,7 @@ class FormFieldValidationTest {
 
         email.value = "not an email"
         emailValidationResult = email.validate() // Should return 1 validation error this time
-        assertEquals(emailValidationResult.size, 1)
+        assertEquals(1, emailValidationResult.size)
         assertEquals("Not a valid email", (emailValidationResult[0] as RegexError).message)
 
         email.value = "valid@email.com"
@@ -141,6 +141,7 @@ class FormFieldValidationTest {
         val passwordPolicy = password.passwordPolicy()
 
         // Assert the password policy
+        assertNotNull(passwordPolicy)
         assertTrue(passwordPolicy?.default ?: false)
         assertEquals("Standard", passwordPolicy.name)
         assertEquals("A standard policy that incorporates industry best practices", passwordPolicy.description)
@@ -166,7 +167,7 @@ class FormFieldValidationTest {
         var passwordValidationResult = password.validate()
 
         // The default password policy is:
-        assertTrue(passwordValidationResult.size == 7)
+        assertEquals(7, passwordValidationResult.size)
         assertTrue(passwordValidationResult.contains(Required))
         assertTrue(passwordValidationResult.contains(InvalidLength(min=8, max=255)))
         assertTrue(passwordValidationResult.contains(UniqueCharacter(min=5)))
@@ -179,7 +180,7 @@ class FormFieldValidationTest {
         password.value = "password123"
         passwordValidationResult = password.validate()
 
-        assertEquals(passwordValidationResult.size, 2)
+        assertEquals(2, passwordValidationResult.size)
         assertFalse(passwordValidationResult.contains(Required)) // Should not contain Required error
         assertFalse(passwordValidationResult.contains(InvalidLength(min=8, max=255))) // Should not contain InvalidLength error
         assertFalse(passwordValidationResult.contains(UniqueCharacter(min=5))) // Should not contain UniqueCharacter error

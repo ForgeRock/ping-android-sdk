@@ -148,7 +148,7 @@ class PasswordCollectorTest {
     }
 
     @Test
-    fun addsMinCharactersErrorWhenEnoughSpecialCharacters() {
+    fun validatesSuccessfullyWhenEnoughSpecialCharacters() {
         val input = buildJsonObject {
             put("passwordPolicy", buildJsonObject {
                 put("minCharacters", buildJsonObject {
