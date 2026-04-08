@@ -39,6 +39,8 @@ import androidx.navigation.navArgument
 import com.pingidentity.samples.pingsampleapp.PingSampleApplication
 import com.pingidentity.samples.pingsampleapp.authenticator.data.AuthenticatorViewModel
 import com.pingidentity.samples.pingsampleapp.authenticator.ui.AboutScreen
+import com.pingidentity.samples.pingsampleapp.authmigration.AuthMigrationScreen
+import com.pingidentity.samples.pingsampleapp.authmigration.AuthMigrationViewModel
 import com.pingidentity.samples.pingsampleapp.authenticator.ui.AccountDetailScreen
 import com.pingidentity.samples.pingsampleapp.authenticator.ui.AccountsScreen
 import com.pingidentity.samples.pingsampleapp.authenticator.ui.EditAccountsScreen
@@ -96,6 +98,7 @@ object Route {
     const val ROUTE_AUTH_APP_ACCOUNT = "account/{issuer}/{accountName}"
     fun routeForAuthAppAccount(accountName: String) = "account/$accountName"
     const val ROUTE_AUTH_TEST_APP = "route_auth_test_app"
+    const val AUTH_MIGRATION = "auth_migration"
 
 }
 
@@ -169,6 +172,9 @@ fun AppNavigation(
                 },
                 onAuthTestScreenClick = {
                     navController.navigate(Route.ROUTE_AUTH_TEST_APP)
+                },
+                onAuthMigrationClick = {
+                    navController.navigate(Route.AUTH_MIGRATION)
                 },
             )
         }
@@ -492,6 +498,14 @@ fun AppNavigation(
                     navController.popBackStack()
                 }
             }
+        }
+
+        composable(Route.AUTH_MIGRATION) {
+            val authMigrationViewModel = viewModel<AuthMigrationViewModel>()
+            AuthMigrationScreen(
+                viewModel = authMigrationViewModel,
+                onBack = { navController.popBackStack() }
+            )
         }
     }
 }
