@@ -7,9 +7,12 @@
 
 package com.pingidentity.davinci.collector
 
+import com.pingidentity.davinci.json
 import com.pingidentity.orchestrate.Closeable
 import com.pingidentity.orchestrate.ContinueNode
 import com.pingidentity.orchestrate.ContinueNodeAware
+import kotlinx.serialization.json.decodeFromJsonElement
+import kotlinx.serialization.json.jsonObject
 
 /**
  * Class representing a PASSWORD Type.
@@ -42,8 +45,6 @@ class PasswordCollector : ValidatedCollector(), ContinueNodeAware, Closeable {
     /**
      * Function to retrieve the password policy, if available.
      */
-    //TODO PasswordPolicy
-    /*
     fun passwordPolicy(): PasswordPolicy? {
         if (cachedPasswordPolicy == null) {
             cachedPasswordPolicy = continueNode.input["passwordPolicy"]?.jsonObject?.let {
@@ -54,8 +55,6 @@ class PasswordCollector : ValidatedCollector(), ContinueNodeAware, Closeable {
 
     }
 
-     */
-
     /**
      * Function to validate the password field.
      * @return A list of validation errors.
@@ -65,8 +64,6 @@ class PasswordCollector : ValidatedCollector(), ContinueNodeAware, Closeable {
         val result = super.validate()
         errors.addAll(result)
 
-        //TODO PasswordPolicy
-        /*
         passwordPolicy()?.let { policy ->
             if (value.length !in policy.length.min..policy.length.max) {
                 errors.add(InvalidLength(policy.length.min, policy.length.max))
@@ -86,7 +83,6 @@ class PasswordCollector : ValidatedCollector(), ContinueNodeAware, Closeable {
                 }
             }
         }
-         */
         return errors
     }
 }

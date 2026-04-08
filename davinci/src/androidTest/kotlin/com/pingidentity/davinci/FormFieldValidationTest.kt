@@ -87,7 +87,7 @@ class FormFieldValidationTest {
         // Validate should return list with 2 validation errors since the value is empty
         // and does not match the configured regex
         var usernameValidationResult = username.validate()
-        assertTrue(usernameValidationResult.size == 2)
+        assertEquals(usernameValidationResult.size, 2)
         assertEquals("Required", usernameValidationResult[0].toString())
         assertEquals("Must be alphanumeric", (usernameValidationResult[1] as RegexError).message)
 
@@ -119,7 +119,7 @@ class FormFieldValidationTest {
 
         email.value = "not an email"
         emailValidationResult = email.validate() // Should return 1 validation error this time
-        assertTrue(emailValidationResult.size == 1)
+        assertEquals(emailValidationResult.size, 1)
         assertEquals("Not a valid email", (emailValidationResult[0] as RegexError).message)
 
         email.value = "valid@email.com"
@@ -138,20 +138,18 @@ class FormFieldValidationTest {
         // Password filed...
         assertTrue(node.collectors[3] is PasswordCollector)
         val password = node.collectors[3] as PasswordCollector
-        //TODO PasswordPolicy
-        /*
         val passwordPolicy = password.passwordPolicy()
 
         // Assert the password policy
         assertTrue(passwordPolicy?.default ?: false)
-        assertEquals("Standard", passwordPolicy?.name)
-        assertEquals("A standard policy that incorporates industry best practices", passwordPolicy?.description)
-        assertEquals(Length(min=8, max=255), passwordPolicy?.length)
-        assertEquals(5, passwordPolicy?.minUniqueCharacters)
-        assertTrue(passwordPolicy?.minCharacters?.containsKey("0123456789") ?: false)
-        assertTrue(passwordPolicy?.minCharacters?.containsKey("ABCDEFGHIJKLMNOPQRSTUVWXYZ") ?: false)
-        assertTrue(passwordPolicy?.minCharacters?.containsKey("abcdefghijklmnopqrstuvwxyz") ?: false)
-        assertTrue(passwordPolicy?.minCharacters?.containsKey("~!@#$%^&*()-_=+[]{}|;:,.<>/?") ?: false)
+        assertEquals("Standard", passwordPolicy.name)
+        assertEquals("A standard policy that incorporates industry best practices", passwordPolicy.description)
+        assertEquals(Length(min=8, max=255), passwordPolicy.length)
+        assertEquals(5, passwordPolicy.minUniqueCharacters)
+        assertTrue(passwordPolicy.minCharacters.containsKey("0123456789"))
+        assertTrue(passwordPolicy.minCharacters.containsKey("ABCDEFGHIJKLMNOPQRSTUVWXYZ"))
+        assertTrue(passwordPolicy.minCharacters.containsKey("abcdefghijklmnopqrstuvwxyz"))
+        assertTrue(passwordPolicy.minCharacters.containsKey("~!@#$%^&*()-_=+[]{}|;:,.<>/?"))
 
         // Assert the properties of the Password field
         assertEquals("Password", password.label)
@@ -181,7 +179,7 @@ class FormFieldValidationTest {
         password.value = "password123"
         passwordValidationResult = password.validate()
 
-        assertTrue(passwordValidationResult.size == 2)
+        assertEquals(passwordValidationResult.size, 2)
         assertFalse(passwordValidationResult.contains(Required)) // Should not contain Required error
         assertFalse(passwordValidationResult.contains(InvalidLength(min=8, max=255))) // Should not contain InvalidLength error
         assertFalse(passwordValidationResult.contains(UniqueCharacter(min=5))) // Should not contain UniqueCharacter error
@@ -196,14 +194,13 @@ class FormFieldValidationTest {
 
         // Should return empty list this time
         assertTrue(passwordValidationResult.isEmpty())
-         */
     }
 
     @TestRailCase(27507)
     @Test
     fun errorNodeTest() = runTest {
         // Go to the "Error Node" form
-        var node = daVinci.start() as ContinueNode
+        val node = daVinci.start() as ContinueNode
         (node.collectors[2] as? FlowCollector)?.value = "click"
         val errorNode = node.next()
         assertTrue(errorNode is ErrorNode)

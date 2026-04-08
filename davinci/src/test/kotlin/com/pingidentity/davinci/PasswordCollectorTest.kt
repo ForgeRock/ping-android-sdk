@@ -23,7 +23,6 @@ import kotlinx.serialization.json.put
 import org.junit.Rule
 import org.junit.rules.TestWatcher
 import kotlin.test.BeforeTest
-import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -64,7 +63,6 @@ class PasswordCollectorTest {
         assertEquals("password", passwordCollector.value)
     }
 
-
     @Test
     fun validatesSuccessfullyWhenNoErrors() {
         val input = buildJsonObject {
@@ -88,8 +86,7 @@ class PasswordCollectorTest {
         assertEquals(emptyList(), collector.validate())
     }
 
-    //TODO PasswordPolicy
-    @Ignore
+    @Test
     fun addsInvalidLengthErrorWhenValueTooShort() {
         val input = buildJsonObject {
             put("passwordPolicy", buildJsonObject {
@@ -106,8 +103,7 @@ class PasswordCollectorTest {
         assertEquals(listOf(InvalidLength(8, 20)), collector.validate())
     }
 
-    //TODO PasswordPolicy
-    @Ignore
+    @Test
     fun addsUniqueCharacterErrorWhenNotEnoughUniqueCharacters() {
         val input = buildJsonObject {
             put("passwordPolicy", buildJsonObject {
@@ -121,8 +117,7 @@ class PasswordCollectorTest {
         assertEquals(listOf(UniqueCharacter(5)), collector.validate())
     }
 
-    //TODO PasswordPolicy
-    @Ignore
+    @Test
     fun addsMaxRepeatErrorWhenTooManyRepeatedCharacters() {
         val input = buildJsonObject {
             put("passwordPolicy", buildJsonObject {
@@ -136,8 +131,7 @@ class PasswordCollectorTest {
         assertEquals(listOf(MaxRepeat(2)), collector.validate())
     }
 
-    //TODO PasswordPolicy
-    @Ignore
+    @Test
     fun addsMinCharactersErrorWhenNotEnoughDigits() {
         val input = buildJsonObject {
             put("passwordPolicy", buildJsonObject {
@@ -153,8 +147,7 @@ class PasswordCollectorTest {
         assertEquals(listOf(MinCharacters("0123456789", 2)), collector.validate())
     }
 
-    //TODO PasswordPolicy
-    @Ignore
+    @Test
     fun addsMinCharactersErrorWhenEnoughSpecialCharacters() {
         val input = buildJsonObject {
             put("passwordPolicy", buildJsonObject {
@@ -177,5 +170,4 @@ class PasswordCollectorTest {
         collector.init(input)
         assertEquals("test", collector.value)
     }
-
 }
