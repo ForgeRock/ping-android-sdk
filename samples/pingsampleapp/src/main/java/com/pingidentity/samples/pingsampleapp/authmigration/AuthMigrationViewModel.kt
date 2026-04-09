@@ -75,11 +75,20 @@ class AuthMigrationViewModel : ViewModel() {
      * Checks whether legacy FR Authenticator data exists in SharedPreferences.
      */
     fun checkMigrationNeeded(context: Context) {
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.FlowCollector
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.withContext
+...
+
         viewModelScope.launch {
             state.update { it.copy(migrationStatus = MigrationStatus.CHECKING) }
             try {
-                val provider = DefaultStorageClientProvider(context)
-                val needed = provider.isMigrationRequired(context)
+                val needed = withContext(Dispatchers.IO) {
+                    val provider = DefaultStorageClientProvider(context.applicationContext)
+                    provider.isMigrationRequired(context.applicationContext)
+                }
                 state.update {
                     it.copy(
                         migrationStatus = MigrationStatus.IDLE,
