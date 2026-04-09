@@ -88,3 +88,5 @@ This setup will automatically report the test results to TestRail based on the p
 Running test with `./gradlew build` will also run the test but may eventually generate a lot of 
 reports, each VM instance will generate a report if `TESTRAIL_RUN_ID` is not set.
 You may want to set the `TESTRAIL_RUN_ID` to avoid this.
+
+© Copyright 2025-2026 Ping Identity Corporation. All Rights Reserved

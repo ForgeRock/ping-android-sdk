@@ -146,3 +146,5 @@ module(CustomHeader, priority = 5, mode = OverrideMode.APPEND) {
   header("Accept-Language", "zh")
 }
 ```
+
+© Copyright 2025-2026 Ping Identity Corporation. All Rights Reserved

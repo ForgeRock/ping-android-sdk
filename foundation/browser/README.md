@@ -150,3 +150,5 @@ customization allows you to override this behavior for specific use cases or bro
 | Redirect Handling         | Manual, error-prone                                      | Automatic via intent filters            | Automatic via intent filters                            |
 | App Store Policy          | May be restricted for auth flows                         | Fully compliant                         | Fully compliant                                         |
 | Recommended For           | Embedded content, not auth                               | Secure authentication/authorization     | Secure authentication/authorization (preferred)         |
+
+© Copyright 2025-2026 Ping Identity Corporation. All Rights Reserved

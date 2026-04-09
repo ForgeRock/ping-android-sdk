@@ -347,3 +347,5 @@ step("Access system resources") {
 6. **Test thoroughly**: Ensure migration steps work correctly in isolation and as part of the full migration
 
 ---
+
+© Copyright 2025-2026 Ping Identity Corporation. All Rights Reserved
