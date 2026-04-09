@@ -17,7 +17,9 @@ import com.pingidentity.testrail.TestRailCase
 import com.pingidentity.testrail.TestRailWatcher
 import io.mockk.coEvery
 import io.mockk.mockk
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import org.junit.Rule
@@ -65,20 +67,18 @@ class PasswordCollectorTest {
 
     @Test
     fun validatesSuccessfullyWhenNoErrors() {
-        val input = buildJsonObject {
-            put("passwordPolicy", buildJsonObject {
-                put("length", buildJsonObject {
-                    put("min", 8)
-                    put("max", 20)
-                })
-                put("minUniqueCharacters", 3)
-                put("maxRepeatedCharacters", 2)
-                put("minCharacters", buildJsonObject {
-                    put("0123456789", 1)
-                    put("!@#$%^&*()", 1)
-                })
+        val input = inputWithPasswordPolicy(buildJsonObject {
+            put("length", buildJsonObject {
+                put("min", 8)
+                put("max", 20)
             })
-        }
+            put("minUniqueCharacters", 3)
+            put("maxRepeatedCharacters", 2)
+            put("minCharacters", buildJsonObject {
+                put("0123456789", 1)
+                put("!@#$%^&*()", 1)
+            })
+        })
         val collector = PasswordCollector()
         collector.continueNode = continueNode
         coEvery { continueNode.input }.returns(input)
@@ -88,14 +88,12 @@ class PasswordCollectorTest {
 
     @Test
     fun addsInvalidLengthErrorWhenValueTooShort() {
-        val input = buildJsonObject {
-            put("passwordPolicy", buildJsonObject {
-                put("length", buildJsonObject {
-                    put("min", 8)
-                    put("max", 20)
-                })
+        val input = inputWithPasswordPolicy(buildJsonObject {
+            put("length", buildJsonObject {
+                put("min", 8)
+                put("max", 20)
             })
-        }
+        })
         val collector = PasswordCollector()
         collector.continueNode = continueNode
         coEvery { continueNode.input }.returns(input)
@@ -105,11 +103,9 @@ class PasswordCollectorTest {
 
     @Test
     fun addsUniqueCharacterErrorWhenNotEnoughUniqueCharacters() {
-        val input = buildJsonObject {
-            put("passwordPolicy", buildJsonObject {
-                put("minUniqueCharacters", 5)
-            })
-        }
+        val input = inputWithPasswordPolicy(buildJsonObject {
+            put("minUniqueCharacters", 5)
+        })
         val collector = PasswordCollector()
         collector.continueNode = continueNode
         coEvery { continueNode.input }.returns(input)
@@ -119,11 +115,10 @@ class PasswordCollectorTest {
 
     @Test
     fun addsMaxRepeatErrorWhenTooManyRepeatedCharacters() {
-        val input = buildJsonObject {
-            put("passwordPolicy", buildJsonObject {
+        val input = inputWithPasswordPolicy(buildJsonObject {
                 put("maxRepeatedCharacters", 2)
-            })
-        }
+            }
+        )
         val collector = PasswordCollector()
         collector.continueNode = continueNode
         coEvery { continueNode.input }.returns(input)
@@ -133,13 +128,11 @@ class PasswordCollectorTest {
 
     @Test
     fun addsMinCharactersErrorWhenNotEnoughDigits() {
-        val input = buildJsonObject {
-            put("passwordPolicy", buildJsonObject {
-                put("minCharacters", buildJsonObject {
-                    put("0123456789", 2)
-                })
+        val input = inputWithPasswordPolicy(buildJsonObject {
+            put("minCharacters", buildJsonObject {
+                put("0123456789", 2)
             })
-        }
+        })
         val collector = PasswordCollector()
         collector.continueNode = continueNode
         coEvery { continueNode.input }.returns(input)
@@ -149,13 +142,11 @@ class PasswordCollectorTest {
 
     @Test
     fun validatesSuccessfullyWhenEnoughSpecialCharacters() {
-        val input = buildJsonObject {
-            put("passwordPolicy", buildJsonObject {
-                put("minCharacters", buildJsonObject {
-                    put("!@#$%^&*()", 2)
-                })
+        val input = inputWithPasswordPolicy(buildJsonObject {
+            put("minCharacters", buildJsonObject {
+                put("!@#$%^&*()", 2)
             })
-        }
+        })
         val collector = PasswordCollector()
         collector.continueNode = continueNode
         coEvery { continueNode.input }.returns(input)
@@ -169,5 +160,106 @@ class PasswordCollectorTest {
         val collector = PasswordCollector()
         collector.init(input)
         assertEquals("test", collector.value)
+    }
+
+    @Test
+    fun `passwordPolicy is read from PASSWORD_VERIFY field when form contains multiple field types`() {
+        val input = buildJsonObject {
+            put("form", buildJsonObject {
+                put("components", buildJsonObject {
+                    put("fields", buildJsonArray {
+                        add(buildJsonObject {
+                            put("type", "LABEL")
+                            put("content", "Simple Registration Form")
+                            put("key", "rich-text")
+                        })
+                        add(buildJsonObject {
+                            put("type", "TEXT")
+                            put("key", "user.username")
+                            put("label", "Username")
+                        })
+                        add(buildJsonObject {
+                            put("type", "TEXT")
+                            put("key", "user.email")
+                            put("label", "Email Address")
+                        })
+                        add(buildJsonObject {
+                            put("type", "PASSWORD_VERIFY")
+                            put("key", "user.password")
+                            put("label", "Password")
+                            put("passwordPolicy", buildJsonObject {
+                                put("length", buildJsonObject {
+                                    put("min", 8)
+                                    put("max", 255)
+                                })
+                                put("minUniqueCharacters", 5)
+                                put("maxRepeatedCharacters", 2)
+                                put("minCharacters", buildJsonObject {
+                                    put("0123456789", 1)
+                                    put("ABCDEFGHIJKLMNOPQRSTUVWXYZ", 1)
+                                    put("abcdefghijklmnopqrstuvwxyz", 1)
+                                    put("~!@#\$%^&*()-_=+[]{}|;:,.<>/?", 1)
+                                })
+                            })
+                        })
+                        add(buildJsonObject {
+                            put("type", "SUBMIT_BUTTON")
+                            put("label", "Submit")
+                            put("key", "submit")
+                        })
+                    })
+                })
+            })
+        }
+        val collector = PasswordCollector()
+        collector.continueNode = continueNode
+        coEvery { continueNode.input }.returns(input)
+        // A valid password satisfying all constraints should produce no errors
+        collector.value = "Valid1@Pass"
+        assertEquals(emptyList(), collector.validate())
+        // A password that is too short should produce an InvalidLength error
+        collector.value = "Sh0rt!"
+        assertEquals(listOf(InvalidLength(8, 255)), collector.validate())
+    }
+
+    // Regression: when no PASSWORD_VERIFY field is present, no policy is applied and no errors are raised
+    @Test
+    fun `no validation errors when form has no PASSWORD_VERIFY field`() {
+        val input = buildJsonObject {
+            put("form", buildJsonObject {
+                put("components", buildJsonObject {
+                    put("fields", buildJsonArray {
+                        add(buildJsonObject {
+                            put("type", "TEXT")
+                            put("key", "user.username")
+                            put("label", "Username")
+                        })
+                        add(buildJsonObject {
+                            put("type", "SUBMIT_BUTTON")
+                            put("label", "Submit")
+                            put("key", "submit")
+                        })
+                    })
+                })
+            })
+        }
+        val collector = PasswordCollector()
+        collector.continueNode = continueNode
+        coEvery { continueNode.input }.returns(input)
+        collector.value = "any"
+        assertEquals(emptyList(), collector.validate())
+    }
+
+    private fun inputWithPasswordPolicy(policy: JsonObject) = buildJsonObject {
+        put("form", buildJsonObject {
+            put("components", buildJsonObject {
+                put("fields", buildJsonArray {
+                    add(buildJsonObject {
+                        put("type", "PASSWORD_VERIFY")
+                        put("passwordPolicy", policy)
+                    })
+                })
+            })
+        })
     }
 }
