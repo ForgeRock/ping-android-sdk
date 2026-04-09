@@ -14,10 +14,12 @@ import com.pingidentity.auth.migration.DefaultStorageClientProvider
 import com.pingidentity.logger.Logger
 import com.pingidentity.logger.STANDARD
 import com.pingidentity.migration.MigrationProgress
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.FlowCollector
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.UUID
 
 /**
@@ -75,13 +77,6 @@ class AuthMigrationViewModel : ViewModel() {
      * Checks whether legacy FR Authenticator data exists in SharedPreferences.
      */
     fun checkMigrationNeeded(context: Context) {
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.FlowCollector
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.withContext
-...
-
         viewModelScope.launch {
             state.update { it.copy(migrationStatus = MigrationStatus.CHECKING) }
             try {
