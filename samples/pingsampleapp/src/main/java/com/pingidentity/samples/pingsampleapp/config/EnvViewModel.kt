@@ -104,7 +104,10 @@ var journey: Journey = Journey {
 var oidcClient: OidcClient? = null
 var daVinci: DaVinci? = null
 var web: OidcWebClient? = null
-lateinit var redirectUri: Uri // For Social Login redirect parameter using Auth Tab
+/** Used by Journey's IdP (social identity provider) callback. Set only by [buildJourney]. */
+lateinit var redirectUri: Uri
+/** Used by DaVinci's Social Login button. Set only by [buildDaVinci]. Never overwritten by Journey. */
+lateinit var daVinciRedirectUri: Uri
 
 // ---------------------------------------------------------------------------
 // Package-level SDK builders (called both at app startup and from ViewModel)
@@ -148,7 +151,8 @@ internal fun buildDaVinci(config: OidcConfigState) {
             storage { fileName = "daVinci" }
         }
     }
-    redirectUri = config.redirectUri.toUri()
+    // Store in the DaVinci-specific global so it never overwrites Journey's redirectUri
+    daVinciRedirectUri = config.redirectUri.toUri()
 }
 
 internal fun buildWeb(config: OidcConfigState) {
@@ -214,7 +218,7 @@ suspend fun initConfigs() {
         )
     } ?: defaultWebConfig
 
-    // Build all three — DaVinci last so `redirectUri` is set correctly for Social Login
+    // Each builder writes to its own global; no ordering dependency.
     buildJourney(jConfig)
     buildWeb(wConfig)
     buildDaVinci(dvConfig)
@@ -351,7 +355,12 @@ class EnvViewModel : ViewModel() {
     }
 
     fun deleteCustomJourneyConfig(index: Int) {
+        val deleted = customJourneyConfigs[index]
         customJourneyConfigs = customJourneyConfigs.toMutableList().also { it.removeAt(index) }
+        // If the deleted config was active, fall back to the first preset
+        if (appliedJourneyConfig?.display == deleted.display) {
+            selectJourneyConfig(journeyPresets[0])
+        }
         viewModelScope.launch(Dispatchers.IO) { persistCustomJourneyConfigs(customJourneyConfigs) }
     }
 
@@ -366,7 +375,12 @@ class EnvViewModel : ViewModel() {
     }
 
     fun deleteCustomDaVinciConfig(index: Int) {
+        val deleted = customDaVinciConfigs[index]
         customDaVinciConfigs = customDaVinciConfigs.toMutableList().also { it.removeAt(index) }
+        // If the deleted config was active, fall back to the first preset
+        if (appliedDaVinciConfig?.display == deleted.display) {
+            selectDaVinciConfig(daVinciPresets[0])
+        }
         viewModelScope.launch(Dispatchers.IO) { persistCustomDaVinciConfigs(customDaVinciConfigs) }
     }
 
@@ -381,7 +395,12 @@ class EnvViewModel : ViewModel() {
     }
 
     fun deleteCustomWebConfig(index: Int) {
+        val deleted = customWebConfigs[index]
         customWebConfigs = customWebConfigs.toMutableList().also { it.removeAt(index) }
+        // If the deleted config was active, fall back to the first preset
+        if (appliedWebConfig?.display == deleted.display) {
+            selectWebConfig(webPresets[0])
+        }
         viewModelScope.launch(Dispatchers.IO) { persistCustomWebConfigs(customWebConfigs) }
     }
 

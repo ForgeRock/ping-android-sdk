@@ -62,9 +62,16 @@ import java.net.URL
 // Bottom sheet content discriminator
 // ---------------------------------------------------------------------------
 
+// Blank Journey config used when opening the "Add" bottom sheet.
+// Intentionally has no default values so the new entry is distinct from presets.
+private val blankJourneyConfig = JourneyConfigState(
+    serverUrl = "", realm = "", cookie = "", clientId = "",
+    discoveryEndpoint = "", scopes = "", redirectUri = "", display = ""
+)
+
 private sealed class SheetContent {
     data class JourneySheet(
-        val config: JourneyConfigState = JourneyConfigState(),
+        val config: JourneyConfigState = blankJourneyConfig,
         val customIndex: Int? = null,
     ) : SheetContent()
 
@@ -179,6 +186,7 @@ fun Env(
                         title = "DaVinci Config",
                         initial = content.config,
                         isEdit = content.customIndex != null,
+                        showArcValue = true,
                         onSave = { cfg ->
                             envViewModel.saveCustomDaVinciConfig(cfg, content.customIndex)
                             dismiss()
@@ -223,7 +231,7 @@ private fun JourneyCard(
                 ConfigRow(
                     display = config.display,
                     subtitle = "${extractHost(config.discoveryEndpoint)} · ${config.clientId}",
-                    isApplied = appliedConfig?.display == config.display,
+                    isApplied = appliedConfig == config,
                     isPreset = true,
                     onSelect = { onSelect(config) },
                     onEdit = null,
@@ -238,7 +246,7 @@ private fun JourneyCard(
                 ConfigRow(
                     display = config.display,
                     subtitle = "${extractHost(config.discoveryEndpoint)} · ${config.clientId}",
-                    isApplied = appliedConfig?.display == config.display,
+                    isApplied = appliedConfig == config,
                     isPreset = false,
                     onSelect = { onSelect(config) },
                     onEdit = { onEdit(config, index) },
@@ -271,7 +279,7 @@ private fun OidcCard(
                 ConfigRow(
                     display = config.display,
                     subtitle = "${extractHost(config.discoveryEndpoint)} · ${config.clientId}",
-                    isApplied = appliedConfig?.display == config.display,
+                    isApplied = appliedConfig == config,
                     isPreset = true,
                     onSelect = { onSelect(config) },
                     onEdit = null,
@@ -286,7 +294,7 @@ private fun OidcCard(
                 ConfigRow(
                     display = config.display,
                     subtitle = "${extractHost(config.discoveryEndpoint)} · ${config.clientId}",
-                    isApplied = appliedConfig?.display == config.display,
+                    isApplied = appliedConfig == config,
                     isPreset = false,
                     onSelect = { onSelect(config) },
                     onEdit = { onEdit(config, index) },
@@ -447,6 +455,13 @@ private fun JourneySheetContent(
     onDismiss: () -> Unit,
 ) {
     var cfg by remember { mutableStateOf(initial) }
+    val canSave =
+        cfg.serverUrl.isNotBlank() &&
+                cfg.realm.isNotBlank() &&
+                cfg.clientId.isNotBlank() &&
+                cfg.discoveryEndpoint.isNotBlank() &&
+                cfg.redirectUri.isNotBlank() &&
+                cfg.display.isNotBlank()
 
     Column(
         modifier = Modifier
@@ -470,7 +485,7 @@ private fun JourneySheetContent(
         ConfigField("Scopes (comma-separated)", cfg.scopes) { cfg = cfg.copy(scopes = it) }
         ConfigField("Redirect URI", cfg.redirectUri) { cfg = cfg.copy(redirectUri = it) }
         ConfigField("Display Name", cfg.display) { cfg = cfg.copy(display = it) }
-        SheetActions(onDismiss = onDismiss, onSave = { onSave(cfg) })
+        SheetActions(onDismiss = onDismiss, onSave = { onSave(cfg) }, canSave = canSave)
         Spacer(Modifier.height(8.dp))
     }
 }
@@ -484,10 +499,16 @@ private fun OidcSheetContent(
     title: String,
     initial: OidcConfigState,
     isEdit: Boolean,
+    showArcValue: Boolean = false,
     onSave: (OidcConfigState) -> Unit,
     onDismiss: () -> Unit,
 ) {
     var cfg by remember { mutableStateOf(initial) }
+    val canSave =
+                cfg.clientId.isNotBlank() &&
+                cfg.discoveryEndpoint.isNotBlank() &&
+                cfg.redirectUri.isNotBlank() &&
+                cfg.display.isNotBlank()
 
     Column(
         modifier = Modifier
@@ -508,7 +529,10 @@ private fun OidcSheetContent(
         ConfigField("Scopes (comma-separated)", cfg.scopes) { cfg = cfg.copy(scopes = it) }
         ConfigField("Redirect URI", cfg.redirectUri) { cfg = cfg.copy(redirectUri = it) }
         ConfigField("Display Name", cfg.display) { cfg = cfg.copy(display = it) }
-        SheetActions(onDismiss = onDismiss, onSave = { onSave(cfg) })
+        if (showArcValue) {
+            ConfigField("ACR Value", cfg.arcValue) { cfg = cfg.copy(arcValue = it) }
+        }
+        SheetActions(onDismiss = onDismiss, onSave = { onSave(cfg) }, canSave = canSave)
         Spacer(Modifier.height(8.dp))
     }
 }
@@ -518,7 +542,11 @@ private fun OidcSheetContent(
 // ---------------------------------------------------------------------------
 
 @Composable
-private fun SheetActions(onDismiss: () -> Unit, onSave: () -> Unit) {
+private fun SheetActions(
+    onDismiss: () -> Unit,
+    onSave: () -> Unit,
+    canSave: Boolean,
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -528,7 +556,7 @@ private fun SheetActions(onDismiss: () -> Unit, onSave: () -> Unit) {
         OutlinedButton(onClick = onDismiss, modifier = Modifier.weight(1f)) {
             Text("Cancel")
         }
-        Button(onClick = onSave, modifier = Modifier.weight(1f)) {
+        Button(onClick = onSave, modifier = Modifier.weight(1f), enabled = canSave) {
             Text("Save & Apply")
         }
     }
