@@ -26,7 +26,7 @@ import androidx.compose.ui.unit.dp
 import com.pingidentity.browser.BrowserLauncher
 import com.pingidentity.idp.davinci.IdpCollector
 import com.pingidentity.samples.pingsampleapp.R
-import com.pingidentity.samples.pingsampleapp.config.redirectUri
+import com.pingidentity.samples.pingsampleapp.config.daVinciRedirectUri
 import kotlinx.coroutines.launch
 
 @Composable
@@ -63,7 +63,7 @@ fun SocialLoginButton(
                             setShowTitle(false)
                             setUrlBarHidingEnabled(true)
                         }
-                        val result = idpCollector.authorize(redirectUri)
+                        val result = idpCollector.authorize(daVinciRedirectUri)
                         result.onSuccess {
                             onNext()
                         }
@@ -93,7 +93,7 @@ fun SocialLoginButton(
                                 setShowTitle(false)
                                 setUrlBarHidingEnabled(true)
                             }
-                            val result = idpCollector.authorize(redirectUri)
+                            val result = idpCollector.authorize(daVinciRedirectUri)
                             result.onSuccess { onNext() }
                             result.onFailure {
                                 Log.e(
