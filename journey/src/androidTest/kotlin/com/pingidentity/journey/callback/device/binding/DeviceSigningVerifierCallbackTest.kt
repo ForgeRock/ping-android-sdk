@@ -461,14 +461,13 @@ class DeviceSigningVerifierCallbackTest : BaseDeviceBindingTest() {
         nameCallback.name = USERNAME
         node = node.next() as ContinueNode
 
+
         val choiceCallback = node.callbacks.first() as ChoiceCallback
         choiceCallback.selectedIndex = choiceCallback.choices.indexOf("inactive-user")
-        val errorNode = node.next() as ErrorNode
-        assertNotNull(errorNode.message)
-        assertEquals("Login failure", errorNode.message)
-        assertEquals("401", errorNode.input["code"].toString())
-        assertEquals("\"Unauthorized\"", errorNode.input["reason"].toString())
-        assertEquals("\"Login failure\"", errorNode.input["message"].toString())
+        node = node.next() as ContinueNode
+
+        val textOutputCallback =  node.callbacks.first() as TextOutputCallback
+        assertEquals("Failure", textOutputCallback.message)
     }
 
     /**

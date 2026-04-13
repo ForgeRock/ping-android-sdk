@@ -30,6 +30,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.fail
 import org.junit.Before
+import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -140,6 +141,7 @@ class KeyAttestationTest : BaseDeviceBindingTest() {
      */
     @Test
     @RequiresDevice
+    @Ignore("This test is currently ignored due to bug in AIC - see TRIAGE-33916")
     fun testKeyAttestationTransientStateVariable() = runTest {
         val user = registerRandomUser()
         // Ensure that when Key Attestation toggle button is enabled in the Device Binding node,
