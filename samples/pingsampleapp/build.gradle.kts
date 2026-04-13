@@ -52,6 +52,9 @@ android {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
+        jniLibs {
+            pickFirsts += "lib/*/libtool-file.so"
+        }
     }
 }
 
@@ -85,6 +88,8 @@ dependencies {
     implementation(project(":mfa:fido"))
     implementation(project(":mfa:oath"))
     implementation(project(":mfa:push"))
+    implementation(project(":mfa:auth-migration"))
+    implementation(project(":foundation:migration"))
 
     //Application Pin
     implementation(libs.bcpkix.jdk18on)
