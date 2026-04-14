@@ -5,6 +5,7 @@
 - Added new `mfa-commons` module [SDKS-4106]
 - Added new `mfa-oath` module [SDKS-4021]
 - Added new `mfa-push` module [SDKS-4023]
+- Added new `auth-migration` module [SDKS-4716]
 - Added new `fido` module [SDKS-4134]
 - Added new `device-binding`, `device-binding-ui` and `device-binding-migration` modules [SDKS-4115]
 - Added new `device-id` module [SDKS-4120]
