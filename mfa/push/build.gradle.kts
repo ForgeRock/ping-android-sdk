@@ -1,14 +1,15 @@
 /*
- * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2025-2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
  */
+
 description = "PUSH library"
 
 plugins {
     id("com.pingidentity.convention.android.library")
-    // id("com.pingidentity.convention.centralPublish") // we are not publishing this module for now
+    id("com.pingidentity.convention.centralPublish")
     id("com.pingidentity.convention.jacoco")
     alias(libs.plugins.androidLibrary)
     alias(libs.plugins.kotlinAndroid)
@@ -24,6 +25,20 @@ android {
             enableUnitTestCoverage = true
         }
     }
+
+    testOptions {
+        unitTests {
+            isIncludeAndroidResources = true
+            all {
+                // Add JVM arguments to exclude Android framework classes from instrumentation
+                // This applies whether running via Gradle or Android Studio's coverage runner
+                it.jvmArgs(
+                    "-noverify",
+                    "-XX:+IgnoreUnrecognizedVMOptions"
+                )
+            }
+        }
+    }
 }
 
 dependencies {
@@ -32,6 +47,7 @@ dependencies {
     implementation(project(":foundation:logger"))
     implementation(project(":foundation:android"))
     implementation(project(":foundation:utils"))
+    implementation(project(":foundation:network"))
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
@@ -47,13 +63,8 @@ dependencies {
     // SQL Cipher for encrypted database
     implementation(libs.sqlcipher)
 
-    // HTTP Client
-    implementation(libs.ktor.client.core)
-    implementation(libs.ktor.client.okhttp)
-    implementation(libs.ktor.client.logging)
-    implementation(libs.ktor.client.cio)
-
     // Firebase Cloud Messaging for push notifications
+    implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.messaging)
 
     // Testing dependencies

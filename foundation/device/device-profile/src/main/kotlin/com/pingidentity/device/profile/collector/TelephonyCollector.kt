@@ -58,7 +58,6 @@ val TelephonyCollector by lazy {
  *   Returns null if not available or if the device doesn't support telephony.
  *   Examples: "Verizon", "AT&T", "Rogers", "Vodafone"
  *
- * @sample
  * ```kotlin
  * val telephonyInfo = TelephonyInfo(
  *     networkCountryIso = "US",

@@ -7,6 +7,7 @@
 
 package com.pingidentity.journey.module
 
+import android.net.Uri
 import com.pingidentity.exception.ApiException
 import com.pingidentity.journey.Constants.ACCEPT_API_VERSION
 import com.pingidentity.journey.Constants.RESOURCE_2_1_PROTOCOL_1_0
@@ -30,14 +31,7 @@ import com.pingidentity.oidc.Pkce
 import com.pingidentity.oidc.exception.AuthorizeException
 import com.pingidentity.orchestrate.EmptySession
 import com.pingidentity.orchestrate.Session
-import io.ktor.client.call.body
-import io.ktor.client.request.get
-import io.ktor.client.request.headers
-import io.ktor.client.request.parameter
-import io.ktor.client.request.url
-import io.ktor.http.HttpHeaders
-import io.ktor.http.HttpStatusCode
-import io.ktor.http.Url
+import java.net.HttpURLConnection
 
 /**
  * Creates an agent for handling session-based authentication.
@@ -62,8 +56,8 @@ internal fun sessionAgent(
                 throw AuthorizeException("No Session, please start Journey flow to authenticate.")
             }
             val pkce = Pkce.generate()
-            val response = oidcConfig.oidcClientConfig.httpClient.get {
-                url(oidcConfig.oidcClientConfig.openId.authorizationEndpoint)
+            val response = oidcConfig.oidcClientConfig.httpClient.request {
+                url = oidcConfig.oidcClientConfig.openId.authorizationEndpoint
                 parameter(CLIENT_ID, oidcConfig.oidcClientConfig.clientId)
                 parameter(Constants.SCOPE, oidcConfig.oidcClientConfig.scopes.joinToString(" "))
                 parameter(RESPONSE_TYPE, CODE)
@@ -91,15 +85,14 @@ internal fun sessionAgent(
                 oidcConfig.oidcClientConfig.uiLocales?.let {
                     parameter(UI_LOCATES, it)
                 }
-                headers {
-                    append(ACCEPT_API_VERSION, RESOURCE_2_1_PROTOCOL_1_0)
-                    append(cookieName, session.value)
-                }
+                header(ACCEPT_API_VERSION, RESOURCE_2_1_PROTOCOL_1_0)
+                header(cookieName, session.value)
             }
-            if (response.status == HttpStatusCode.Found) { // Check if the status is redirect
-                val locationHeader = response.headers[HttpHeaders.Location]
+            if (response.status == HttpURLConnection.HTTP_MOVED_TEMP) { // Check if the status is redirect
+                val locationHeader = response.header("Location")
                 locationHeader?.let {
-                    Url(it).parameters["code"]?.let { code ->
+                    val uri = Uri.parse(it)
+                    uri.getQueryParameter("code")?.let { code ->
                         return AuthCode(code, pkce.codeVerifier)
                     }
                 }
@@ -107,7 +100,7 @@ internal fun sessionAgent(
             onAuthorizeFailed()
             throw AuthorizeException(
                 "Authorize failed, session is discarded. Please start Journey flow to authenticate.",
-                ApiException(response.status.value, response.body())
+                ApiException(response.status, response.body())
             )
         }
 

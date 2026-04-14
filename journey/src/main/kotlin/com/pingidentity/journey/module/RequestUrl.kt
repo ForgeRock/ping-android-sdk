@@ -18,7 +18,7 @@ import com.pingidentity.journey.Constants.START_REQUEST
 import com.pingidentity.journey.journey
 import com.pingidentity.journey.options
 import com.pingidentity.orchestrate.Module
-import com.pingidentity.orchestrate.Request
+import com.pingidentity.network.HttpRequest as Request
 
 /**
  * The RequestUrl module is responsible for initiating the authentication journey.
@@ -27,7 +27,7 @@ import com.pingidentity.orchestrate.Request
 val RequestUrl = Module.of {
 
     start { request ->
-        request.url("${journey.options.serverUrl}/json/realms/${journey.options.realm}/authenticate")
+        request.url = "${journey.options.serverUrl}/json/realms/${journey.options.realm}/authenticate"
         flowContext.getValue<Request.() -> Unit>(START_REQUEST)?.invoke(request) ?: run {
             // Default parameters
             request.parameter(AUTH_INDEX_TYPE, SERVICE)
@@ -39,7 +39,7 @@ val RequestUrl = Module.of {
         flowContext.getValue<Boolean>(NO_SESSION)?.let {
             request.parameter(NO_SESSION_PARAM, it.toString())
         }
-        request.body()
+        request.post()
         request
     }
 

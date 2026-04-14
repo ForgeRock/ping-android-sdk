@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2025 - 2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -34,7 +34,11 @@ object LegacyDeviceIdentifier : DeviceIdentifier {
      *
      * @return A unique identifier string for the device
      */
-    override val id: suspend () -> String = { catch { identifier() } }
+    override val id: suspend () -> String = {
+        catch {
+            identifier() ?: DefaultDeviceIdentifier.id()
+        }
+    }
 
     /**
      * Generates the device identifier by checking for a legacy key in the KeyStore.
@@ -43,13 +47,12 @@ object LegacyDeviceIdentifier : DeviceIdentifier {
      *
      * @return A composite identifier string or the default device identifier
      */
-    @OptIn(ExperimentalStdlibApi::class)
-    private suspend fun identifier(): String {
+    internal suspend fun identifier(): String? {
         return key()?.let {
             AndroidIDDeviceIdentifier.id() + "-" +
                     MessageDigest.getInstance(KeyProperties.DIGEST_SHA1)
                         .digest(it.encoded).toHexString()
-        } ?: DefaultDeviceIdentifier.id()
+        }
     }
 
     /**

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2025-2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -8,27 +8,27 @@
 package com.pingidentity.mfa.push
 
 import android.util.Base64
+import com.pingidentity.logger.Logger
+import com.pingidentity.mfa.commons.util.JwtUtils
+import com.pingidentity.mfa.push.PushConstants.DEFAULT_DEVICE_NAME
+import com.pingidentity.mfa.push.PushConstants.DEFAULT_TTL_SECONDS
 import com.pingidentity.mfa.push.PushConstants.KEY_ADDITIONAL_DATA
 import com.pingidentity.mfa.push.PushConstants.KEY_AMLB_COOKIE
 import com.pingidentity.mfa.push.PushConstants.KEY_CHALLENGE
 import com.pingidentity.mfa.push.PushConstants.KEY_CONTEXT_INFO
 import com.pingidentity.mfa.push.PushConstants.KEY_CREDENTIAL_ID
 import com.pingidentity.mfa.push.PushConstants.KEY_CUSTOM_PAYLOAD
+import com.pingidentity.mfa.push.PushConstants.KEY_DEVICE_NAME
+import com.pingidentity.mfa.push.PushConstants.KEY_MESSAGE
+import com.pingidentity.mfa.push.PushConstants.KEY_MESSAGE_ID
 import com.pingidentity.mfa.push.PushConstants.KEY_MESSAGE_TEXT
 import com.pingidentity.mfa.push.PushConstants.KEY_NUMBERS_CHALLENGE
 import com.pingidentity.mfa.push.PushConstants.KEY_PUSH_TYPE
 import com.pingidentity.mfa.push.PushConstants.KEY_RAW_JWT
-import com.pingidentity.mfa.push.PushConstants.KEY_TTL
-import com.pingidentity.mfa.push.PushConstants.KEY_USER_ID
-import com.pingidentity.logger.Logger
-import com.pingidentity.mfa.commons.util.JwtUtils
-import com.pingidentity.mfa.push.PushConstants.DEFAULT_DEVICE_NAME
-import com.pingidentity.mfa.push.PushConstants.DEFAULT_TTL_SECONDS
-import com.pingidentity.mfa.push.PushConstants.KEY_DEVICE_NAME
-import com.pingidentity.mfa.push.PushConstants.KEY_MESSAGE
-import com.pingidentity.mfa.push.PushConstants.KEY_MESSAGE_ID
 import com.pingidentity.mfa.push.PushConstants.KEY_TIME_INTERVAL
-import io.ktor.client.HttpClient
+import com.pingidentity.mfa.push.PushConstants.KEY_TTL
+import com.pingidentity.mfa.push.PushConstants.KEY_USERNAME
+import com.pingidentity.network.HttpClient
 
 /**
  * This class processes push notifications from PingAM service, handling the parsing of JWT messages,
@@ -203,7 +203,7 @@ internal class PingAMPushHandler(
             numbersChallenge?.let { result[KEY_NUMBERS_CHALLENGE] = it }
             contextInfo?.let { result[KEY_CONTEXT_INFO] = it }
             pushType?.let { result[KEY_PUSH_TYPE] = it }
-            userId?.let { result[KEY_USER_ID] = it }
+            userId?.let { result[KEY_USERNAME] = it }
             
             timeIntervalString?.let { currentIntervalString ->
                 try {

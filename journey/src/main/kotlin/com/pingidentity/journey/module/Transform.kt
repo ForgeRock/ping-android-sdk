@@ -27,7 +27,6 @@ import com.pingidentity.orchestrate.FailureNode
 import com.pingidentity.orchestrate.FlowContext
 import com.pingidentity.orchestrate.Module
 import com.pingidentity.orchestrate.Node
-import com.pingidentity.orchestrate.Request
 import com.pingidentity.orchestrate.SuccessNode
 import com.pingidentity.orchestrate.catch
 import kotlinx.serialization.json.Json
@@ -38,13 +37,13 @@ import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
-import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
+import com.pingidentity.network.HttpRequest as Request
 
 internal val NodeTransform =
     Module.of {
         transform {
-            when (it.status()) {
+            when (it.status) {
                 200 -> {
                     transform(this, workflow, it.body().asJson())
                 }
@@ -53,7 +52,7 @@ internal val NodeTransform =
                     catch {
                         FailureNode(
                             ApiException(
-                                it.status(),
+                                it.status,
                                 "Unexpected redirect to ${it.header("location") ?: ""}"
                             )
                         )
@@ -67,7 +66,7 @@ internal val NodeTransform =
                         val errorText = errorBody["code"]?.jsonPrimitive?.contentOrNull
                         if (errorCode == 1999 || errorText == "requestTimedOut") {
                             // Client-side timeout or unrecoverable error
-                            FailureNode(ApiException(it.status(), errorMessage))
+                            FailureNode(ApiException(it.status, errorMessage))
                         } else {
                             // API error
                             error(this, errorBody)
@@ -108,24 +107,27 @@ private fun transform(
         return object : ContinueNode(context, journey, json, callbacks) {
             private fun asJson(): JsonObject {
                 return buildJsonObject {
-                    put(AUTH_ID, json[AUTH_ID]?.jsonPrimitive?.content ?: "")
-                    putJsonArray(CALLBACKS) {
-                        callbacks.forEach {
-                            if (it.payload().isNotEmpty()) {
-                                add(it.payload())
+                    json.forEach { (key, value) ->
+                        if (key == CALLBACKS) {
+                            putJsonArray(CALLBACKS) {
+                                callbacks.forEach {
+                                    if (it.payload().isNotEmpty()) {
+                                        add(it.payload())
+                                    }
+                                }
                             }
+                        } else {
+                            put(key, value)
                         }
                     }
-                }
+               }
             }
 
             override fun asRequest(): Request {
-                val request = Request().apply {
-                    url(
-                        "${journey.options.serverUrl}/json/realms/${journey.options.realm}/authenticate"
-                    )
+                val request = journey.config.httpClient.request().apply {
+                    url = "${journey.options.serverUrl}/json/realms/${journey.options.realm}/authenticate"
                     header(CONTENT_TYPE, APPLICATION_JSON)
-                    body(asJson())
+                    post(asJson())
                 }
                 return callbacks.request(context, request)
             }

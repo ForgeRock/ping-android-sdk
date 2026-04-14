@@ -7,6 +7,7 @@
 
 package com.pingidentity.oidc
 
+import com.pingidentity.network.ktor.KtorHttpClient
 import com.pingidentity.oidc.agent.BrowserConfig
 import com.pingidentity.oidc.agent.browser
 import com.pingidentity.storage.MemoryStorage
@@ -123,7 +124,7 @@ class OidcClientTest {
                 }
             val oidcClient =
                 OidcClient {
-                    httpClient = HttpClient(mockEngine)
+                    httpClient = KtorHttpClient(HttpClient(mockEngine))
                     discoveryEndpoint = "http://localhost/openid-configuration"
                     redirectUri = "http://localhost/redirect"
                     clientId = "test-client-id"
@@ -146,7 +147,7 @@ class OidcClientTest {
         runTest {
             val oidcClient =
                 OidcClient {
-                    this.httpClient = HttpClient(mockEngine)
+                    this.httpClient = KtorHttpClient(HttpClient(mockEngine))
                     discoveryEndpoint = "http://localhost/openid-configuration"
                     redirectUri = "http://localhost/redirect"
                     clientId = "test-client-id"
@@ -174,7 +175,7 @@ class OidcClientTest {
         runTest {
             val oidcClient =
                 OidcClient {
-                    this.httpClient = HttpClient(mockEngine)
+                    this.httpClient = KtorHttpClient(HttpClient(mockEngine))
                     discoveryEndpoint = "http://localhost/openid-configuration"
                     redirectUri = "http://localhost/redirect"
                     clientId = "test-client-id"
@@ -212,7 +213,7 @@ class OidcClientTest {
     @Test
     fun `revoke should delete token from storage`() =
         runTest {
-            val httpClient = HttpClient(mockEngine)
+            val httpClient = KtorHttpClient(HttpClient(mockEngine))
             val oidcClientConfig =
                 OidcClientConfig().apply {
                     this.httpClient = httpClient
@@ -239,7 +240,7 @@ class OidcClientTest {
     @Test
     fun `refresh should failed if no AccessToken`() =
         runTest {
-            val httpClient = HttpClient(mockEngine)
+            val httpClient = KtorHttpClient(HttpClient(mockEngine))
             val oidcClientConfig =
                 OidcClientConfig().apply {
                     this.httpClient = httpClient
@@ -264,7 +265,7 @@ class OidcClientTest {
     @Test
     fun `refresh should refresh token and revoke non expired access token`() =
         runTest {
-            val httpClient = HttpClient(mockEngine)
+            val httpClient = KtorHttpClient(HttpClient(mockEngine))
             val oidcClientConfig =
                 OidcClientConfig().apply {
                     this.httpClient = httpClient
@@ -329,7 +330,7 @@ class OidcClientTest {
         runTest {
             val oidcClient =
                 OidcClient {
-                    httpClient = HttpClient(mockEngine)
+                    httpClient = KtorHttpClient(HttpClient(mockEngine))
                     discoveryEndpoint = "http://localhost/openid-configuration"
                     redirectUri = "http://localhost/redirect"
                     clientId = "test-client-id"
@@ -347,7 +348,7 @@ class OidcClientTest {
     @Test
     fun `endSession should end session and revoke token`() =
         runTest {
-            val httpClient = HttpClient(mockEngine)
+            val httpClient = KtorHttpClient(HttpClient(mockEngine))
             val oidcClientConfig =
                 OidcClientConfig().apply {
                     this.httpClient = httpClient
@@ -416,7 +417,7 @@ class OidcClientTest {
                         }
                     }
                 }
-            val httpClient = HttpClient(mockEngine)
+            val httpClient = KtorHttpClient(HttpClient(mockEngine))
             val oidcClientConfig =
                 OidcClientConfig().apply {
                     this.httpClient = httpClient
@@ -469,7 +470,7 @@ class OidcClientTest {
                         }
                     }
                 }
-            val httpClient = HttpClient(mockEngine)
+            val httpClient = KtorHttpClient(HttpClient(mockEngine))
             val oidcClientConfig =
                 OidcClientConfig().apply {
                     this.httpClient = httpClient
@@ -514,7 +515,7 @@ class OidcClientTest {
                 }
             val oidcClient =
                 OidcClient {
-                    this.httpClient = HttpClient(mockEngine)
+                    this.httpClient = KtorHttpClient(HttpClient(mockEngine))
                     discoveryEndpoint = "http://localhost/openid-configuration"
                     redirectUri = "http://localhost/redirect"
                     clientId = "test-client-id"
@@ -554,7 +555,7 @@ class OidcClientTest {
                 }
             val oidcClient =
                 OidcClient {
-                    this.httpClient = HttpClient(mockEngine)
+                    this.httpClient = KtorHttpClient(HttpClient(mockEngine))
                     discoveryEndpoint = "http://localhost/openid-configuration"
                     redirectUri = "http://localhost/redirect"
                     clientId = "test-client-id"
@@ -598,7 +599,7 @@ class OidcClientTest {
                 }
             val oidcClient =
                 OidcClient {
-                    this.httpClient = HttpClient(mockEngine)
+                    this.httpClient = KtorHttpClient(HttpClient(mockEngine))
                     discoveryEndpoint = "http://localhost/openid-configuration"
                     redirectUri = "http://localhost/redirect"
                     clientId = "test-client-id"
@@ -650,7 +651,7 @@ class OidcClientTest {
                 }
             val oidcClient =
                 OidcClient {
-                    this.httpClient = HttpClient(mockEngine)
+                    this.httpClient = KtorHttpClient(HttpClient(mockEngine))
                     discoveryEndpoint = "http://localhost/openid-configuration"
                     redirectUri = "http://localhost/redirect"
                     clientId = "test-client-id"

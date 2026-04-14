@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2025-2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -10,27 +10,18 @@ package com.pingidentity.mfa.push
 import android.util.Base64
 import com.pingidentity.exception.ApiException
 import com.pingidentity.logger.Logger
-import com.pingidentity.mfa.commons.json
 import com.pingidentity.mfa.commons.util.JwtUtils
 import com.pingidentity.mfa.push.PushConstants.RESPONSE_ALGORITHM
-import io.ktor.client.HttpClient
-import io.ktor.client.call.body
-import io.ktor.client.request.headers
-import io.ktor.client.request.post
-import io.ktor.client.request.setBody
-import io.ktor.client.request.url
-import io.ktor.client.statement.HttpResponse
-import io.ktor.http.ContentType
-import io.ktor.http.contentType
-import io.ktor.http.isSuccess
+import com.pingidentity.network.HttpClient
+import com.pingidentity.network.HttpResponse
+import com.pingidentity.network.isSuccess
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import java.net.URL
 import java.security.InvalidKeyException
 import java.security.NoSuchAlgorithmException
@@ -97,34 +88,28 @@ class PingAMPushResponder(
             // Generate JWT
             val jwt = generateJwt(base64Secret, payload)
 
-            // Create request body
-            val requestBody = mapOf(
-                PushConstants.KEY_MESSAGE_ID to messageId,
-                PushConstants.KEY_JWT to jwt,
-            )
-
             // Make the HTTP request
-            val response: HttpResponse = httpClient.post {
-                url(endpoint)
-                contentType(ContentType.Application.Json)
-                headers {
-                    append(PushConstants.HEADER_CONTENT_TYPE, PushConstants.APPLICATION_JSON)
-                    append(
-                        PushConstants.HEADER_ACCEPT_API_VERSION,
-                        PushConstants.ACCEPT_API_VERSION
-                    )
-                    if (amlbCookie != null) {
-                        append(PushConstants.HEADER_COOKIE, amlbCookie)
-                    }
+            val response: HttpResponse = httpClient.request {
+                url = endpoint
+                header(PushConstants.HEADER_CONTENT_TYPE, PushConstants.APPLICATION_JSON)
+                header(
+                    PushConstants.HEADER_ACCEPT_API_VERSION,
+                    PushConstants.ACCEPT_API_VERSION
+                )
+                if (amlbCookie != null) {
+                    header(PushConstants.HEADER_COOKIE, amlbCookie)
                 }
-                setBody(Json.Default.encodeToString(mapToJsonElement(requestBody)))
+                post(buildJsonObject {
+                    put(PushConstants.KEY_MESSAGE_ID, JsonPrimitive(messageId))
+                    put(PushConstants.KEY_JWT, JsonPrimitive(jwt))
+                })
             }
 
             // Check if the response was successful
             if (response.status.isSuccess()) {
                 return@withContext true
             } else {
-                throw ApiException(response.status.value, response.body())
+                throw ApiException(response.status, response.body())
             }
         } catch (e: Exception) {
             coroutineContext.ensureActive()
@@ -162,34 +147,30 @@ class PingAMPushResponder(
             val jwt = generateJwt(credential.sharedSecret, payload)
 
             // Make the HTTP request
-            val response: HttpResponse = httpClient.post {
-                url(url.toString())
-                contentType(ContentType.Application.Json)
-                headers {
-                    append(PushConstants.HEADER_CONTENT_TYPE, PushConstants.APPLICATION_JSON)
-                    append(
-                        PushConstants.HEADER_ACCEPT_API_VERSION,
-                        PushConstants.ACCEPT_API_VERSION
-                    )
-                }
-                val requestBody = mutableMapOf<String,Any>(
-                    PushConstants.KEY_MECHANISM_UID to credential.id,
-                    PushConstants.KEY_JWT to jwt
+            val response: HttpResponse = httpClient.request {
+                this.url = url.toString()
+                header(PushConstants.HEADER_CONTENT_TYPE, PushConstants.APPLICATION_JSON)
+                header(
+                    PushConstants.HEADER_ACCEPT_API_VERSION,
+                    PushConstants.ACCEPT_API_VERSION
                 )
+                val requestBody = buildJsonObject {
+                    put(PushConstants.KEY_MECHANISM_UID, credential.id)
+                    put(PushConstants.KEY_JWT, jwt)
+                    credential.userId?.let {
+                        put(PushConstants.KEY_USERNAME, it)
+                    }
+                }
 
                 // Add userId to the request body if available
-                credential.userId?.let {
-                    requestBody[PushConstants.KEY_USER_ID] = it
-                }
-
-                setBody(Json.Default.encodeToString(mapToJsonElement(requestBody)))
+                post(requestBody)
             }
 
             // Check if the response was successful
             if (response.status.isSuccess()) {
                 return@withContext true
             } else {
-                throw ApiException(response.status.value, response.body())
+                throw ApiException(response.status, response.body())
             }
         } catch (e: Exception) {
             coroutineContext.ensureActive()
@@ -243,32 +224,29 @@ class PingAMPushResponder(
             val jwt = generateJwt(credential.sharedSecret, payload)
 
             // Make the HTTP request
-            val response: HttpResponse = httpClient.post {
-                url(url.toString())
-                contentType(ContentType.Application.Json)
-                headers {
-                    append(PushConstants.HEADER_CONTENT_TYPE, PushConstants.APPLICATION_JSON)
-                    append(
-                        PushConstants.HEADER_ACCEPT_API_VERSION,
-                        PushConstants.ACCEPT_API_VERSION
-                    )
-                    // Add AMLB cookie if present in the notification
-                    notification.loadBalancer?.let {
-                        append(PushConstants.HEADER_COOKIE, it)
-                    }
-                }
-                val requestBody = mapOf(
-                    PushConstants.KEY_MESSAGE_ID to notification.messageId,
-                    PushConstants.KEY_JWT to jwt
+            val response: HttpResponse = httpClient.request {
+                this.url = url.toString()
+                header(PushConstants.HEADER_CONTENT_TYPE, PushConstants.APPLICATION_JSON)
+                header(
+                    PushConstants.HEADER_ACCEPT_API_VERSION,
+                    PushConstants.ACCEPT_API_VERSION
                 )
-                setBody(json.encodeToString(mapToJsonElement(requestBody)))
+                // Add AMLB cookie if present in the notification
+                notification.loadBalancer?.let {
+                    header(PushConstants.HEADER_COOKIE, it)
+                }
+                post(buildJsonObject {
+                    put(PushConstants.KEY_MESSAGE_ID, notification.messageId)
+                    put(PushConstants.KEY_JWT, jwt)
+                })
+
             }
 
             // Check if the response was successful
             if (response.status.isSuccess()) {
                 return@withContext true
             } else {
-                throw ApiException(response.status.value, response.body())
+                throw ApiException(response.status, response.body())
             }
         } catch (e: Exception) {
             coroutineContext.ensureActive()
@@ -341,6 +319,7 @@ class PingAMPushResponder(
                         key,
                         mapToJsonElement(value as Map<String, Any>)
                     )
+
                     else -> put(key, JsonPrimitive(value.toString()))
                 }
             }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2025-2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -7,15 +7,16 @@
 
 package com.pingidentity.mfa.oath
 
+import com.pingidentity.mfa.commons.MfaConfiguration
 import com.pingidentity.mfa.commons.exception.CredentialLockedException
+import com.pingidentity.mfa.commons.exception.DuplicateCredentialException
 import com.pingidentity.mfa.commons.exception.MfaException
 import com.pingidentity.mfa.commons.exception.MfaPolicyViolationException
-import com.pingidentity.mfa.commons.MfaConfiguration
 import com.pingidentity.mfa.commons.policy.MfaPolicyEvaluator
 import com.pingidentity.mfa.oath.storage.OathStorage
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import java.util.concurrent.ConcurrentHashMap
-import kotlin.coroutines.coroutineContext
 
 /**
  * Service class that provides OATH functionality including credential management
@@ -90,9 +91,26 @@ internal class OathService(
      * @param credential The OathCredential to add.
      * @return The created OathCredential (potentially locked due to policy violation).
      * @throws MfaException if the credential cannot be created.
+     * @throws DuplicateCredentialException if a credential with the same issuer and account name already exists.
      */
     suspend fun addCredential(credential: OathCredential): OathCredential {
         try {
+            // Check for duplicate credential by issuer and account name
+            val existingCredential = storage.getCredentialByIssuerAndAccount(
+                credential.issuer,
+                credential.accountName
+            )
+            
+            // Only throw duplicate exception if the existing credential has a different ID
+            // (same ID means we're updating, not creating a duplicate)
+            if (existingCredential != null && existingCredential.id != credential.id) {
+                logger.w("Credential already exists for issuer '${credential.issuer}' and account '${credential.accountName}'")
+                throw DuplicateCredentialException(
+                    issuer = credential.issuer,
+                    accountName = credential.accountName
+                )
+            }
+
             // Evaluate policies at runtime if context is available and policies exist
             logger.d("Evaluating policies for OATH credential: ${credential.id}")
             evaluateAndUpdateCredentialPolicies(credential, store = false)
@@ -108,7 +126,7 @@ internal class OathService(
             logger.d("Added OATH credential with ID: ${credential.id} (locked: ${credential.isLocked})")
             return credential
         } catch (e: Exception) {
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
             logger.e("Failed to add credential: ${e.message}", e)
             throw MfaException("Failed to add credential", e)
         }
@@ -143,7 +161,7 @@ internal class OathService(
 
             return credentials
         } catch (e: Exception) {
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
             logger.e("Failed to get credentials: ${e.message}", e)
             throw MfaException("Failed to get credentials", e)
         }
@@ -204,7 +222,7 @@ internal class OathService(
 
             return removed
         } catch (e: Exception) {
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
             logger.e("Failed to remove credential with ID $credentialId: ${e.message}", e)
             throw MfaException("Failed to remove credential with ID $credentialId", e)
         }
@@ -221,7 +239,7 @@ internal class OathService(
         try {
             return OathAlgorithmHelper.generateCode(credential, configuration.logger)
         } catch (e: Exception) {
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
             logger.e("Failed to generate code for credential: ${e.message}", e)
             throw MfaException("Failed to generate code", e)
         }
@@ -263,7 +281,7 @@ internal class OathService(
         } catch (e: CredentialLockedException) {
             throw e  // Re-throw credential locked exceptions as-is
         } catch (e: Exception) {
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
             logger.e("Failed to generate code for credential with ID $credentialId: ${e.message}", e)
             throw MfaException("Failed to generate code for credential with ID $credentialId", e)
         }

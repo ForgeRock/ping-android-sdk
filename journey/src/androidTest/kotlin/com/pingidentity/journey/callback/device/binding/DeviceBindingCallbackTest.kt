@@ -1,5 +1,6 @@
 /*
- * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2025 - 2025 Ping Identity Corporation. All rights reserved.
+ *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
  */
@@ -9,7 +10,6 @@ package com.pingidentity.journey.callback.device.binding
 import com.pingidentity.device.binding.authenticator.Attestation
 import com.pingidentity.device.binding.authenticator.DeviceBindingAuthenticationType
 import com.pingidentity.device.binding.journey.DeviceBindingCallback
-import com.pingidentity.journey.BaseJourneyTest
 import com.pingidentity.journey.callback.ChoiceCallback
 import com.pingidentity.journey.callback.TextOutputCallback
 import com.pingidentity.journey.module.session
@@ -29,8 +29,9 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import java.time.Instant
 
-class DeviceBindingCallbackTest : BaseJourneyTest() {
+class DeviceBindingCallbackTest : BaseDeviceBindingTest() {
 
     /**
      * Initializes the journey tree and configures the test server before each test.
@@ -42,8 +43,12 @@ class DeviceBindingCallbackTest : BaseJourneyTest() {
 
     @Test
     fun testDeviceBindingDefaults() = runTest {
+        val user = registerRandomUser()
         var node = defaultJourney.start(tree) as ContinueNode
-        node.handleLoginCallbacks()
+        node.handleLoginCallbacks(
+            username = user.username,
+            password = user.password,
+        )
         node = node.next() as ContinueNode
 
         val choiceCallback = node.callbacks.first() as ChoiceCallback
@@ -68,8 +73,12 @@ class DeviceBindingCallbackTest : BaseJourneyTest() {
 
     @Test
     fun testDeviceBindingCustom() = runTest {
+        val user = registerRandomUser()
         var node = defaultJourney.start(tree) as ContinueNode
-        node.handleLoginCallbacks()
+        node.handleLoginCallbacks(
+            username = user.username,
+            password = user.password,
+        )
         node = node.next() as ContinueNode
 
         val choiceCallback = node.callbacks.first() as ChoiceCallback
@@ -91,8 +100,12 @@ class DeviceBindingCallbackTest : BaseJourneyTest() {
 
     @Test
     fun testDeviceBindingBind() = runTest {
+        val user = registerRandomUser()
         var node = defaultJourney.start(tree) as ContinueNode
-        node.handleLoginCallbacks()
+        node.handleLoginCallbacks(
+            username = user.username,
+            password = user.password,
+        )
         node = node.next() as ContinueNode
 
         val choiceCallback = node.callbacks.first() as ChoiceCallback
@@ -114,8 +127,12 @@ class DeviceBindingCallbackTest : BaseJourneyTest() {
 
     @Test
     fun testDeviceBindingExceed() = runTest {
+        val user = registerRandomUser()
         var node = defaultJourney.start(tree) as ContinueNode
-        node.handleLoginCallbacks()
+        node.handleLoginCallbacks(
+            username = user.username,
+            password = user.password,
+        )
         node = node.next() as ContinueNode
 
         var choiceCallback = node.callbacks.first() as ChoiceCallback
@@ -151,8 +168,12 @@ class DeviceBindingCallbackTest : BaseJourneyTest() {
 
     @Test
     fun testDeviceBindingCustomOutcome() = runTest {
+        val user = registerRandomUser()
         var node = defaultJourney.start(tree) as ContinueNode
-        node.handleLoginCallbacks()
+        node.handleLoginCallbacks(
+            username = user.username,
+            password = user.password,
+        )
         node = node.next() as ContinueNode
 
         val choiceCallback = node.callbacks.first() as ChoiceCallback
@@ -175,9 +196,12 @@ class DeviceBindingCallbackTest : BaseJourneyTest() {
     @Test
     fun testDeviceBindingApplicationPin() = runTest {
         withContext(Dispatchers.Default.limitedParallelism(1)) {
-
+            val user = registerRandomUser()
             var node = defaultJourney.start(tree) as ContinueNode
-            node.handleLoginCallbacks()
+            node.handleLoginCallbacks(
+                username = user.username,
+                password = user.password,
+            )
             node = node.next() as ContinueNode
 
             val choiceCallback = node.callbacks.first() as ChoiceCallback
@@ -187,7 +211,7 @@ class DeviceBindingCallbackTest : BaseJourneyTest() {
             val deviceBindingCallback = node.callbacks.first() as DeviceBindingCallback
             assertNotNull(deviceBindingCallback)
             val result = deviceBindingCallback.bind {
-                expirationTime(60)
+                expirationTime = { Instant.now().plusSeconds(60)}
                 appPinConfig {
                     pinCollector { prompt ->
                         "1234".toCharArray()
@@ -212,8 +236,12 @@ class DeviceBindingCallbackTest : BaseJourneyTest() {
 
     @Test
     fun testDeviceBindApplicationIdNotMatchingError() = runTest {
+        val user = registerRandomUser()
         var node = defaultJourney.start(tree) as ContinueNode
-        node.handleLoginCallbacks()
+        node.handleLoginCallbacks(
+            username = user.username,
+            password = user.password,
+        )
         node = node.next() as ContinueNode
 
         val choiceCallback = node.callbacks.first() as ChoiceCallback
@@ -239,9 +267,13 @@ class DeviceBindingCallbackTest : BaseJourneyTest() {
 
     @Test
     fun testDeviceBindingDeviceDataVariable() = runTest {
+        val user = registerRandomUser()
         // This test is to ensure that the Device Binding node sets DeviceBinding.DEVICE variable in shared state
         var node = defaultJourney.start(tree) as ContinueNode
-        node.handleLoginCallbacks()
+        node.handleLoginCallbacks(
+            username = user.username,
+            password = user.password,
+        )
         node = node.next() as ContinueNode
 
         val choiceCallback = node.callbacks.first() as ChoiceCallback

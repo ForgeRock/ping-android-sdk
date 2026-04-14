@@ -1,3 +1,19 @@
+## [2.0.0]
+#### Added
+- Added new `network` module [SDKS-4505]
+- Added new `journey` module [SDKS-3917]
+- Added new `mfa-commons` module [SDKS-4106]
+- Added new `mfa-oath` module [SDKS-4021]
+- Added new `mfa-push` module [SDKS-4023]
+- Added new `auth-migration` module [SDKS-4716]
+- Added new `fido` module [SDKS-4134]
+- Added new `device-binding`, `device-binding-ui` and `device-binding-migration` modules [SDKS-4115]
+- Added new `device-id` module [SDKS-4120]
+- Added new `device-client` module [SDKS-4190]
+- Added new `device-profile` module [SDKS-4300]
+- Added new `device-root` module [SDKS-4365]
+- Added new `recaptcha-enterprise` module [SDKS-4422]
+
 ## [1.3.0]
 #### Added
 - Added new `protect` module [SDKS-4069]

@@ -9,10 +9,10 @@ package com.pingidentity.idp.davinci
 
 import com.pingidentity.idp.IdpClient
 import com.pingidentity.idp.IdpHandler
-import com.pingidentity.orchestrate.Request
-import io.ktor.client.HttpClient
+import com.pingidentity.network.HttpClient
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
+import com.pingidentity.network.HttpRequest as Request
 
 /**
  * A handler class for managing Google Identity Provider (IdP) authorization.
@@ -25,10 +25,10 @@ internal class GoogleRequestHandler(private val httpClient: HttpClient, private 
     override suspend fun authorize(url: String): Request {
         val idpClient = fetch(httpClient, url)
         val result = authorize(idpClient)
-        return Request().apply {
-            url(idpClient.continueUrl ?: "")
+        return httpClient.request().apply {
+            this.url = idpClient.continueUrl ?: ""
             header("Accept", "application/json")
-            body(buildJsonObject {
+            post(buildJsonObject {
                 put("idToken", result.token)
             })
         }

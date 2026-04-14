@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 - 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2025 - 2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -52,6 +52,17 @@ interface PushStorage : MfaStorage {
      * @throws MfaStorageException if the credential cannot be removed.
      */
     suspend fun removePushCredential(credentialId: String): Boolean
+
+    /**
+     * Retrieve a push credential by issuer and account name.
+     * This method performs a case-sensitive lookup to detect duplicate credentials.
+     *
+     * @param issuer The issuer of the credential.
+     * @param accountName The account name of the credential.
+     * @return The Push credential if found, or null if not found.
+     * @throws MfaStorageException if the credential cannot be retrieved.
+     */
+    suspend fun getCredentialByIssuerAndAccount(issuer: String, accountName: String): PushCredential?
 
     /**
      * Store a push notification.

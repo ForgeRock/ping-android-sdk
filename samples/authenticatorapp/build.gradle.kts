@@ -1,3 +1,10 @@
+/*
+ * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ *
+ * This software may be modified and distributed under the terms
+ * of the MIT license. See the LICENSE file for details.
+ */
+
 plugins {
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.kotlinAndroid)
@@ -59,6 +66,14 @@ android {
     }
 }
 
+configurations.all {
+    resolutionStrategy {
+        force("com.google.android.gms:play-services-basement:18.4.0")
+        force("com.google.android.gms:play-services-tasks:18.2.0")
+        force("com.google.android.gms:play-services-base:18.5.0")
+    }
+}
+
 dependencies {
     // Ping SDK dependencies
     implementation(project(":mfa:oath"))
@@ -92,8 +107,8 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.compose)
 
     // HTTP client for reverse geocoding API calls
+    implementation(libs.ktor.client.cio)
     implementation(libs.ktor.client.core)
-    implementation(libs.ktor.client.okhttp)
     implementation(libs.ktor.client.content.negotiation)
     implementation(libs.ktor.serialization.kotlinx.json)
 

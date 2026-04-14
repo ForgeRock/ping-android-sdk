@@ -15,12 +15,12 @@ import com.pingidentity.davinci.plugin.DaVinci
 import com.pingidentity.orchestrate.ContinueNode
 import com.pingidentity.orchestrate.FlowContext
 import com.pingidentity.orchestrate.Module
-import com.pingidentity.orchestrate.Request
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
+import com.pingidentity.network.HttpRequest as Request
 
 internal const val CONTINUE_NODE = "com.pingidentity.davinci.CONTINUE_NODE"
 
@@ -57,7 +57,10 @@ val ContinueNode.category: String
  * @property collectors The collectors of the connector.
  */
 internal class Connector(
-    context: FlowContext, daVinci: DaVinci, input: JsonObject, private val collectors: Collectors
+    context: FlowContext,
+    val daVinci: DaVinci,
+    input: JsonObject,
+    private val collectors: Collectors
 ) : ContinueNode(
     context, daVinci, input, collectors
 ) {
@@ -115,13 +118,10 @@ internal class Connector(
      */
     override fun asRequest(): Request {
 
-        val request = Request().apply {
-            url(
-                input["_links"]?.jsonObject?.get("next")?.jsonObject?.get("href")?.jsonPrimitive?.content
-                    ?: "",
-            )
+        val request = daVinci.config.httpClient.request().apply {
+            url = input["_links"]?.jsonObject?.get("next")?.jsonObject?.get("href")?.jsonPrimitive?.content ?: ""
             header("Content-Type", "application/json")
-            body(asJson())
+            post(asJson())
         }
 
         //Check if there is a collector that override the request

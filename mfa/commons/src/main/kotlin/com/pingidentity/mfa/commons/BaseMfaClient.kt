@@ -8,17 +8,14 @@
 package com.pingidentity.mfa.commons
 
 import com.pingidentity.logger.Logger
-import com.pingidentity.logger.None
 import com.pingidentity.mfa.commons.exception.MfaClientNotInitializedException
 import com.pingidentity.mfa.commons.exception.MfaInitializationException
-import io.ktor.client.HttpClient
-import io.ktor.client.engine.cio.CIO
-import io.ktor.client.plugins.HttpTimeout
-import io.ktor.client.plugins.logging.LogLevel
-import io.ktor.client.plugins.logging.Logging
+import com.pingidentity.network.HttpClient
+import com.pingidentity.network.ktor.HttpClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
+import kotlin.time.Duration
 
 /**
  * Base abstract class for MFA client implementations.
@@ -76,28 +73,12 @@ abstract class BaseMfaClient(
      * Initializes the HTTP client for making network requests.
      * This method is called by [initializeClient] of the client implementation.
      */
-    protected fun initHttp(timeout: Long) {
+    protected fun initHttp(timeout: Duration) {
         // Create HTTP client, if not already initialized
         if (!::httpClient.isInitialized) {
-            httpClient = HttpClient(CIO) {
-                // Install logging plugin for debugging
-                val log = logger
-                followRedirects = false
-                if (logger !is None) {
-                    install(Logging) {
-                        logger =
-                            object : io.ktor.client.plugins.logging.Logger {
-                                override fun log(message: String) {
-                                    log.d(message)
-                                }
-                            }
-                        level = LogLevel.ALL
-                    }
-                }
-                // Install timeout plugin
-                install(HttpTimeout) {
-                    requestTimeoutMillis = timeout
-                }
+            httpClient = HttpClient {
+                logger = this@BaseMfaClient.logger
+                this.timeout = timeout
             }
         }
     }

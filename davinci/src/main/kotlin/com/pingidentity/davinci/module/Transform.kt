@@ -20,13 +20,13 @@ import com.pingidentity.orchestrate.Module
 import com.pingidentity.orchestrate.Node
 import com.pingidentity.orchestrate.Session
 import com.pingidentity.orchestrate.SuccessNode
-import io.ktor.http.HttpStatusCode
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import java.net.HttpURLConnection
 
 /**
  * Module for transforming the response from DaVinci to [Node].
@@ -34,7 +34,7 @@ import kotlinx.serialization.json.jsonPrimitive
 internal val NodeTransform =
     Module.of {
         transform {
-            val statusCode = it.status()
+            val statusCode = it.status
             val body = it.body()
             when (statusCode) {
                 // Check for 4XX errors that are unrecoverable
@@ -73,7 +73,7 @@ internal val NodeTransform =
                     // Filter out 2XX errors with error object
                     val error = jsonResponse["error"]?.jsonObject
                     if (error.isNullOrEmpty().not()) {
-                        return@transform FailureNode(ApiException(HttpStatusCode.OK.value, body))
+                        return@transform FailureNode(ApiException(HttpURLConnection.HTTP_OK, body))
                     }
                     return@transform transform(this, workflow, jsonResponse)
                 }

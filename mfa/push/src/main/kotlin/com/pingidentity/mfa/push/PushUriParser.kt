@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2025-2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -251,7 +251,7 @@ object PushUriParser : UriParser() {
     private fun extractServerEndpoint(url: String): String {
         // Handle URLs without using Uri parser to avoid encoding issues
         val queryIndex = url.indexOf('?')
-        val baseUrl = if (queryIndex > 0) url.substring(0, queryIndex) else url
+        val baseUrl = if (queryIndex > 0) url.take(queryIndex) else url
 
         // Since we're not using Uri.parse, we need to manually decode any percent-encoded characters
         return Uri.decode(baseUrl)

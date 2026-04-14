@@ -9,19 +9,13 @@ package com.pingidentity.oidc
 
 import com.pingidentity.exception.ApiException
 import com.pingidentity.logger.Logger
-import com.pingidentity.logger.None
+import com.pingidentity.network.HttpClient
+import com.pingidentity.network.isSuccess
+import com.pingidentity.network.ktor.HttpClient
 import com.pingidentity.storage.EncryptedDataStoreStorage
 import com.pingidentity.storage.EncryptedDataStoreStorageConfig
 import com.pingidentity.storage.Storage
 import com.pingidentity.utils.PingDsl
-import io.ktor.client.HttpClient
-import io.ktor.client.call.body
-import io.ktor.client.engine.cio.CIO
-import io.ktor.client.plugins.logging.LogLevel
-import io.ktor.client.plugins.logging.Logging
-import io.ktor.client.request.get
-import io.ktor.http.Url
-import io.ktor.http.isSuccess
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -190,20 +184,8 @@ class OidcClientConfig {
     suspend fun init() {
 
         if (!::httpClient.isInitialized) {
-            httpClient = HttpClient(CIO) {
-                val log = logger
-                followRedirects = false
-                if (logger !is None) {
-                    install(Logging) {
-                        logger =
-                            object : io.ktor.client.plugins.logging.Logger {
-                                override fun log(message: String) {
-                                    log.d(message)
-                                }
-                            }
-                        level = LogLevel.ALL
-                    }
-                }
+            httpClient = HttpClient {
+                logger = this@OidcClientConfig.logger
             }
         }
         if (!::tokenStorage.isInitialized) {
@@ -226,13 +208,15 @@ class OidcClientConfig {
      */
     private suspend fun discover() =
         withContext(Dispatchers.IO) {
-            val response = httpClient.get(Url(discoveryEndpoint))
+            val response = httpClient.request {
+                this.url = discoveryEndpoint
+            }
             if (response.status.isSuccess()) {
                 return@withContext with(response) {
-                    json.decodeFromString<OpenIdConfiguration>(call.body())
+                    json.decodeFromString<OpenIdConfiguration>(body())
                 }
             }
-            throw ApiException(response.status.value, response.body())
+            throw ApiException(response.status, response.body())
         }
 
     /**

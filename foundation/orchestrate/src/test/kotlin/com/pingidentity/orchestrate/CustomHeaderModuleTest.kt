@@ -7,6 +7,7 @@
 
 package com.pingidentity.orchestrate
 
+import com.pingidentity.network.ktor.KtorHttpClient
 import com.pingidentity.orchestrate.module.CustomHeader
 import com.pingidentity.testrail.TestRailCase
 import com.pingidentity.testrail.TestRailWatcher
@@ -44,7 +45,7 @@ class CustomHeaderModuleTest {
         }
 
         val workflow = Workflow {
-            httpClient = HttpClient(mockEngine)
+            httpClient = KtorHttpClient(HttpClient(mockEngine))
             module(CustomHeader) {
                 header("X-Custom-Header", "CustomValue")
             }

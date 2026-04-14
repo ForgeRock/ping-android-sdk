@@ -60,7 +60,9 @@ val deviceId = DefaultDeviceIdentifier.id
 
 The `DefaultDeviceIdentifier`:
 
-- Creates and stores a key pair in the Android KeyStore
+- First attempts to retrieve a legacy identifier from the KeyStore using the Android ID as the key
+  alias, if a legacy identifier is found, it is used for backward compatibility, if not found,
+  creates and stores a new key pair in the Android KeyStore
 - Uses the public key as the basis for the device identifier
 - Hashes the key data using SHA-256 for added security
 - Caches the result for efficient access
@@ -119,3 +121,5 @@ val customId = CustomDeviceIdentifier.id
 - **Handle gracefully**: Be prepared to handle cases where the device identifier changes.
 - **Combine with other factors**: For authentication purposes, combine device identifiers with other
   factors like user credentials.
+
+© Copyright 2025-2026 Ping Identity Corporation. All Rights Reserved

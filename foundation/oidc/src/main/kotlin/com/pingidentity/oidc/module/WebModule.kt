@@ -11,7 +11,6 @@ import androidx.core.net.toUri
 import com.pingidentity.browser.BrowserLauncher
 import com.pingidentity.oidc.Constants.CODE
 import com.pingidentity.orchestrate.Module
-import com.pingidentity.orchestrate.Response
 import com.pingidentity.orchestrate.Session
 import com.pingidentity.orchestrate.SuccessNode
 import com.pingidentity.orchestrate.module.Cookies
@@ -21,6 +20,8 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
+import java.net.URL
+import com.pingidentity.network.HttpResponse as Response
 
 internal const val IS_WEB = "IS_WEB"
 
@@ -35,7 +36,7 @@ val Web = Module.of(::WebModuleConfig) {
     transport {
         // launch the browser and return a Response with authorization code
         // When there is exception, it will be handled by the orchestrate module, which will return [FailureNode]
-        val url = it.toUrl()
+        val url = URL(it.url)
         logger.d("Launching browser for OIDC authorization flow with url $url")
         BrowserLauncher.customTabsCustomizer = config.customTabsCustomizer
         BrowserLauncher.authTabCustomizer = config.authTabCustomizer
@@ -48,15 +49,13 @@ val Web = Module.of(::WebModuleConfig) {
 
         object : Response {
             override val request = it
+            override val status: Int
+                get() = 200
 
             override suspend fun body(): String {
                 return buildJsonObject {
                     put(CODE, code)
                 }.toString()
-            }
-
-            override fun status(): Int {
-                return 200 // HTTP OK
             }
 
             override fun cookies(): Cookies {
@@ -65,6 +64,10 @@ val Web = Module.of(::WebModuleConfig) {
 
             override fun header(name: String): String? {
                 return null
+            }
+
+            override fun headers(): Set<Map.Entry<String, List<String>>> {
+                return emptySet()
             }
         }
     }

@@ -21,6 +21,7 @@ android {
 
 dependencies {
     api(project(":foundation:orchestrate"))
+    api(project(":foundation:network"))
     api(libs.kotlinx.serialization.json)
 
     testImplementation(libs.kotlin.test)

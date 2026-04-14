@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2025 - 2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -34,11 +34,11 @@ object DefaultDeviceIdentifier : DeviceIdentifier {
      *
      * @return A unique identifier string for the device
      */
-    @OptIn(ExperimentalStdlibApi::class)
     override val id: suspend () -> String = {
         catch {
-            MessageDigest.getInstance(KeyProperties.DIGEST_SHA256)
-                .digest(KeyManager.identifierKey(KEY_ALIAS).encoded).toHexString()
+            LegacyDeviceIdentifier.identifier()
+                ?: MessageDigest.getInstance(KeyProperties.DIGEST_SHA256)
+                    .digest(KeyManager.identifierKey(KEY_ALIAS).encoded).toHexString()
         }
     }
 

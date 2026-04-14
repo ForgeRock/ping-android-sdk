@@ -84,7 +84,7 @@ val Oidc =
                 } else {
                     config.openId.endSessionEndpoint
                 }
-            request.url(endpoint)
+            request.url = endpoint
             OidcClient(config).endSession {
                 request.parameter(ID_TOKEN_HINT, it)
                 request.parameter(CLIENT_ID, config.clientId)

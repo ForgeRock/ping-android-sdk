@@ -24,6 +24,7 @@ import com.pingidentity.davinci.module.name
 import com.pingidentity.davinci.plugin.collectors
 import com.pingidentity.logger.Logger
 import com.pingidentity.logger.STANDARD
+import com.pingidentity.network.ktor.KtorHttpClient
 import com.pingidentity.oidc.Token
 import com.pingidentity.oidc.module.user
 import com.pingidentity.orchestrate.ContinueNode
@@ -157,7 +158,7 @@ class DaVinciTest {
             val cookieStorage = MemoryStorage<Cookies>()
             val daVinci =
                 DaVinci {
-                    httpClient = HttpClient(mockEngine)
+                    httpClient = KtorHttpClient(HttpClient(mockEngine))
                     // Oidc as module
                     module(Oidc) {
                         clientId = "test"
@@ -251,7 +252,7 @@ class DaVinciTest {
         runTest {
             val daVinci =
                 DaVinci {
-                    httpClient = HttpClient(mockEngine)
+                    httpClient = KtorHttpClient(HttpClient(mockEngine))
                     // Oidc as module
                     module(Oidc) {
                         clientId = "test"
@@ -308,7 +309,7 @@ class DaVinciTest {
             val cookieStorage = MemoryStorage<Cookies>()
             val daVinci =
                 DaVinci {
-                    httpClient = HttpClient(mockEngine)
+                    httpClient = KtorHttpClient(HttpClient(mockEngine))
                     // Oidc as module
                     module(Oidc) {
                         clientId = "test"
@@ -367,7 +368,7 @@ class DaVinciTest {
                 }
             }
         val daVinci = DaVinci {
-            httpClient = HttpClient(mockEngine)
+            httpClient = KtorHttpClient(HttpClient(mockEngine))
             // Oidc as module
             module(Oidc) {
                 clientId = "test"

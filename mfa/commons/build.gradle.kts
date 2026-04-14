@@ -8,7 +8,7 @@ description = "MFA Commons library"
 
 plugins {
     id("com.pingidentity.convention.android.library")
-    // id("com.pingidentity.convention.centralPublish") // we are not publishing this module for now
+    id("com.pingidentity.convention.centralPublish")
     id("com.pingidentity.convention.jacoco")
     alias(libs.plugins.androidLibrary)
     alias(libs.plugins.kotlinAndroid)
@@ -27,6 +27,8 @@ dependencies {
     implementation(project(":foundation:logger"))
     implementation(project(":foundation:android"))
     implementation(project(":foundation:storage"))
+    implementation(project(":foundation:network"))
+    implementation(project(":foundation:device:device-root"))
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
@@ -40,12 +42,6 @@ dependencies {
 
     // JWT Generation and Validation
     implementation(libs.nimbus.jose.jwt)
-
-    // HTTP Client
-    implementation(libs.ktor.client.core)
-    implementation(libs.ktor.client.okhttp)
-    implementation(libs.ktor.client.logging)
-    implementation(libs.ktor.client.cio)
 
     // SQL Cipher for encrypted database
     implementation(libs.sqlcipher)

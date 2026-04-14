@@ -89,6 +89,26 @@ jobs:
       BROWSERSTACK_ACCESS_KEY: ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
       SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
 
+  browserstack-oath-run:
+    name: Run tests in BrowserStack
+    uses: ./.github/workflows/browserstack-oath-run.yaml
+    needs: 
+      - browserstack-prepare-artifacts
+    secrets:
+      BROWSERSTACK_USERNAME: ${{ secrets.BROWSERSTACK_USERNAME }}
+      BROWSERSTACK_ACCESS_KEY: ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
+      SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+
+  browserstack-push-run:
+    name: Run tests in BrowserStack
+    uses: ./.github/workflows/browserstack-push-run.yaml
+    needs: 
+      - browserstack-prepare-artifacts
+    secrets:
+      BROWSERSTACK_USERNAME: ${{ secrets.BROWSERSTACK_USERNAME }}
+      BROWSERSTACK_ACCESS_KEY: ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
+      SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+
   # Wait for BrowserStack davinci test run to finish and publish results
   browserstack-davinci-results:
     name: BrowserStack DaVinci Test Results
@@ -113,6 +133,30 @@ jobs:
     with:
       browserstack-journey-build-id: ${{ needs.browserstack-journey-run.outputs.browserstack-journey-build-id }}
 
+  # Wait for BrowserStack OATH test run to finish and publish results
+  browserstack-oath-results:
+    name: BrowserStack OATH Test Results
+    uses: ./.github/workflows/browserstack-oath-results.yaml
+    needs: browserstack-oath-run
+    secrets:
+      BROWSERSTACK_USERNAME: ${{ secrets.BROWSERSTACK_USERNAME }}
+      BROWSERSTACK_ACCESS_KEY: ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
+      SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+    with:
+      browserstack-oath-build-id: ${{ needs.browserstack-oath-run.outputs.browserstack-oath-build-id }}
+
+  # Wait for BrowserStack PUSH test run to finish and publish results
+  browserstack-push-results:
+    name: BrowserStack PUSH Test Results
+    uses: ./.github/workflows/browserstack-push-results.yaml
+    needs: browserstack-push-run
+    secrets:
+      BROWSERSTACK_USERNAME: ${{ secrets.BROWSERSTACK_USERNAME }}
+      BROWSERSTACK_ACCESS_KEY: ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
+      SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+    with:
+      browserstack-push-build-id: ${{ needs.browserstack-push-run.outputs.browserstack-push-build-id }}
+
   # Run Mend SCA Scan
   mend-sca-scan:
     name: Mend SCA Scan
@@ -130,3 +174,8 @@ jobs:
       MEND_EMAIL: ${{ secrets.MEND_EMAIL }}
       MEND_USER_KEY: ${{ secrets.MEND_USER_KEY }}
       SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+
+  # Generate and publish API docs
+  docs:
+    name: Docs
+    uses: ./.github/workflows/docs.yaml

@@ -11,6 +11,7 @@ import android.content.Intent
 import android.net.Uri
 import androidx.browser.customtabs.CustomTabsIntent
 import com.pingidentity.browser.BrowserLauncher
+import com.pingidentity.network.isSuccess
 import com.pingidentity.oidc.Agent
 import com.pingidentity.oidc.AuthCode
 import com.pingidentity.oidc.Constants.ACR_VALUES
@@ -32,10 +33,6 @@ import com.pingidentity.oidc.Constants.UI_LOCATES
 import com.pingidentity.oidc.OidcConfig
 import com.pingidentity.oidc.Pkce
 import com.pingidentity.utils.PingDsl
-import io.ktor.client.request.get
-import io.ktor.client.request.headers
-import io.ktor.http.HttpHeaders
-import io.ktor.http.isSuccess
 import java.net.URL
 
 /**
@@ -85,14 +82,11 @@ var browser =
                         endpoint = it
                     }
                 }
-                val response = oidcConfig.oidcClientConfig.httpClient.get(endpoint) {
-                    headers {
-                        append(HttpHeaders.Accept, "application/json")
-                    }
-                    url {
-                        parameters.append(ID_TOKEN_HINT, idToken)
-                        parameters.append(CLIENT_ID, oidcConfig.oidcClientConfig.clientId)
-                    }
+                val response = oidcConfig.oidcClientConfig.httpClient.request {
+                    url = endpoint
+                    header("Accept", "application/json")
+                    parameter(ID_TOKEN_HINT, idToken)
+                    parameter(CLIENT_ID, oidcConfig.oidcClientConfig.clientId)
                 }
                 return response.status.isSuccess()
             }

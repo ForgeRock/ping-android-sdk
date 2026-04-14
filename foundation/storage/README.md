@@ -192,3 +192,5 @@ class Memory<T : @Serializable Any> : Storage<T> {
 // Delegate the MemoryStorage to the Storage
 inline fun <reified T : @Serializable Any> MemoryStorage(): Storage<T> = StorageDelegate(Memory())
 ```
+
+© Copyright 2025-2026 Ping Identity Corporation. All Rights Reserved

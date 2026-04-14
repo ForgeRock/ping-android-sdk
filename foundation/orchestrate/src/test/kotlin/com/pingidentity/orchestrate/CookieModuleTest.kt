@@ -7,6 +7,8 @@
 
 package com.pingidentity.orchestrate
 
+import com.pingidentity.network.HttpRequest
+import com.pingidentity.network.ktor.KtorHttpClient
 import com.pingidentity.orchestrate.module.Cookie
 import com.pingidentity.orchestrate.module.Cookies
 import com.pingidentity.storage.MemoryStorage
@@ -66,7 +68,7 @@ class CookieModuleTest {
         val memory = MemoryStorage<Cookies>()
 
         val workflow = Workflow {
-            httpClient = HttpClient(mockEngine)
+            httpClient = KtorHttpClient(HttpClient(mockEngine))
             module(dummy)
             module(Cookie) {
                 storage = { memory }
@@ -109,7 +111,7 @@ class CookieModuleTest {
         val memory = MemoryStorage<Cookies>()
 
         val workflow = Workflow {
-            httpClient = HttpClient(mockEngine)
+            httpClient = KtorHttpClient(HttpClient(mockEngine))
             module(dummy)
             module(Cookie) {
                 storage = { memory }
@@ -153,8 +155,8 @@ class CookieModuleTest {
                 } else {
                     success = true
                     object : ContinueNode(this, workflow, json, emptyList()) {
-                        override fun asRequest(): Request {
-                            return Request()
+                        override fun asRequest(): HttpRequest {
+                            return workflow.config.httpClient.request()
                         }
                     }
                 }
@@ -165,7 +167,7 @@ class CookieModuleTest {
         val memory = MemoryStorage<Cookies>()
 
         val workflow = Workflow {
-            httpClient = HttpClient(mockEngine)
+            httpClient = KtorHttpClient(HttpClient(mockEngine))
             module(dummy)
             module(Cookie) {
                 storage = { memory }
@@ -229,7 +231,7 @@ class CookieModuleTest {
         val memory = MemoryStorage<Cookies>()
 
         val workflow = Workflow {
-            httpClient = HttpClient(mockEngine)
+            httpClient = KtorHttpClient(HttpClient(mockEngine))
             module(dummy)
             module(Cookie) {
                 storage = { memory }

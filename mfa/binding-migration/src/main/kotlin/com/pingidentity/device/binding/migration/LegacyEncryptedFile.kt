@@ -24,6 +24,7 @@ import java.io.File
  * @see step1
  * @see androidx.security.crypto.EncryptedFile
  */
+@Suppress("DEPRECATION")
 class LegacyEncryptedFile {
     companion object {
         /**

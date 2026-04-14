@@ -7,12 +7,9 @@
 
 package com.pingidentity.davinci.collector
 
-import com.pingidentity.davinci.json
-import com.pingidentity.davinci.plugin.ContinueNodeAware
 import com.pingidentity.orchestrate.Closeable
 import com.pingidentity.orchestrate.ContinueNode
-import kotlinx.serialization.json.decodeFromJsonElement
-import kotlinx.serialization.json.jsonObject
+import com.pingidentity.orchestrate.ContinueNodeAware
 
 /**
  * Class representing a PASSWORD Type.

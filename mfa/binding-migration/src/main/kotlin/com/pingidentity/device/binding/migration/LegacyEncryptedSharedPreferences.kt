@@ -30,6 +30,7 @@ private const val ANDROID_KEY_STORE = "AndroidKeyStore"
  * @see step2
  * @see androidx.security.crypto.EncryptedSharedPreferences
  */
+@Suppress("DEPRECATION")
 class LegacyEncryptedSharedPreferences {
     companion object {
 

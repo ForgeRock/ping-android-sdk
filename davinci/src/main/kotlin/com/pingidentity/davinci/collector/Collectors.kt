@@ -8,15 +8,15 @@
 package com.pingidentity.davinci.collector
 
 import com.pingidentity.davinci.plugin.Collectors
-import com.pingidentity.davinci.plugin.RequestInterceptor
 import com.pingidentity.davinci.plugin.Submittable
 import com.pingidentity.orchestrate.FlowContext
-import com.pingidentity.orchestrate.Request
+import com.pingidentity.orchestrate.RequestInterceptor
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
+import com.pingidentity.network.HttpRequest as Request
 
 internal fun Collectors.eventType(): String? {
     forEach {

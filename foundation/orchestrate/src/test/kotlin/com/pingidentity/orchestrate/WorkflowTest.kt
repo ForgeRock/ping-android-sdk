@@ -7,11 +7,12 @@
 
 package com.pingidentity.orchestrate
 
-import com.pingidentity.testrail.TestRailCase
 import com.pingidentity.logger.CONSOLE
 import com.pingidentity.logger.Logger
+import com.pingidentity.network.ktor.KtorHttpClient
 import com.pingidentity.orchestrate.OverrideMode.APPEND
 import com.pingidentity.orchestrate.OverrideMode.IGNORE
+import com.pingidentity.testrail.TestRailCase
 import com.pingidentity.testrail.TestRailWatcher
 import com.pingidentity.utils.PingDsl
 import io.ktor.client.HttpClient
@@ -26,11 +27,11 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.put
 import org.junit.Rule
 import org.junit.rules.TestWatcher
-import kotlin.IllegalStateException
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.seconds
+import com.pingidentity.network.HttpRequest as Request
 
 class WorkflowTest {
     @JvmField
@@ -378,7 +379,7 @@ class WorkflowTest {
                     success = true
                     object : ContinueNode(this, workflow, json, emptyList()) {
                         override fun asRequest(): Request {
-                            return Request()
+                            return workflow.config.httpClient.request()
                         }
                     }
                 }
@@ -393,7 +394,7 @@ class WorkflowTest {
             }
         }
         val workflow = Workflow {
-            httpClient = HttpClient(mockEngine)
+            httpClient = KtorHttpClient(HttpClient(mockEngine))
             module(dummy)
         }
 
@@ -453,7 +454,7 @@ class WorkflowTest {
                     success = true
                     object : ContinueNode(this, workflow, json, emptyList()) {
                         override fun asRequest(): Request {
-                            return Request()
+                            return workflow.config.httpClient.request()
                         }
                     }
                 }
@@ -468,7 +469,7 @@ class WorkflowTest {
             }
         }
         val workflow = Workflow {
-            httpClient = HttpClient(mockEngine)
+            httpClient = KtorHttpClient(HttpClient(mockEngine))
             logger = Logger.CONSOLE
             module(dummy)
         }
@@ -540,7 +541,7 @@ class WorkflowTest {
         }
 
         val workflow = Workflow {
-            httpClient = HttpClient(mockEngine)
+            httpClient = KtorHttpClient(HttpClient(mockEngine))
             module(module)
         }
 
@@ -568,7 +569,7 @@ class WorkflowTest {
         }
 
         val workflow = Workflow {
-            httpClient = HttpClient(mockEngine)
+            httpClient = KtorHttpClient(HttpClient(mockEngine))
             module(module)
         }
 
@@ -600,14 +601,14 @@ class WorkflowTest {
             transform {
                 object : ContinueNode(this, workflow, json, emptyList()) {
                     override fun asRequest(): Request {
-                        return Request()
+                        return workflow.config.httpClient.request()
                     }
                 }
             }
         }
 
         val workflow = Workflow {
-            httpClient = HttpClient(mockEngine)
+            httpClient = KtorHttpClient(HttpClient(mockEngine))
             module(module)
         }
 
@@ -640,14 +641,14 @@ class WorkflowTest {
             transform {
                 object : ContinueNode(this, workflow, json, emptyList()) {
                     override fun asRequest(): Request {
-                        return Request()
+                        return workflow.config.httpClient.request()
                     }
                 }
             }
         }
 
         val workflow = Workflow {
-            httpClient = HttpClient(mockEngine)
+            httpClient = KtorHttpClient(HttpClient(mockEngine))
             module(module)
         }
 
@@ -681,7 +682,7 @@ class WorkflowTest {
         }
 
         val workflow = Workflow {
-            httpClient = HttpClient(mockEngine)
+            httpClient = KtorHttpClient(HttpClient(mockEngine))
             module(module)
         }
 
@@ -710,7 +711,7 @@ class WorkflowTest {
             }
         }
         val workflow = Workflow {
-            httpClient = HttpClient(mockEngine)
+            httpClient = KtorHttpClient(HttpClient(mockEngine))
             module(dummy)
         }
 
@@ -723,7 +724,7 @@ class WorkflowTest {
     @TestRailCase(22121)
     @Test
     fun `signOff should return success result when no exceptions occur`() = runTest {
-        val mockHttpClient = HttpClient(MockEngine { respond("") })
+        val mockHttpClient = KtorHttpClient(HttpClient(MockEngine { respond("") }))
         val workflow = Workflow {
             httpClient = mockHttpClient
         }
@@ -736,7 +737,7 @@ class WorkflowTest {
     @TestRailCase(22122)
     @Test
     fun `signOff should return failure result when exception occurs`() = runTest {
-        val mockHttpClient = HttpClient(MockEngine { throw IllegalStateException("Sign off failed") })
+        val mockHttpClient = KtorHttpClient(HttpClient(MockEngine { throw IllegalStateException("Sign off failed") }))
         val workflow = Workflow {
             httpClient = mockHttpClient
         }

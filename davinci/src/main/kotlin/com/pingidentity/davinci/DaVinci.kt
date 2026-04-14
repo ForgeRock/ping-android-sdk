@@ -20,13 +20,7 @@ import com.pingidentity.orchestrate.module.CustomParameterConfig.Companion.START
 import com.pingidentity.utils.toAcceptLanguage
 
 // typealias DaVinciConfig = WorkflowConfig
-private const val X_REQUESTED_WITH = "x-requested-with"
-private const val X_REQUESTED_PLATFORM = "x-requested-platform"
 private const val ACCEPT_LANGUAGE = "Accept-Language"
-
-// Constants for header values
-private const val PING_SDK = "ping-sdk"
-private const val ANDROID = "android"
 
 class DaVinciConfig : WorkflowConfig()
 
@@ -52,8 +46,6 @@ fun DaVinci(block: DaVinciConfig.() -> Unit = {}): DaVinci {
     // Apply default
     config.apply {
         module(CustomHeader) {
-            header(X_REQUESTED_WITH, PING_SDK)
-            header(X_REQUESTED_PLATFORM, ANDROID)
             header(ACCEPT_LANGUAGE, LocaleList.getDefault().toAcceptLanguage())
         }
         module(CustomParameter) {

@@ -8,9 +8,9 @@
 package com.pingidentity.journey.callback
 
 import com.pingidentity.journey.plugin.Callbacks
-import com.pingidentity.journey.plugin.RequestInterceptor
 import com.pingidentity.orchestrate.FlowContext
-import com.pingidentity.orchestrate.Request
+import com.pingidentity.orchestrate.RequestInterceptor
+import com.pingidentity.network.HttpRequest as Request
 
 /**
  * Intercepts the request and applies any transformations defined in the callbacks.

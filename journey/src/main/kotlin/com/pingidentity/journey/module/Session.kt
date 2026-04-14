@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 - 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2024 - 2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -57,11 +57,11 @@ val Session = Module.of(::SessionConfig) {
         //Sign off the session
 
         ssoToken?.let {
-            request.url("${journey.options.serverUrl}/json/realms/${journey.options.realm}/sessions")
+            request.url = "${journey.options.serverUrl}/json/realms/${journey.options.realm}/sessions"
             request.parameter("_action", "logout")
             request.header(journey.options.cookie, it.value)
             request.header(ACCEPT_API_VERSION, RESOURCE31)
-            request.body()
+            request.post()
             config.tokenStorage.delete()
         } ?: throw IllegalStateException("Session not found")
         request
@@ -72,7 +72,7 @@ val Session = Module.of(::SessionConfig) {
  * Function to retrieve the session token.
  * @return The session token if found, otherwise null.
  */
-internal suspend fun Journey.session(): SSOToken? {
+suspend fun Journey.session(): SSOToken? {
     sharedContext.getValue<SessionConfig>(SESSION_CONFIG)?.let {
         return it.tokenStorage.get()
     }

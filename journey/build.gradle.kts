@@ -9,7 +9,7 @@ description = "Journey library"
 
 plugins {
     id("com.pingidentity.convention.android.library")
-    // id("com.pingidentity.convention.centralPublish") // we are not publishing this module for now
+    id("com.pingidentity.convention.centralPublish")
     id("com.pingidentity.convention.jacoco")
     alias(libs.plugins.androidLibrary)
     alias(libs.plugins.kotlinAndroid)
@@ -33,6 +33,12 @@ android {
             enableUnitTestCoverage = true
         }
     }
+
+    packaging {
+        resources {
+            excludes += mutableSetOf("META-INF/LICENSE.md", "META-INF/LICENSE-notice.md")
+        }
+    }
 }
 
 dependencies {
@@ -46,7 +52,6 @@ dependencies {
 
     testImplementation(project(":foundation:testrail"))
     implementation(libs.androidx.datastore)
-    implementation(libs.ktor.client.core)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.androidx.startup.runtime)
 
@@ -68,4 +73,9 @@ dependencies {
     androidTestImplementation(project(":recaptcha-enterprise"))
     androidTestImplementation(project(":mfa:binding"))
     androidTestImplementation(libs.bcpkix.jdk18on)
+    androidTestImplementation(libs.ktor.client.core)
+    androidTestImplementation(libs.nimbus.jose.jwt)
+    androidTestImplementation(libs.mockk)
+    androidTestImplementation(libs.mockk.android)
+    androidTestImplementation(libs.kotlin.test)
 }

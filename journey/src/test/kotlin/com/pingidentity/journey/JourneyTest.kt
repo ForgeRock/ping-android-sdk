@@ -21,6 +21,7 @@ import com.pingidentity.journey.plugin.callbacks
 import com.pingidentity.logger.CONSOLE
 import com.pingidentity.logger.Logger
 import com.pingidentity.logger.STANDARD
+import com.pingidentity.network.ktor.KtorHttpClient
 import com.pingidentity.oidc.Token
 import com.pingidentity.orchestrate.ContinueNode
 import com.pingidentity.orchestrate.ErrorNode
@@ -174,9 +175,9 @@ class JourneyTest {
             Journey {
                 serverUrl = "http://localhost/am"
                 logger = Logger.CONSOLE
-                httpClient = HttpClient(mockEngine) {
+                httpClient = KtorHttpClient(HttpClient(mockEngine) {
                     followRedirects = false
-                }
+                })
                 module(Session) {
                     storage = { sessionStorage }
                 }
@@ -196,9 +197,9 @@ class JourneyTest {
             Journey {
                 serverUrl = "http://localhost/am"
                 logger = Logger.CONSOLE
-                httpClient = HttpClient(mockEngine) {
+                httpClient = KtorHttpClient(HttpClient(mockEngine) {
                     followRedirects = false
-                }
+                })
                 module(Session) {
                     storage = { sessionStorage }
                 }
@@ -206,7 +207,7 @@ class JourneyTest {
 
         var node = journey.start("myLogin") // Return first Node
         assertTrue(node is ContinueNode)
-        assertTrue { node.callbacks.size == 2 }
+        assertEquals(2, node.callbacks.size)
 
         (node.callbacks[0] as? NameCallback)?.name = "My First Name"
         (node.callbacks[1] as? PasswordCallback)?.password = "My Password"
@@ -237,9 +238,9 @@ class JourneyTest {
             Journey {
                 serverUrl = "http://localhost/am"
                 logger = Logger.CONSOLE
-                httpClient = HttpClient(mockEngine) {
+                httpClient = KtorHttpClient(HttpClient(mockEngine) {
                     followRedirects = false
-                }
+                })
                 // Oidc as module
                 module(Oidc) {
                     clientId = "test"
@@ -256,7 +257,7 @@ class JourneyTest {
 
         var node = journey.start("myLogin") // Return first Node
         assertTrue(node is ContinueNode)
-        assertTrue { node.callbacks.size == 2 }
+        assertEquals(2, node.callbacks.size)
 
         (node.callbacks[0] as? NameCallback)?.name = "My First Name"
         (node.callbacks[1] as? PasswordCallback)?.password = "My Password"
@@ -338,9 +339,9 @@ class JourneyTest {
             val journey =
                 Journey {
                     serverUrl = "http://localhost/am"
-                    httpClient = HttpClient(mockEngine) {
+                    httpClient = KtorHttpClient(HttpClient(mockEngine) {
                         followRedirects = false
-                    }
+                    })
                     // Oidc as module
                     module(Oidc) {
                         clientId = "test"
@@ -400,9 +401,9 @@ class JourneyTest {
             val journey =
                 Journey {
                     serverUrl = "http://localhost/am"
-                    httpClient = HttpClient(mockEngine) {
+                    httpClient = KtorHttpClient(HttpClient(mockEngine) {
                         followRedirects = false
-                    }
+                    })
                     // Oidc as module
                     module(Oidc) {
                         clientId = "test"
@@ -443,9 +444,9 @@ class JourneyTest {
             val journey =
                 Journey {
                     serverUrl = "http://localhost/am"
-                    httpClient = HttpClient(mockEngine) {
+                    httpClient = KtorHttpClient(HttpClient(mockEngine) {
                         followRedirects = false
-                    }
+                    })
                     module(Session) {
                         storage = { sessionStorage }
                     }
@@ -456,7 +457,7 @@ class JourneyTest {
                 noSession = true
             }
             assertTrue(node is ContinueNode)
-            assertTrue { node.callbacks.size == 2 }
+            assertEquals(2, node.callbacks.size)
 
             node = node.next()
             assertTrue(node is SuccessNode)
@@ -479,9 +480,9 @@ class JourneyTest {
             Journey {
                 serverUrl = "http://localhost/am"
                 logger = Logger.CONSOLE
-                httpClient = HttpClient(mockEngine) {
+                httpClient = KtorHttpClient(HttpClient(mockEngine) {
                     followRedirects = false
-                }
+                })
                 module(Session) {
                     storage = { sessionStorage }
                 }
@@ -501,9 +502,9 @@ class JourneyTest {
             Journey {
                 serverUrl = "http://localhost/am"
                 logger = Logger.CONSOLE
-                httpClient = HttpClient(mockEngine) {
+                httpClient = KtorHttpClient(HttpClient(mockEngine) {
                     followRedirects = false
-                }
+                })
                 module(Session) {
                     storage = { sessionStorage }
                 }
@@ -529,9 +530,9 @@ class JourneyTest {
             Journey {
                 serverUrl = "http://localhost/am"
                 logger = Logger.CONSOLE
-                httpClient = HttpClient(mockEngine) {
+                httpClient = KtorHttpClient(HttpClient(mockEngine) {
                     followRedirects = false
-                }
+                })
                 module(Session) {
                     storage = { sessionStorage }
                 }
@@ -554,9 +555,9 @@ class JourneyTest {
         val journey = Journey {
             serverUrl = "http://localhost/am"
             logger = Logger.CONSOLE
-            httpClient = HttpClient(mockEngine) {
+            httpClient = KtorHttpClient(HttpClient(mockEngine) {
                 followRedirects = false
-            }
+            })
             module(Session) {
                 storage = { MemoryStorage() }
             }
@@ -581,9 +582,9 @@ class JourneyTest {
         val journey = Journey {
             serverUrl = "http://localhost/am"
             logger = Logger.CONSOLE
-            httpClient = HttpClient(mockEngine) {
+            httpClient = KtorHttpClient(HttpClient(mockEngine) {
                 followRedirects = false
-            }
+            })
             module(Session) {
                 storage = { MemoryStorage() }
             }
@@ -608,9 +609,9 @@ class JourneyTest {
         val journey = Journey {
             serverUrl = "http://localhost/am"
             logger = Logger.CONSOLE
-            httpClient = HttpClient(mockEngine) {
+            httpClient = KtorHttpClient(HttpClient(mockEngine) {
                 followRedirects = false
-            }
+            })
             module(Session) {
                 storage = { MemoryStorage() }
             }
@@ -635,9 +636,9 @@ class JourneyTest {
         val journey = Journey {
             serverUrl = "http://localhost/am"
             logger = Logger.CONSOLE
-            httpClient = HttpClient(mockEngine) {
+            httpClient = KtorHttpClient(HttpClient(mockEngine) {
                 followRedirects = false
-            }
+            })
             module(Session) {
                 storage = { MemoryStorage() }
             }
@@ -659,9 +660,9 @@ class JourneyTest {
         val journey = Journey {
             serverUrl = "http://localhost/am"
             logger = Logger.CONSOLE
-            httpClient = HttpClient(mockEngine) {
+            httpClient = KtorHttpClient(HttpClient(mockEngine) {
                 followRedirects = false
-            }
+            })
             module(Session) {
                 storage = { MemoryStorage() }
             }
@@ -683,9 +684,9 @@ class JourneyTest {
         val journey = Journey {
             serverUrl = "http://localhost/am"
             logger = Logger.CONSOLE
-            httpClient = HttpClient(mockEngine) {
+            httpClient = KtorHttpClient(HttpClient(mockEngine) {
                 followRedirects = false
-            }
+            })
             module(Session) {
                 storage = { MemoryStorage() }
             }
@@ -708,9 +709,9 @@ class JourneyTest {
         val journey = Journey {
             serverUrl = "http://localhost/am"
             logger = Logger.CONSOLE
-            httpClient = HttpClient(mockEngine) {
+            httpClient = KtorHttpClient(HttpClient(mockEngine) {
                 followRedirects = false
-            }
+            })
             module(Session) {
                 storage = { MemoryStorage() }
             }
@@ -722,5 +723,155 @@ class JourneyTest {
         val ssoToken = node.session as SSOToken
         assertEquals("/enduser/?realm=/alpha", ssoToken.successUrl)
         assertEquals("/alpha", ssoToken.realm)
+    }
+
+    @Test
+    fun `ContinueNode preserves all original JSON fields in request body`() = runTest {
+        val journey = Journey {
+            serverUrl = "http://localhost/am"
+            logger = Logger.CONSOLE
+            httpClient = KtorHttpClient(HttpClient(mockEngine) {
+                followRedirects = false
+            })
+            module(Session) {
+                storage = { MemoryStorage() }
+            }
+        }
+
+        val node = journey.start("myLogin")
+        assertTrue(node is ContinueNode)
+        assertEquals(2, node.callbacks.size)
+
+        // Set callback values
+        (node.callbacks[0] as? NameCallback)?.name = "TestUser"
+        (node.callbacks[1] as? PasswordCallback)?.password = "TestPassword"
+
+        // Continue to next node
+        node.next()
+
+        // Verify the request preserves all original fields
+        val authenticateRequest = mockEngine.requestHistory[1]
+        val requestBody = (authenticateRequest.body as TextContent).text
+        val requestJson = Json.parseToJsonElement(requestBody).jsonObject
+
+        // Verify authId is preserved from original response
+        assertEquals("authIdValue", requestJson["authId"]?.jsonPrimitive?.content)
+
+        // Verify callbacks are updated with new values
+        val callbacks = requestJson["callbacks"]?.jsonArray
+        assertNotNull(callbacks)
+        assertEquals(2, callbacks.size)
+
+        // Verify callback values are updated
+        val nameValue = callbacks[0].jsonObject["input"]
+            ?.jsonArray?.get(0)?.jsonObject?.get("value")?.jsonPrimitive?.content
+        val passwordValue = callbacks[1].jsonObject["input"]
+            ?.jsonArray?.get(0)?.jsonObject?.get("value")?.jsonPrimitive?.content
+
+        assertEquals("TestUser", nameValue)
+        assertEquals("TestPassword", passwordValue)
+    }
+
+    @Test
+    fun `ContinueNode preserves additional JSON fields beyond authId and callbacks`() = runTest {
+        // Create a mock engine that returns a response with extra fields
+        val customMockEngine = MockEngine { request ->
+            when (request.url.encodedPath) {
+                "/am/json/realms/root/authenticate" -> {
+                    if (request.body is TextContent) {
+                        val bodyText = (request.body as TextContent).text
+                        val bodyJson = Json.parseToJsonElement(bodyText).jsonObject
+                        // If request has callbacks, return success response
+                        if (bodyJson["callbacks"]?.jsonArray?.isNotEmpty() == true) {
+                            respond(sessionResponse(), HttpStatusCode.OK, authenticateHeader)
+                        } else {
+                            // First request without callbacks
+                            respond(
+                                ByteReadChannel(
+                                    """{
+                                        "authId": "testAuthId",
+                                        "stage": "UsernamePassword",
+                                        "header": "Sign In",
+                                        "description": "Please enter your credentials",
+                                        "customField": "customValue",
+                                        "callbacks": [
+                                            {
+                                                "type": "NameCallback",
+                                                "output": [{"name": "prompt", "value": "User Name"}],
+                                                "input": [{"name": "IDToken1", "value": ""}],
+                                                "_id": 0
+                                            }
+                                        ]
+                                    }"""
+                                ),
+                                HttpStatusCode.OK,
+                                authenticateHeader
+                            )
+                        }
+                    } else {
+                        respond(
+                            ByteReadChannel(
+                                """{
+                                    "authId": "testAuthId",
+                                    "stage": "UsernamePassword",
+                                    "header": "Sign In",
+                                    "description": "Please enter your credentials",
+                                    "customField": "customValue",
+                                    "callbacks": [
+                                        {
+                                            "type": "NameCallback",
+                                            "output": [{"name": "prompt", "value": "User Name"}],
+                                            "input": [{"name": "IDToken1", "value": ""}],
+                                            "_id": 0
+                                        }
+                                    ]
+                                }"""
+                            ),
+                            HttpStatusCode.OK,
+                            authenticateHeader
+                        )
+                    }
+                }
+                else -> respond(ByteReadChannel(""), HttpStatusCode.InternalServerError)
+            }
+        }
+
+        val journey = Journey {
+            serverUrl = "http://localhost/am"
+            logger = Logger.CONSOLE
+            httpClient = KtorHttpClient(HttpClient(customMockEngine) {
+                followRedirects = false
+            })
+            module(Session) {
+                storage = { MemoryStorage() }
+            }
+        }
+
+        val node = journey.start()
+        assertTrue(node is ContinueNode)
+        assertEquals(1, node.callbacks.size)
+        (node.callbacks[0] as? NameCallback)?.name = "TestUser"
+
+        // Continue to next node
+        node.next()
+
+        // Verify the request preserves all original fields including custom ones
+        val authenticateRequest = customMockEngine.requestHistory[1]
+        val requestBody = (authenticateRequest.body as TextContent).text
+        val requestJson = Json.parseToJsonElement(requestBody).jsonObject
+
+        // Verify all original fields are preserved
+        assertEquals("testAuthId", requestJson["authId"]?.jsonPrimitive?.content)
+        assertEquals("UsernamePassword", requestJson["stage"]?.jsonPrimitive?.content)
+        assertEquals("Sign In", requestJson["header"]?.jsonPrimitive?.content)
+        assertEquals("Please enter your credentials", requestJson["description"]?.jsonPrimitive?.content)
+        assertEquals("customValue", requestJson["customField"]?.jsonPrimitive?.content)
+
+        // Verify callbacks are updated
+        val callbacks = requestJson["callbacks"]?.jsonArray
+        assertNotNull(callbacks)
+        assertEquals(1, callbacks.size)
+
+        customMockEngine.close()
     }
 }

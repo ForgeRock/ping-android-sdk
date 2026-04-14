@@ -30,23 +30,20 @@ android {
 dependencies {
     api(project(":foundation:utils"))
     api(project(":foundation:logger"))
+    api(project(":foundation:orchestrate"))
     implementation(project(":foundation:android"))
     implementation(project(":foundation:storage"))
-    implementation(project(":foundation:orchestrate"))
+    implementation(project(":foundation:network"))
 
     //Make it optional for using centralize login
     compileOnly(project(":foundation:browser"))
 
     implementation(libs.androidx.datastore)
     implementation(libs.androidx.datastore.core)
-    implementation(libs.ktor.client.okhttp)
-    implementation(libs.ktor.client.logging)
-    implementation(libs.ktor.client.cio)
     implementation(libs.androidx.browser)
 
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.kotlinx.coroutines.core)
-    implementation(libs.ktor.client.core)
     implementation(libs.androidx.activity)
 
     testImplementation(libs.androidx.junit.ktx)

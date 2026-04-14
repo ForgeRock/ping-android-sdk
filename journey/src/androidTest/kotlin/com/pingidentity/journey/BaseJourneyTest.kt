@@ -39,8 +39,8 @@ open class BaseJourneyTest {
     protected val SERVER_URL: String = serverUrl
     protected val REALM: String = realm
     protected val COOKIE: String = cookieName
-    protected val USERNAME: String = username
-    protected val PASSWORD: String = password
+    protected var USERNAME: String = username
+    protected var PASSWORD: String = password
     protected val CLIENT_ID: String = clientId
     protected val REDIRECT_URI: String = redirectUri
     protected val DISCOVERY_ENDPOINT: String = discoveryEndPoint

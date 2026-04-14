@@ -82,7 +82,6 @@ class PlatformCollector(
  * @property timeZone The current system timezone ID (e.g., "America/Vancouver", "UTC")
  * @property jailBreakScore Security score indicating device modification level, currently unused (null)
  *
- * @sample
  * ```kotlin
  * val platformInfo = PlatformInfo(
  *     platform = "android",
