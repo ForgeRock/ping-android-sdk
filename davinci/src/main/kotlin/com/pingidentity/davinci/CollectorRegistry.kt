@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 - 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2024 - 2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -8,6 +8,7 @@
 package com.pingidentity.davinci
 
 import com.pingidentity.android.ModuleInitializer
+import com.pingidentity.davinci.collector.AgreementCollector
 import com.pingidentity.davinci.collector.DeviceAuthenticationCollector
 import com.pingidentity.davinci.collector.DeviceRegistrationCollector
 import com.pingidentity.davinci.collector.FlowCollector
@@ -54,5 +55,8 @@ internal class CollectorRegistry : ModuleInitializer() {
         CollectorFactory.register("DEVICE_REGISTRATION", ::DeviceRegistrationCollector)
         CollectorFactory.register("DEVICE_AUTHENTICATION", ::DeviceAuthenticationCollector)
         CollectorFactory.register("PHONE_NUMBER", ::PhoneNumberCollector)
+
+        // AGREEMENT fields use inputType "READ_ONLY_TEXT" which is the factory lookup key
+        CollectorFactory.register("READ_ONLY_TEXT", ::AgreementCollector)
     }
 }
