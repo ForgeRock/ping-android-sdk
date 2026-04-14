@@ -174,3 +174,8 @@ jobs:
       MEND_EMAIL: ${{ secrets.MEND_EMAIL }}
       MEND_USER_KEY: ${{ secrets.MEND_USER_KEY }}
       SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+
+  # Generate and publish API docs
+  docs:
+    name: Docs
+    uses: ./.github/workflows/docs.yaml
