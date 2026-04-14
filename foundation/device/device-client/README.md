@@ -655,3 +655,5 @@ This software may be modified and distributed under the terms of the MIT license
 
 Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
 
+
+© Copyright 2025-2026 Ping Identity Corporation. All Rights Reserved

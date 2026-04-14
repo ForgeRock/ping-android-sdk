@@ -271,3 +271,5 @@ Contributions are welcome! Please read the [contributing guidelines](../../CONTR
 
 Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
 This software may be modified and distributed under the terms of the MIT license. See the [LICENSE](../LICENSE) file for details.
+
+© Copyright 2025-2026 Ping Identity Corporation. All Rights Reserved

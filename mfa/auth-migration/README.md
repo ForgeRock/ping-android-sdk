@@ -616,3 +616,6 @@ Legacy Files: [Deleted via StorageClient]  (backed up if backup callback was pro
 This module is part of the Ping Identity SDK for Android and is subject to the MIT License. See the LICENSE file for details.
 
 ---
+
+
+© Copyright 2025-2026 Ping Identity Corporation. All Rights Reserved

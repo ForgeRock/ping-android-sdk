@@ -1,10 +1,6 @@
 name: Docs
 
 on:
-  push:
-    branches:
-      - master
-      - generate-api-docs
   workflow_call:
 
 permissions:
@@ -17,7 +13,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build:
+  build-docs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -39,8 +35,8 @@ jobs:
           path: build/dokka/html
           if-no-files-found: error
 
-  deploy:
-    needs: build
+  deploy-docs:
+    needs: build-docs
     runs-on: ubuntu-latest
     environment:
       name: github-pages

@@ -21,12 +21,14 @@ import com.pingidentity.samples.pingsampleapp.authenticator.managers.JourneyMana
 import com.pingidentity.samples.pingsampleapp.authenticator.managers.OathManager
 import com.pingidentity.samples.pingsampleapp.authenticator.managers.PushManager
 import com.pingidentity.samples.pingsampleapp.authenticator.managers.TestAccountFactory
+import com.pingidentity.samples.pingsampleapp.config.initConfigs
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withContext
 
 /**
  * Main Application class for PingSampleApp.
@@ -87,6 +89,11 @@ class PingSampleApplication : Application() {
 
         // Initialize SDK clients and managers asynchronously
         CoroutineScope(Dispatchers.Default).launch {
+            withContext(Dispatchers.IO) {
+                // Load persisted SDK configs (Journey, DaVinci, OIDC Web) immediately so
+                // all flows are ready before the user visits the Configuration screen.
+                initConfigs()
+            }
             initializeSdkClients()
             initializeManagers()
             initializeViewModel()

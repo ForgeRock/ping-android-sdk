@@ -225,6 +225,28 @@
     <string name="account_group_item_otp_placeholder">• • • • • •</string>
     <string name="account_group_item_otp_code_label">OTP Code</string>
 
+    <!-- Auth Migration -->
+    <string name="text_auth_migration_title">Auth Migration</string>
+    <string name="text_auth_migration_subtitle">Migrate legacy authenticator data</string>
+    <string name="auth_migration_screen_title">Migration</string>
+    <string name="auth_migration_instructions_title">How to Test</string>
+    <string name="auth_migration_instruction_1">Install a legacy ForgeRock Authenticator app using the same application ID as this sample app.</string>
+    <string name="auth_migration_instruction_2">Register OATH (TOTP/HOTP) and/or Push accounts in the legacy app.</string>
+    <string name="auth_migration_instruction_3">Uninstall the legacy app from the device.</string>
+    <string name="auth_migration_instruction_4">Install this sample app (same application ID ensures SharedPreferences data persists).</string>
+    <string name="auth_migration_instruction_5">Open this screen and tap \"Start Migration\" to import the legacy credentials.</string>
+    <string name="auth_migration_instructions_note">Note: Only one app with the same application ID can be installed at a time. SharedPreferences data persists across app installs/uninstalls as long as the application ID matches.</string>
+    <string name="auth_migration_legacy_data">Legacy Data</string>
+    <string name="auth_migration_status_checking">Checking…</string>
+    <string name="auth_migration_status_found">Found</string>
+    <string name="auth_migration_status_none">None</string>
+    <string name="auth_migration_status_migrating">Migrating…</string>
+    <string name="auth_migration_status_completed">Completed</string>
+    <string name="auth_migration_status_failed">Failed</string>
+    <string name="auth_migration_start_button">Start Migration</string>
+    <string name="auth_migration_progress_title">Progress</string>
+    <string name="auth_migration_no_legacy_data">No legacy data to migrate.</string>
+
     <!-- Account locking messages -->
     <string name="account_locked_biometric_available">Biometrics are required but are unavailable. Please contact your account administrator for help.</string>
     <string name="account_locked_device_tampering">The device might have been tampered with or rooted. Please contact the account administrator for help.</string>

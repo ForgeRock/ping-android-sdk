@@ -577,3 +577,5 @@ interface AndroidBuildProvider {
 Provides testable access to Android Build properties.
 
 ---
+
+© Copyright 2025-2026 Ping Identity Corporation. All Rights Reserved
