@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -30,6 +30,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
 import com.pingidentity.pingonemfa.push.PushNotification
+import com.pingidentity.pingonemfapp.R
 import com.pingidentity.pingonemfapp.data.DiagnosticLogger
 import com.pingidentity.pingonemfapp.ui.theme.PingIdentityAuthenticatorTheme
 import kotlinx.coroutines.CoroutineScope
@@ -82,14 +83,14 @@ class BiometricPromptActivity : AppCompatActivity() {
                         }
                         else -> {
                             diagnosticLogger.w("Biometric authentication not available")
-                            errorMessage = "Biometric authentication not available"
+                            errorMessage = context.getString(R.string.biometric_authentication_unavailable)
                             isLoading = false
                             finish()
                         }
                     }
                 } catch (e: Exception) {
                     diagnosticLogger.e("Failed to initialize PushClient: ${e.message}", e)
-                    errorMessage = "Failed to initialize. Please try again."
+                    errorMessage = context.getString(R.string.biometric_initialize_failed)
                     isLoading = false
                     finish()
                 }
@@ -151,7 +152,7 @@ class BiometricPromptActivity : AppCompatActivity() {
                         finish()
                     } catch (e: Exception) {
                         diagnosticLogger.e("Failed to process approval: ${e.message}", e)
-                        onFailure("Failed to approve notification: ${e.message}")
+                        onFailure(getString(R.string.biometric_approve_failed, e.message))
                     }
                 }
             }
@@ -164,7 +165,7 @@ class BiometricPromptActivity : AppCompatActivity() {
                 if (errorCode != BiometricPrompt.ERROR_USER_CANCELED && 
                     errorCode != BiometricPrompt.ERROR_CANCELED &&
                     errorCode != BiometricPrompt.ERROR_NEGATIVE_BUTTON) {
-                    onFailure("Authentication error: $errString")
+                    onFailure(getString(R.string.biometric_authentication_error, errString))
                 } else {
                     finish()
                 }
@@ -173,14 +174,14 @@ class BiometricPromptActivity : AppCompatActivity() {
             override fun onAuthenticationFailed() {
                 super.onAuthenticationFailed()
                 diagnosticLogger.w("Authentication failed")
-                onFailure("Biometric authentication failed. Please try again.")
+                onFailure(getString(R.string.biometric_authentication_failed))
             }
         }
         
         val promptInfo = BiometricPrompt.PromptInfo.Builder()
-            .setTitle("Authenticate")
-            .setSubtitle("Confirm your identity to approve the authentication request")
-            .setNegativeButtonText("Cancel")
+            .setTitle(getString(R.string.system_notification_authenticate))
+            .setSubtitle(getString(R.string.biometric_prompt_subtitle))
+            .setNegativeButtonText(getString(R.string.login_cancel))
             .setConfirmationRequired(true)
             .setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_STRONG)
             .build()

@@ -47,10 +47,6 @@ class PingOneMFAViewModel(
 
     val otpState: StateFlow<OtpUiState> = otpManager.otpState
 
-    // Expose all settings preferences as StateFlows
-    val copyOtp: StateFlow<Boolean>
-        get() = userPreferences.copyOtpFlow
-
     val diagnosticLogging: StateFlow<Boolean>
         get() = userPreferences.diagnosticLoggingFlow
 
