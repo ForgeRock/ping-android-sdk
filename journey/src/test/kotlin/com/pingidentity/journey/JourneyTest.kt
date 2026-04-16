@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 - 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2024 - 2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -101,6 +101,10 @@ class JourneyTest {
 
                     "/am/json/realms/root/sessions" -> {
                         respond("", HttpStatusCode.OK, headers)
+                    }
+
+                    "/par" -> {
+                        respond(parResponse(), HttpStatusCode.Created, headers)
                     }
 
                     "/am/json/realms/root/authenticate" -> {
@@ -874,4 +878,77 @@ class JourneyTest {
 
         customMockEngine.close()
     }
+
+    @Test
+    fun `Journey with PAR enabled`() = runTest {
+        val tokenStorage = MemoryStorage<Token>()
+        val sessionStorage = MemoryStorage<SSOToken>()
+        val journey =
+            Journey {
+                serverUrl = "http://localhost/am"
+                logger = Logger.CONSOLE
+                httpClient = KtorHttpClient(HttpClient(mockEngine) {
+                    followRedirects = false
+                })
+                // Oidc as module with PAR enabled
+                module(Oidc) {
+                    clientId = "test"
+                    discoveryEndpoint =
+                        "http://localhost/.well-known/openid-configuration"
+                    scopes = mutableSetOf("openid", "email", "address")
+                    redirectUri = "http://localhost:8080"
+                    storage = { tokenStorage }
+                    par = true // Enable PAR
+                }
+                module(Session) {
+                    storage = { sessionStorage }
+                }
+            }
+
+        var node = journey.start("myLogin") // Return first Node
+        assertTrue(node is ContinueNode)
+        assertTrue { (node as ContinueNode).callbacks.size == 2 }
+
+        (node.callbacks[0] as? NameCallback)?.name = "My First Name"
+        (node.callbacks[1] as? PasswordCallback)?.password = "My Password"
+
+        node = node.next()
+        assertTrue(node is SuccessNode)
+
+        mockEngine.requestHistory[0] // well-known
+        val startRequest = mockEngine.requestHistory[1] // authenticate
+        assertContains(startRequest.url.encodedQuery, "authIndexValue=myLogin")
+        assertContains(startRequest.url.encodedQuery, "authIndexType=service")
+
+        val user = journey.user()
+        assertEquals("Dummy AccessToken", (user?.token() as Result.Success).value.accessToken)
+        assertEquals("Dummy Session Token", user.session().value)
+
+        // Verify PAR request was made
+        val parRequest = mockEngine.requestHistory[3] // PAR request
+        assertEquals("https://auth.test-one-pingone.com/par", parRequest.url.toString())
+        assertTrue(parRequest.body is FormDataContent)
+
+        // Verify client_id and other parameters are in the POST body, not URL
+        val parBody = parRequest.body as FormDataContent
+        assertEquals("test", parBody.formData["client_id"])
+        assertEquals("code", parBody.formData["response_type"])
+        assertEquals("openid email address", parBody.formData["scope"])
+        assertEquals("http://localhost:8080", parBody.formData["redirect_uri"])
+        assertNotNull(parBody.formData["code_challenge"])
+        assertEquals("S256", parBody.formData["code_challenge_method"])
+
+        // Verify authorize request uses request_uri parameter
+        val authorizeRequest = mockEngine.requestHistory[4] // authorize request
+        assertContains(authorizeRequest.url.encodedQuery, "request_uri=urn%3Aietf%3Aparams%3Aoauth%3Arequest_uri%3Atest-request-uri")
+        assertContains(authorizeRequest.url.encodedQuery, "client_id=test")
+    }
+
+    private fun parResponse(): String =
+        """
+        {
+            "request_uri": "urn:ietf:params:oauth:request_uri:test-request-uri",
+            "expires_in": 60
+        }
+        """.trimIndent()
 }

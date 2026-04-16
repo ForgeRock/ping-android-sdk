@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 - 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2024 - 2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -54,3 +54,25 @@ fun tokeErrorResponse() =
             "  \"error\" : \"Invalid Grant\"\n" +
             "}",
     )
+
+fun openIdConfigurationWithParResponse() =
+    ByteReadChannel(
+        "{\n" +
+            "  \"authorization_endpoint\" : \"http://auth.test-one-pingone.com/authorize\",\n" +
+            "  \"pushed_authorization_request_endpoint\" : \"https://auth.test-one-pingone.com/par\",\n" +
+            "  \"token_endpoint\" : \"https://auth.test-one-pingone.com/token\",\n" +
+            "  \"userinfo_endpoint\" : \"https://auth.test-one-pingone.com/userinfo\",\n" +
+            "  \"end_session_endpoint\" : \"https://auth.test-one-pingone.com/signoff\",\n" +
+            "  \"ping_end_idp_session_endpoint\" : \"https://auth.test-one-pingone.com/idp/signoff\",\n" +
+            "  \"revocation_endpoint\" : \"https://auth.test-one-pingone.com/revoke\"\n" +
+            "}",
+    )
+
+fun parResponse() =
+    ByteReadChannel(
+        "{\n" +
+            "  \"request_uri\" : \"urn:ietf:params:oauth:request_uri:test-request-uri\",\n" +
+            "  \"expires_in\" : 60\n" +
+            "}",
+    )
+

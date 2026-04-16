@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 - 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2024 - 2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -9,7 +9,6 @@ package com.pingidentity.oidc
 
 import com.pingidentity.testrail.TestRailCase
 import com.pingidentity.testrail.TestRailWatcher
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.junit.Rule
 import org.junit.rules.TestWatcher
@@ -27,6 +26,7 @@ class OpenIdConfigurationTest {
     fun `OpenIdConfiguration default constructor should set all fields to empty strings`() {
         val config = OpenIdConfiguration()
         assertEquals("", config.authorizationEndpoint)
+        assertEquals("", config.pushAuthorizationRequestEndpoint)
         assertEquals("", config.tokenEndpoint)
         assertEquals("", config.userinfoEndpoint)
         assertEquals("", config.endSessionEndpoint)
@@ -39,6 +39,7 @@ class OpenIdConfigurationTest {
     fun `OpenIdConfiguration should serialize to JSON correctly`() {
         val config = OpenIdConfiguration(
             authorizationEndpoint = "https://auth.example.com",
+            pushAuthorizationRequestEndpoint = "https://par.example.com",
             tokenEndpoint = "https://token.example.com",
             userinfoEndpoint = "https://userinfo.example.com",
             endSessionEndpoint = "https://endsession.example.com",
@@ -47,7 +48,7 @@ class OpenIdConfigurationTest {
         )
         val json = Json.encodeToString(config)
         assertEquals(
-            """{"authorization_endpoint":"https://auth.example.com","token_endpoint":"https://token.example.com","userinfo_endpoint":"https://userinfo.example.com","end_session_endpoint":"https://endsession.example.com","ping_end_idp_session_endpoint":"https://pingend.example.com","revocation_endpoint":"https://revoke.example.com"}""",
+            """{"authorization_endpoint":"https://auth.example.com","pushed_authorization_request_endpoint":"https://par.example.com","token_endpoint":"https://token.example.com","userinfo_endpoint":"https://userinfo.example.com","end_session_endpoint":"https://endsession.example.com","ping_end_idp_session_endpoint":"https://pingend.example.com","revocation_endpoint":"https://revoke.example.com"}""",
             json
         )
     }
@@ -55,9 +56,10 @@ class OpenIdConfigurationTest {
     @TestRailCase(22108)
     @Test
     fun `OpenIdConfiguration should deserialize from JSON correctly`() {
-        val json = """{"authorization_endpoint":"https://auth.example.com","token_endpoint":"https://token.example.com","userinfo_endpoint":"https://userinfo.example.com","end_session_endpoint":"https://endsession.example.com","ping_end_idp_session_endpoint":"https://pingend.example.com","revocation_endpoint":"https://revoke.example.com"}"""
+        val json = """{"authorization_endpoint":"https://auth.example.com","pushed_authorization_request_endpoint":"https://par.example.com","token_endpoint":"https://token.example.com","userinfo_endpoint":"https://userinfo.example.com","end_session_endpoint":"https://endsession.example.com","ping_end_idp_session_endpoint":"https://pingend.example.com","revocation_endpoint":"https://revoke.example.com"}"""
         val config = Json.decodeFromString<OpenIdConfiguration>(json)
         assertEquals("https://auth.example.com", config.authorizationEndpoint)
+        assertEquals("https://par.example.com", config.pushAuthorizationRequestEndpoint)
         assertEquals("https://token.example.com", config.tokenEndpoint)
         assertEquals("https://userinfo.example.com", config.userinfoEndpoint)
         assertEquals("https://endsession.example.com", config.endSessionEndpoint)
@@ -71,6 +73,7 @@ class OpenIdConfigurationTest {
         val json = """{"authorization_endpoint":"https://auth.example.com"}"""
         val config = Json.decodeFromString<OpenIdConfiguration>(json)
         assertEquals("https://auth.example.com", config.authorizationEndpoint)
+        assertEquals("", config.pushAuthorizationRequestEndpoint)
         assertEquals("", config.tokenEndpoint)
         assertEquals("", config.userinfoEndpoint)
         assertEquals("", config.endSessionEndpoint)

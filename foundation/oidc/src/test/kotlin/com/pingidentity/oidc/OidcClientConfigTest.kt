@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 - 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2024 - 2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -146,6 +146,7 @@ class OidcClientConfigTest {
                 storage { fileName = "test" }
                 discoveryEndpoint = "http://localhost"
                 clientId = "clientId"
+                par = true
                 scope("openid")
                 redirectUri = "http://localhost/callback"
                 loginHint = "loginHint"
@@ -168,6 +169,7 @@ class OidcClientConfigTest {
         assertEquals(otherConfig.storage, oidcClientConfig.storage)
         assertEquals(otherConfig.discoveryEndpoint, oidcClientConfig.discoveryEndpoint)
         assertEquals(otherConfig.clientId, oidcClientConfig.clientId)
+        assertEquals(otherConfig.par, oidcClientConfig.par)
         assertEquals(otherConfig.scopes, oidcClientConfig.scopes)
         assertEquals(otherConfig.redirectUri, oidcClientConfig.redirectUri)
         assertEquals(otherConfig.loginHint, oidcClientConfig.loginHint)
@@ -192,6 +194,7 @@ class OidcClientConfigTest {
                 storage = { mockk<StorageDelegate<Token>>() }
                 discoveryEndpoint = "http://localhost"
                 clientId = "clientId"
+                par = true
                 scope("openid")
                 redirectUri = "http://localhost/callback"
                 signOutRedirectUri = "http://localhost/signout"
@@ -206,9 +209,9 @@ class OidcClientConfigTest {
                 httpClient = mockk()
             }
 
-        //Ensure there are 21 properties in the class for now.
+        //Ensure there are 22 properties in the class for now.
         val clazz: KClass<OidcClientConfig> = OidcClientConfig::class
-        assertEquals(clazz.memberProperties.size, 21)
+        assertEquals(clazz.memberProperties.size, 22)
 
         val clonedConfig = oidcClientConfig.clone()
 
@@ -220,6 +223,7 @@ class OidcClientConfigTest {
         assertFalse(oidcClientConfig.isTokenStorageInitialized())
         assertEquals(oidcClientConfig.discoveryEndpoint, clonedConfig.discoveryEndpoint)
         assertEquals(oidcClientConfig.clientId, clonedConfig.clientId)
+        assertEquals(oidcClientConfig.par, clonedConfig.par)
         assertEquals(oidcClientConfig.scopes, clonedConfig.scopes)
         assertEquals(oidcClientConfig.redirectUri, clonedConfig.redirectUri)
         assertEquals(oidcClientConfig.signOutRedirectUri, clonedConfig.signOutRedirectUri)
@@ -245,6 +249,7 @@ class OidcClientConfigTest {
                 storage = { mockk<StorageDelegate<Token>>() }
                 discoveryEndpoint = "http://localhost"
                 clientId = "clientId"
+                par = true
                 scope("openid")
                 redirectUri = "http://localhost/callback"
                 signOutRedirectUri = "http://localhost/signout"
@@ -269,6 +274,7 @@ class OidcClientConfigTest {
         assertEquals(oidcClientConfig.tokenStorage, clonedConfig.tokenStorage)
         assertEquals(oidcClientConfig.discoveryEndpoint, clonedConfig.discoveryEndpoint)
         assertEquals(oidcClientConfig.clientId, clonedConfig.clientId)
+        assertEquals(oidcClientConfig.par, clonedConfig.par)
         assertEquals(oidcClientConfig.scopes, clonedConfig.scopes)
         assertEquals(oidcClientConfig.redirectUri, clonedConfig.redirectUri)
         assertEquals(oidcClientConfig.signOutRedirectUri, clonedConfig.signOutRedirectUri)

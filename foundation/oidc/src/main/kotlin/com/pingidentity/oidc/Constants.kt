@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2025 - 2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -33,4 +33,6 @@ object Constants {
     const val STATE = "state"
     const val UI_LOCATES = "ui_locales"
     const val ACR_VALUES = "acr_values"
+    const val REQUEST_URI = "request_uri"
+    const val RESPONSE_MODE = "response_mode"
 }
