@@ -1,21 +1,30 @@
 
 [![Ping Identity](https://www.pingidentity.com/content/dam/picr/nav/Ping-Logo-2.svg)](https://github.com/ForgeRock/ping-android-sdk)
 
-# Ping Logger SDK
+# Logger Module
 
 The Ping Logger SDK provides a versatile logging interface and a set of common loggers for the Ping
 SDKs.
 
-## Integrating the SDK into your project
+## Getting Started
 
-To add the Ping Logger SDK as a dependency to your project, include the following in
-your `build.gradle.kts` file:
+### Prerequisites
+
+- Android API level 29 or higher
+
+### Installation
+
+To integrate this module into your Android project, include the following dependency in
+your `build.gradle.kts` (or `build.gradle`) file:
 
 ```kotlin
 dependencies {
     implementation(project(":foundation:logging"))
 }
 ```
+
+Replace `<version>` with the latest available version of the SDK from the Maven repository. Ensure your
+project's `repositories` block includes Maven Central or the Ping Identity Maven repository.
 
 ## How to Use the SDK
 
@@ -91,3 +100,9 @@ The Ping Logger SDK provides the following loggers:
 | STANDARD | Logs messages to Android's LogCat                     |
 | WARN     | Logs warning and error messages with Android's LogCat |
 | NONE     | Disables logging                                      |
+
+## License
+
+This software may be modified and distributed under the terms of the MIT license. See the LICENSE file for details.
+
+© Copyright 2025-2026 Ping Identity Corporation. All rights reserved.

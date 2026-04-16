@@ -1,36 +1,40 @@
 [![Ping Identity](https://www.pingidentity.com/content/dam/picr/nav/Ping-Logo-2.svg)](https://github.com/ForgeRock/ping-android-sdk)
 
-# Authenticator Migration
+# Authenticator Migration Module
 
 The Authenticator Migration module provides automatic migration capabilities for upgrading legacy FR Authenticator data to the new unified OATH and Push storage format. This module ensures seamless transitions between SDK versions while preserving user accounts, TOTP/HOTP credentials, and push credentials.
 
----
+## Getting Started
 
-## Table of Contents
+### Prerequisites
 
-- [Integrating the SDK into your project](#integrating-the-sdk-into-your-project)
-- [Migration Overview](#migration-overview)
-- [Automatic Migration](#automatic-migration)
-- [Migration Steps](#migration-steps)
-- [Manual Migration](#manual-migration)
-- [Monitoring Migration Progress](#monitoring-migration-progress)
-- [Error Handling](#error-handling)
-- [Custom Storage Migration](#custom-storage-migration)
-- [Troubleshooting](#troubleshooting)
+- Ping Identity Platform
+    - Ping Advanced Identity Cloud
+    - PingAM 6.5.2 or higher
+- Android API level 29 or higher
 
----
+### Installation
 
-## Integrating the SDK into your project
-
-To add the Authenticator Migration module as a dependency to your project, include the following in your `build.gradle.kts` file:
+To integrate this module into your Android project, include the following dependency in
+your `build.gradle.kts` (or `build.gradle`) file:
 
 ```kotlin
 dependencies {
-    implementation(project(":mfa:auth-migration"))
+    implementation("com.pingidentity.sdks:auth-migration:<version>")
 }
 ```
 
----
+Replace `<version>` with the latest available version of the SDK from the Maven repository. Ensure your
+project's `repositories` block includes Maven Central or the Ping Identity Maven repository.
+
+### Requirements
+
+To migrate to the new SDK, you must also declare the dependencies on the new modules.
+
+- **Dependencies**:
+  - `mfa:oath` - OATH credential storage
+  - `mfa:push` - Push credential and notification storage
+  - `foundation:migration` - Migration framework
 
 ## Migration Overview
 
@@ -68,14 +72,6 @@ To start automatic migration, please add the following code to your manifest fil
 ```
 
 ### Configuration
-
-Add the following in your `build.gradle.kts`:
-
-```kotlin
-dependencies {
-    implementation(project(":mfa:auth-migration"))
-}
-```
 
 Create a `LegacyAuthenticationConfig` and start the migration, typically in your `Application.onCreate()` or an `AppInitializer`:
 
@@ -130,7 +126,6 @@ lifecycleScope.launch {
 }
 ```
 
----
 
 ## Migration Steps
 
@@ -163,7 +158,6 @@ The migration process consists of three sequential steps:
 - Closes both `SQLOathStorage` and `SQLPushStorage` database connections
 - Cleanup failures don't abort the migration (non-critical)
 
----
 
 ## Manual Migration
 
@@ -184,7 +178,6 @@ lifecycleScope.launch {
 }
 ```
 
----
 
 ## Monitoring Migration Progress
 
@@ -211,8 +204,6 @@ Migration completed successfully
 ```
 
 To observe raw `MigrationProgress` events, use the `Migration` API directly with your own steps.
-
----
 
 
 ## Error Handling
@@ -251,7 +242,6 @@ Before migration begins, the framework inspects any existing SQLite databases:
 - No errors are thrown for clean installations
 - Subsequent app starts skip migration checks after successful completion
 
----
 
 ## Custom Storage Migration
 
@@ -379,7 +369,6 @@ lifecycleScope.launch {
 }
 ```
 
-
 ### Expected Data Format
 
 The `LegacyExportedData` your implementation returns must conform to the structure in `sample_export.json`. Key points:
@@ -448,7 +437,6 @@ The `LegacyExportedData` your implementation returns must conform to the structu
 
 See `sample_export.json` for a complete three-mechanism example.
 
----
 
 ## Data Mapping
 
@@ -478,7 +466,6 @@ See `sample_export.json` for a complete three-mechanism example.
 | `imageURL` | `imageURL` | Optional logo URL |
 | `backgroundColor` | `backgroundColor` | Optional UI customization |
 
----
 
 ## Troubleshooting
 
@@ -564,7 +551,6 @@ The migration process is designed to be safe and non-destructive:
 - Typically completes in 1-5 seconds for normal datasets
 - Scales linearly with number of accounts/mechanisms
 
----
 
 ## Example Migration Scenario
 
@@ -592,30 +578,15 @@ SQLPushStorage (SQLite):
 Legacy Files: [Deleted via StorageClient]  (backed up if backup callback was provided)
 ```
 
----
-
-## Requirements
-
-- **Dependencies**:
-  - `mfa:oath` - OATH credential storage
-  - `mfa:push` - Push credential and notification storage
-  - `foundation:migration` - Migration framework
-
----
-
 ## Additional Resources
 
 - [Migration Framework Documentation](../../foundation/migration/README.md)
 - [OATH Storage Documentation](../oath/README.md)
 - [Push Storage Documentation](../push/README.md)
 
----
 
 ## License
 
-This module is part of the Ping Identity SDK for Android and is subject to the MIT License. See the LICENSE file for details.
+This software may be modified and distributed under the terms of the MIT license. See the LICENSE file for details.
 
----
-
-
-© Copyright 2025-2026 Ping Identity Corporation. All Rights Reserved
+© Copyright 2025-2026 Ping Identity Corporation. All rights reserved.

@@ -1,28 +1,19 @@
 
 [![Ping Identity](https://www.pingidentity.com/content/dam/picr/nav/Ping-Logo-2.svg)](https://github.com/ForgeRock/ping-android-sdk)
 
-# Ping SDK - MFA Commons Module
+# Commons Module
 
 The MFA Commons module provides the core foundation and shared functionality for all Multi-Factor Authentication (MFA) modules within the Ping Identity SDK. It includes base implementations for clients, storage, configuration, and other common utilities that are leveraged by specialized MFA modules like OATH, Push, and FIDO2.
-
-## Features
-
-- **Base MFA Client**: A base client implementation that provides common functionality for all MFA clients.
-- **Secure Storage**: A common storage infrastructure for securely storing credentials and other sensitive data.
-- **URI Parsing**: A flexible URI parser for handling different MFA registration URIs.
-- **Common Exceptions**: A set of common exceptions for handling MFA-related errors.
-- **Flexible Configuration**: A common configuration pattern for all MFA clients.
-- **Common Utilities**: A set of common utilities that are leveraged by specialized MFA modules.
 
 ## Getting Started
 
 ### Prerequisites
 
-- Android API level 24 or higher
+- Android API level 29 or higher
 
 ### Installation
 
-The MFA Commons module is included as a transitive dependency when you add any of the other MFA modules. You do not need to add it explicitly to your `build.gradle` file.
+The MFA Commons module is included as a transitive dependency when you add any of the other MFA modules. You do not need to add it explicitly to your `build.gradle.kts` (or `build.gradle`) file.
 
 ```gradle
 // Included automatically with other MFA modules
@@ -53,5 +44,6 @@ The MFA Commons module provides a set of common exceptions that are used by all 
 
 ## License
 
-Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
 This software may be modified and distributed under the terms of the MIT license. See the LICENSE file for details.
+
+© Copyright 2025-2026 Ping Identity Corporation. All rights reserved.

@@ -2,37 +2,47 @@
 
 # Device Profile Module
 
-> **A flexible, extensible, and privacy-conscious framework for collecting device information in Android applications.**
-
 The Device Profile module provides a structured framework for collecting device information in
 Android applications. It uses a modular collector system that makes it easy to gather, extend, and
 customize the device data you need.
 
----
+## Getting Started
 
-## ✨ Features
+### Prerequisites
 
-- **🔧 Modular Architecture**: Plug-and-play collector system for maximum flexibility
-- **⚡ Asynchronous Collection**: All operations are suspend functions for smooth UI performance
-- **🔗 AIC Journey Integration**: Built-in support for PingOne AIC Device Profile workflows
-- **📦 Serializable Output**: JSON-ready data structures for easy network transmission
-- **🔌 Extensible Framework**: Create custom collectors for any device signals you need
-- **🔒 Permission-Aware**: Handles Android permissions gracefully with automatic permission requests
-- **📍 Location Services**: Built-in location collection with privacy-first permission handling
-- **🛡️ Testable Design**: Comprehensive test coverage with mockable components
+- Ping Identity Platform
+    - Ping Advanced Identity Cloud
+    - PingAM 6.5.2 or higher
+- Android API level 29 or higher
 
----
+### Installation
 
-## 📋 Table of Contents
+To integrate this module into your Android project, include the following dependency in
+your `build.gradle.kts` (or `build.gradle`) file:
 
-- [Overview](#overview)
-- [Getting Started](#getting-started)
-- [Built-in Collectors](#-built-in-collectors)
-- [Customization](#customization)
-- [AIC Journey Integration](#-aic-journey-integration)
-- [API Reference](#-api-reference)
+```kotlin
+dependencies {
+  implementation("com.pingidentity.sdks:device-profile:<version>")
+}
+```
 
----
+Replace `<version>` with the latest available version of the SDK from the Maven repository. Ensure your
+project's `repositories` block includes Maven Central or the Ping Identity Maven repository.
+
+### Permissions
+
+The module respects Android's permission model. Some collectors may require specific permissions:
+
+```xml
+<!-- Required for NetworkCollector -->
+<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+<!-- Optional: For LocationCollector (will prompt user automatically) -->
+<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+
+<!-- Note: LocationCollector handles permission requests automatically -->
+```
 
 ## Overview
 
@@ -70,36 +80,12 @@ This module helps you collect various device attributes through dedicated collec
 │          Location Services              │
 └─────────────────────────────────────────┘
 ```
----
 
-## Getting Started
-
-### Permissions
-
-The module respects Android's permission model. Some collectors may require specific permissions:
-
-```xml
-<!-- Required for NetworkCollector -->
-<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-
-<!-- Optional: For LocationCollector (will prompt user automatically) -->
-<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
-<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
-
-<!-- Note: LocationCollector handles permission requests automatically -->
-```
+## Usage
 
 ### Basic Usage
 
-1. **Add the module dependency** to your project:
-
-```kotlin
-dependencies {
-    implementation("com.pingidentity.device:device-profile:x.y.z")
-}
-```
-
-2. **Create collectors** and collect device information:
+**Create collectors** and collect device information:
 
 ```kotlin
 import com.pingidentity.device.profile.collector.DefaultDeviceCollector
@@ -163,8 +149,6 @@ suspend fun collectDeviceProfile() {
   }
 }
 ```
-
----
 
 ## 🔧 Built-in Collectors
 
@@ -265,8 +249,6 @@ Gathers the default browser's user agent string:
 - Gracefully handles permission denials
 - Includes timeout protection (30 seconds)
 - Returns null if location is unavailable or denied
-
----
 
 ## Customization
 
@@ -391,7 +373,7 @@ fun createCollectors(context: Context): List<DeviceCollector<*>> {
 
 ---
 
-## 🔗 AIC Journey Integration
+## AIC Journey Integration
 
 The `DeviceProfileCallback` class provides a specialized way to collect device information
 specifically for integration with AIC Journeys. It creates device profiles in the format expected by
@@ -490,9 +472,7 @@ result.onSuccess { profile ->
 }
 ```
 
----
-
-## 📚 API Reference
+## API Reference
 
 ### Core Interfaces
 
@@ -576,6 +556,8 @@ interface AndroidBuildProvider {
 
 Provides testable access to Android Build properties.
 
----
+## License
 
-© Copyright 2025-2026 Ping Identity Corporation. All Rights Reserved
+This software may be modified and distributed under the terms of the MIT license. See the LICENSE file for details.
+
+© Copyright 2025-2026 Ping Identity Corporation. All rights reserved.

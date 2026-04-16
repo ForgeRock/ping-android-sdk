@@ -1,34 +1,31 @@
 [![Ping Identity](https://www.pingidentity.com/content/dam/picr/nav/Ping-Logo-2.svg)](https://github.com/ForgeRock/ping-android-sdk)
 
-# Ping SDK - MFA OATH Module
+# OATH Module
 
 The OATH MFA module provides functionality for implementing Time-based One-Time Password (TOTP) and HMAC-based One-Time Password (HOTP) multi-factor authentication in Android applications. This module enables applications to manage OATH credentials and generate one-time passwords for authentication.
-
-## Features
-
-- OATH credential management (add, retrieve, delete)
-- TOTP and HOTP support
-- Multiple hashing algorithms (SHA1, SHA256, SHA512)
-- Customizable digit lengths (6-8 digits)
-- Customizable periods for TOTP
-- URI parsing and formatting
-- Kotlin Result-based API for improved error handling
 
 ## Getting Started
 
 ### Prerequisites
 
-- Android API level 24 or higher
+- Ping Identity Platform
+    - Ping Advanced Identity Cloud
+    - PingAM 6.5.2 or higher
+- Android API level 29 or higher
 
 ### Installation
 
-Add the following dependency to your app module's `build.gradle` file:
+To integrate this module into your Android project, include the following dependency in
+your `build.gradle.kts` (or `build.gradle`) file:
 
-```gradle
+```kotlin
 dependencies {
     implementation 'com.pingidentity.sdk:mfa-oath:<version>
 }
 ```
+
+Replace `<version>` with the latest available version of the SDK from the Maven repository. Ensure your
+project's `repositories` block includes Maven Central or the Ping Identity Maven repository.
 
 ## Usage
 
@@ -356,7 +353,6 @@ The [`SharedPrefsOathStorage`](/mfa/oath/src/androidTest/kotlin/com/pingidentity
 
 ## License
 
-Copyright (c) 2026 Ping Identity Corporation. All rights reserved.
 This software may be modified and distributed under the terms of the MIT license. See the LICENSE file for details.
 
-© Copyright 2025-2026 Ping Identity Corporation. All Rights Reserved
+© Copyright 2025-2026 Ping Identity Corporation. All rights reserved.

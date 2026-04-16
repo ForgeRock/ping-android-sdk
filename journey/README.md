@@ -1,12 +1,35 @@
 [![Ping Identity](https://www.pingidentity.com/content/dam/picr/nav/Ping-Logo-2.svg)](https://github.com/ForgeRock/ping-android-sdk)
 
-# Journey: Authentication and Authorization SDK
+# Journey Module
+
+Journey is an Android library designed to streamline Authentication and Authorization processes for applications utilizing Ping Advanced Identity Cloud and PingAM.
+
+## Getting Started
+
+### Prerequisites
+
+- Ping Identity Platform
+    - Ping Advanced Identity Cloud
+    - PingAM 6.5.2 or higher
+- Android API level 29 or higher
+
+### Installation
+
+To integrate this module into your Android project, include the following dependency in
+your `build.gradle.kts` (or `build.gradle`) file:
+
+```kotlin
+dependencies {
+    implementation("com.pingidentity.sdks:journey:<version>")
+}
+```
+
+Replace `<version>` with the latest available version of the SDK from the Maven repository. Ensure your
+project's `repositories` block includes Maven Central or the Ping Identity Maven repository.
 
 ## Overview
 
-**Journey** is a robust and adaptable library designed to streamline Authentication and
-Authorization processes within your Android applications. Engineered for ease of integration and
-extensibility, it offers a straightforward API to manage authentication flows and handle the various
+**Journey** offers a straightforward API to manage authentication flows and handle the various
 states encountered during this process.
 
 ```mermaid
@@ -35,23 +58,6 @@ sequenceDiagram
 
 For a deeper understanding of PingOne AIC Journeys, refer to the official documentation available
 [here](https://docs.pingidentity.com/pingoneaic/latest/realms/journeys.html).
-
-## Installation
-
-### Add dependency to your project
-
-To integrate Journey into your Android project, add the following dependency to your
-`build.gradle` (app level) file:
-
-```kotlin
-dependencies {
-    implementation("com.pingidentity.sdks:journey:<version>")
-}
-```
-
-Replace `<version>` with the latest version of the Journey SDK.
-
-## Getting Started
 
 ### Basic Usage
 
@@ -462,4 +468,8 @@ Callback below will be supported by other modules:
 | IdpCallback                      | External Identity provider authentication.                                     |
 
 
-© Copyright 2025-2026 Ping Identity Corporation. All Rights Reserved
+## License
+
+This software may be modified and distributed under the terms of the MIT license. See the LICENSE file for details.
+
+© Copyright 2025-2026 Ping Identity Corporation. All rights reserved.

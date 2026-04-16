@@ -1,40 +1,25 @@
 [![Ping Identity](https://www.pingidentity.com/content/dam/picr/nav/Ping-Logo-2.svg)](https://github.com/ForgeRock/ping-android-sdk)
 
-# Ping Migration SDK
+# Migration Module
 
-The Ping Migration SDK provides a flexible framework for managing data migration and transformation tasks in Android applications. It enables applications to perform step-by-step migrations with progress tracking, error handling, and state management.
+The Migration module provides a flexible framework for managing data migration and transformation tasks in Android applications. It enables applications to perform step-by-step migrations with progress tracking, error handling, and state management.
 
----
+## Getting Started
 
-## Table of Contents
+### Prerequisites
 
-- [Integrating the SDK into your project](#integrating-the-sdk-into-your-project)
-- [Migration Framework Overview](#migration-framework-overview)
-- [How to Use the SDK](#how-to-use-the-sdk)
-    - [Creating a Simple Migration](#creating-a-simple-migration)
-    - [Migration Progress Monitoring](#migration-progress-monitoring)
-    - [Step Configuration](#step-configuration)
-    - [State Management](#state-management)
-    - [Error Handling](#error-handling)
-- [Migration Step Results](#migration-step-results)
-- [Advanced Usage](#advanced-usage)
-    - [Custom Migration Steps](#custom-migration-steps)
-    - [Conditional Migration Logic](#conditional-migration-logic)
-    - [Migration Context](#migration-context)
+- Android API level 29 or higher
 
----
+### Installation
 
-## Integrating the SDK into your project
-
-To add the Ping Migration SDK as a dependency to your project, include the following in your `build.gradle.kts` file:
+To integrate this module into your Android project, include the following dependency in
+your `build.gradle.kts` (or `build.gradle`) file:
 
 ```kotlin
 dependencies {
     implementation(project(":foundation:migration"))
 }
 ```
-
----
 
 ## Migration Framework Overview
 
@@ -56,8 +41,6 @@ Each step can return one of three results:
 - **CONTINUE**: Proceed to the next step
 - **RERUN**: Execute the current step again
 - **ABORT**: Terminate migration successfully
-
----
 
 ## How to Use the SDK
 
@@ -220,8 +203,6 @@ val migration = Migration {
 }
 ```
 
----
-
 ## Migration Step Results
 
 | Result | Description | Behavior |
@@ -335,8 +316,6 @@ step("Access system resources") {
 }
 ```
 
----
-
 ## Best Practices
 
 1. **Keep steps focused**: Each migration step should have a single responsibility
@@ -346,6 +325,8 @@ step("Access system resources") {
 5. **Monitor progress**: Implement proper progress tracking for long-running migrations
 6. **Test thoroughly**: Ensure migration steps work correctly in isolation and as part of the full migration
 
----
+## License
 
-© Copyright 2025-2026 Ping Identity Corporation. All Rights Reserved
+This software may be modified and distributed under the terms of the MIT license. See the LICENSE file for details.
+
+© Copyright 2025-2026 Ping Identity Corporation. All rights reserved.

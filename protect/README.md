@@ -1,19 +1,26 @@
 
 [![Ping Identity](https://www.pingidentity.com/content/dam/picr/nav/Ping-Logo-2.svg)](https://github.com/ForgeRock/ping-android-sdk)
 
-# Protect Module: Advanced Security Integration
+# Protect Module
 
-## Overview
+> [!NOTE]
+>**This module is a wrapper for the standalone PingOne Protect SDK. Its purpose is to facilitate integration between your application and PingOne services, typically as part of a DaVinci flow or an Advanced Identity Cloud/PingAM journey. The Protect service is invoked server-side as a step within the orchestration layer, not directly from the client application. This architecture means that the business logic for triggering PingOne Protect resides on the server, allowing you to update this logic without requiring a new client application release.**
+>
+>**Alternatively, for scenarios where you need to call a service independently outside of an orchestrated flow, Protect offers the standalone [PingOne Protect SDK](https://developer.pingidentity.com/pingone-api/native-sdks/pingone-risk-sdks/risk_evaluation_sdk_android.html). This option allows for direct application integration with the specific PingOne service using purpose-built REST APIs.**
 
-The `protect` module is a powerful component of the Ping Identity Android SDK, designed to seamlessly integrate Ping
-Identity's Protect service into your mobile applications. It provides comprehensive tools for real-time behavioral data
-collection, sophisticated risk analysis, and adaptive authentication strategies. By leveraging this module, developers
-can significantly enhance application security, detect and mitigate fraudulent activities, and create a more secure and
-user-friendly authentication experience.
+## Getting Started
 
-## Add Dependency to Your Project
+### Prerequisites
 
-To incorporate the Protect module into your Android project, include the following dependency in
+- PingOne DaVinci
+- Ping Identity Platform
+    - Ping Advanced Identity Cloud
+    - PingAM 6.5.2 or higher
+- Android API level 29 or higher
+
+### Installation
+
+To integrate this module into your Android project, include the following dependency in
 your `build.gradle.kts` (or `build.gradle`) file:
 
 ```kotlin
@@ -22,8 +29,16 @@ dependencies {
 }
 ```
 
-Replace `<version>` with the latest available version of the Protect SDK from the Maven repository. Ensure your
+Replace `<version>` with the latest available version of the SDK from the Maven repository. Ensure your
 project's `repositories` block includes Maven Central or the Ping Identity Maven repository.
+
+## Overview
+
+The `protect` module is a powerful component of the Ping Identity Android SDK, designed to seamlessly integrate Ping
+Identity's Protect service into your mobile applications. It provides comprehensive tools for real-time behavioral data
+collection, sophisticated risk analysis, and adaptive authentication strategies. By leveraging this module, developers
+can significantly enhance application security, detect and mitigate fraudulent activities, and create a more secure and
+user-friendly authentication experience.
 
 ## Usage
 
@@ -249,3 +264,9 @@ Protect.resumeBehavioralData() // Resume data collection.
 
 These methods allow for granular control over data collection, enabling you to pause collection during sensitive
 operations or when required by user privacy preferences.
+
+## License
+
+This software may be modified and distributed under the terms of the MIT license. See the LICENSE file for details.
+
+© Copyright 2025-2026 Ping Identity Corporation. All rights reserved.

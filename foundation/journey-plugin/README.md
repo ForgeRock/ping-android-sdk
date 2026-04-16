@@ -1,6 +1,6 @@
 [![Ping Identity](https://www.pingidentity.com/content/dam/picr/nav/Ping-Logo-2.svg)](https://github.com/ForgeRock/ping-android-sdk)
 
-# Journey Plugin
+# Journey Plugin Module
 
 The `Journey-Plugin` module provides a mechanism to extend the functionality of the Journey Module by allowing you to
 implement custom callbacks and register them for use within the Journey workflow. This enables you to inject specific
@@ -22,16 +22,19 @@ logic and data handling at various stages of the user journey.
 
 ### 1. Add Dependency
 
-To use the `Journey-Plugin` module in your project, you need to add it as a dependency, add the following line to your
-module's `build.gradle` file (usually the `app/build.gradle` or a feature module's `build.gradle`):
+To integrate this module into your Android project, include the following dependency in
+your `build.gradle.kts` (or `build.gradle`) file:
 
-```gradle
+```kotlin
 dependencies {
     ...
-    implementation("com.pingidentity.sdks:android:<latest_version>") 
-    implementation("com.pingidentity.sdks:journey-plugin:<latest_version>") 
+    implementation("com.pingidentity.sdks:android:<version>") 
+    implementation("com.pingidentity.sdks:journey-plugin:<version>") 
 }
 ```
+
+Replace `<version>` with the latest available version of the SDK from the Maven repository. Ensure your
+project's `repositories` block includes Maven Central or the Ping Identity Maven repository.
 
 ### 2. Implement the `Callback` Interface
 
@@ -147,3 +150,9 @@ class CollectorRegistry : ModuleInitializer() {
 
 By following these steps, you can effectively use the `Journey-Plugin` module to extend the Journey Module with your own
 custom callback logic, making your application more flexible and adaptable to specific user journey requirements.
+
+## License
+
+This software may be modified and distributed under the terms of the MIT license. See the LICENSE file for details.
+
+© Copyright 2025-2026 Ping Identity Corporation. All rights reserved.

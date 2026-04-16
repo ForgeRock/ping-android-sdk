@@ -3,7 +3,7 @@
 
 [![Ping Identity](https://www.pingidentity.com/content/dam/picr/nav/Ping-Logo-2.svg)](https://github.com/ForgeRock/ping-android-sdk)
 
-The Ping SDK for Android is designed for creating mobile native Apps that seamlessly integrate with
+The Ping Orchestration SDK for Android is designed for creating mobile native Apps that seamlessly integrate with
 the PingOne platform.
 It offers a range of APIs for user authentication, user device management, and accessing resources
 secured by PingOne.
@@ -12,14 +12,17 @@ secured by PingOne.
 
 - **Quick Starts** - Find specific setup instructions in the quick start guide for each SDK module.
   Begin with
-  the [DaVinci](https://docs.pingidentity.com/sdks/latest/davinci/tutorials/android/index.html)
-  or [Journey](https://docs.pingidentity.com/sdks/latest/sdks/tutorials/android-quickstart/index.html)
+  the [DaVinci](./davinci/README.md)
+  or [Journey](./journey/README.md)
   guide, based on your chosen orchestration platform.
 - **Sample Apps** - Visit our [sample apps](https://github.com/ForgeRock/sdk-sample-apps) repository
-  on GitHub for examples showcasing various use cases.
+  on GitHub for examples showcasing various use cases.  
 - **Official Docs** - Refer to our
-  main [documentation site](https://docs.pingidentity.com/sdks/latest/sdks/index.html) for
+  main [documentation site](https://developer.pingidentity.com/orchsdks/index.html) for
   comprehensive information on the SDKs.
+
+> [!NOTE]
+> If you are migrating from the  ForgeRock Android SDK, refer to [MIGRATION.md](./MIGRATION.md).
 
 # Modules
 
@@ -102,6 +105,6 @@ provisions.**
 
 # License
 
-This project is licensed under the MIT License - see the [LICENSE](./LICENSE) file for details
+This software may be modified and distributed under the terms of the MIT license. See the [LICENSE](./LICENSE) file for details
 
-© Copyright 2025-2026 Ping Identity Corporation. All Rights Reserved
+© Copyright 2025-2026 Ping Identity Corporation. All rights reserved.

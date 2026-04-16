@@ -4,22 +4,20 @@
 
 The Device Binding Migration module provides automatic migration capabilities for upgrading legacy device binding data to the new unified storage format. This module ensures seamless transitions between SDK versions while preserving user authentication keys and configurations.
 
----
+## Getting Started
 
-## Table of Contents
+### Prerequisites
 
-- [Integrating the SDK into your project](#integrating-the-sdk-into-your-project)
-- [Migration Overview](#migration-overview)
-- [Automatic Migration](#automatic-migration)
-- [Migration Steps](#migration-steps)
-- [Manual Migration](#manual-migration)
-- [Monitoring Migration Progress](#monitoring-migration-progress)
-- [Error Handling](#error-handling)
-- [Troubleshooting](#troubleshooting)
+- Ping Identity Platform
+    - Ping Advanced Identity Cloud
+    - PingAM 6.5.2 or higher
+- Android API level 29 or higher
+- The `binding` module must be integrated in your project
 
----
+### Installation
 
-## Integrating the SDK into your project
+To integrate this module into your Android project, include the following dependency in
+your `build.gradle.kts` (or `build.gradle`) file:
 
 To add the Device Binding Migration module as a dependency to your project, include the following in your `build.gradle.kts` file:
 
@@ -29,7 +27,8 @@ dependencies {
 }
 ```
 
----
+Replace `<version>` with the latest available version of the SDK from the Maven repository. Ensure your
+project's `repositories` block includes Maven Central or the Ping Identity Maven repository.
 
 ## Migration Overview
 
@@ -47,7 +46,6 @@ The Device Binding Migration module automatically migrates legacy device binding
 | Legacy Encrypted File Keystore | AppPinConfig Storage | App PIN cryptographic key material |
 | Legacy Storage Files | - | Cleaned up after successful migration |
 
----
 
 ## Automatic Migration
 
@@ -76,8 +74,6 @@ The migration will automatically:
 3. Clean up legacy files after successful migration
 4. Skip migration if no legacy data exists
 
----
-
 ## Migration Steps
 
 The migration process consists of three main steps:
@@ -96,8 +92,6 @@ The migration process consists of three main steps:
 - Migrates App PIN cryptographic keys to new encrypted storage
 - Maintains key security and encryption
 - Removes legacy encrypted files after migration
-
----
 
 ## Manual Migration
 
@@ -134,8 +128,6 @@ BindingMigration.migration.migrate(context).collect { progress ->
 }
 ```
 
----
-
 ## Error Handling
 
 The migration framework includes robust error handling:
@@ -160,8 +152,6 @@ try {
 - No errors are thrown for clean installations
 - Subsequent app starts skip migration checks after successful completion
 
----
-
 ## ⚠️ Important Warning: Custom Storage Migration
 
 **If you are using custom storage implementations for device binding, this automatic migration will NOT handle your custom data.**
@@ -178,8 +168,6 @@ If your application uses custom storage implementations, you must:
 1. **Write your own migration logic** to handle your custom data format
 2. **Implement migration before** the automatic migration runs
 3. **Test your custom migration thoroughly** with real user data
-
----
 
 ## Troubleshooting
 
@@ -222,8 +210,6 @@ The migration maintains state between steps:
 - Legacy repository reference is preserved for cleanup
 - Failed migrations can be retried on next app start
 
----
-
 ## Migration Safety
 
 The migration process is designed to be safe and non-destructive:
@@ -240,4 +226,8 @@ The migration process is designed to be safe and non-destructive:
 - Key-user associations remain intact
 - No data is lost during migration process
 
----
+## License
+
+This software may be modified and distributed under the terms of the MIT license. See the LICENSE file for details.
+
+© Copyright 2025-2026 Ping Identity Corporation. All rights reserved.

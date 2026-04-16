@@ -1,31 +1,24 @@
 [![Ping Identity](https://www.pingidentity.com/content/dam/picr/nav/Ping-Logo-2.svg)](https://github.com/ForgeRock/ping-android-sdk)
 
-# Device Binding UI
+# Device Binding UI Module
 
 The Device Binding UI module provides pre-built Jetpack Compose UI components for device binding authentication flows. It offers user-friendly dialogs for PIN collection and user key selection, seamlessly integrating with the device binding authentication system.
 
----
+## Getting Started
 
-## Table of Contents
+### Prerequisites
 
-- [Integrating the SDK into your project](#integrating-the-sdk-into-your-project)
-- [Module Overview](#module-overview)
-    - [Components](#components)
-    - [Key Features](#key-features)
-- [UI Components](#ui-components)
-    - [PIN Collector Dialog](#pin-collector-dialog)
-    - [User Key Selection Dialog](#user-key-selection-dialog)
-    - [Integration with Device Binding](#integration-with-device-binding)
-- [Customization](#customization)
-    - [Custom PIN Collection](#custom-pin-collection)
-    - [Custom User Key Selection](#custom-user-key-selection)
-- [Thread Safety](#thread-safety)
+- Ping Identity Platform
+    - Ping Advanced Identity Cloud
+    - PingAM 6.5.2 or higher
+- Android API level 29 or higher
+- Jetpack Compose integration in your project
+- Activity context for displaying dialogs
 
----
+### Installation
 
-## Integrating the SDK into your project
-
-To add the Device Binding UI module as a dependency to your project, include the following in your `build.gradle.kts` file:
+To integrate this module into your Android project, include the following dependency in
+your `build.gradle.kts` (or `build.gradle`) file:
 
 ```kotlin
 dependencies {
@@ -33,11 +26,8 @@ dependencies {
 }
 ```
 
-**Prerequisites:**
-- Jetpack Compose integration in your project
-- Activity context for displaying dialogs
-
----
+Replace `<version>` with the latest available version of the SDK from the Maven repository. Ensure your
+project's `repositories` block includes Maven Central or the Ping Identity Maven repository.
 
 ## Module Overview
 
@@ -156,4 +146,8 @@ The UI components are designed to be called from coroutines and handle UI thread
 - Automatic UI thread dispatching for view operations
 - Proper cleanup on cancellation
 
----
+## License
+
+This software may be modified and distributed under the terms of the MIT license. See the LICENSE file for details.
+
+© Copyright 2025-2026 Ping Identity Corporation. All rights reserved.
