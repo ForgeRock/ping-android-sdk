@@ -18,7 +18,6 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.Surface
 import androidx.compose.material3.rememberDrawerState
@@ -94,17 +93,14 @@ class MainActivity : ComponentActivity() {
                     ) {
                         ModalNavigationDrawer(
                             drawerContent = {
-                                ModalDrawerSheet {
-                                    AppDrawer(
-                                        navigateTo = { route ->
-                                            navController.navigate(route)
-                                        },
-                                        closeDrawer = {
-                                            coroutineScope.launch { drawerState.close() }
-                                        },
-                                    )
-                                }
-
+                                AppDrawer(
+                                    navigateTo = { route ->
+                                        navController.navigate(route)
+                                    },
+                                    closeDrawer = {
+                                        coroutineScope.launch { drawerState.close() }
+                                    },
+                                )
                             },
                             drawerState = drawerState,
                             gesturesEnabled = true,
