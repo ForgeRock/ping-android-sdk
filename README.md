@@ -84,7 +84,7 @@ clicking **New Ticket**.
 # Contributing
 
 If you would like to contribute to this project, please see
-the [contributions guide](./CONTRIBUTION.md).
+the [contributions guide](./CONTRIBUTING.md).
 
 # Disclaimer
 
