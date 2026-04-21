@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 - 2026 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2024 - 2025 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -7,13 +7,9 @@
 
 package com.pingidentity.davinci.collector
 
-import com.pingidentity.davinci.json
 import com.pingidentity.orchestrate.Closeable
 import com.pingidentity.orchestrate.ContinueNode
 import com.pingidentity.orchestrate.ContinueNodeAware
-import kotlinx.serialization.json.decodeFromJsonElement
-import kotlinx.serialization.json.jsonArray
-import kotlinx.serialization.json.jsonObject
 
 /**
  * Class representing a PASSWORD Type.
@@ -29,7 +25,7 @@ class PasswordCollector : ValidatedCollector(), ContinueNodeAware, Closeable {
      * The continue node for the DaVinci flow.
      */
     override lateinit var continueNode: ContinueNode
-    private var passwordPolicy: PasswordPolicy? = null
+    private var cachedPasswordPolicy: PasswordPolicy? = null
 
     // A flag to determine whether to clear the password or not after submission.
     var clearPassword = true
@@ -46,25 +42,19 @@ class PasswordCollector : ValidatedCollector(), ContinueNodeAware, Closeable {
     /**
      * Function to retrieve the password policy, if available.
      */
+    //TODO PasswordPolicy
+    /*
     fun passwordPolicy(): PasswordPolicy? {
-        if (passwordPolicy == null) {
-            passwordPolicy = continueNode.input["form"]
-                ?.jsonObject?.get("components")
-                ?.jsonObject?.get("fields")
-                ?.jsonArray
-                ?.firstOrNull {
-                    it.jsonObject["type"]?.let { t ->
-                        json.decodeFromJsonElement<String>(t)
-                    } == "PASSWORD_VERIFY"
-                }
-                ?.jsonObject?.get("passwordPolicy")
-                ?.jsonObject?.let {
-                    json.decodeFromJsonElement(it)
-                }
+        if (cachedPasswordPolicy == null) {
+            cachedPasswordPolicy = continueNode.input["passwordPolicy"]?.jsonObject?.let {
+                json.decodeFromJsonElement(it)
+            }
         }
-        return passwordPolicy
+        return cachedPasswordPolicy
 
     }
+
+     */
 
     /**
      * Function to validate the password field.
@@ -75,6 +65,8 @@ class PasswordCollector : ValidatedCollector(), ContinueNodeAware, Closeable {
         val result = super.validate()
         errors.addAll(result)
 
+        //TODO PasswordPolicy
+        /*
         passwordPolicy()?.let { policy ->
             if (value.length !in policy.length.min..policy.length.max) {
                 errors.add(InvalidLength(policy.length.min, policy.length.max))
@@ -94,6 +86,7 @@ class PasswordCollector : ValidatedCollector(), ContinueNodeAware, Closeable {
                 }
             }
         }
+         */
         return errors
     }
 }
