@@ -59,7 +59,8 @@ class DaVinciViewModel : ViewModel() {
             true
         }
         viewModelScope.launch {
-            val next = daVinci.start()
+            val selectedDaVinci = daVinci ?: error("DaVinci must be configured before starting a flow.")
+            val next = selectedDaVinci.start()
             state.update {
                 it.copy(node = next, counter = it.counter + 1)
             }
