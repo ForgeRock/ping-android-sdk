@@ -2,16 +2,13 @@
 
 # Browser Module
 
-Ping Browser is a comprehensive library for in-app browser functionality. It launches browser sessions and captures redirect data from authentication/authorization flows, intelligently choosing between CustomTabsIntent and AuthTabsIntent based on device security and capabilities.
+Ping Browser is a comprehensive library for in-app browser functionality. It launches browser sessions and captures redirect data from authentication/authorization flows, intelligently choosing between `CustomTabsIntent` and `AuthTabsIntent` based on device security and capabilities.
 
 ## Getting Started
 
 ### Prerequisites
 
-- PingOne DaVinci
-- Ping Identity Platform
-    - Ping Advanced Identity Cloud
-    - PingAM 6.5.2 or higher
+- PingOne DaVinci or Ping Advanced Identity Cloud / PingAM [Supported Versions](https://support.pingidentity.com/s/article/Ping-Identity-EOL-Tracker)
 - Android API level 29 or higher
 
 ### Installation

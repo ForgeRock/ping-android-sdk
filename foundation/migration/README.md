@@ -17,9 +17,12 @@ your `build.gradle.kts` (or `build.gradle`) file:
 
 ```kotlin
 dependencies {
-    implementation(project(":foundation:migration"))
+    implementation("com.pingidentity.sdks:migration:<version>")
 }
 ```
+
+Replace `<version>` with the latest available version of the SDK from the Maven repository. Ensure your
+project's `repositories` block includes Maven Central or the Ping Identity Maven repository.
 
 ## Migration Framework Overview
 

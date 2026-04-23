@@ -15,10 +15,9 @@ The MFA Commons module provides the core foundation and shared functionality for
 
 The MFA Commons module is included as a transitive dependency when you add any of the other MFA modules. You do not need to add it explicitly to your `build.gradle.kts` (or `build.gradle`) file.
 
-```gradle
+```kotlin
 // Included automatically with other MFA modules
-implementation 'com.pingidentity.sdk:mfa-oath:<version>'
-implementation 'com.pingidentity.sdk:mfa-push:<version>'
+    implementation("com.pingidentity.sdks:commons:<version>")
 ```
 
 ## Usage

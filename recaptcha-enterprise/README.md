@@ -8,9 +8,7 @@ Seamless integration of Google ReCaptcha Enterprise into Ping Identity's Journey
 
 ### Prerequisites
 
-- Ping Identity Platform
-    - Ping Advanced Identity Cloud
-    - PingAM 6.5.2 or higher
+- Ping Advanced Identity Cloud / PingAM [Supported Versions](https://support.pingidentity.com/s/article/Ping-Identity-EOL-Tracker)
 - Android API level 29 or higher
 - Google ReCaptcha Enterprise Site key configured in Google Cloud Console
 - The `Journey` module must be integrated in your project
@@ -22,8 +20,6 @@ Seamless integration of Google ReCaptcha Enterprise into Ping Identity's Journey
 
 For more information about Google ReCaptcha Enterprise, refer to the [official documentation](https://cloud.google.com/recaptcha-enterprise/docs).
 
-
-
 ### Add Dependency to Your Project
 
 ```kotlin
@@ -33,8 +29,6 @@ dependencies {
 ```
 
 Replace `<version>` with the latest available version of the ReCaptcha Enterprise module.
-
----
 
 ## Overview
 

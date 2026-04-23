@@ -12,10 +12,7 @@
 
 ### Prerequisites
 
-- PingOne DaVinci
-- Ping Identity Platform
-    - Ping Advanced Identity Cloud
-    - PingAM 6.5.2 or higher
+- PingOne DaVinci or Ping Advanced Identity Cloud / PingAM [Supported Versions](https://support.pingidentity.com/s/article/Ping-Identity-EOL-Tracker)
 - Android API level 29 or higher
 
 ### Installation

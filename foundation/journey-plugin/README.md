@@ -20,6 +20,11 @@ logic and data handling at various stages of the user journey.
 
 ## Getting Started
 
+### Prerequisites
+
+- PingOne DaVinci or Ping Advanced Identity Cloud / PingAM [Supported Versions](https://support.pingidentity.com/s/article/Ping-Identity-EOL-Tracker)
+- Android API level 29 or higher
+
 ### 1. Add Dependency
 
 To integrate this module into your Android project, include the following dependency in

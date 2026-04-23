@@ -10,19 +10,16 @@ authentication methods.
 
 ### Prerequisites
 
-- Ping Identity Platform
-    - Ping Advanced Identity Cloud
-    - PingAM 6.5.2 or higher
+- Ping Advanced Identity Cloud / PingAM [Supported Versions](https://support.pingidentity.com/s/article/Ping-Identity-EOL-Tracker)
 - Android API level 29 or higher
 
 ### Installation
 
-To integrate this module into your Android project, include the following dependency in
-your `build.gradle.kts` (or `build.gradle`) file:
+To integrate this module into your Android project, include the following dependency in your `build.gradle.kts` (or `build.gradle`) file:
 
 ```kotlin
 dependencies {
-    implementation(project(":mfa:binding"))
+    implementation("com.pingidentity.sdks:binding:<version>")
 }
 ```
 
@@ -35,7 +32,7 @@ If you plan to use **Application PIN** authentication, you must also add the [Bo
 
 ```kotlin
 dependencies {
-    implementation(project(":mfa:binding"))
+    implementation("com.pingidentity.sdks:binding:<version>")
     implementation("org.bouncycastle:bcpkix-jdk18on:1.82") // Required for Application PIN
 }
 ```
@@ -46,8 +43,8 @@ For enhanced user experience with default UI components, add the binding-ui modu
 
 ```kotlin
 dependencies {
-    implementation(project(":mfa:binding"))
-    implementation(project(":mfa:binding-ui")) // Provides default UI components
+    implementation("com.pingidentity.sdks:binding:<version>")
+    implementation("com.pingidentity.sdks:binding-ui:<version>") // Provides default UI components
     implementation("org.bouncycastle:bcpkix-jdk18on:1.82") // Required for Application PIN
 }
 ```

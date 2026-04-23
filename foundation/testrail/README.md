@@ -1,3 +1,5 @@
+[![Ping Identity](https://www.pingidentity.com/content/dam/picr/nav/Ping-Logo-2.svg)](https://github.com/ForgeRock/ping-android-sdk)
+
 # TestRail Module
 
 This module provides TestRail integration for the test classes.

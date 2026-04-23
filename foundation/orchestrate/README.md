@@ -29,7 +29,7 @@ your `build.gradle.kts` (or `build.gradle`) file:
 
 ```kotlin
 dependencies {
-    implementation(project(":orchestrate"))
+    implementation("com.pingidentity.sdks:orchestrate:<version>")
 }
 ```
 

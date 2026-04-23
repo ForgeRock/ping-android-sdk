@@ -1,6 +1,6 @@
-# Contributing to the Ping Identity Android SDK
+# Contributing to the Ping Orchestration SDK for Android
 
-Thank you for considering contributing to the Ping Identity Android SDK! We appreciate your time and effort.
+Thank you for considering contributing to the Ping Orchestration SDK for Android! We appreciate your time and effort.
 
 This document outlines the guidelines for contributing to this project. Please read it before getting started.
 
@@ -11,7 +11,7 @@ This document outlines the guidelines for contributing to this project. Please r
 - A GitHub account with Git installed locally.
 - The latest stable version of [Android Studio](https://developer.android.com/studio).
 - Android API level 29 or higher.
-- A PingOne tenant or PingAM instance — see the [documentation](https://developer.pingidentity.com/orchsdks/index.html) for setup instructions.
+- A PingOne and Ping AIC tenants or PingAM instance — see the [documentation](https://developer.pingidentity.com/orchsdks) for setup instructions.
 
 ### Fork and Clone the Repository
 

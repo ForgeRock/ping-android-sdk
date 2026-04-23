@@ -2,22 +2,13 @@
 
 # Push Module
 
-The Push module provides support for push notification-based multi-factor authentication. It supports both PingAM and PingOne push notification formats and enables applications to:
-
-- Support for PingAM push notification formats
-- Register devices for push notifications
-- Device registration via QR code
-- Secure storage of push credentials
-- Process incoming push notifications
-- Support for simple approval, challenge-response, and biometric authentication flows
+The Push module facilitates multi-factor authentication using push notifications, supporting both PingAM and Ping AIC formats. This module is responsible for securely storing push credentials, allowing applications to register devices for push notifications, and processing incoming notifications.
 
 ## Getting Started
 
 ### Prerequisites
 
-- Ping Identity Platform
-    - Ping Advanced Identity Cloud
-    - PingAM 6.5.2 or higher
+- Ping Advanced Identity Cloud / PingAM [Supported Versions](https://support.pingidentity.com/s/article/Ping-Identity-EOL-Tracker)
 - Android API level 29 or higher
 - Firebase Cloud Messaging (FCM) configured for your application
 - Push Notification Service from Ping Identity (PingAM or Ping AIC)
@@ -29,10 +20,10 @@ your `build.gradle.kts` (or `build.gradle`) file:
 
 ```kotlin
 dependencies {
-    implementation 'com.pingidentity.sdk:mfa:push:<version>'
-    
+    implementation("com.pingidentity.sdks:push:<version>")
+
     // Firebase dependencies for push notifications
-    implementation 'com.google.firebase:firebase-messaging:<version>'
+    implementation("com.google.firebase:firebase-messaging:<version>")
 }
 ```
 
@@ -933,4 +924,4 @@ class AuthenticationActivity : AppCompatActivity() {
 
 This software may be modified and distributed under the terms of the MIT license. See the LICENSE file for details.
 
-© Copyright (c) 2026 Ping Identity Corporation. All rights reserved.
+© Copyright 2025-2026 Ping Identity Corporation. All rights reserved.

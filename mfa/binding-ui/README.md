@@ -8,9 +8,7 @@ The Device Binding UI module provides pre-built Jetpack Compose UI components fo
 
 ### Prerequisites
 
-- Ping Identity Platform
-    - Ping Advanced Identity Cloud
-    - PingAM 6.5.2 or higher
+- Ping Advanced Identity Cloud / PingAM [Supported Versions](https://support.pingidentity.com/s/article/Ping-Identity-EOL-Tracker)
 - Android API level 29 or higher
 - Jetpack Compose integration in your project
 - Activity context for displaying dialogs
@@ -22,7 +20,7 @@ your `build.gradle.kts` (or `build.gradle`) file:
 
 ```kotlin
 dependencies {
-    implementation(project(":mfa:binding-ui"))
+    implementation("com.pingidentity.sdks:binding-ui:<version>")
 }
 ```
 

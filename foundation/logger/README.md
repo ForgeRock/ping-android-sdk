@@ -19,7 +19,7 @@ your `build.gradle.kts` (or `build.gradle`) file:
 
 ```kotlin
 dependencies {
-    implementation(project(":foundation:logging"))
+    implementation("com.pingidentity.sdks:logger:<version>")
 }
 ```
 
