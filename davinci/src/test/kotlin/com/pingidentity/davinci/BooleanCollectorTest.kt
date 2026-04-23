@@ -1,0 +1,162 @@
+/*
+ * Copyright (c) 2026 Ping Identity Corporation. All rights reserved.
+ * This software may be modified and distributed under the terms
+ * of the MIT license. See the LICENSE file for details.
+ */
+
+package com.pingidentity.davinci
+
+import com.pingidentity.davinci.collector.SingleCheckboxAppearance
+import com.pingidentity.davinci.collector.BooleanCollector
+import com.pingidentity.davinci.collector.SingleCheckboxRequiredError
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
+import kotlin.test.assertFalse
+import kotlin.test.assertIs
+
+class BooleanCollectorTest {
+
+    @Test
+    fun initializesDefaultValuesWhenNoInputProvided() {
+        val input = buildJsonObject {}
+        val collector = BooleanCollector()
+        collector.init(input)
+
+        assertEquals(SingleCheckboxAppearance.CHECKBOX, collector.appearance)
+        assertEquals("This field is required.", collector.errorMessage)
+        assertNull(collector.richContent)
+        assertFalse(collector.value)
+    }
+
+    @Test
+    fun initializesAppearanceAsCheckbox() {
+        val input = buildJsonObject {
+            put("appearance", "CHECKBOX")
+        }
+        val collector = BooleanCollector()
+        collector.init(input)
+
+        assertEquals(SingleCheckboxAppearance.CHECKBOX, collector.appearance)
+    }
+
+    @Test
+    fun initializesAppearanceAsSwitch() {
+        val input = buildJsonObject {
+            put("appearance", "SWITCH")
+        }
+        val collector = BooleanCollector()
+        collector.init(input)
+
+        assertEquals(SingleCheckboxAppearance.SWITCH, collector.appearance)
+    }
+
+    @Test
+    fun initializesAppearanceAsCheckboxWhenUnknownValueProvided() {
+        val input = buildJsonObject {
+            put("appearance", "UNKNOWN")
+        }
+        val collector = BooleanCollector()
+        collector.init(input)
+
+        assertEquals(SingleCheckboxAppearance.CHECKBOX, collector.appearance)
+    }
+
+    @Test
+    fun initializesErrorMessage() {
+        val input = buildJsonObject {
+            put("errorMessage", "Select the checkbox to continue.")
+        }
+        val collector = BooleanCollector()
+        collector.init(input)
+
+        assertEquals("Select the checkbox to continue.", collector.errorMessage)
+    }
+
+    @Test
+    fun initializesRichContent() {
+        val input = buildJsonObject {
+            put("richContent", buildJsonObject {
+                put("content", "This is a sample checkbox test.")
+            })
+        }
+        val collector = BooleanCollector()
+        collector.init(input)
+
+        assertEquals("This is a sample checkbox test.", collector.richContent)
+    }
+
+
+    @Test
+    fun validateReturnsNoErrorsWhenRequiredAndChecked() {
+        val input = buildJsonObject {
+            put("required", true)
+            put("errorMessage", "Select the checkbox to continue.")
+        }
+        val collector = BooleanCollector()
+        collector.init(input)
+        collector.value = true
+
+        val errors = collector.validate()
+
+        assertTrue(errors.isEmpty())
+    }
+
+    @Test
+    fun validateReturnsErrorWhenRequiredAndUnchecked() {
+        val input = buildJsonObject {
+            put("required", true)
+            put("errorMessage", "Select the checkbox to continue.")
+        }
+        val collector = BooleanCollector()
+        collector.init(input)
+        collector.value = false
+
+        val errors = collector.validate()
+
+        assertTrue(errors.isNotEmpty())
+        assertIs<SingleCheckboxRequiredError>(errors[0])
+        assertEquals("Select the checkbox to continue.", (errors[0] as SingleCheckboxRequiredError).message)
+    }
+
+    @Test
+    fun validateReturnsNoErrorsWhenNotRequired() {
+        val input = buildJsonObject {
+            put("required", false)
+        }
+        val collector = BooleanCollector()
+        collector.init(input)
+        collector.value = false
+
+        val errors = collector.validate()
+
+        assertTrue(errors.isEmpty())
+    }
+
+    @Test
+    fun payloadReturnsTrueWhenChecked() {
+        val collector = BooleanCollector()
+        collector.value = true
+
+        assertTrue(collector.payload())
+    }
+
+    @Test
+    fun payloadReturnsFalseWhenUnchecked() {
+        val collector = BooleanCollector()
+        collector.value = false
+
+        assertFalse(collector.payload())
+    }
+
+    @Test
+    fun singleCheckboxRequiredErrorToString() {
+        val error = SingleCheckboxRequiredError("test-key", "Select the checkbox to continue.")
+
+        assertEquals("SingleCheckboxRequiredError(key='test-key', message='Select the checkbox to continue.')", error.toString())
+    }
+}
+
