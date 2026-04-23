@@ -11,8 +11,8 @@ import com.pingidentity.davinci.json
 import com.pingidentity.orchestrate.Closeable
 import com.pingidentity.orchestrate.ContinueNode
 import com.pingidentity.orchestrate.ContinueNodeAware
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.decodeFromJsonElement
-import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 
 /**
@@ -24,6 +24,10 @@ import kotlinx.serialization.json.jsonObject
  * @constructor Creates a new PasswordCollector with the given input.
  */
 class PasswordCollector : ValidatedCollector(), ContinueNodeAware, Closeable {
+
+    companion object {
+        private const val PASSWORD_POLICY = "passwordPolicy"
+    }
 
     /**
      * The continue node for the DaVinci flow.
@@ -43,24 +47,23 @@ class PasswordCollector : ValidatedCollector(), ContinueNodeAware, Closeable {
         if (clearPassword) value = ""
     }
 
+    override fun init(input: JsonObject): ValidatedCollector {
+        super.init(input)
+        passwordPolicy = input[PASSWORD_POLICY]?.jsonObject?.let {
+            json.decodeFromJsonElement<PasswordPolicy>(it)
+        }
+        return this
+    }
+
     /**
      * Function to retrieve the password policy, if available.
      */
     fun passwordPolicy(): PasswordPolicy? {
         if (passwordPolicy == null) {
-            passwordPolicy = continueNode.input["form"]
-                ?.jsonObject?.get("components")
-                ?.jsonObject?.get("fields")
-                ?.jsonArray
-                ?.firstOrNull {
-                    it.jsonObject["type"]?.let { t ->
-                        json.decodeFromJsonElement<String>(t)
-                    } == "PASSWORD_VERIFY"
-                }
-                ?.jsonObject?.get("passwordPolicy")
-                ?.jsonObject?.let {
-                    json.decodeFromJsonElement(it)
-                }
+            // Fall back to continue node input if not found in the collector input
+            passwordPolicy = continueNode.input[PASSWORD_POLICY]?.jsonObject?.let {
+                json.decodeFromJsonElement(it)
+            }
         }
         return passwordPolicy
 
