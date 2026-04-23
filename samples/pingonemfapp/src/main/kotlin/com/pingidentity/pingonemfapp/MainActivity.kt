@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -16,15 +16,20 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.Surface
+import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
+import androidx.navigation.compose.rememberNavController
 import com.pingidentity.pingonemfapp.data.DiagnosticLogger
 import com.pingidentity.pingonemfapp.data.PingOneMFAViewModel
 import com.pingidentity.pingonemfapp.data.ThemeMode
@@ -32,6 +37,7 @@ import com.pingidentity.pingonemfapp.data.UserPreferences
 import com.pingidentity.pingonemfapp.managers.AccountsManager
 import com.pingidentity.pingonemfapp.managers.OTPManager
 import com.pingidentity.pingonemfapp.notification.NotificationHelper
+import com.pingidentity.pingonemfapp.ui.AppDrawer
 import com.pingidentity.pingonemfapp.ui.AuthenticatorNavHost
 import com.pingidentity.pingonemfapp.ui.theme.PingIdentityAuthenticatorTheme
 import kotlinx.coroutines.launch
@@ -77,14 +83,37 @@ class MainActivity : ComponentActivity() {
             if (areViewModelsInitialized) {
                 val themeMode by authenticatorViewModel.themeMode.collectAsState()
                 PingIdentityAuthenticatorTheme(themeMode = themeMode) {
+                    val navController = rememberNavController()
+                    val drawerState = rememberDrawerState(DrawerValue.Closed)
+                    val coroutineScope = rememberCoroutineScope()
+
                     Surface(
                         modifier = Modifier.fillMaxSize(),
                         color = MaterialTheme.colorScheme.background
                     ) {
-                        AuthenticatorNavHost(
-                            authenticatorViewModel = authenticatorViewModel,
-                            initialDestination = getInitialDestination()
-                        )
+                        ModalNavigationDrawer(
+                            drawerContent = {
+                                AppDrawer(
+                                    navigateTo = { route ->
+                                        navController.navigate(route)
+                                    },
+                                    closeDrawer = {
+                                        coroutineScope.launch { drawerState.close() }
+                                    },
+                                )
+                            },
+                            drawerState = drawerState,
+                            gesturesEnabled = true,
+                        ) {
+                            AuthenticatorNavHost(
+                                navController = navController,
+                                authenticatorViewModel = authenticatorViewModel,
+                                initialDestination = getInitialDestination(),
+                                onOpenDrawer = {
+                                    coroutineScope.launch { drawerState.open() }
+                                }
+                            )
+                        }
                     }
                 }
             } else {

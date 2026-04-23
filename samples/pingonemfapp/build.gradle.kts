@@ -83,6 +83,7 @@ dependencies {
     // Ping SDK dependencies
     implementation(project(":pingonemfa"))
     implementation(project(":foundation:logger"))
+    implementation(project(":davinci"))
 
     // Kotlinx Serialization
     implementation(libs.kotlinx.serialization.json)

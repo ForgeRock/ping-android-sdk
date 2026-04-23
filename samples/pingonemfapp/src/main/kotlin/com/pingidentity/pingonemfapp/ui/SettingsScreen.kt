@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -17,7 +17,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ListAlt
-import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Dns
 import androidx.compose.material3.AlertDialog
@@ -35,7 +34,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.pingidentity.pingonemfapp.R
 import com.pingidentity.pingonemfapp.data.PingOneMFAViewModel
 import com.pingidentity.pingonemfapp.data.ThemeMode
 import com.pingidentity.pingonemfapp.ui.components.BackNavigationTopAppBar
@@ -57,7 +58,6 @@ fun SettingsScreen(
     onDiagnosticLogsClick: () -> Unit = {}
 ) {
     // Collect all settings as state
-    val copyOtp by viewModel.copyOtp.collectAsState()
     val diagnosticLogging by viewModel.diagnosticLogging.collectAsState()
     val themeMode by viewModel.themeMode.collectAsState()
     
@@ -67,7 +67,7 @@ fun SettingsScreen(
     Scaffold(
         topBar = {
             BackNavigationTopAppBar(
-                title = "Settings",
+                title = stringResource(id = R.string.settings_screen_title),
                 onBackClick = onDismiss
             )
         }
@@ -82,8 +82,11 @@ fun SettingsScreen(
             // Theme Setting
             SettingItem(
                 icon = Icons.Default.DarkMode,
-                title = "Theme",
-                description = "Choose between light, dark, or follow system theme: ${getThemeDisplayName(themeMode)}",
+                title = stringResource(id = R.string.settings_theme_title),
+                description = stringResource(
+                    id = R.string.settings_theme_summary,
+                    getThemeDisplayName(themeMode)
+                ),
                 hasNavigation = true,
                 onNavigate = { showThemeDialog = true }
             )
@@ -93,8 +96,8 @@ fun SettingsScreen(
             // Diagnostic Logging Setting
             SettingItem(
                 icon = Icons.Default.Dns,
-                title = "Enable diagnostic logging",
-                description = "Automatically collect errors from the app and save in place developers can collect",
+                title = stringResource(id = R.string.settings_diagnostic_logging_title),
+                description = stringResource(id = R.string.settings_diagnostic_logging_summary),
                 checked = diagnosticLogging,
                 onToggle = { viewModel.setDiagnosticLogging(it) }
             )
@@ -103,8 +106,8 @@ fun SettingsScreen(
             if (diagnosticLogging) {
                 SettingItem(
                     icon = Icons.AutoMirrored.Filled.ListAlt,
-                    title = "View diagnostic logs",
-                    description = "View and export captured diagnostic logs",
+                    title = stringResource(id = R.string.settings_view_diagnostic_logs_title),
+                    description = stringResource(id = R.string.settings_view_diagnostic_logs_summary),
                     hasNavigation = true,
                     onNavigate = onDiagnosticLogsClick
                 )
@@ -139,7 +142,7 @@ private fun ThemeSelectionDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
-            Text("Choose Theme")
+            Text(stringResource(id = R.string.settings_choose_theme_title))
         },
         text = {
             Column {
@@ -165,7 +168,7 @@ private fun ThemeSelectionDialog(
         },
         confirmButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringResource(id = R.string.login_cancel))
             }
         }
     )
@@ -174,10 +177,11 @@ private fun ThemeSelectionDialog(
 /**
  * Get display name for theme mode
  */
+@Composable
 private fun getThemeDisplayName(themeMode: ThemeMode): String {
     return when (themeMode) {
-        ThemeMode.LIGHT -> "Light"
-        ThemeMode.DARK -> "Dark"
-        ThemeMode.SYSTEM -> "Follow System"
+        ThemeMode.LIGHT -> stringResource(id = R.string.theme_mode_light)
+        ThemeMode.DARK -> stringResource(id = R.string.theme_mode_dark)
+        ThemeMode.SYSTEM -> stringResource(id = R.string.theme_mode_system)
     }
 }

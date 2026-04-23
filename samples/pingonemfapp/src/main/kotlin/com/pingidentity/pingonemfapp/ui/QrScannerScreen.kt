@@ -238,7 +238,7 @@ fun QrScannerScreen(
             if (uiState.error != null) {
                 AlertDialog(
                     onDismissRequest = { viewModel.clearError() },
-                    title = { Text("Error") },
+                    title = { Text(stringResource(id = R.string.error_title)) },
                     text = { Text(uiState.error!!) },
                     confirmButton = {
                         Button(onClick = { viewModel.clearError() }) {

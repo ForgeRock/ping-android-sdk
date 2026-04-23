@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -25,13 +25,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.QrCodeScanner
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -74,17 +70,13 @@ import kotlinx.coroutines.isActive
 @Composable
 fun AccountsScreen(
     viewModel: PingOneMFAViewModel,
+    onMenuClick: () -> Unit,
     onScanQrCode: () -> Unit,
     onAccountClick: () -> Unit,
-    onSettingsClick: () -> Unit,
-    onAboutClick: () -> Unit,
 ) {
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
     val coroutineScope = rememberCoroutineScope()
-    
-    // Collect settings state
-    val copyOtpEnabled by viewModel.copyOtp.collectAsState()
 
     // State for triggering progress bar updates
     var currentTimeMillis by remember { mutableLongStateOf(System.currentTimeMillis()) }
@@ -97,11 +89,12 @@ fun AccountsScreen(
         }
     }
 
+    LaunchedEffect(Unit) {
+        viewModel.refreshPingOneMfaAccounts()
+    }
+
     // Show fab menu state
     var showFabMenu by remember { mutableStateOf(false) }
-    
-    // Show hamburger menu state
-    var showHamburgerMenu by remember { mutableStateOf(false) }
     
     // Snackbar state
     val snackbarHostState = remember { SnackbarHostState() }
@@ -129,7 +122,7 @@ fun AccountsScreen(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Image(
                             painter = painterResource(id = R.drawable.ping_logo),
-                            contentDescription = "Ping Identity Logo",
+                            contentDescription = stringResource(id = R.string.content_description_ping_identity_logo),
                             modifier = Modifier
                                 .size(32.dp)
                                 .padding(end = 4.dp)
@@ -137,54 +130,12 @@ fun AccountsScreen(
                                                 Text(text = stringResource(id = R.string.accounts_screen_title))
                     }
                 },
-                actions = {
-                    // Hamburger menu
-                    Box {
-                        IconButton(onClick = { showHamburgerMenu = true }) {
-                            Icon(
-                                imageVector = Icons.Default.MoreVert,
-                                contentDescription = "Menu"
-                            )
-                        }
-                        
-                        DropdownMenu(
-                            expanded = showHamburgerMenu,
-                            onDismissRequest = { showHamburgerMenu = false }
-                        ) {
-                            DropdownMenuItem(
-                                text = {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Icon(
-                                            imageVector = Icons.Default.Settings,
-                                            contentDescription = null,
-                                            modifier = Modifier.padding(end = 12.dp)
-                                        )
-                                        Text("Settings")
-                                    }
-                                },
-                                onClick = {
-                                    showHamburgerMenu = false
-                                    onSettingsClick()
-                                }
-                            )
-                            
-                            DropdownMenuItem(
-                                text = {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Icon(
-                                            imageVector = Icons.Default.Info,
-                                            contentDescription = null,
-                                            modifier = Modifier.padding(end = 12.dp)
-                                        )
-                                                                                Text(stringResource(id = R.string.menu_about))
-                                    }
-                                },
-                                onClick = {
-                                    showHamburgerMenu = false
-                                    onAboutClick()
-                                }
-                            )
-                        }
+                navigationIcon = {
+                    IconButton(onClick = onMenuClick) {
+                        Icon(
+                            imageVector = Icons.Default.Menu,
+                            contentDescription = stringResource(id = R.string.content_description_menu)
+                        )
                     }
                 }
             )
@@ -211,7 +162,7 @@ fun AccountsScreen(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.QrCodeScanner,
-                                contentDescription = "Scan QR Code"
+                                contentDescription = stringResource(id = R.string.content_description_scan_qr)
                             )
                         }
                     }
@@ -264,7 +215,7 @@ fun AccountsScreen(
                 }
                 uiState.pingOneMfaAccounts.isEmpty() -> {
                     EmptyStateMessage(
-                        title = "No accounts added yet",
+                        title = stringResource(id = R.string.accounts_empty_state_title),
                         subtitle = stringResource(id = R.string.accounts_empty_state_subtitle)
                     )
                 }

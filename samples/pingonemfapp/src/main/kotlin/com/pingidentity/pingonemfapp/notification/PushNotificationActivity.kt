@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -31,6 +31,7 @@ import com.pingidentity.pingonemfapp.ui.NotificationResponseScreen
 import com.pingidentity.pingonemfapp.ui.theme.PingIdentityAuthenticatorTheme
 import com.pingidentity.pingonemfa.push.PushNotification
 import com.pingidentity.pingonemfapp.notification.NotificationActionReceiver.Companion.EXTRA_NOTIFICATION
+import com.pingidentity.pingonemfapp.R
 import kotlinx.coroutines.launch
 
 /**
@@ -74,7 +75,7 @@ class PushNotificationActivity : ComponentActivity() {
                     isLoading = false
                 } catch (e: Exception) {
                     diagnosticLogger.w("Error loading notification: ${e.message}")
-                    errorMessage = "Failed to load notification: ${e.message}"
+                    errorMessage = context.getString(R.string.push_notification_error_load, e.message)
                     isLoading = false
                 }
             }

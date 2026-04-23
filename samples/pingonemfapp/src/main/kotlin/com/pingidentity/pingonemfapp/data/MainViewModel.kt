@@ -47,10 +47,6 @@ class PingOneMFAViewModel(
 
     val otpState: StateFlow<OtpUiState> = otpManager.otpState
 
-    // Expose all settings preferences as StateFlows
-    val copyOtp: StateFlow<Boolean>
-        get() = userPreferences.copyOtpFlow
-
     val diagnosticLogging: StateFlow<Boolean>
         get() = userPreferences.diagnosticLoggingFlow
 
@@ -107,10 +103,28 @@ class PingOneMFAViewModel(
         }
     }
 
+    fun refreshPingOneMfaAccounts() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isRefreshing = true) }
+            try {
+                loadPingOneMfaAccounts()
+            } finally {
+                _uiState.update { it.copy(isRefreshing = false) }
+            }
+        }
+    }
+
+    /**
+     * Starts automatic OTP refresh for the currently selected account.
+     */
     fun startOtpSequence(){
         diagnosticLogger.d("startOtpSequence")
         otpManager.startAutoRefresh(viewModelScope)
     }
+
+    /**
+     * Stops automatic OTP refresh and clears any running OTP timer work.
+     */
     fun stopOtpSequence(){
         diagnosticLogger.d("stopOtpSequence")
         otpManager.stop()
@@ -142,7 +156,9 @@ class PingOneMFAViewModel(
         }
     }
 
-
+    /**
+     * Attempts to pair a new MFA account using a scanned pairing key.
+     */
     fun tryToPairUserForPingOneMFA(pairingKey: String){
         diagnosticLogger.d("tryToPairUserForPingOneMFA: $pairingKey")
         // Attempt to pair user

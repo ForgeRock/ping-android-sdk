@@ -3,6 +3,7 @@
 # PingOne MFA Authenticator Sample App
 
 This sample application demonstrates how to implement multi-factor authentication using the Ping Identity SDK. The app allows users to register and manage both OATH credentials (TOTP/HOTP) and Push authentication credentials.
+It also includes sample DaVinci flows that can collect a PingOne MFA mobile payload or pair a device through DaVinci.
 
 ## Disclaimer
 
@@ -11,7 +12,7 @@ This application is a sample and not intended for production use. It is provided
 ## Features
 
 ### OATH Authentication
-- **QR Code Scanning**: Register accounts by scanning QR codes 
+- **QR Code Scanning**: Register accounts by scanning QR codes
 - **TOTP Support**: Automatic generation of time-based one-time passwords with countdown timer
 
 ### Push Authentication
@@ -22,26 +23,32 @@ This application is a sample and not intended for production use. It is provided
 - **Push Biometric Authentication**: Authenticate using fingerprint or face recognition (BIOMETRIC type)
 - **Push Challenge Verification**: Verify challenge numbers for enhanced security (CHALLENGE type)
 
+### DaVinci Integration
+- **DaVinci Launcher**: Choose a configured DaVinci flow from the app drawer
+- **Editable Configurations**: Edit client ID, discovery endpoint, scopes, redirect URI, display name, timeout, and storage file name in the sample app
+- **Mobile Payload Collection**: Collect a PingOne MFA mobile payload and submit it through a DaVinci collector
+- **Device Pairing Flow**: Pair a device through a DaVinci flow using the PingOne MFA SDK
+
 ## Architecture overview
 
-The Ping Authenticator App sample is a modular Android application built on Model-View-ViewModel architecture with Kotlin, Jetpack Compose, and the Ping SDK for secure multi-factor authentication (MFA).
+The PingOne MFA Authenticator sample is a modular Android application built on Model-View-ViewModel architecture with Kotlin, Jetpack Compose, and the Ping SDK for secure multi-factor authentication (MFA).
 
 ```
 ┌─────────────────────────────┐
-│      Presentation Layer     │  ← UI: Jetpack Compose screens, navigation
+│      Presentation Layer     │  ← UI: Jetpack Compose screens and navigation
 ├─────────────────────────────┤
 │        Domain Layer         │  ← ViewModels, business logic, state
 ├─────────────────────────────┤
 │     Data/Service Layer      │  ← Managers, services, secure storage
 ├─────────────────────────────┤
-│         SDK Layer           │  ← Ping SDK: push, oath, and journey modules
+│         SDK Layer           │  ← Ping SDK: push, oath, and DaVinci modules
 └─────────────────────────────┘
 ```
 
-- **Presentation Layer**: Android Activities/Fragments for user interaction.
+- **Presentation Layer**: Jetpack Compose screens and navigation for user interaction.
 - **Domain Layer**: Handles business logic, orchestrates feature flows, and manages state.
-- **Data/Service Layer**: Integrates with Ping SDK modules (`push`, `otp`).
-- **SDK Layer**: Abstracts the complexity to deal with MFA capabilities and communication with Ping backend.
+- **Data/Service Layer**: Integrates with Ping SDK modules, Firebase Cloud Messaging, and local preferences.
+- **SDK Layer**: Abstracts MFA, DaVinci, and communication with Ping backend services.
 
 The application follows modern Android development practices:
 
@@ -59,8 +66,15 @@ The application follows modern Android development practices:
 ### Code Structure Overview
 
 ```
-src/main/kotlin/com/pingidentity/authenticatorapp/
+src/main/kotlin/com/pingidentity/pingonemfapp/
 ├── PingOneMFApp.kt                 # App initialization
+├── config/
+│   ├── Env.kt                      # Editable DaVinci configuration UI
+│   └── EnvViewModel.kt             # DaVinci configuration state and persistence
+├── davinci/
+│   ├── DaVinci.kt                  # DaVinci flow UI
+│   ├── DaVinciViewModel.kt         # DaVinci flow state and node progression
+│   └── collector/                  # PingOne MFA-specific DaVinci collectors
 ├── managers/
 │   ├── AccountsManager.kt          # Pairing account and accounts retrieval from the SDK
 │   └── OtpManager.kt               # OTP generation and auto-refresh
@@ -78,6 +92,8 @@ src/main/kotlin/com/pingidentity/authenticatorapp/
 **Key Classes & Structure:**
 
 - `PingOneMFApp.kt`: Configures logging, initializes the PingOne MFA SDK, and registers the Firebase push token.
+- `config/EnvViewModel.kt`: Stores editable DaVinci configurations as JSON in SharedPreferences and applies the selected configuration before a DaVinci flow starts.
+- `davinci/`: Compose UI and ViewModels for running DaVinci flows from the selected configuration.
 - `managers/`: Integrates Ping SDK modules.
 - `managers/AccountsManager.kt`: wraps the PingOne MFA SDK to pair users and load MFA accounts.
 - `managers/OtpManager.kt`: continuously fetches OTP codes from the PingOne MFA SDK, maintains their countdown lifecycle, and exposes the current OTP state to the UI via a reactive flow.
@@ -106,7 +122,7 @@ The app handles three different types of push authentication:
    // Approve a standard notification
    notification.approveNotification(notification, authMethod)
    ```
-    ***important:***
+    ***Important:***
 If you're approving the notification from the notification banner button (notification action) you must call:
    ```kotlin
    // Approve a background notification
@@ -137,12 +153,21 @@ If you're approving the notification from the notification banner button (notifi
 
 **Flow Diagram (textual):**
 ```
-Enroll User → OtpManager → Ping One SDK → Token Retrieval → Display in UI → User enters code
+Enroll User → OtpManager → PingOne MFA SDK → Token Retrieval → Display in UI → User enters code
 ```
 
 ### QR Code Scanning
 
 The app uses CameraX and ML Kit to scan and decode QR codes.
+
+### DaVinci Module
+
+The sample includes two editable DaVinci configurations:
+
+1. **DaVinci Payload Flow Config**: launches a flow that collects a PingOne MFA mobile payload.
+2. **DaVinci Pairing Flow Config**: launches a flow that pairs a device through PingOne MFA.
+
+DaVinci is initialized only when the user selects a configuration from the DaVinci launcher. The selected configuration is then applied and persisted before the flow starts. Configuration edits are stored as JSON in SharedPreferences.
 
 
 ## Getting Started
@@ -152,13 +177,30 @@ The app uses CameraX and ML Kit to scan and decode QR codes.
 - Android Studio Koala | 2024.1.1 or newer
 - Android SDK 29 or higher
 - Gradle 8.7 or newer
-- google-services.json file (to work with FCM push notifications)
+- A `google-services.json` file for the `com.pingidentity.pingonemfapp` application ID if you want to test FCM push notifications
+- A PingOne environment with MFA configured
+- DaVinci applications/flows configured with redirect URI `app://oauth2redirect` if you want to test the DaVinci launcher
 
 ### Building the App
 
 1. Clone the repository
-2. Open the project in Android Studio
-3. Build and run on your device or emulator
+2. Add or replace `samples/pingonemfapp/google-services.json` with the Firebase configuration for your app
+3. Open the project in Android Studio
+4. Build and run on your device or emulator
+
+You can also build from the command line:
+
+```bash
+./gradlew :samples:pingonemfapp:assembleDebug
+```
+
+### Running DaVinci Flows
+
+1. Open the app drawer and choose **Launch DaVinci**.
+2. Tap a configuration to apply it and start that flow.
+3. To edit the defaults, choose **Edit Configurations**, update the fields, and tap **Apply**.
+
+The sample ships with default configuration values for demonstration. Replace the client IDs, discovery endpoint, scopes, redirect URI, display name, timeout, and storage file name with values that match your PingOne/DaVinci environment.
 
 ## Testing
 
@@ -169,6 +211,7 @@ To test the app's functionality, you need:
 - A PingOne account with MFA enabled
 - FCM configured for your Android application
 - The app properly registered with FCM to receive push notifications
+- DaVinci flows configured for the payload and/or pairing scenarios if testing the DaVinci launcher
 
 
 ## Contributing
@@ -185,8 +228,12 @@ Contributions are welcome! Please read the [contributing guidelines](../../CONTR
   - Make sure that the QR code is well-lit and in focus.
   - Try scanning the QR code from a different distance or angle.
   - Ensure that the QR code is in the correct format.
+- **DaVinci flow does not start**:
+  - Confirm that you selected a configuration from **Launch DaVinci** before navigating to the flow.
+  - Verify the client ID, discovery endpoint, scopes, and redirect URI in **Edit Configurations**.
+  - Ensure the redirect URI configured in DaVinci matches `app://oauth2redirect`.
 
 ## License
 
-Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
-This software may be modified and distributed under the terms of the MIT license. See the [LICENSE](../LICENSE) file for details.
+Copyright (c) 2026 Ping Identity Corporation. All rights reserved.
+This software may be modified and distributed under the terms of the MIT license. See the [LICENSE](../../LICENSE) file for details.
