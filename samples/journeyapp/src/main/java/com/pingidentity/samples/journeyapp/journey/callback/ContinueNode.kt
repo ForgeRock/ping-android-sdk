@@ -51,6 +51,8 @@ import com.pingidentity.orchestrate.ContinueNode
 import com.pingidentity.protect.journey.PingOneProtectEvaluationCallback
 import com.pingidentity.protect.journey.PingOneProtectInitializeCallback
 import com.pingidentity.recaptcha.enterprise.ReCaptchaEnterpriseCallback
+import com.pingidentity.recognize.journey.PingOneRecognizeAuthenticateCallback
+import com.pingidentity.recognize.journey.PingOneRecognizeEnrollCallback
 
 @Composable
 fun ContinueNode(
@@ -168,6 +170,14 @@ fun ContinueNode(
                     val vm: DeviceSigningVerifierCallbackViewModel =
                         viewModel(factory = DeviceSigningVerifierCallbackViewModel.factory(it))
                     DeviceSigningVerifierCallback(vm, true, onNext)
+                    showNext = false
+                }
+                is PingOneRecognizeEnrollCallback -> {
+                    RecognizeEnrollment(it, onNext)
+                    showNext = false
+                }
+                is PingOneRecognizeAuthenticateCallback -> {
+                    RecognizeAuthenticate(it, onNext)
                     showNext = false
                 }
             }

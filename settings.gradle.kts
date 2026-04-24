@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 - 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2024 - 2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -21,6 +21,7 @@ dependencyResolutionManagement {
         mavenCentral()
         //mavenLocal()
         maven(url = "https://central.sonatype.com/repository/maven-snapshots/")
+        maven(url = "https://dl.cloudsmith.io/J6bQSXpmunvvb5sY/keyless/keyless/maven/")
     }
 }
 
@@ -61,6 +62,7 @@ include(":foundation:testrail")
 
 include(":mfa")
 include(":mfa:fido")
+include(":recognize")
 
 include(":samples:app")
 include(":samples:journeyapp")

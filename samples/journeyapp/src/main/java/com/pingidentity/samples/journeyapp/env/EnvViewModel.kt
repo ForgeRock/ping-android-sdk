@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2025 - 2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -35,9 +35,10 @@ val forgeblock =  Journey {
     serverUrl = "https://openam-sdks.forgeblocks.com/am"
     realm = "alpha"
     cookie = "5421aeddf91aa20"
+
     // Oidc as module
     module(Oidc) {
-        clientId = "AndroidTest"
+        clientId = "iosClient"
         discoveryEndpoint =
             "https://openam-sdks.forgeblocks.com/am/oauth2/alpha/.well-known/openid-configuration"
         scopes = mutableSetOf("openid", "email", "address", "profile", "phone")
@@ -49,13 +50,15 @@ val forgeblock =  Journey {
 val localhost =  Journey {
     logger = Logger.STANDARD
 
-    serverUrl = "http://192.168.86.32:8080/openam"
-    realm = "root"
+    serverUrl = "https://openam-keyless.forgeblocks.com/am"
+    realm = "alpha"
+    cookie = "89bf6dea4a81042"
+
     // Oidc as module
     module(Oidc) {
         clientId = "AndroidTest2"
         discoveryEndpoint =
-            "http://192.168.86.32:8080/openam/oauth2/.well-known/openid-configuration"
+            "https://openam-keyless.forgeblocks.com/am/oauth2/alpha/.well-known/openid-configuration"
         scopes = mutableSetOf("openid", "email", "address", "profile", "phone")
         redirectUri = "org.forgerock.demo:/oauth2redirect"
         //storage = dataStore
