@@ -8,11 +8,13 @@
 package com.pingidentity.davinci
 
 import com.pingidentity.davinci.collector.LabelCollector
+import com.pingidentity.davinci.collector.RichContentReplacement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class LabelCollectorTest {
 
@@ -36,4 +38,184 @@ class LabelCollectorTest {
         assertEquals("", collector.content)
     }
 
+    @Test
+    fun `richText falls back to content when no richContent is present`() {
+        val input = buildJsonObject {
+            put("key", "label-key")
+            put("content", "Plain text content")
+        }
+        val collector = LabelCollector()
+        collector.init(input)
+        assertEquals("Plain text content", collector.richText)
+        assertTrue(collector.replacements.isEmpty())
+    }
+
+    @Test
+    fun `richText is read from richContent content when present`() {
+        val input = buildJsonObject {
+            put("key", "rich-text")
+            put("content", "A translatable rich text to take the user to google.com")
+            put("richContent", buildJsonObject {
+                put("content", "A translatable rich text to take the user to {{link1}}")
+            })
+        }
+        val collector = LabelCollector()
+        collector.init(input)
+        assertEquals("A translatable rich text to take the user to google.com", collector.content)
+        assertEquals("A translatable rich text to take the user to {{link1}}", collector.richText)
+        assertTrue(collector.replacements.isEmpty())
+    }
+
+    @Test
+    fun `replacements are parsed from richContent when present`() {
+        val input = buildJsonObject {
+            put("key", "rich-text")
+            put("content", "A translatable rich text to take the user to google.com")
+            put("richContent", buildJsonObject {
+                put("content", "A translatable rich text to take the user to {{link1}}")
+                put("replacements", buildJsonObject {
+                    put("link1", buildJsonObject {
+                        put("value", "google.com")
+                        put("href", "https://www.google.com")
+                        put("type", "link")
+                        put("target", "_self")
+                    })
+                })
+            })
+        }
+        val collector = LabelCollector()
+        collector.init(input)
+
+        assertEquals("A translatable rich text to take the user to {{link1}}", collector.richText)
+        assertEquals(1, collector.replacements.size)
+
+        val link1 = collector.replacements["link1"]
+        assertEquals(RichContentReplacement(
+            value = "google.com",
+            href = "https://www.google.com",
+            type = "link",
+            target = "_self"
+        ), link1)
+    }
+
+    @Test
+    fun `replacements map is empty when richContent has no replacements`() {
+        val input = buildJsonObject {
+            put("key", "rich-text")
+            put("richContent", buildJsonObject {
+                put("content", "Some rich text")
+            })
+        }
+        val collector = LabelCollector()
+        collector.init(input)
+        assertTrue(collector.replacements.isEmpty())
+    }
+
+    @Test
+    fun `richText is set to HTML content when content contains HTML tags`() {
+        val input = buildJsonObject {
+            put("content", "<p><strong><em>Rich Text fields produce LABELs</em></strong></p><hr><p><br></p>")
+        }
+        val collector = LabelCollector()
+        collector.init(input)
+        assertEquals("<p><strong><em>Rich Text fields produce LABELs</em></strong></p><hr><p><br></p>", collector.content)
+        // richText falls back to content since no richContent is present
+        assertEquals("<p><strong><em>Rich Text fields produce LABELs</em></strong></p><hr><p><br></p>", collector.richText)
+        assertEquals("", collector.key)
+        assertTrue(collector.replacements.isEmpty())
+    }
+
+    @Test
+    fun `richText is set from richContent when content has trailing whitespace`() {
+        val input = buildJsonObject {
+            put("key", "translatable-rich-text-key")
+            put("content", "Translatable Rich Text produce LABELs too!\n\n")
+            put("richContent", buildJsonObject {
+                put("content", "Translatable Rich Text produce LABELs too!")
+            })
+        }
+        val collector = LabelCollector()
+        collector.init(input)
+        // content retains the original value including trailing newlines
+        assertEquals("Translatable Rich Text produce LABELs too!\n\n", collector.content)
+        // richText is trimmed to the richContent value
+        assertEquals("Translatable Rich Text produce LABELs too!", collector.richText)
+        assertEquals("translatable-rich-text-key", collector.key)
+        assertTrue(collector.replacements.isEmpty())
+    }
+
+    @Test
+    fun `replacement href with query params is stored as-is`() {
+        // The server sends raw URLs; escaping is the rendering layer's job
+        val input = buildJsonObject {
+            put("key", "rich-text")
+            put("richContent", buildJsonObject {
+                put("content", "Search on {{searchLink}}")
+                put("replacements", buildJsonObject {
+                    put("searchLink", buildJsonObject {
+                        put("value", "Google")
+                        put("href", "https://google.com/search?q=hello&lang=en")
+                        put("type", "link")
+                        put("target", "_self")
+                    })
+                })
+            })
+        }
+        val collector = LabelCollector()
+        collector.init(input)
+
+        val replacement = collector.replacements["searchLink"]
+        // href must be raw — escaping happens at render time, not parse time
+        assertEquals("https://google.com/search?q=hello&lang=en", replacement?.href)
+        assertEquals("Google", replacement?.value)
+    }
+
+    @Test
+    fun `replacement value with special HTML characters is stored as-is`() {
+        val input = buildJsonObject {
+            put("key", "rich-text")
+            put("richContent", buildJsonObject {
+                put("content", "Learn about {{company}}")
+                put("replacements", buildJsonObject {
+                    put("company", buildJsonObject {
+                        put("value", "AT&T <Wireless>")
+                        put("href", "https://att.com")
+                        put("type", "link")
+                        put("target", "_blank")
+                    })
+                })
+            })
+        }
+        val collector = LabelCollector()
+        collector.init(input)
+
+        val replacement = collector.replacements["company"]
+        // value must be raw — rendering layer calls escapeHtml() before injecting into HTML
+        assertEquals("AT&T <Wireless>", replacement?.value)
+    }
+
+    @Test
+    fun `replacement href with injection attempt is stored as-is`() {
+        // The collector must not modify the server payload — escaping is deferred to render time
+        val maliciousHref = """https://evil.com" onclick="stealData()"""
+        val input = buildJsonObject {
+            put("key", "rich-text")
+            put("richContent", buildJsonObject {
+                put("content", "Click {{link}}")
+                put("replacements", buildJsonObject {
+                    put("link", buildJsonObject {
+                        put("value", "here")
+                        put("href", maliciousHref)
+                        put("type", "link")
+                        put("target", "_self")
+                    })
+                })
+            })
+        }
+        val collector = LabelCollector()
+        collector.init(input)
+
+        // Collector stores raw value; Label.kt's escapeHtml() neutralises it at render time
+        assertEquals(maliciousHref, collector.replacements["link"]?.href)
+    }
 }
