@@ -15,6 +15,7 @@ import com.pingidentity.davinci.collector.LabelCollector
 import com.pingidentity.davinci.collector.MultiSelectCollector
 import com.pingidentity.davinci.collector.PasswordCollector
 import com.pingidentity.davinci.collector.PhoneNumberCollector
+import com.pingidentity.davinci.collector.BooleanCollector
 import com.pingidentity.davinci.collector.SingleSelectCollector
 import com.pingidentity.davinci.collector.SubmitCollector
 import com.pingidentity.davinci.collector.TextCollector
@@ -50,6 +51,7 @@ internal class CollectorRegistry : ModuleInitializer() {
 
         CollectorFactory.register("SINGLE_SELECT", ::SingleSelectCollector)
         CollectorFactory.register("MULTI_SELECT", ::MultiSelectCollector)
+        CollectorFactory.register("BOOLEAN", ::BooleanCollector)
 
         CollectorFactory.register("DEVICE_REGISTRATION", ::DeviceRegistrationCollector)
         CollectorFactory.register("DEVICE_AUTHENTICATION", ::DeviceAuthenticationCollector)

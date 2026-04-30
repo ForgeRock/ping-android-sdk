@@ -18,6 +18,7 @@ import com.pingidentity.davinci.collector.MaxRepeat
 import com.pingidentity.davinci.collector.MinCharacters
 import com.pingidentity.davinci.collector.RegexError
 import com.pingidentity.davinci.collector.Required
+import com.pingidentity.davinci.collector.SingleCheckboxRequiredError
 import com.pingidentity.davinci.collector.UniqueCharacter
 import com.pingidentity.davinci.collector.ValidationError
 
@@ -45,5 +46,6 @@ fun getErrorMessage(error: ValidationError): String {
         is UniqueCharacter -> "The input must contain at least ${error.min} unique characters."
         is MaxRepeat -> "The input contains too many repeated characters. Maximum allowed repeats: ${error.max}."
         is MinCharacters -> "The input must include at least ${error.min} character(s) from this set: '${error.character}'."
+        is SingleCheckboxRequiredError -> error.message
     }
 }
