@@ -102,15 +102,29 @@ class FormFieldsTest {
         assertEquals("", labelCollector1.key)
 
         // labelCollector1: HTML content — richText falls back to the raw HTML content string
-        assertTrue(labelCollector1.richText.contains("Rich Text fields produce LABELs"))
+        val richContent1 = labelCollector1.richContent
+        assertNotNull(richContent1)
+        assertTrue(richContent1.richText.contains("Rich Text fields produce LABELs"))
         // No richContent on this label so replacements must be empty
-        assertTrue(labelCollector1.replacements.isEmpty())
+        assertTrue(richContent1.replacements.isEmpty())
 
         // labelCollector2: plain translatable text — richText comes from richContent.content
         // (without the trailing newlines present in the top-level content field)
-        assertEquals("Translatable Rich Text produce LABELs too!", labelCollector2.richText)
+        val richContent2 = labelCollector2.richContent
+        assertNotNull(richContent2)
+        assertEquals("Translatable Rich Text produce LABELs too!", richContent2.richText)
         // No replacement tokens on this label
-        assertTrue(labelCollector2.replacements.isEmpty())
+        assertTrue(richContent2.replacements.isEmpty())
+
+        // labelCollector3: translatable link — richText contains {{token}} placeholders and replacements map contains corresponding entries
+        val richContent3 = labelCollector3.richContent
+        assertNotNull(richContent3)
+        assertEquals("A translatable rich text to take the user to {{link1}}", richContent3.richText)
+        assertTrue(richContent3.replacements.containsKey("link1"))
+        val replacement = richContent3.replacements["link1"]
+        assertNotNull(replacement)
+        assertEquals("google.com", replacement.value)
+        assertEquals("https://www.google.com", replacement.href)
     }
 
     @Test
@@ -123,18 +137,18 @@ class FormFieldsTest {
         // Find a LabelCollector that has replacements (translatable link label)
         val linkLabel = node.collectors
             .filterIsInstance<LabelCollector>()
-            .firstOrNull { it.replacements.isNotEmpty() }
+            .firstOrNull { it.richContent?.replacements?.isNotEmpty() ?: false }
 
         if (linkLabel != null) {
             // richText must contain at least one {{token}} placeholder
             assertTrue(
-                tokenPattern.containsMatchIn(linkLabel.richText),
-                "Expected richText to contain {{token}} placeholders, was: ${linkLabel.richText}"
+                tokenPattern.containsMatchIn(linkLabel.richContent?.richText ?: ""),
+                "Expected richText to contain {{token}} placeholders, was: ${linkLabel.richContent?.richText}"
             )
             // Every token present in richText must have a corresponding replacement entry
-            for (match in tokenPattern.findAll(linkLabel.richText)) {
+            for (match in tokenPattern.findAll(linkLabel.richContent?.richText ?: "")) {
                 val token = match.groupValues[1]
-                val replacement = linkLabel.replacements[token]
+                val replacement = linkLabel.richContent?.replacements[token]
                 assertNotNull(replacement, "Missing replacement for token '$token'")
                 assertTrue(replacement.value.isNotEmpty(), "Replacement value for '$token' must not be empty")
                 assertTrue(replacement.href.isNotEmpty(), "Replacement href for '$token' must not be empty")

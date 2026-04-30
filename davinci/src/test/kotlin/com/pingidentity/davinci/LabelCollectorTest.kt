@@ -8,12 +8,12 @@
 package com.pingidentity.davinci
 
 import com.pingidentity.davinci.collector.LabelCollector
-import com.pingidentity.davinci.collector.RichContentReplacement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class LabelCollectorTest {
@@ -46,8 +46,10 @@ class LabelCollectorTest {
         }
         val collector = LabelCollector()
         collector.init(input)
-        assertEquals("Plain text content", collector.richText)
-        assertTrue(collector.replacements.isEmpty())
+        val richContent = collector.richContent
+        assertNotNull(richContent)
+        assertEquals("Plain text content", richContent.richText)
+        assertTrue(richContent.replacements.isEmpty())
     }
 
     @Test
@@ -62,8 +64,11 @@ class LabelCollectorTest {
         val collector = LabelCollector()
         collector.init(input)
         assertEquals("A translatable rich text to take the user to google.com", collector.content)
-        assertEquals("A translatable rich text to take the user to {{link1}}", collector.richText)
-        assertTrue(collector.replacements.isEmpty())
+        val richContent = collector.richContent
+        assertNotNull(richContent)
+        val replacement = richContent.replacements
+        assertEquals("A translatable rich text to take the user to {{link1}}", richContent.richText)
+        assertTrue(replacement.isEmpty())
     }
 
     @Test
@@ -85,11 +90,13 @@ class LabelCollectorTest {
         }
         val collector = LabelCollector()
         collector.init(input)
+        val richContent = collector.richContent
 
-        assertEquals("A translatable rich text to take the user to {{link1}}", collector.richText)
-        assertEquals(1, collector.replacements.size)
+        assertNotNull(richContent)
+        assertEquals("A translatable rich text to take the user to {{link1}}", richContent.richText)
+        assertEquals(1, richContent.replacements.size)
 
-        val link1 = collector.replacements["link1"]
+        val link1 = richContent.replacements["link1"]
         assertEquals(RichContentReplacement(
             value = "google.com",
             href = "https://www.google.com",
@@ -108,7 +115,9 @@ class LabelCollectorTest {
         }
         val collector = LabelCollector()
         collector.init(input)
-        assertTrue(collector.replacements.isEmpty())
+        val richContent = collector.richContent
+        assertNotNull(richContent)
+        assertTrue(richContent.replacements.isEmpty())
     }
 
     @Test
@@ -118,11 +127,13 @@ class LabelCollectorTest {
         }
         val collector = LabelCollector()
         collector.init(input)
+        val richContent = collector.richContent
+        assertNotNull(richContent)
         assertEquals("<p><strong><em>Rich Text fields produce LABELs</em></strong></p><hr><p><br></p>", collector.content)
         // richText falls back to content since no richContent is present
-        assertEquals("<p><strong><em>Rich Text fields produce LABELs</em></strong></p><hr><p><br></p>", collector.richText)
+        assertEquals("<p><strong><em>Rich Text fields produce LABELs</em></strong></p><hr><p><br></p>", richContent.richText)
         assertEquals("", collector.key)
-        assertTrue(collector.replacements.isEmpty())
+        assertTrue(richContent.replacements.isEmpty())
     }
 
     @Test
@@ -136,12 +147,14 @@ class LabelCollectorTest {
         }
         val collector = LabelCollector()
         collector.init(input)
+        val richContent = collector.richContent
+        assertNotNull(richContent)
         // content retains the original value including trailing newlines
         assertEquals("Translatable Rich Text produce LABELs too!\n\n", collector.content)
         // richText is trimmed to the richContent value
-        assertEquals("Translatable Rich Text produce LABELs too!", collector.richText)
+        assertEquals("Translatable Rich Text produce LABELs too!", richContent.richText)
         assertEquals("translatable-rich-text-key", collector.key)
-        assertTrue(collector.replacements.isEmpty())
+        assertTrue(richContent.replacements.isEmpty())
     }
 
     @Test
@@ -163,8 +176,10 @@ class LabelCollectorTest {
         }
         val collector = LabelCollector()
         collector.init(input)
+        val richContent = collector.richContent
+        assertNotNull(richContent)
 
-        val replacement = collector.replacements["searchLink"]
+        val replacement = richContent.replacements["searchLink"]
         // href must be raw — escaping happens at render time, not parse time
         assertEquals("https://google.com/search?q=hello&lang=en", replacement?.href)
         assertEquals("Google", replacement?.value)
@@ -188,8 +203,10 @@ class LabelCollectorTest {
         }
         val collector = LabelCollector()
         collector.init(input)
+        val richContent = collector.richContent
+        assertNotNull(richContent)
 
-        val replacement = collector.replacements["company"]
+        val replacement = richContent.replacements["company"]
         // value must be raw — rendering layer calls escapeHtml() before injecting into HTML
         assertEquals("AT&T <Wireless>", replacement?.value)
     }
@@ -214,8 +231,10 @@ class LabelCollectorTest {
         }
         val collector = LabelCollector()
         collector.init(input)
+        val richContent = collector.richContent
+        assertNotNull(richContent)
 
         // Collector stores raw value; Label.kt's escapeHtml() neutralises it at render time
-        assertEquals(maliciousHref, collector.replacements["link"]?.href)
+        assertEquals(maliciousHref, richContent.replacements["link"]?.href)
     }
 }

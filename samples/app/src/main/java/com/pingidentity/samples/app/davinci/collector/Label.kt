@@ -23,8 +23,9 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.fromHtml
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
+import com.pingidentity.davinci.RichContent
+import com.pingidentity.davinci.RichContentReplacement
 import com.pingidentity.davinci.collector.LabelCollector
-import com.pingidentity.davinci.collector.RichContentReplacement
 import com.pingidentity.davinci.collector.escapeHtml
 
 private val tokenPattern = Regex("""\{\{(\w+)\}\}""")
@@ -51,22 +52,22 @@ fun Label(field: LabelCollector) {
  * Selects the appropriate rendering strategy for a [LabelCollector]:
  *
  * 1. **Token replacement** — `richText` contains `{{token}}` placeholders →
- *    inline clickable links are substituted from [LabelCollector.replacements].
+ *    inline clickable links are substituted from [LabelCollector.richContent].
  * 2. **HTML** — `richText` contains HTML tags →
  *    rendered via [AnnotatedString.Companion.fromHtml].
  * 3. **Plain text** — everything else → rendered as-is.
  */
 private fun buildLabelText(field: LabelCollector): AnnotatedString {
-    val text = field.richText
-    val hasTokens = tokenPattern.containsMatchIn(text)
-    val hasHtml = htmlTagPattern.containsMatchIn(text)
+    val richContent = field.richContent ?: return AnnotatedString(field.content)
+    val hasTokens = tokenPattern.containsMatchIn(richContent.richText)
+    val hasHtml = htmlTagPattern.containsMatchIn(richContent.richText)
     return when {
         hasTokens && hasHtml ->
             AnnotatedString
                 .fromHtml(
-                    tokenPattern.replace(text) { match ->
+                    tokenPattern.replace(richContent.richText) { match ->
                         val token = match.groupValues[1]
-                        val replacement = field.replacements[token]
+                        val replacement = richContent.replacements[token]
                         when {
                             replacement?.href?.isNotEmpty() == true -> {
                                 val label = replacement.value.ifEmpty { match.value }.escapeHtml()
@@ -79,32 +80,31 @@ private fun buildLabelText(field: LabelCollector): AnnotatedString {
                     }
                 )
         hasTokens ->
-            buildRichAnnotatedString(text, field.replacements)
+            buildRichAnnotatedString(richContent)
         hasHtml ->
-            AnnotatedString.fromHtml(text)
+            AnnotatedString.fromHtml(richContent.richText)
         else ->
-            AnnotatedString(text)
+            AnnotatedString(richContent.richText)
     }
 }
 
 /**
- * Builds an [AnnotatedString] from a [richText] template that may contain
- * `{{tokenName}}` placeholders. Each token found in [replacements] is
+ * Builds an [AnnotatedString] from a [richContent] template that may contain
+ * `{{tokenName}}` placeholders. Each token found in [com.pingidentity.davinci.REPLACEMENTS] is
  * rendered as a clickable hyperlink using the token's [RichContentReplacement.href]
  * and [RichContentReplacement.value]. Unresolved tokens fall back to their
  * raw placeholder text.
  */
 private fun buildRichAnnotatedString(
-    richText: String,
-    replacements: Map<String, RichContentReplacement>,
+    richContent: RichContent,
 ) = buildAnnotatedString {
     var lastIndex = 0
-    for (match in tokenPattern.findAll(richText)) {
+    for (match in tokenPattern.findAll(richContent.richText)) {
         // Append any plain text before this token
-        append(richText.substring(lastIndex, match.range.first))
+        append(richContent.richText.substring(lastIndex, match.range.first))
 
         val token = match.groupValues[1]
-        val replacement = replacements[token]
+        val replacement = richContent.replacements[token]
 
         if (replacement != null && replacement.href.isNotEmpty()) {
             pushLink(
@@ -125,5 +125,5 @@ private fun buildRichAnnotatedString(
         lastIndex = match.range.last + 1
     }
     // Append any remaining plain text after the last token
-    append(richText.substring(lastIndex))
+    append(richContent.richText.substring(lastIndex))
 }
