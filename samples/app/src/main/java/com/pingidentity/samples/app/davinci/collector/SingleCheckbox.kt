@@ -22,8 +22,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.pingidentity.davinci.collector.SingleCheckboxAppearance
+import com.pingidentity.davinci.collector.BooleanCollectorAppearance
 import com.pingidentity.davinci.collector.BooleanCollector
+import com.pingidentity.samples.app.davinci.RichText.buildRichTextLabel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -52,18 +53,16 @@ fun SingleCheckbox(field: BooleanCollector, onNodeUpdated: () -> Unit) {
                 isValid = field.validate().isEmpty()
                 onNodeUpdated()
             }
-            if (field.appearance ==  SingleCheckboxAppearance.SWITCH) {
+            if (field.appearance ==  BooleanCollectorAppearance.SWITCH) {
                 Switch(checked = isChecked, onCheckedChange = onChange)
             } else {
                 Checkbox(checked = isChecked, onCheckedChange = onChange)
             }
-            val richText = field.richContent?.richText ?: field.label
-            val text = if (field.richContent != null) {
-                if (field.required) "$richText*" else richText
-            } else {
-                if (field.required) "${field.label}*" else field.label
-            }
-            Text(text = text)
+            val richText = buildRichTextLabel(
+                richContent = field.richContent,
+                fallbackContent = field.label,
+            )
+            Text(text = richText)
         }
         if (!isValid) {
             ErrorMessage(field.validate())

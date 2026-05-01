@@ -38,7 +38,7 @@ import kotlinx.serialization.json.jsonPrimitive
  *
  */
 class BooleanCollector: FieldCollector<Boolean>() {
-    var appearance: SingleCheckboxAppearance = SingleCheckboxAppearance.CHECKBOX
+    var appearance: BooleanCollectorAppearance = BooleanCollectorAppearance.CHECKBOX
         private set
 
     var errorMessage: String = ""
@@ -50,10 +50,10 @@ class BooleanCollector: FieldCollector<Boolean>() {
 
     override fun init(input: JsonObject): BooleanCollector {
         super.init(input)
-        appearance = when (input["appearance"]?.jsonPrimitive?.contentOrNull ?: SingleCheckboxAppearance.CHECKBOX.value) {
-            SingleCheckboxAppearance.CHECKBOX.value -> SingleCheckboxAppearance.CHECKBOX
-            SingleCheckboxAppearance.SWITCH.value -> SingleCheckboxAppearance.SWITCH
-            else -> SingleCheckboxAppearance.CHECKBOX
+        appearance = when (input["appearance"]?.jsonPrimitive?.contentOrNull ?: BooleanCollectorAppearance.CHECKBOX.value) {
+            BooleanCollectorAppearance.CHECKBOX.value -> BooleanCollectorAppearance.CHECKBOX
+            BooleanCollectorAppearance.SWITCH.value -> BooleanCollectorAppearance.SWITCH
+            else -> BooleanCollectorAppearance.CHECKBOX
         }
         errorMessage = input["errorMessage"]?.jsonPrimitive?.contentOrNull ?: "This field is required."
         val richContentJson = input[RICH_CONTENT] as? JsonObject
@@ -80,7 +80,7 @@ class BooleanCollector: FieldCollector<Boolean>() {
         val result = super.validate()
         errors.addAll(result)
         if (required && !value) {
-            errors.add(SingleCheckboxRequiredError(key, errorMessage))
+            errors.add(BooleanCollectorError(key, errorMessage))
         }
         return errors
     }
@@ -90,13 +90,13 @@ class BooleanCollector: FieldCollector<Boolean>() {
     }
 }
 
-enum class SingleCheckboxAppearance(val value: String) {
+enum class BooleanCollectorAppearance(val value: String) {
     CHECKBOX("CHECKBOX"),
     SWITCH("SWITCH")
 }
 
-class SingleCheckboxRequiredError(val key: String, val message: String) : ValidationError() {
+class BooleanCollectorError(val key: String, val message: String) : ValidationError() {
     override fun toString(): String {
-        return "SingleCheckboxRequiredError(key='$key', message='$message')"
+        return "BooleanCollectorError(key='$key', message='$message')"
     }
 }

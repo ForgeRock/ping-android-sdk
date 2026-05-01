@@ -6,9 +6,9 @@
 
 package com.pingidentity.davinci
 
-import com.pingidentity.davinci.collector.SingleCheckboxAppearance
+import com.pingidentity.davinci.collector.BooleanCollectorAppearance
 import com.pingidentity.davinci.collector.BooleanCollector
-import com.pingidentity.davinci.collector.SingleCheckboxRequiredError
+import com.pingidentity.davinci.collector.BooleanCollectorError
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import kotlin.test.Test
@@ -27,7 +27,7 @@ class BooleanCollectorTest {
         val collector = BooleanCollector()
         collector.init(input)
 
-        assertEquals(SingleCheckboxAppearance.CHECKBOX, collector.appearance)
+        assertEquals(BooleanCollectorAppearance.CHECKBOX, collector.appearance)
         assertEquals("This field is required.", collector.errorMessage)
         assertNull(collector.richContent)
         assertFalse(collector.value)
@@ -41,7 +41,7 @@ class BooleanCollectorTest {
         val collector = BooleanCollector()
         collector.init(input)
 
-        assertEquals(SingleCheckboxAppearance.CHECKBOX, collector.appearance)
+        assertEquals(BooleanCollectorAppearance.CHECKBOX, collector.appearance)
     }
 
     @Test
@@ -52,7 +52,7 @@ class BooleanCollectorTest {
         val collector = BooleanCollector()
         collector.init(input)
 
-        assertEquals(SingleCheckboxAppearance.SWITCH, collector.appearance)
+        assertEquals(BooleanCollectorAppearance.SWITCH, collector.appearance)
     }
 
     @Test
@@ -63,7 +63,7 @@ class BooleanCollectorTest {
         val collector = BooleanCollector()
         collector.init(input)
 
-        assertEquals(SingleCheckboxAppearance.CHECKBOX, collector.appearance)
+        assertEquals(BooleanCollectorAppearance.CHECKBOX, collector.appearance)
     }
 
     @Test
@@ -152,8 +152,8 @@ class BooleanCollectorTest {
         val errors = collector.validate()
 
         assertTrue(errors.isNotEmpty())
-        assertIs<SingleCheckboxRequiredError>(errors[0])
-        assertEquals("Select the checkbox to continue.", (errors[0] as SingleCheckboxRequiredError).message)
+        assertIs<BooleanCollectorError>(errors[0])
+        assertEquals("Select the checkbox to continue.", (errors[0] as BooleanCollectorError).message)
     }
 
     @Test
@@ -187,10 +187,9 @@ class BooleanCollectorTest {
     }
 
     @Test
-    fun singleCheckboxRequiredErrorToString() {
-        val error = SingleCheckboxRequiredError("test-key", "Select the checkbox to continue.")
-
-        assertEquals("SingleCheckboxRequiredError(key='test-key', message='Select the checkbox to continue.')", error.toString())
+    fun booleanCollectorRequiredErrorToString() {
+        val error = BooleanCollectorError("test-key", "Select the checkbox to continue.")
+        assertEquals("BooleanCollectorError(key='test-key', message='Select the checkbox to continue.')", error.toString())
     }
 }
 

@@ -13,12 +13,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.pingidentity.davinci.collector.BooleanCollectorError
 import com.pingidentity.davinci.collector.InvalidLength
 import com.pingidentity.davinci.collector.MaxRepeat
 import com.pingidentity.davinci.collector.MinCharacters
 import com.pingidentity.davinci.collector.RegexError
 import com.pingidentity.davinci.collector.Required
-import com.pingidentity.davinci.collector.SingleCheckboxRequiredError
 import com.pingidentity.davinci.collector.UniqueCharacter
 import com.pingidentity.davinci.collector.ValidationError
 
@@ -46,6 +46,6 @@ fun getErrorMessage(error: ValidationError): String {
         is UniqueCharacter -> "The input must contain at least ${error.min} unique characters."
         is MaxRepeat -> "The input contains too many repeated characters. Maximum allowed repeats: ${error.max}."
         is MinCharacters -> "The input must include at least ${error.min} character(s) from this set: '${error.character}'."
-        is SingleCheckboxRequiredError -> error.message
+        is BooleanCollectorError -> "This checkbox must be checked."
     }
 }
