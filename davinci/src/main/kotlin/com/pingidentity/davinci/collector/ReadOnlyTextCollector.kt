@@ -24,10 +24,10 @@ private const val ID = "id"
 private const val USE_DYNAMIC_AGREEMENT = "useDynamicAgreement"
 
 /**
- * Class representing an AGREEMENT type collector.
+ * Class representing a READ_ONLY_TEXT type collector.
  *
- * This class handles the response from a DaVinci form field of type AGREEMENT.
- * It displays agreement/terms-of-service text and collects the user's acceptance.
+ * This class handles the response from a DaVinci form field of type READ_ONLY_TEXT (inputType).
+ * It displays read-only text content such as agreement/terms-of-service text.
  *
  * Example JSON:
  * ```json
@@ -46,9 +46,9 @@ private const val USE_DYNAMIC_AGREEMENT = "useDynamicAgreement"
  * }
  * ```
  *
- * @constructor Creates a new AgreementCollector.
+ * @constructor Creates a new ReadOnlyTextCollector.
  */
-class AgreementCollector : Collector<Nothing> {
+class ReadOnlyTextCollector : Collector<Nothing> {
 
     /**
      * The key identifier for this collector, used as the form field key during submission.
@@ -63,19 +63,19 @@ class AgreementCollector : Collector<Nothing> {
         private set
 
     /**
-     * The agreement text content to display to the user.
+     * The text content to display to the user.
      */
     var content = ""
         private set
 
     /**
-     * The title of the agreement (shown when [titleEnabled] is true).
+     * The title (shown when [titleEnabled] is true).
      */
     var title = ""
         private set
 
     /**
-     * Whether to display the [title] above the agreement content.
+     * Whether to display the [title] above the content.
      */
     var titleEnabled = false
         private set
@@ -98,7 +98,7 @@ class AgreementCollector : Collector<Nothing> {
     var useDynamicAgreement = false
         private set
 
-    override fun init(input: JsonObject): AgreementCollector {
+    override fun init(input: JsonObject): ReadOnlyTextCollector {
         key = input[KEY]?.jsonPrimitive?.content ?: ""
         type = input[TYPE]?.jsonPrimitive?.content ?: ""
         content = input[CONTENT]?.jsonPrimitive?.content ?: ""
@@ -116,4 +116,3 @@ class AgreementCollector : Collector<Nothing> {
 
     override fun id(): String = key
 }
-
