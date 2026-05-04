@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2025 - 2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -12,6 +12,7 @@ import com.pingidentity.davinci.collector.FlowCollector
 import com.pingidentity.davinci.collector.LabelCollector
 import com.pingidentity.davinci.collector.MultiSelectCollector
 import com.pingidentity.davinci.collector.PhoneNumberCollector
+import com.pingidentity.davinci.collector.BooleanCollector
 import com.pingidentity.davinci.collector.SingleSelectCollector
 import com.pingidentity.davinci.collector.SubmitCollector
 import com.pingidentity.davinci.collector.TextCollector
@@ -48,8 +49,9 @@ class FormFieldsTest {
         const val RADIO_INDEX = 6
         const val COMBOBOX_INDEX = 7
         const val PHONE_NUMBER_INDEX = 8
-        const val FLOW_BUTTON_INDEX = 9
-        const val FLOW_LINK_INDEX = 10
+        const val SINGLE_CHECKBOX_INDEX = 9
+        const val FLOW_BUTTON_INDEX = 10
+        const val FLOW_LINK_INDEX = 11
     }
 
     private var daVinci = DaVinci {
@@ -408,6 +410,40 @@ class FormFieldsTest {
         assertTrue(validationResult.isEmpty())
     }
 
+    @TestRailCase(/* Add test rail IDs */)
+    @Test
+    fun booleanCollectorTest() = runTest {
+        // Go to the "Form Fields" form
+        var node = daVinci.start() as ContinueNode
+        (node.collectors[0] as? SubmitCollector)?.value = "click"
+        node = node.next() as ContinueNode
+
+        // 10th collector in the form is a SingleCheckbox (index 9)
+        assertTrue(node.collectors[SINGLE_CHECKBOX_INDEX] is BooleanCollector)
+        val singleCheckbox = (node.collectors[SINGLE_CHECKBOX_INDEX] as BooleanCollector)
+
+        // Assert the properties
+        assertEquals("SINGLE_CHECKBOX", singleCheckbox.type)
+        assertEquals("single-checkbox-field", singleCheckbox.key)
+        assertEquals("I agree to the Terms and Conditions", singleCheckbox.label)
+        val richContent = singleCheckbox.richContent
+        assertNotNull(richContent)
+        assertEquals("I agree to the {{link1}}", richContent.richText)
+        assertEquals(1, richContent.replacements.size)
+        assertTrue(richContent.replacements.containsKey("link1"))
+        assertEquals(true, singleCheckbox.required)
+
+        // Default value should be false
+        assertEquals(false, singleCheckbox.value)
+        val requiredErrors = singleCheckbox.validate()
+        assertTrue(requiredErrors.isNotEmpty())
+
+        // Set the value to true and validate
+        singleCheckbox.value = true
+        val validationResult = singleCheckbox.validate() // Should return empty list since it's valid
+        assertTrue(validationResult.isEmpty())
+    }
+
     @TestRailCase(26033)
     @Test
     fun flowButtonCollectorTest() = runTest {
@@ -416,7 +452,7 @@ class FormFieldsTest {
         (node.collectors[0] as? SubmitCollector)?.value = "click"
         node = node.next() as ContinueNode
 
-        // 10th collector in the form is a FlowButton (index 9)
+        // 11th collector in the form is a FlowButton (index 10)
         assertTrue(node.collectors[FLOW_BUTTON_INDEX] is FlowCollector)
         val flowButton = (node.collectors[FLOW_BUTTON_INDEX] as FlowCollector)
 
@@ -440,7 +476,7 @@ class FormFieldsTest {
         (node.collectors[0] as? SubmitCollector)?.value = "click"
         node = node.next() as ContinueNode
 
-        // 11th collector in the form is a FlowLink (index 10)
+        // 12th collector in the form is a FlowLink (index 11)
         assertTrue(node.collectors[FLOW_LINK_INDEX] is FlowCollector)
         val flowLink = (node.collectors[FLOW_LINK_INDEX] as FlowCollector)
 
