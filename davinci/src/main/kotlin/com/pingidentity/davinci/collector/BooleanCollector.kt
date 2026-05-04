@@ -80,7 +80,7 @@ class BooleanCollector: FieldCollector<Boolean>() {
         val result = super.validate()
         errors.addAll(result)
         if (required && !value) {
-            errors.add(BooleanCollectorError(key, errorMessage))
+            errors.add(Required)
         }
         return errors
     }
@@ -93,10 +93,4 @@ class BooleanCollector: FieldCollector<Boolean>() {
 enum class BooleanCollectorAppearance(val value: String) {
     CHECKBOX("CHECKBOX"),
     SWITCH("SWITCH")
-}
-
-class BooleanCollectorError(val key: String, val message: String) : ValidationError() {
-    override fun toString(): String {
-        return "BooleanCollectorError(key='$key', message='$message')"
-    }
 }

@@ -412,7 +412,7 @@ class FormFieldsTest {
 
     @TestRailCase(/* Add test rail IDs */)
     @Test
-    fun singleCheckboxCollectorTest() = runTest {
+    fun booleanCollectorTest() = runTest {
         // Go to the "Form Fields" form
         var node = daVinci.start() as ContinueNode
         (node.collectors[0] as? SubmitCollector)?.value = "click"

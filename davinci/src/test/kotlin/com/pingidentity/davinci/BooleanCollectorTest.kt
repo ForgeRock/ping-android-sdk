@@ -8,7 +8,7 @@ package com.pingidentity.davinci
 
 import com.pingidentity.davinci.collector.BooleanCollectorAppearance
 import com.pingidentity.davinci.collector.BooleanCollector
-import com.pingidentity.davinci.collector.BooleanCollectorError
+import com.pingidentity.davinci.collector.Required
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import kotlin.test.Test
@@ -152,8 +152,7 @@ class BooleanCollectorTest {
         val errors = collector.validate()
 
         assertTrue(errors.isNotEmpty())
-        assertIs<BooleanCollectorError>(errors[0])
-        assertEquals("Select the checkbox to continue.", (errors[0] as BooleanCollectorError).message)
+        assertIs<Required>(errors[0])
     }
 
     @Test
@@ -184,12 +183,6 @@ class BooleanCollectorTest {
         collector.value = false
 
         assertFalse(collector.payload())
-    }
-
-    @Test
-    fun booleanCollectorRequiredErrorToString() {
-        val error = BooleanCollectorError("test-key", "Select the checkbox to continue.")
-        assertEquals("BooleanCollectorError(key='test-key', message='Select the checkbox to continue.')", error.toString())
     }
 }
 
