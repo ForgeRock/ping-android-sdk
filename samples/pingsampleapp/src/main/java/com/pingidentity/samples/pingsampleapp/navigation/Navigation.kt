@@ -21,6 +21,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -41,6 +42,7 @@ import com.pingidentity.samples.pingsampleapp.authenticator.data.AuthenticatorVi
 import com.pingidentity.samples.pingsampleapp.authenticator.ui.AboutScreen
 import com.pingidentity.samples.pingsampleapp.authmigration.AuthMigrationScreen
 import com.pingidentity.samples.pingsampleapp.authmigration.AuthMigrationViewModel
+import com.pingidentity.samples.pingsampleapp.authmigration.MigrationStatus
 import com.pingidentity.samples.pingsampleapp.authenticator.ui.AccountDetailScreen
 import com.pingidentity.samples.pingsampleapp.authenticator.ui.AccountsScreen
 import com.pingidentity.samples.pingsampleapp.authenticator.ui.EditAccountsScreen
@@ -502,6 +504,18 @@ fun AppNavigation(
 
         composable(Route.AUTH_MIGRATION) {
             val authMigrationViewModel = viewModel<AuthMigrationViewModel>()
+            val migrationState by authMigrationViewModel.state.collectAsState()
+
+            // When migration finishes successfully, close and re-initialize the MFA clients so
+            // their in-memory credential caches are cleared and fresh database connections are
+            // opened — then reload credentials into the UI-bound AuthenticatorViewModel.
+            LaunchedEffect(migrationState.migrationStatus) {
+                if (migrationState.migrationStatus == MigrationStatus.COMPLETED) {
+                    PingSampleApplication.reinitializeMfaClients()
+                    authenticatorViewModel?.refreshCredentials()
+                }
+            }
+
             AuthMigrationScreen(
                 viewModel = authMigrationViewModel,
                 onBack = { navController.popBackStack() }
