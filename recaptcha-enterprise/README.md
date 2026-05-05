@@ -2,56 +2,17 @@
 
 # ReCaptcha Enterprise Module
 
-> **Seamless integration of Google ReCaptcha Enterprise into Ping Identity's Journey workflows for Android.**
+Seamless integration of Google ReCaptcha Enterprise into Ping Identity's Journey workflows for Android.
 
-## Overview
+## Getting Started
 
-The **ReCaptcha Enterprise** module provides seamless integration of Google ReCaptcha Enterprise verification into Ping Identity's Journey authentication flows. This powerful module enables developers to add advanced bot detection and abuse protection to their Android applications with minimal configuration.
+### Prerequisites
 
-The module is designed as a Journey plugin callback, automatically handling ReCaptcha client initialization, token generation, and server validation within your authentication workflows.
-
----
-
-## ✨ Features
-
-- **🔌 Plugin Architecture**: Integrates seamlessly with the Journey framework for authentication orchestration
-- **🛡️ Enterprise Security**: Adds advanced bot and abuse protection using Google ReCaptcha Enterprise
-- **⚡ Asynchronous API**: Coroutine-based suspend functions for smooth, non-blocking UI operations
-- **📝 Type-Safe DSL**: Fluent, compile-time safe configuration using Kotlin DSL
-- **📦 Modern Serialization**: Uses Kotlin serialization for efficient JSON handling
-- **🎯 Action-Based**: Support for different ReCaptcha actions (LOGIN, SIGNUP, custom actions)
-- **⏱️ Configurable Timeouts**: Customizable timeout settings for different network conditions
-- **📊 Custom Payload Support**: Send additional metadata with verification requests for risk assessment
-- **📝 Integrated Logging**: Configurable logger with multiple log levels (DEBUG, INFO, WARN, ERROR)
-- **✅ Comprehensive Tests**: 17 unit tests covering all major scenarios with 100% pass rate
-
----
-
-## 📋 Table of Contents
-
-- [Overview](#overview)
-- [Features](#-features)
-- [Prerequisites](#prerequisites)
-- [Add Dependency](#add-dependency-to-your-project)
-- [Quick Start](#quick-start)
-- [Configuration](#configuration)
-- [Usage Examples](#usage-examples)
-- [API Reference](#api-reference)
-- [Architecture](#architecture)
-- [Sequence Diagram](#sequence-diagram)
-- [Testing](#testing)
-- [Troubleshooting](#troubleshooting)
-- [Best Practices](#best-practices)
-- [License](#license)
-
----
-
-## Prerequisites
-
-- **Android API Level**: 21 (Lollipop) or higher
-- **Google ReCaptcha Enterprise**: Site key configured in Google Cloud Console
-- **Journey SDK**: The Journey module must be integrated in your project
-- **Network Permissions**: Ensure your app has internet permissions in `AndroidManifest.xml`
+- Ping Advanced Identity Cloud / PingAM [Supported Versions](https://support.pingidentity.com/s/article/Ping-Identity-EOL-Tracker)
+- Android API level 29 or higher
+- Google ReCaptcha Enterprise Site key configured in Google Cloud Console
+- The `Journey` module must be integrated in your project
+- Ensure your app has internet permissions in `AndroidManifest.xml`
 
 ```xml
 <uses-permission android:name="android.permission.INTERNET" />
@@ -59,9 +20,7 @@ The module is designed as a Journey plugin callback, automatically handling ReCa
 
 For more information about Google ReCaptcha Enterprise, refer to the [official documentation](https://cloud.google.com/recaptcha-enterprise/docs).
 
----
-
-## Add Dependency to Your Project
+### Add Dependency to Your Project
 
 ```kotlin
 dependencies {
@@ -71,7 +30,11 @@ dependencies {
 
 Replace `<version>` with the latest available version of the ReCaptcha Enterprise module.
 
----
+## Overview
+
+The **ReCaptcha Enterprise** module provides seamless integration of Google ReCaptcha Enterprise verification into Ping Identity's Journey authentication flows. This powerful module enables developers to add advanced bot detection and abuse protection to their Android applications with minimal configuration.
+
+The module is designed as a Journey plugin callback, automatically handling ReCaptcha client initialization, token generation, and server validation within your authentication workflows.
 
 ## Quick Start
 
@@ -91,7 +54,6 @@ result.onSuccess { token ->
 }
 ```
 
----
 
 ## Configuration
 
@@ -226,8 +188,6 @@ logger.w("reCAPTCHA execution failed or returned empty token.", error)
 // ERROR level - Shows errors
 logger.e("An unexpected error occurred during reCAPTCHA setup or execution.", exception)
 ```
-
----
 
 ## Usage Examples
 
@@ -522,7 +482,6 @@ All properties are configured via the `ReCaptchaEnterpriseConfig` DSL block pass
 - `customPayload: JsonObject?` - Optional metadata to send with verification. Default: `null`
 - `logger: Logger` - Logger instance for verification process. Default: `Logger.WARN`
 
----
 
 ## Architecture
 
@@ -617,94 +576,6 @@ sequenceDiagram
     Journey->>Journey: Process with verification token + payload
     Journey->>Dev: Next node or completion
 ```
-
----
-
-## Testing
-
-### Test Coverage
-
-The module includes **17 comprehensive unit tests** with a **100% pass rate**, covering:
-
-✅ **Initialization Tests**
-- Site key initialization with correct property names
-- Ignoring unrelated property names
-- Config default values validation
-
-✅ **Success Scenarios**
-- Basic verification with default configuration
-- Custom actions (LOGIN, SIGNUP) with custom timeouts
-- Custom timeout configuration
-- Custom payload support
-- All configuration options combined
-- Config inheritance from callback properties
-
-✅ **Failure Scenarios**
-- Empty token handling
-- Execute failure handling
-- FetchClient exception handling
-
-### Mocking for Unit Tests
-
-For testing purposes, you can mock the ReCaptcha verification:
-
-```kotlin
-import io.mockk.coEvery
-import io.mockk.mockk
-
-class MyViewModelTest {
-    
-    @Test
-    fun `test successful verification`() = runTest {
-        // Mock the callback
-        val mockCallback = mockk<ReCaptchaEnterpriseCallback>()
-        coEvery { mockCallback.verify(any()) } returns Result.success("mock_token_12345")
-        
-        // Test your flow
-        val result = mockCallback.verify()
-        
-        assertTrue(result.isSuccess)
-        assertEquals("mock_token_12345", result.getOrNull())
-    }
-    
-    @Test
-    fun `test failed verification`() = runTest {
-        val mockCallback = mockk<ReCaptchaEnterpriseCallback>()
-        coEvery { mockCallback.verify(any()) } returns 
-            Result.failure(Exception("UNKNOWN_ERROR"))
-        
-        val result = mockCallback.verify()
-        
-        assertTrue(result.isFailure)
-        assertTrue(result.exceptionOrNull()?.message?.contains("UNKNOWN_ERROR") == true)
-    }
-    
-    @Test
-    fun `test verification with custom payload`() = runTest {
-        val mockCallback = mockk<ReCaptchaEnterpriseCallback>(relaxed = true)
-        coEvery { mockCallback.verify(any()) } returns Result.success("payload_token")
-        
-        val result = mockCallback.verify {
-            customPayload = buildJsonObject {
-                put("userId", "12345")
-            }
-        }
-        
-        assertTrue(result.isSuccess)
-    }
-}
-```
-
-### Testing Best Practices
-
-1. **Unit Tests**: Mock the callback to test your application logic without actual ReCaptcha verification
-2. **Focus on Integration**: Test how your app handles success and failure scenarios
-3. **Avoid Native Dependencies**: The Google ReCaptcha SDK has native dependencies that cannot be properly tested in standard unit tests
-4. **Use Instrumented Tests**: For end-to-end testing with real verification, use Android instrumented tests (androidTest)
-
-⚠️ **Important**: The Google ReCaptcha Enterprise SDK has native dependencies that cannot be properly mocked in standard unit tests. Always mock the callback itself rather than trying to mock the internal ReCaptcha SDK.
-
----
 
 ## Troubleshooting
 
@@ -900,5 +771,4 @@ If you continue to experience issues:
 
 This software may be modified and distributed under the terms of the MIT license. See the LICENSE file for details.
 
-
-© Copyright 2025-2026 Ping Identity Corporation. All Rights Reserved
+© Copyright 2025-2026 Ping Identity Corporation. All rights reserved.

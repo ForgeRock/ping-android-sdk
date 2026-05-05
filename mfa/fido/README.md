@@ -1,61 +1,33 @@
 [![Ping Identity](https://www.pingidentity.com/content/dam/picr/nav/Ping-Logo-2.svg)](https://github.com/ForgeRock/ping-android-sdk)
 
-# Ping FIDO
-
-# MFA/FIDO Module
+# FIDO Module
 
 This module provides functionality for integrating FIDO multi-factor authentication into your
 Android application. It simplifies the process of user registration and authentication using modern
 security keys and platform authenticators. This module is specifically designed for smooth
 integration with AIC Journey and DaVinci Flow.
 
----
+## Getting Started
 
-## Features
+### Prerequisites
 
-- **FIDO Registration:** Register security keys, fingerprint sensors, face unlock, and other
-  authenticators.
-- **FIDO Authentication:** Securely authenticate users with their registered FIDO authenticators.
-- **Easy Integration:** Streamlined API for use with AIC Journey and DaVinci Flow.
-- **Standards-Based:** Built on the WebAuthn/FIDO standard for strong authentication.
+- PingOne DaVinci or Ping Advanced Identity Cloud / PingAM [Supported Versions](https://support.pingidentity.com/s/article/Ping-Identity-EOL-Tracker)
+- Android API level 29 or higher
 
----
+### Installation
 
-## Supported Authenticators
+To integrate this module into your Android project, include the following dependency in
+your `build.gradle.kts` (or `build.gradle`) file:
 
-- Platform authenticators (fingerprint, face, PIN, etc.)
-- Android devices with FIDO support
-
----
-
-## Overview
-
-This module offers a streamlined API for handling FIDO interactions. It abstracts away the
-complexities of the underlying FIDO protocols, allowing you to easily add strong authentication to
-your application with `AIC` Journey and `DaVinci` Flow.
-
-Key features include:
-
-* **FIDO Registration:** Enables users to register their FIDO authenticators (security keys,
-  fingerprint sensors, face unlock, etc.) with your application.
-* **FIDO Authentication:** Facilitates secure user login using their registered FIDO
-  authenticators.
-* **Simplified API:** Provides clear and concise functions for performing registration and
-  authentication.
-
----
-
-## Integration
-
-To integrate this module into your Android project, add the following dependency to your app-level
-`build.gradle` file:
-
-```gradle
+```kotlin
 dependencies {
     implementation("com.pingidentity.sdks:fido:<version>")
     // Add other necessary dependencies here
 }
 ```
+
+Replace `<version>` with the latest available version of the SDK from the Maven repository. Ensure your
+project's `repositories` block includes Maven Central or the Ping Identity Maven repository.
 
 ### Additional Dependencies for API 33 and Older
 
@@ -95,7 +67,27 @@ This ensures compatibility with:
 
 Make sure to synchronize your Gradle project after adding the dependency.
 
----
+
+## Supported Authenticators
+
+- Platform authenticators (fingerprint, face, PIN, etc.)
+- Android devices with FIDO support
+
+
+## Overview
+
+This module offers a streamlined API for handling FIDO interactions. It abstracts away the
+complexities of the underlying FIDO protocols, allowing you to easily add strong authentication to
+your application with `AIC` Journey and `DaVinci` Flow.
+
+Key features include:
+
+* **FIDO Registration:** Enables users to register their FIDO authenticators (security keys,
+  fingerprint sensors, face unlock, etc.) with your application.
+* **FIDO Authentication:** Facilitates secure user login using their registered FIDO
+  authenticators.
+* **Simplified API:** Provides clear and concise functions for performing registration and
+  authentication.
 
 ## Usage
 
@@ -299,3 +291,9 @@ val result = collector.authenticate {
 This change may affect existing customers who are currently using WebAuthn Authentication with **username-less flow** and rely on `setResidentKeyRequirement` set to `discouraged`.
 
 If you are currently using this method in your Legacy ForgeRock SDK implementation, please review your authentication flow and consider alternative approaches that align with the standard FIDO implementation provided by this module.
+
+## License
+
+This software may be modified and distributed under the terms of the MIT license. See the LICENSE file for details.
+
+© Copyright 2025-2026 Ping Identity Corporation. All rights reserved.

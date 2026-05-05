@@ -1,12 +1,34 @@
 
 [![Ping Identity](https://www.pingidentity.com/content/dam/picr/nav/Ping-Logo-2.svg)](https://github.com/ForgeRock/ping-android-sdk)
 
-# DaVinci
+# DaVinci Module
+
+DaVinci is a flexible Android library for Authentication and Authorization, utilizing the PingOne DaVinci orchestration engine.
+
+## Getting Started
+
+### Prerequisites
+
+- PingOne DaVinci
+- Android API level 29 or higher
+
+### Installation
+
+To integrate this module into your Android project, include the following dependency in
+your `build.gradle.kts` (or `build.gradle`) file:
+
+```kotlin
+dependencies {
+    implementation("com.pingidentity.sdks:davinci:<version>")
+}
+```
+
+Replace `<version>` with the latest available version of the SDK from the Maven repository. Ensure your
+project's `repositories` block includes Maven Central or the Ping Identity Maven repository.
 
 ## Overview
 
-DaVinci is a powerful and flexible library for Authentication and Authorization. It is designed to be easy to use and
-extensible. It provides a simple API for navigating the authentication flow and handling the various states that can
+DaVinci provides a simple API for navigating the authentication flow and handling the various states that can
 occur during the authentication process.
 
 ```mermaid
@@ -31,15 +53,7 @@ sequenceDiagram
 You can find more information about PingOne
 DaVinci [here](https://docs.pingidentity.com/davinci/davinci_introduction.html).
 
-## Add dependency to your project
-
-```kotlin
-dependencies {
-    implementation("com.pingidentity.sdks:davinci:<version>")
-}
-```
-
-## Usage
+### Usage
 
 To use the `DaVinci` class, you need to create an instance of it and pass a configuration block to the constructor. The
 configuration block allows you to customize various aspects of the `DaVinci` instance, such as the timeout and logging.
@@ -365,4 +379,8 @@ user?.let {
 }
 ```
 
-© Copyright 2025-2026 Ping Identity Corporation. All Rights Reserved
+## License
+
+This software may be modified and distributed under the terms of the MIT license. See the LICENSE file for details.
+
+© Copyright 2025-2026 Ping Identity Corporation. All rights reserved.

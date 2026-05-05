@@ -2,7 +2,7 @@
 
 # Oidc Module
 
-`Oidc module` provides OIDC client for PingOne and ForgeRock platform.
+`Oidc module` provides OIDC client for PingOne and Ping Identity platform.
 
 The `oidc` module follows the [OIDC](https://openid.net/specs/openid-connect-core-1_0.html)
 specification and
@@ -10,7 +10,16 @@ provides a simple and easy-to-use API to interact with the OIDC server. It allow
 authenticate, retrieve the
 access token, revoke the token, and sign out from the OIDC server.
 
-## Add dependency to your project
+## Getting Started
+
+### Prerequisites
+
+- Android API level 29 or higher
+
+### Installation
+
+To integrate this module into your Android project, include the following dependency in
+your `build.gradle.kts` (or `build.gradle`) file:
 
 ```kotlin
 dependencies {
@@ -20,7 +29,10 @@ dependencies {
 }
 ```
 
-## Set scheme in AndroidManifest.xml
+Replace `<version>` with the latest available version of the SDK from the Maven repository. Ensure your
+project's `repositories` block includes Maven Central or the Ping Identity Maven repository.
+
+### Set scheme in `AndroidManifest.xml`
 
 With the `browser` module dependency, the Ping SDK's OIDC module uses a Browser agent to launch the
 authorization request in a browser. By default, it uses Custom Tabs or Auth Tabs.
@@ -197,4 +209,8 @@ web.authorize(
   }
 ```
 
-© Copyright 2025-2026 Ping Identity Corporation. All Rights Reserved
+## License
+
+This software may be modified and distributed under the terms of the MIT license. See the LICENSE file for details.
+
+© Copyright 2025-2026 Ping Identity Corporation. All rights reserved.

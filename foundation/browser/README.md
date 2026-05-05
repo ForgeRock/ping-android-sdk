@@ -1,6 +1,26 @@
 [![Ping Identity](https://www.pingidentity.com/content/dam/picr/nav/Ping-Logo-2.svg)](https://github.com/ForgeRock/ping-android-sdk)
 
-# Ping Browser
+# Browser Module
+
+Ping Browser is a comprehensive library for in-app browser functionality. It launches browser sessions and captures redirect data from authentication/authorization flows, intelligently choosing between `CustomTabsIntent` and `AuthTabsIntent` based on device security and capabilities.
+
+## Getting Started
+
+### Prerequisites
+
+- PingOne DaVinci or Ping Advanced Identity Cloud / PingAM [Supported Versions](https://support.pingidentity.com/s/article/Ping-Identity-EOL-Tracker)
+- Android API level 29 or higher
+
+### Installation
+
+To integrate this module into your Android project, add the following dependency to your app-level
+`build.gradle` file:
+
+```kotlin
+dependencies {
+    implementation("com.pingidentity.sdks:browser:<version>")
+}
+```
 
 ## Overview
 
@@ -26,14 +46,6 @@ sequenceDiagram
     Browser ->> BrowserLauncher: URI
     BrowserLauncher ->> App: URI
     Note over App, Browser: Complete redirect flow
-```
-
-## Add dependency to your project
-
-```kotlin
-dependencies {
-    implementation("com.pingidentity.sdks:browser:<version>")
-}
 ```
 
 ## Usage
@@ -151,4 +163,8 @@ customization allows you to override this behavior for specific use cases or bro
 | App Store Policy          | May be restricted for auth flows                         | Fully compliant                         | Fully compliant                                         |
 | Recommended For           | Embedded content, not auth                               | Secure authentication/authorization     | Secure authentication/authorization (preferred)         |
 
-© Copyright 2025-2026 Ping Identity Corporation. All Rights Reserved
+## License
+
+This software may be modified and distributed under the terms of the MIT license. See the LICENSE file for details.
+
+© Copyright 2025-2026 Ping Identity Corporation. All rights reserved.

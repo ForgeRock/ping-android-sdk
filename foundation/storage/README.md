@@ -1,30 +1,20 @@
 
 [![Ping Identity](https://www.pingidentity.com/content/dam/picr/nav/Ping-Logo-2.svg)](https://github.com/ForgeRock/ping-android-sdk)
 
-# Ping Storage SDK
+# Storage Module
 
 The Ping Storage SDK provides a flexible storage interface and a set of common storage solutions for the Ping SDKs.
 
----
+## Getting Started
 
-## Table of Contents
+### Prerequisites
 
-- [Integrating the SDK into your project](#integrating-the-sdk-into-your-project)
-- [Storage Interface](#storage-interface)
-- [Available Storage Solutions](#available-storage-solutions)
-- [How to Use the SDK](#how-to-use-the-sdk)
-    - [Creating and Using a Storage Instance](#creating-and-using-a-storage-instance)
-    - [DataStoreStorage](#datastorestorage)
-    - [EncryptedDataStoreStorage](#encrypteddatastorestorage)
-    - [Enabling Cache for the Storage](#enabling-cache-for-the-storage)
-    - [Cache Strategy Table](#cache-strategy-table)
-- [Creating a Custom Storage](#creating-a-custom-storage)
+- Android API level 29 or higher
 
----
+### Installation
 
-## Integrating the SDK into your project
-
-To add the Ping Storage SDK as a dependency to your project, include the following in your `build.gradle` file:
+To integrate this module into your Android project, include the following dependency in
+your `build.gradle.kts` (or `build.gradle`) file:
 
 ```kotlin
 dependencies {
@@ -32,7 +22,8 @@ dependencies {
 }
 ```
 
----
+Replace `<version>` with the latest available version of the SDK from the Maven repository. Ensure your
+project's `repositories` block includes Maven Central or the Ping Identity Maven repository.
 
 ## Storage Interface
 
@@ -46,8 +37,6 @@ interface Storage<T> {
 }
 ```
 
----
-
 ## Available Storage Solutions
 
 | Storage                   | Description                                                                                                              |
@@ -56,7 +45,6 @@ interface Storage<T> {
 | DataStoreStorage          | Storage backed by [DataStore](https://developer.android.com/topic/libraries/architecture/datastore). No encryption by default. |
 | MemoryStorage             | Storage that stores data in memory.                                                                                      |
 
----
 
 ## How to Use the SDK
 
@@ -76,7 +64,6 @@ storage.save(Dog("Lucky", "Golden Retriever"))
 val storedData = storage.get()
 ```
 
----
 
 ### DataStoreStorage
 
@@ -128,7 +115,6 @@ val storage = EncryptedDataStoreStorage<String> {
 
 **Note:** StrongBox offers the strongest security, best for apps truly at risk of physical attacks. But it's slower and consumes more resources.
 
----
 
 ### Enabling Cache for the Storage
 
@@ -156,8 +142,6 @@ val storage = DataStoreStorage<String> {
 > Data that store in the cache is kept in plain text and is not encrypted.
 > A device that can output a memory dump may expose sensitive information.
 
----
-
 ### Cache Strategy Table
 
 | Strategy         | Description                                                    | Use Case                                 |
@@ -165,8 +149,6 @@ val storage = DataStoreStorage<String> {
 | NO_CACHE         | No caching, always fetch fresh data                            | Critical data, always up-to-date needed  |
 | CACHE_ON_FAILURE | Cache the item in memory only if the storage operation fails.  | Storage interruptions, fallback reads    |
 | CACHE            | Cache the item in memory, even if the storage operation fails. | Fast access, frequent non-critical reads |
-
----
 
 ## Creating a Custom Storage
 
@@ -193,4 +175,8 @@ class Memory<T : @Serializable Any> : Storage<T> {
 inline fun <reified T : @Serializable Any> MemoryStorage(): Storage<T> = StorageDelegate(Memory())
 ```
 
-© Copyright 2025-2026 Ping Identity Corporation. All Rights Reserved
+## License
+
+This software may be modified and distributed under the terms of the MIT license. See the LICENSE file for details.
+
+© Copyright 2025-2026 Ping Identity Corporation. All rights reserved.
