@@ -54,19 +54,21 @@ class LabelCollector : Collector<Nothing> {
         key = input[KEY]?.jsonPrimitive?.contentOrNull ?: ""
 
         val richContentJson = input[RICH_CONTENT] as? JsonObject
-        richContent = RichContent(
-            richText = richContentJson?.get(CONTENT)?.jsonPrimitive?.contentOrNull ?: content,
-            replacements = (richContentJson?.get(REPLACEMENTS) as? JsonObject)
-                ?.mapValues { (_, element) ->
-                    val obj = element as? JsonObject ?: return@mapValues RichContentReplacement()
-                    RichContentReplacement(
-                        value = (obj[VALUE] as? JsonPrimitive)?.contentOrNull.orEmpty(),
-                        href = (obj[HREF] as? JsonPrimitive)?.contentOrNull.orEmpty(),
-                        type = (obj[TYPE] as? JsonPrimitive)?.contentOrNull.orEmpty(),
-                        target = (obj[TARGET] as? JsonPrimitive)?.contentOrNull.orEmpty(),
-                    )
-                } ?: emptyMap()
-        )
+        richContentJson?.let {
+            richContent = RichContent(
+                content = it[CONTENT]?.jsonPrimitive?.contentOrNull ?: "",
+                replacements = (it[REPLACEMENTS] as? JsonObject)
+                    ?.mapValues { (_, element) ->
+                        val obj = element as? JsonObject ?: return@mapValues RichContentReplacement()
+                        RichContentReplacement(
+                            value = (obj[VALUE] as? JsonPrimitive)?.contentOrNull.orEmpty(),
+                            href = (obj[HREF] as? JsonPrimitive)?.contentOrNull.orEmpty(),
+                            type = (obj[TYPE] as? JsonPrimitive)?.contentOrNull.orEmpty(),
+                            target = (obj[TARGET] as? JsonPrimitive)?.contentOrNull.orEmpty(),
+                        )
+                    } ?: emptyMap()
+            )
+        }
 
         return this
     }

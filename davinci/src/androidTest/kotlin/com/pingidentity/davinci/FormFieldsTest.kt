@@ -95,7 +95,6 @@ class FormFieldsTest {
         val labelCollector3 = node.collectors[LABEL_RICH_TEXT_INDEX] as LabelCollector
 
         // TODO: Update the following assertion to be more specific when the bug in DaVinci is fixed - see: https://pingidentity.slack.com/archives/C06CCT3NSP5/p1736897937860359
-        assertTrue(labelCollector1.content.contains("Rich Text fields produce LABELs"))
         assertEquals("Translatable Rich Text produce LABELs too!\n\n", labelCollector2.content)
 
         // SDKS-3957 Add support for key attribute in Label Collectors
@@ -103,25 +102,30 @@ class FormFieldsTest {
         // Note that the Rich Text component has been deprecated, so the key is not set
         assertEquals("", labelCollector1.key)
 
-        // labelCollector1: HTML content — richText falls back to the raw HTML content string
+        // labelCollector1: No richContent field in the input → richContent should be null and
+        // content should contain the plain text (with HTML tags, since it's a TEXTBLOB)
         val richContent1 = labelCollector1.richContent
-        assertNotNull(richContent1)
-        assertTrue(richContent1.richText.contains("Rich Text fields produce LABELs"))
-        // No richContent on this label so replacements must be empty
-        assertTrue(richContent1.replacements.isEmpty())
+        assertNull(richContent1)
+        assertTrue(labelCollector1.content.contains("Rich Text fields produce LABELs"))
+        // TEXTBLOB content is raw HTML — verify HTML tags are present so that buildRichTextLabel
+        // can parse it correctly when richContent is null
+        assertTrue(
+            labelCollector1.content.contains("<"),
+            "Expected TEXTBLOB content to contain HTML tags, was: ${labelCollector1.content}"
+        )
 
         // labelCollector2: plain translatable text — richText comes from richContent.content
         // (without the trailing newlines present in the top-level content field)
         val richContent2 = labelCollector2.richContent
         assertNotNull(richContent2)
-        assertEquals("Translatable Rich Text produce LABELs too!", richContent2.richText)
+        assertEquals("Translatable Rich Text produce LABELs too!", richContent2.content)
         // No replacement tokens on this label
         assertTrue(richContent2.replacements.isEmpty())
 
         // labelCollector3: translatable link — richText contains {{token}} placeholders and replacements map contains corresponding entries
         val richContent3 = labelCollector3.richContent
         assertNotNull(richContent3)
-        assertEquals("A translatable rich text to take the user to {{link1}}", richContent3.richText)
+        assertEquals("A translatable rich text to take the user to {{link1}}", richContent3.content)
         assertTrue(richContent3.replacements.containsKey("link1"))
         val replacement = richContent3.replacements["link1"]
         assertNotNull(replacement)
@@ -144,11 +148,11 @@ class FormFieldsTest {
         if (linkLabel != null) {
             // richText must contain at least one {{token}} placeholder
             assertTrue(
-                tokenPattern.containsMatchIn(linkLabel.richContent?.richText ?: ""),
-                "Expected richText to contain {{token}} placeholders, was: ${linkLabel.richContent?.richText}"
+                tokenPattern.containsMatchIn(linkLabel.richContent?.content ?: ""),
+                "Expected richText to contain {{token}} placeholders, was: ${linkLabel.richContent?.content}"
             )
             // Every token present in richText must have a corresponding replacement entry
-            for (match in tokenPattern.findAll(linkLabel.richContent?.richText ?: "")) {
+            for (match in tokenPattern.findAll(linkLabel.richContent?.content ?: "")) {
                 val token = match.groupValues[1]
                 val replacement = linkLabel.richContent?.replacements[token]
                 assertNotNull(replacement, "Missing replacement for token '$token'")
@@ -428,7 +432,7 @@ class FormFieldsTest {
         assertEquals("I agree to the Terms and Conditions", singleCheckbox.label)
         val richContent = singleCheckbox.richContent
         assertNotNull(richContent)
-        assertEquals("I agree to the {{link1}}", richContent.richText)
+        assertEquals("I agree to the {{link1}}", richContent.content)
         assertEquals(1, richContent.replacements.size)
         assertTrue(richContent.replacements.containsKey("link1"))
         assertEquals(true, singleCheckbox.required)

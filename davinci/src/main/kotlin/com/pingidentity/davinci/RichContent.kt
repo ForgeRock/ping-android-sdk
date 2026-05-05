@@ -32,11 +32,11 @@ data class RichContentReplacement(
 /**
  * Represents rich text content with optional token replacements.
  *
- * @property richText The rich text content, potentially containing `{{tokenName}}` placeholders.
+ * @property content The rich text content, potentially containing `{{tokenName}}` placeholders.
  * @property replacements Map of token name → [RichContentReplacement] parsed from
  * `richContent.replacements`.  Empty when there are no replacements.
  */
 data class RichContent(
-    val richText: String = "",
+    val content: String = "",
     val replacements: Map<String, RichContentReplacement> = emptyMap(),
 )
