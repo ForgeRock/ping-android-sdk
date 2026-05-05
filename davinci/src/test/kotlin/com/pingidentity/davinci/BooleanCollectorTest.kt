@@ -88,7 +88,7 @@ class BooleanCollectorTest {
         collector.init(input)
         val richContent = collector.richContent
         assertNotNull(richContent)
-        assertEquals("This is a sample checkbox test.", richContent.richText)
+        assertEquals("This is a sample checkbox test.", richContent.content)
     }
 
     @Test
@@ -110,7 +110,7 @@ class BooleanCollectorTest {
         collector.init(input)
         val richContent = collector.richContent
         assertNotNull(richContent)
-        assertEquals("A translatable rich text to take the user to {{link1}}", richContent.richText)
+        assertEquals("A translatable rich text to take the user to {{link1}}", richContent.content)
         assertTrue(richContent.replacements.isNotEmpty())
         assertEquals(1, richContent.replacements.size)
 

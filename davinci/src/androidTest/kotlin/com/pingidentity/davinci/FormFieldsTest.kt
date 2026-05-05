@@ -106,7 +106,7 @@ class FormFieldsTest {
         // labelCollector1: HTML content — richText falls back to the raw HTML content string
         val richContent1 = labelCollector1.richContent
         assertNotNull(richContent1)
-        assertTrue(richContent1.richText.contains("Rich Text fields produce LABELs"))
+        assertTrue(richContent1.content.contains("Rich Text fields produce LABELs"))
         // No richContent on this label so replacements must be empty
         assertTrue(richContent1.replacements.isEmpty())
 
@@ -114,14 +114,14 @@ class FormFieldsTest {
         // (without the trailing newlines present in the top-level content field)
         val richContent2 = labelCollector2.richContent
         assertNotNull(richContent2)
-        assertEquals("Translatable Rich Text produce LABELs too!", richContent2.richText)
+        assertEquals("Translatable Rich Text produce LABELs too!", richContent2.content)
         // No replacement tokens on this label
         assertTrue(richContent2.replacements.isEmpty())
 
         // labelCollector3: translatable link — richText contains {{token}} placeholders and replacements map contains corresponding entries
         val richContent3 = labelCollector3.richContent
         assertNotNull(richContent3)
-        assertEquals("A translatable rich text to take the user to {{link1}}", richContent3.richText)
+        assertEquals("A translatable rich text to take the user to {{link1}}", richContent3.content)
         assertTrue(richContent3.replacements.containsKey("link1"))
         val replacement = richContent3.replacements["link1"]
         assertNotNull(replacement)
@@ -144,11 +144,11 @@ class FormFieldsTest {
         if (linkLabel != null) {
             // richText must contain at least one {{token}} placeholder
             assertTrue(
-                tokenPattern.containsMatchIn(linkLabel.richContent?.richText ?: ""),
-                "Expected richText to contain {{token}} placeholders, was: ${linkLabel.richContent?.richText}"
+                tokenPattern.containsMatchIn(linkLabel.richContent?.content ?: ""),
+                "Expected richText to contain {{token}} placeholders, was: ${linkLabel.richContent?.content}"
             )
             // Every token present in richText must have a corresponding replacement entry
-            for (match in tokenPattern.findAll(linkLabel.richContent?.richText ?: "")) {
+            for (match in tokenPattern.findAll(linkLabel.richContent?.content ?: "")) {
                 val token = match.groupValues[1]
                 val replacement = linkLabel.richContent?.replacements[token]
                 assertNotNull(replacement, "Missing replacement for token '$token'")
@@ -428,7 +428,7 @@ class FormFieldsTest {
         assertEquals("I agree to the Terms and Conditions", singleCheckbox.label)
         val richContent = singleCheckbox.richContent
         assertNotNull(richContent)
-        assertEquals("I agree to the {{link1}}", richContent.richText)
+        assertEquals("I agree to the {{link1}}", richContent.content)
         assertEquals(1, richContent.replacements.size)
         assertTrue(richContent.replacements.containsKey("link1"))
         assertEquals(true, singleCheckbox.required)

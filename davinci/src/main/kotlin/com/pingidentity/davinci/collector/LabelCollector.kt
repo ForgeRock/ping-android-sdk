@@ -55,7 +55,7 @@ class LabelCollector : Collector<Nothing> {
 
         val richContentJson = input[RICH_CONTENT] as? JsonObject
         richContent = RichContent(
-            richText = richContentJson?.get(CONTENT)?.jsonPrimitive?.contentOrNull ?: content,
+            content = richContentJson?.get(CONTENT)?.jsonPrimitive?.contentOrNull ?: content,
             replacements = (richContentJson?.get(REPLACEMENTS) as? JsonObject)
                 ?.mapValues { (_, element) ->
                     val obj = element as? JsonObject ?: return@mapValues RichContentReplacement()

@@ -33,9 +33,9 @@ object RichText {
         richContent: RichContent,
     ) = buildAnnotatedString {
         var lastIndex = 0
-        for (match in tokenPattern.findAll(richContent.richText)) {
+        for (match in tokenPattern.findAll(richContent.content)) {
             // Append any plain text before this token
-            append(richContent.richText.substring(lastIndex, match.range.first))
+            append(richContent.content.substring(lastIndex, match.range.first))
 
             val token = match.groupValues[1]
             val replacement = richContent.replacements[token]
@@ -59,7 +59,7 @@ object RichText {
             lastIndex = match.range.last + 1
         }
         // Append any remaining plain text after the last token
-        append(richContent.richText.substring(lastIndex))
+        append(richContent.content.substring(lastIndex))
     }
 
     /**
@@ -82,13 +82,13 @@ object RichText {
         fallbackContent: String = "",
     ): AnnotatedString {
         if (richContent == null) return AnnotatedString(fallbackContent)
-        val hasTokens = tokenPattern.containsMatchIn(richContent.richText)
-        val hasHtml = htmlTagPattern.containsMatchIn(richContent.richText)
+        val hasTokens = tokenPattern.containsMatchIn(richContent.content)
+        val hasHtml = htmlTagPattern.containsMatchIn(richContent.content)
         return when {
             hasTokens && hasHtml ->
                 AnnotatedString
                     .fromHtml(
-                        tokenPattern.replace(richContent.richText) { match ->
+                        tokenPattern.replace(richContent.content) { match ->
                             val token = match.groupValues[1]
                             val replacement = richContent.replacements[token]
                             when {
@@ -105,9 +105,9 @@ object RichText {
             hasTokens ->
                 buildRichAnnotatedString(richContent)
             hasHtml ->
-                AnnotatedString.fromHtml(richContent.richText)
+                AnnotatedString.fromHtml(richContent.content)
             else ->
-                AnnotatedString(richContent.richText)
+                AnnotatedString(richContent.content)
         }
     }
 }
