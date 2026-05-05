@@ -203,6 +203,20 @@ fun customHTMLTemplateWithInvalidPassword() = ByteReadChannel(
 )
 
 
+fun rewindStateToLastRenderedUIResponse() =
+    ByteReadChannel(
+        "{\n" +
+                "    \"eventName\": \"rewindStateToLastRenderedUI\"\n" +
+                "}",
+    )
+
+fun rewindStateToSpecificRenderedUIResponse() =
+    ByteReadChannel(
+        "{\n" +
+                "    \"eventName\": \"rewindStateToSpecificRenderedUI\"\n" +
+                "}",
+    )
+
 fun tokeErrorResponse() =
     ByteReadChannel(
         "{\n" +

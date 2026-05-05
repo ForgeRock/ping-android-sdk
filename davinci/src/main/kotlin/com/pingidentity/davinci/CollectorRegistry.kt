@@ -16,6 +16,8 @@ import com.pingidentity.davinci.collector.LabelCollector
 import com.pingidentity.davinci.collector.MultiSelectCollector
 import com.pingidentity.davinci.collector.PasswordCollector
 import com.pingidentity.davinci.collector.PhoneNumberCollector
+import com.pingidentity.davinci.collector.PollingCollector
+import com.pingidentity.davinci.collector.QRCodeCollector
 import com.pingidentity.davinci.collector.BooleanCollector
 import com.pingidentity.davinci.collector.SingleSelectCollector
 import com.pingidentity.davinci.collector.SubmitCollector
@@ -57,6 +59,9 @@ internal class CollectorRegistry : ModuleInitializer() {
         CollectorFactory.register("DEVICE_REGISTRATION", ::DeviceRegistrationCollector)
         CollectorFactory.register("DEVICE_AUTHENTICATION", ::DeviceAuthenticationCollector)
         CollectorFactory.register("PHONE_NUMBER", ::PhoneNumberCollector)
+
+        CollectorFactory.register("POLLING", ::PollingCollector)
+        CollectorFactory.register("QR_CODE", ::QRCodeCollector)
 
         // AGREEMENT fields use inputType "READ_ONLY_TEXT" which is the factory lookup key
         CollectorFactory.register("READ_ONLY_TEXT", ::AgreementCollector)
