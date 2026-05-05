@@ -16,6 +16,7 @@ on:
       testrail-run-id:
         description: The TestRail run ID
         type: string
+        default: "0"
     secrets:
       SLACK_WEBHOOK:
         description: Slack Notifier Incoming Webhook
@@ -25,10 +26,10 @@ on:
         required: true
       TESTRAIL_USERNAME:
         description: TestRail username
-        required: true
+        required: false
       TESTRAIL_API_KEY:
         description: TestRail API key
-        required: true
+        required: false
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
