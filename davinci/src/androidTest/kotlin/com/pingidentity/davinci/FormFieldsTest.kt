@@ -95,7 +95,6 @@ class FormFieldsTest {
         val labelCollector3 = node.collectors[LABEL_RICH_TEXT_INDEX] as LabelCollector
 
         // TODO: Update the following assertion to be more specific when the bug in DaVinci is fixed - see: https://pingidentity.slack.com/archives/C06CCT3NSP5/p1736897937860359
-        assertTrue(labelCollector1.content.contains("Rich Text fields produce LABELs"))
         assertEquals("Translatable Rich Text produce LABELs too!\n\n", labelCollector2.content)
 
         // SDKS-3957 Add support for key attribute in Label Collectors
@@ -103,12 +102,17 @@ class FormFieldsTest {
         // Note that the Rich Text component has been deprecated, so the key is not set
         assertEquals("", labelCollector1.key)
 
-        // labelCollector1: HTML content — richText falls back to the raw HTML content string
+        // labelCollector1: No richContent field in the input → richContent should be null and
+        // content should contain the plain text (with HTML tags, since it's a TEXTBLOB)
         val richContent1 = labelCollector1.richContent
-        assertNotNull(richContent1)
-        assertTrue(richContent1.content.contains("Rich Text fields produce LABELs"))
-        // No richContent on this label so replacements must be empty
-        assertTrue(richContent1.replacements.isEmpty())
+        assertNull(richContent1)
+        assertTrue(labelCollector1.content.contains("Rich Text fields produce LABELs"))
+        // TEXTBLOB content is raw HTML — verify HTML tags are present so that buildRichTextLabel
+        // can parse it correctly when richContent is null
+        assertTrue(
+            labelCollector1.content.contains("<"),
+            "Expected TEXTBLOB content to contain HTML tags, was: ${labelCollector1.content}"
+        )
 
         // labelCollector2: plain translatable text — richText comes from richContent.content
         // (without the trailing newlines present in the top-level content field)

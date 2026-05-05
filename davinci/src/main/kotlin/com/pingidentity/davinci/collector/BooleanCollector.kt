@@ -59,7 +59,7 @@ class BooleanCollector: FieldCollector<Boolean>() {
         val richContentJson = input[RICH_CONTENT] as? JsonObject
         richContentJson?.let {
             richContent = RichContent(
-                content = it["content"]?.jsonPrimitive?.contentOrNull ?: label,
+                content = it["content"]?.jsonPrimitive?.contentOrNull ?: "",
                 replacements = (it[REPLACEMENTS] as? JsonObject)
                     ?.mapValues { (_, element) ->
                         val obj = element as? JsonObject ?: return@mapValues RichContentReplacement()

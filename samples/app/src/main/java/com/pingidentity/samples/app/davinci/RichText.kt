@@ -81,7 +81,13 @@ object RichText {
         richContent: RichContent?,
         fallbackContent: String = "",
     ): AnnotatedString {
-        if (richContent == null) return AnnotatedString(fallbackContent)
+        if (richContent == null) {
+            return if (htmlTagPattern.containsMatchIn(fallbackContent)) {
+                AnnotatedString.fromHtml(fallbackContent)
+            } else {
+                AnnotatedString(fallbackContent)
+            }
+        }
         val hasTokens = tokenPattern.containsMatchIn(richContent.content)
         val hasHtml = htmlTagPattern.containsMatchIn(richContent.content)
         return when {

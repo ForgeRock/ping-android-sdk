@@ -14,6 +14,7 @@ import kotlinx.serialization.json.put
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class LabelCollectorTest {
@@ -39,17 +40,17 @@ class LabelCollectorTest {
     }
 
     @Test
-    fun `richText falls back to content when no richContent is present`() {
+    fun `richContent is null when no richContent field is present`() {
         val input = buildJsonObject {
             put("key", "label-key")
             put("content", "Plain text content")
         }
         val collector = LabelCollector()
         collector.init(input)
-        val richContent = collector.richContent
-        assertNotNull(richContent)
-        assertEquals("Plain text content", richContent.content)
-        assertTrue(richContent.replacements.isEmpty())
+        // richContent is only populated when a richContent JSON object is present.
+        // The rendering layer (buildRichTextLabel) handles the null fallback to content.
+        assertNull(collector.richContent)
+        assertEquals("Plain text content", collector.content)
     }
 
     @Test
@@ -121,19 +122,17 @@ class LabelCollectorTest {
     }
 
     @Test
-    fun `richText is set to HTML content when content contains HTML tags`() {
+    fun `richContent is null and content retains HTML when no richContent field is present`() {
         val input = buildJsonObject {
             put("content", "<p><strong><em>Rich Text fields produce LABELs</em></strong></p><hr><p><br></p>")
         }
         val collector = LabelCollector()
         collector.init(input)
-        val richContent = collector.richContent
-        assertNotNull(richContent)
+        // TEXTBLOB-style labels have no richContent JSON → richContent is null.
+        // The raw HTML is stored in content; buildRichTextLabel parses it at render time.
+        assertNull(collector.richContent)
         assertEquals("<p><strong><em>Rich Text fields produce LABELs</em></strong></p><hr><p><br></p>", collector.content)
-        // richText falls back to content since no richContent is present
-        assertEquals("<p><strong><em>Rich Text fields produce LABELs</em></strong></p><hr><p><br></p>", richContent.content)
         assertEquals("", collector.key)
-        assertTrue(richContent.replacements.isEmpty())
     }
 
     @Test
