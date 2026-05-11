@@ -32,6 +32,7 @@ class OpenIdConfigurationTest {
         assertEquals("", config.endSessionEndpoint)
         assertEquals("", config.pingEndIdpSessionEndpoint)
         assertEquals("", config.revocationEndpoint)
+        assertEquals("", config.deviceAuthorizationEndpoint)
     }
 
     @TestRailCase(22107)
@@ -79,5 +80,20 @@ class OpenIdConfigurationTest {
         assertEquals("", config.endSessionEndpoint)
         assertEquals("", config.pingEndIdpSessionEndpoint)
         assertEquals("", config.revocationEndpoint)
+        assertEquals("", config.deviceAuthorizationEndpoint)
+    }
+
+    @Test
+    fun `OpenIdConfiguration should deserialize device_authorization_endpoint when present`() {
+        val json = """{"authorization_endpoint":"https://auth.example.com","device_authorization_endpoint":"https://example.com/device"}"""
+        val config = Json.decodeFromString<OpenIdConfiguration>(json)
+        assertEquals("https://example.com/device", config.deviceAuthorizationEndpoint)
+    }
+
+    @Test
+    fun `OpenIdConfiguration should default deviceAuthorizationEndpoint to empty string when absent`() {
+        val json = """{"authorization_endpoint":"https://auth.example.com","token_endpoint":"https://token.example.com"}"""
+        val config = Json.decodeFromString<OpenIdConfiguration>(json)
+        assertEquals("", config.deviceAuthorizationEndpoint)
     }
 }

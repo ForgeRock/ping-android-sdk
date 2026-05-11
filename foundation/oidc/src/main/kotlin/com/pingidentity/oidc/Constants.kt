@@ -35,4 +35,8 @@ object Constants {
     const val ACR_VALUES = "acr_values"
     const val REQUEST_URI = "request_uri"
     const val RESPONSE_MODE = "response_mode"
+    const val USER_CODE = "user_code"
+    const val USER_CODE_CAMEL = "userCode"
+    const val DEVICE_CODE = "device_code"
+    const val URN_DEVICE_CODE_GRANT_TYPE = "urn:ietf:params:oauth:grant-type:device_code"
 }

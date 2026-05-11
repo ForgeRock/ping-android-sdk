@@ -27,10 +27,24 @@ private const val COM_PING_SDK_V_1_TOKENS = "com.pingidentity.sdk.v1.tokens"
 @PingDsl
 class OidcClientConfig {
 
+    // Backing property for OpenID configuration to allow for lazy initialization
+    private var _openId: OpenIdConfiguration? = null
+
     /**
      * OpenID configuration.
      */
-    lateinit var openId: OpenIdConfiguration
+    var openId: OpenIdConfiguration
+        get() = _openId ?: throw UninitializedPropertyAccessException("property openId has not been initialized")
+        set(value) { _openId = value }
+
+    /**
+     * Configures the OpenID configuration directly.
+     *
+     * @param block A lambda to configure the [OpenIdConfiguration].
+     */
+    fun openId(block: OpenIdConfiguration.() -> Unit) {
+        _openId = OpenIdConfiguration().apply(block)
+    }
 
     /**
      * Token refresh threshold in seconds.
@@ -203,7 +217,7 @@ class OidcClientConfig {
         if (!::tokenStorage.isInitialized) {
             tokenStorage = storage()
         }
-        if (!::openId.isInitialized) {
+        if (_openId == null) {
             openId = discover()
         }
         if (!::agent.isInitialized) {
