@@ -25,6 +25,7 @@ import com.pingidentity.oidc.Constants.RESPONSE_TYPE
 import com.pingidentity.oidc.Constants.SCOPE
 import com.pingidentity.oidc.Constants.STATE
 import com.pingidentity.oidc.Constants.UI_LOCATES
+import com.pingidentity.oidc.Constants.USER_CODE_CAMEL
 import com.pingidentity.oidc.OidcClientConfig
 import com.pingidentity.oidc.Pkce
 import com.pingidentity.oidc.exception.AuthorizeException
@@ -134,3 +135,41 @@ val populateRequest: suspend OidcClientConfig.(Request, Map<String, String>, Pkc
         }
         request
     }
+
+private const val AS_DEVICE_AUTHORIZATION_PATH = "/as/device_authorization"
+
+/**
+ * Populates a request to verify a user code in the Device Authorization Grant flow (RFC 8628).
+ *
+ * **This function applies to DaVinci Environment only.** PingOne DaVinci uses
+ * specific URL to handle the device grant flow.
+ *
+ * Constructs the device flow verification URL from [com.pingidentity.oidc.OpenIdConfiguration.deviceAuthorizationEndpoint]
+ * by stripping the `/as/device_authorization` suffix to obtain the base URL, then appending
+ * `/applications/{clientId}/deviceFlow` with the `userCode` query parameter.
+ *
+ * Examples:
+ * - `https://auth.pingone.ca/{tenantId}/as/device_authorization`
+ *   → `https://auth.pingone.ca/{tenantId}/applications/{clientId}/deviceFlow?userCode={userCode}`
+ * - `https://pingone.petrov.ca/as/device_authorization`
+ *   → `https://pingone.petrov.ca/applications/{clientId}/deviceFlow?userCode={userCode}`
+ *
+ * @param userCode The user code obtained from the device authorization response that needs to be verified.
+ * @return The populated [Request] ready for execution.
+ */
+val populateDeviceFlowVerificationRequest: suspend OidcClientConfig.(Request, String) -> Request =
+    { request, userCode ->
+        val deviceAuthEndpoint = openId.deviceAuthorizationEndpoint
+
+        // Strip "/as/device_authorization" to obtain the tenant-scoped base URL.
+        val baseUrl = deviceAuthEndpoint.removeSuffix(AS_DEVICE_AUTHORIZATION_PATH)
+
+        request.url = "$baseUrl/applications/$clientId/deviceFlow"
+
+        // PingOne format paths look like "/{tenantId}/as/device_authorization", whereas
+        // custom-domain paths look like "/as/device_authorization".
+        request.parameter(USER_CODE_CAMEL, userCode)
+
+        request
+    }
+
