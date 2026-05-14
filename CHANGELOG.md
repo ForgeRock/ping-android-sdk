@@ -1,3 +1,8 @@
+## [2.0.1]
+
+#### Fixed
+- Upgraded `bcpkix-jdk18on` from `1.81` to `1.84` to address a security vulnerability (CVE-2026-5588). [SDKS-5037]
+
 ## [2.0.0]
 #### Added
 - Added new `network` module [SDKS-4505]
