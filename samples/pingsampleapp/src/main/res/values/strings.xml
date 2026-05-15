@@ -22,6 +22,8 @@
     <string name="text_journey_subtitle">Test Journey Authentication</string>
     <string name="text_oidc_title">OIDC Login</string>
     <string name="text_oidc_subtitle">OpenID Connect Flow</string>
+    <string name="text_device_authorization_grant_title">Device Authorization Grant</string>
+    <string name="text_device_authorization_grant_subtitle">Test Device Authorization Grant Flow</string>
 
     <!-- User Management section -->
     <string name="text_user_profile_title">User Profile</string>

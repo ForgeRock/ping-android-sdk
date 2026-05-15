@@ -156,6 +156,22 @@ fun Logout(
                         }
                     }
 
+                    // OIDC Device Client Session
+                    if (state.oidcDeviceClient) {
+                        item {
+                            LogoutOptionCard(
+                                title = "Device Auth Grant Session",
+                                description = "Logout from OIDC Device Client authentication",
+                                onLogout = {
+                                    logoutViewModel.logoutOidcDeviceClient {
+                                        // Refresh the list after logout
+                                        logoutViewModel.listLogoutOptions()
+                                    }
+                                }
+                            )
+                        }
+                    }
+
                     // No active sessions
                     if (!state.journey && !state.daVinci && !state.oidc) {
                         item {

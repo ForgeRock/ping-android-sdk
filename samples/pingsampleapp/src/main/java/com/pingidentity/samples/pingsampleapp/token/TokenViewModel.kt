@@ -15,6 +15,7 @@ import com.pingidentity.davinci.user as davinciUser
 import com.pingidentity.oidc.Token
 import com.pingidentity.samples.pingsampleapp.config.daVinci
 import com.pingidentity.samples.pingsampleapp.config.journey
+import com.pingidentity.samples.pingsampleapp.config.oidcDeviceClient
 import com.pingidentity.samples.pingsampleapp.config.web
 import com.pingidentity.utils.Result.Failure
 import com.pingidentity.utils.Result.Success
@@ -51,6 +52,11 @@ class TokenViewModel : ViewModel() {
                     json.encodeToString(Token.serializer(), it)
                 } ?: tokenState.oidcError?.toString() ?: "No OIDC token information is available"
             }
+            TokenType.AUTH_GRANT -> {
+                tokenState.authGrantToken?.let {
+                    json.encodeToString(Token.serializer(), it)
+                } ?: tokenState.authGrantError?.toString() ?: "No Auth Grant token information is available"
+            }
         }
     }
 
@@ -63,6 +69,7 @@ class TokenViewModel : ViewModel() {
             TokenType.JOURNEY -> journeyAccessToken()
             TokenType.DAVINCI -> daVinciAccessToken()
             TokenType.OIDC -> oidcAccessToken()
+            TokenType.AUTH_GRANT -> authGrantAccessToken()
         }
     }
 
@@ -74,6 +81,7 @@ class TokenViewModel : ViewModel() {
         journeyAccessToken()
         daVinciAccessToken()
         oidcAccessToken()
+        authGrantAccessToken()
     }
 
     fun refresh() {
@@ -81,6 +89,7 @@ class TokenViewModel : ViewModel() {
             TokenType.JOURNEY -> journeyRefresh()
             TokenType.DAVINCI -> daVinciRefresh()
             TokenType.OIDC -> oidcRefresh()
+            TokenType.AUTH_GRANT -> authGrantRefresh()
         }
     }
 
@@ -89,6 +98,7 @@ class TokenViewModel : ViewModel() {
             TokenType.JOURNEY -> journeyRevoke()
             TokenType.DAVINCI -> daVinciRevoke()
             TokenType.OIDC -> oidcRevoke()
+            TokenType.AUTH_GRANT -> authGrantRevoke()
         }
     }
 
@@ -97,6 +107,7 @@ class TokenViewModel : ViewModel() {
             TokenType.JOURNEY -> state.update { it.copy(journeyToken = null, journeyError = null) }
             TokenType.DAVINCI -> state.update { it.copy(daVinciToken = null, daVinciError = null) }
             TokenType.OIDC -> state.update { it.copy(oidcToken = null, oidcError = null) }
+            TokenType.AUTH_GRANT -> state.update { it.copy(authGrantToken = null, authGrantError = null) }
         }
     }
 
@@ -267,6 +278,64 @@ class TokenViewModel : ViewModel() {
             }
         }
     }
+
+    // Auth Grant Token Operations
+    private fun authGrantAccessToken() {
+        viewModelScope.launch {
+            oidcDeviceClient?.user()?.let {
+                when (val result = it.token()) {
+                    is Failure -> {
+                        state.update { state ->
+                            state.copy(authGrantToken = null, authGrantError = result.value)
+                        }
+                    }
+                    is Success -> {
+                        state.update { state ->
+                            state.copy(authGrantToken = result.value, authGrantError = null)
+                        }
+                    }
+                }
+            } ?: run {
+                state.update {
+                    it.copy(authGrantToken = null, authGrantError = null)
+                }
+            }
+        }
+    }
+
+    private fun authGrantRevoke() {
+        viewModelScope.launch {
+            oidcDeviceClient?.user()?.revoke()
+            state.update {
+                it.copy(authGrantToken = null, authGrantError = null)
+            }
+        }
+    }
+
+    private fun authGrantRefresh() {
+        viewModelScope.launch {
+            oidcDeviceClient?.user()?.let {
+                when (val result = it.refresh()) {
+                    is Failure -> {
+                        state.update { state ->
+                            state.copy(authGrantToken = null, authGrantError = result.value)
+                        }
+                    }
+                    is Success -> {
+                        state.update { state ->
+                            state.copy(authGrantToken = result.value, authGrantError = null)
+                        }
+                    }
+                }
+            } ?: run {
+                state.update {
+                    it.copy(authGrantToken = null, authGrantError = null)
+                }
+            }
+        }
+    }
+
+
 
     companion object {
         fun factory(): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
