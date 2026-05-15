@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2025 - 2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -39,6 +39,10 @@ internal object Constants {
     const val TOKEN_ID = "tokenId"
     const val SUCCESS_URL = "successUrl"
     const val REALM_NAME = "realm"
+    const val ACCEPT = "Accept"
+    const val DECISION = "decision"
+    const val ALLOW = "allow"
+    const val CSRF = "csrf"
 
     // Constant key used to store and retrieve the OIDC client from the shared context
     const val OIDC_CLIENT = "com.pingidentity.journey.OIDC_CLIENT"

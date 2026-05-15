@@ -10,6 +10,7 @@ package com.pingidentity.journey
 import android.content.Context
 import android.net.Uri
 import android.os.LocaleList
+import androidx.core.net.toUri
 import com.pingidentity.journey.callback.NameCallback
 import com.pingidentity.journey.callback.PasswordCallback
 import com.pingidentity.journey.module.NodeTransform
@@ -23,6 +24,7 @@ import com.pingidentity.logger.Logger
 import com.pingidentity.logger.STANDARD
 import com.pingidentity.network.ktor.KtorHttpClient
 import com.pingidentity.oidc.Token
+import com.pingidentity.oidc.module.VERIFICATION_URI_COMPLETE
 import com.pingidentity.orchestrate.ContinueNode
 import com.pingidentity.orchestrate.ErrorNode
 import com.pingidentity.orchestrate.FailureNode
@@ -129,6 +131,10 @@ class JourneyTest {
 
                     "/authorize" -> {
                         respond("", HttpStatusCode.Found, authorizeResponseHeaders)
+                    }
+
+                    "/tenantId/applications/test/deviceFlow" -> {
+                        respond("", HttpStatusCode.OK, headers)
                     }
 
                     else -> {
@@ -942,6 +948,206 @@ class JourneyTest {
         val authorizeRequest = mockEngine.requestHistory[4] // authorize request
         assertContains(authorizeRequest.url.encodedQuery, "request_uri=urn%3Aietf%3Aparams%3Aoauth%3Arequest_uri%3Atest-request-uri")
         assertContains(authorizeRequest.url.encodedQuery, "client_id=test")
+    }
+
+    @Test
+    fun `Journey with device user code posts user code to verification URI on success`() = runTest {
+        val tokenStorage = MemoryStorage<Token>()
+        val sessionStorage = MemoryStorage<SSOToken>()
+        val verificationUriComplete =
+            "https://auth.test-one-pingone.com/tenantId/applications/test/deviceFlow?user_code=WDJB-MJHT"
+
+        val journey = Journey {
+            serverUrl = "http://localhost/am"
+            logger = Logger.CONSOLE
+            httpClient = KtorHttpClient(HttpClient(mockEngine) {
+                followRedirects = false
+            })
+            module(Oidc) {
+                clientId = "test"
+                discoveryEndpoint = "http://localhost/.well-known/openid-configuration"
+                scopes = mutableSetOf("openid", "email", "address")
+                redirectUri = "http://localhost:8080"
+                storage = { tokenStorage }
+            }
+            module(Session) {
+                storage = { sessionStorage }
+            }
+        }
+
+        var node = journey.start("myLogin") {
+            VERIFICATION_URI_COMPLETE to verificationUriComplete.toUri()
+        }
+        assertTrue(node is ContinueNode)
+        (node.callbacks[0] as? NameCallback)?.name = "My First Name"
+        (node.callbacks[1] as? PasswordCallback)?.password = "My Password"
+
+        node = node.next()
+        assertTrue(node is SuccessNode)
+        assertEquals("Dummy Session Token", node.session.value)
+
+        // Verify device flow POST request was made to the verification URI
+        val deviceFlowRequest = mockEngine.requestHistory.last()
+        assertEquals(
+            "https://auth.test-one-pingone.com/tenantId/applications/test/deviceFlow",
+            deviceFlowRequest.url.toString().substringBefore("?")
+        )
+        val deviceFlowBody = deviceFlowRequest.body as FormDataContent
+        assertEquals("WDJB-MJHT", deviceFlowBody.formData["user_code"])
+        assertEquals("allow", deviceFlowBody.formData["decision"])
+        assertEquals("Dummy Session Token", deviceFlowBody.formData["csrf"])
+
+        // Verify the session cookie is set in the request header
+        assertEquals("Dummy Session Token", deviceFlowRequest.headers["iPlanetDirectoryPro"])
+    }
+
+    @Test
+    fun `Journey with device user code skips OIDC authorize and token exchange`() = runTest {
+        val tokenStorage = MemoryStorage<Token>()
+        val sessionStorage = MemoryStorage<SSOToken>()
+        val verificationUriComplete =
+            "https://auth.test-one-pingone.com/tenantId/applications/test/deviceFlow?user_code=WDJB-MJHT"
+
+        val journey = Journey {
+            serverUrl = "http://localhost/am"
+            logger = Logger.CONSOLE
+            httpClient = KtorHttpClient(HttpClient(mockEngine) {
+                followRedirects = false
+            })
+            module(Oidc) {
+                clientId = "test"
+                discoveryEndpoint = "http://localhost/.well-known/openid-configuration"
+                scopes = mutableSetOf("openid", "email", "address")
+                redirectUri = "http://localhost:8080"
+                storage = { tokenStorage }
+            }
+            module(Session) {
+                storage = { sessionStorage }
+            }
+        }
+
+        var node = journey.start("myLogin") {
+            VERIFICATION_URI_COMPLETE to verificationUriComplete.toUri()
+        }
+        assertTrue(node is ContinueNode)
+        (node.callbacks[0] as? NameCallback)?.name = "My First Name"
+        (node.callbacks[1] as? PasswordCallback)?.password = "My Password"
+
+        node = node.next()
+        assertTrue(node is SuccessNode)
+
+        // well-known, authenticate (x2), deviceFlow — no /authorize or /access_token
+        val paths = mockEngine.requestHistory.map { it.url.encodedPath }
+        assertTrue(paths.contains("/.well-known/openid-configuration"))
+        assertTrue(paths.contains("/am/json/realms/root/authenticate"))
+        assertTrue(paths.none { it == "/authorize" })
+        assertTrue(paths.none { it == "/access_token" })
+    }
+
+    @Test
+    fun `Journey with device user code returns FailureNode when verification POST fails`() = runTest {
+        val verificationUriComplete =
+            "https://auth.test-one-pingone.com/tenantId/applications/test/deviceFlow?user_code=WDJB-MJHT"
+
+        val failingEngine = MockEngine { request ->
+            when (request.url.encodedPath) {
+                "/.well-known/openid-configuration" ->
+                    respond(openIdConfigurationResponse(), HttpStatusCode.OK, headers)
+                "/am/json/realms/root/authenticate" -> {
+                    if (request.body is TextContent) {
+                        val json = Json.parseToJsonElement((request.body as TextContent).text).jsonObject
+                        if ((json["callbacks"]?.jsonArray?.size ?: 0) == 2) {
+                            return@MockEngine respond(sessionResponse(), HttpStatusCode.OK, authenticateHeader)
+                        }
+                    }
+                    return@MockEngine respond(authenticate(), HttpStatusCode.OK, authenticateHeader)
+                }
+                "/tenantId/applications/test/deviceFlow" ->
+                    respond(
+                        ByteReadChannel("""{"error":"access_denied"}"""),
+                        HttpStatusCode.Forbidden,
+                        headers
+                    )
+                else -> respond(ByteReadChannel(""), HttpStatusCode.InternalServerError)
+            }
+        }
+
+        val journey = Journey {
+            serverUrl = "http://localhost/am"
+            logger = Logger.CONSOLE
+            httpClient = KtorHttpClient(HttpClient(failingEngine) {
+                followRedirects = false
+            })
+            module(Oidc) {
+                clientId = "test"
+                discoveryEndpoint = "http://localhost/.well-known/openid-configuration"
+                scopes = mutableSetOf("openid", "email", "address")
+                redirectUri = "http://localhost:8080"
+                storage = { MemoryStorage() }
+            }
+            module(Session) {
+                storage = { MemoryStorage() }
+            }
+        }
+
+        var node = journey.start("myLogin") {
+            VERIFICATION_URI_COMPLETE to verificationUriComplete.toUri()
+        }
+        assertTrue(node is ContinueNode)
+        (node.callbacks[0] as? NameCallback)?.name = "My First Name"
+        (node.callbacks[1] as? PasswordCallback)?.password = "My Password"
+
+        node = node.next()
+        assertTrue(node is FailureNode)
+        assertTrue(node.cause is com.pingidentity.exception.ApiException)
+        val exception = node.cause as com.pingidentity.exception.ApiException
+        assertEquals(403, exception.status)
+
+        failingEngine.close()
+    }
+
+    @Test
+    fun `Journey without device user code proceeds with normal OIDC flow`() = runTest {
+        val tokenStorage = MemoryStorage<Token>()
+        val sessionStorage = MemoryStorage<SSOToken>()
+
+        val journey = Journey {
+            serverUrl = "http://localhost/am"
+            logger = Logger.CONSOLE
+            httpClient = KtorHttpClient(HttpClient(mockEngine) {
+                followRedirects = false
+            })
+            module(Oidc) {
+                clientId = "test"
+                discoveryEndpoint = "http://localhost/.well-known/openid-configuration"
+                scopes = mutableSetOf("openid", "email", "address")
+                redirectUri = "http://localhost:8080"
+                storage = { tokenStorage }
+            }
+            module(Session) {
+                storage = { sessionStorage }
+            }
+        }
+
+        var node = journey.start("myLogin")
+        assertTrue(node is ContinueNode)
+        (node.callbacks[0] as? NameCallback)?.name = "My First Name"
+        (node.callbacks[1] as? PasswordCallback)?.password = "My Password"
+
+        node = node.next()
+        assertTrue(node is SuccessNode)
+
+        // Token exchange is lazy — trigger it by fetching the user token
+        val user = journey.user()
+        assertNotNull(user)
+        user.token()
+
+        // Normal flow includes /authorize and /access_token after token() is called
+        val paths = mockEngine.requestHistory.map { it.url.encodedPath }
+        assertTrue(paths.contains("/authorize"))
+        assertTrue(paths.contains("/access_token"))
+        // No device flow request
+        assertTrue(paths.none { it.contains("deviceFlow") })
     }
 
     private fun parResponse(): String =

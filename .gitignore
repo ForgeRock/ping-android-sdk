@@ -9,3 +9,5 @@ captures
 local.properties
 xcuserdata
 .kotlin
+.polaris/
+.claude/settings.local.json
