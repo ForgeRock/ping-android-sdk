@@ -84,7 +84,7 @@ fun Logout(
                 )
 
                 // Logout All button - enabled only when there are active sessions
-                val hasActiveSessions = state.journey || state.daVinci || state.oidc
+                val hasActiveSessions = state.journey || state.daVinci || state.oidc || state.oidcDeviceClient
                 Button(
                     onClick = {
                         logoutViewModel.logoutAll {
@@ -156,8 +156,24 @@ fun Logout(
                         }
                     }
 
+                    // OIDC Device Client Session
+                    if (state.oidcDeviceClient) {
+                        item {
+                            LogoutOptionCard(
+                                title = "Device Auth Grant Session",
+                                description = "Logout from OIDC Device Client authentication",
+                                onLogout = {
+                                    logoutViewModel.logoutOidcDeviceClient {
+                                        // Refresh the list after logout
+                                        logoutViewModel.listLogoutOptions()
+                                    }
+                                }
+                            )
+                        }
+                    }
+
                     // No active sessions
-                    if (!state.journey && !state.daVinci && !state.oidc) {
+                    if (!state.journey && !state.daVinci && !state.oidc && !state.oidcDeviceClient) {
                         item {
                             Card(
                                 elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),

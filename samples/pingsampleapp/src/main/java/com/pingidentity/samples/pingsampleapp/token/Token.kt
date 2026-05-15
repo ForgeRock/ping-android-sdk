@@ -10,6 +10,8 @@ package com.pingidentity.samples.pingsampleapp.token
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -59,6 +61,7 @@ fun TokenScreen(
     onBack: (() -> Unit)? = null,
 ) {
     val tokenState by tokenViewModel.state.collectAsState()
+    var expanded by remember { mutableStateOf(false) }
 
     LaunchedEffect(true) {
         tokenViewModel.loadAllTokens()
@@ -143,6 +146,14 @@ fun TokenScreen(
                         tokenViewModel.loadAllTokens()
                     },
                     text = { Text("OIDC") },
+                )
+                Tab(
+                    selected = tokenState.selectedTab == TokenType.AUTH_GRANT,
+                    onClick = {
+                        tokenViewModel.selectTab(TokenType.AUTH_GRANT)
+                        tokenViewModel.loadAllTokens()
+                    },
+                    text = { Text("Auth Grant") }
                 )
             }
 

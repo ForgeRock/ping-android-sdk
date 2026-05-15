@@ -29,6 +29,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.Aod
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.DeviceHub
 import androidx.compose.material.icons.filled.Key
@@ -102,6 +103,7 @@ fun HomeApp(
     onDeviceIdClick : () -> Unit,
     onAuthTestScreenClick : () -> Unit,
     onAuthMigrationClick : () -> Unit,
+    onDeviceAuthorizationGrantClick : () -> Unit,
 ) {
     var deviceId by remember { mutableStateOf("Loading Device ID...") }
     var deviceStatus by remember { mutableStateOf("Loading device status...") }
@@ -236,6 +238,13 @@ fun HomeApp(
                     title = stringResource(R.string.text_oidc_title),
                     subtitle = stringResource(R.string.text_oidc_subtitle),
                     onClick = onOIDCLoginClick
+                )
+
+                IconRowItem(
+                    icon = Icons.Default.Aod,
+                    title = stringResource(R.string.text_device_authorization_grant_title),
+                    subtitle = stringResource(R.string.text_device_authorization_grant_subtitle),
+                    onClick = onDeviceAuthorizationGrantClick
                 )
 
                 // User Management Section
@@ -497,7 +506,8 @@ fun PreviewHomeApp() {
         onPushNotificationClick = {},
         onDeviceIdClick = {},
         onAuthTestScreenClick = {},
-        onAuthMigrationClick = {}
+        onAuthMigrationClick = {},
+        onDeviceAuthorizationGrantClick = {},
     )
 }
 

@@ -83,6 +83,7 @@ dependencies {
     implementation(project(":foundation:device:device-profile"))
     implementation(project(":foundation:device:device-client"))
     implementation(project(":foundation:device:device-root"))
+    implementation(project(":foundation:oidc"))
     val composeBom = platform(libs.androidx.compose.bom)
     implementation(composeBom)
 
@@ -150,6 +151,8 @@ dependencies {
     implementation(libs.androidx.camera.lifecycle)
     implementation(libs.androidx.camera.view)
     implementation(libs.barcode.scanning)
+    // QR code generation
+    implementation(libs.zxing.qr.generator)
 
     // HTTP client for reverse geocoding API calls
     implementation(libs.ktor.client.cio)

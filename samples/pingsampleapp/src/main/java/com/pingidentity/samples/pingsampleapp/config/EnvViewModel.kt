@@ -26,6 +26,7 @@ import com.pingidentity.logger.STANDARD
 import com.pingidentity.oidc.OidcClient
 import com.pingidentity.oidc.OidcWebClient
 import com.pingidentity.oidc.module.Web
+import com.pingidentity.oidc.OidcDeviceClient
 import com.pingidentity.samples.pingsampleapp.settingDataStore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -60,6 +61,20 @@ data class OidcConfigState(
     val arcValue: String = ""
 )
 
+data class DeviceAuthConfigState(
+    val clientId: String = "",
+    val discoveryEndpoint: String = "",
+    val scopes: String = "",
+    val display: String = "Device Authorization",
+    val authorizationEndpoint: String = "",
+    val tokenEndpoint: String = "",
+    val userinfoEndpoint: String = "",
+    val endSessionEndpoint: String = "",
+    val revocationEndpoint: String = "",
+    val deviceAuthorizationEndpoint: String = "",
+    val acrValues: String = "",
+)
+
 // ---------------------------------------------------------------------------
 // Default preset configs (used as fallbacks when no saved config exists)
 // ---------------------------------------------------------------------------
@@ -75,6 +90,19 @@ internal val defaultDaVinciConfig = OidcConfigState(
     display = "DaVinci Test Config",
 )
 
+internal val defaultDeviceAuthConfig = DeviceAuthConfigState(
+    clientId = "dummy",
+    discoveryEndpoint = "https://example.com/am/oauth2/alpha/.well-known/openid-configuration",
+    scopes = "openid",
+    display = "Device Authorization",
+    authorizationEndpoint = "https://example.com/am/oauth2/alpha/authorize",
+    tokenEndpoint = "https://example.com/am/oauth2/alpha/access_token",
+    userinfoEndpoint = "https://example.com/am/oauth2/alpha/userinfo",
+    endSessionEndpoint = "https://example.com/am/oauth2/alpha/session/end",
+    revocationEndpoint = "https://example.com/am/oauth2/alpha/token/revoke",
+    deviceAuthorizationEndpoint = "https://example.com/am/oauth2/realms/root/realms/alpha/device/code",
+)
+
 internal val defaultWebConfig = OidcConfigState(
     clientId = "dummy",
     discoveryEndpoint = "https://www.example.com/am/oauth2/alpha/.well-known/openid-configuration",
@@ -87,23 +115,11 @@ internal val defaultWebConfig = OidcConfigState(
 // Global SDK instance holders (consumed by other ViewModels)
 // ---------------------------------------------------------------------------
 
-var journey: Journey = Journey {
-    logger = Logger.STANDARD
-    serverUrl = defaultJourneyConfig.serverUrl
-    realm = defaultJourneyConfig.realm
-    cookie = defaultJourneyConfig.cookie
-    module(JourneyOidc) {
-        clientId = defaultJourneyConfig.clientId
-        discoveryEndpoint = defaultJourneyConfig.discoveryEndpoint
-        scopes = defaultJourneyConfig.scopes.toScopeSet()
-        redirectUri = defaultJourneyConfig.redirectUri
-        display = defaultJourneyConfig.display
-        storage { fileName = "journey" }
-    }
-}
+var journey: Journey = createJourney(defaultJourneyConfig)
 var oidcClient: OidcClient? = null
 var daVinci: DaVinci? = null
 var web: OidcWebClient? = null
+var oidcDeviceClient: OidcDeviceClient? = null
 /** Used by Journey's IdP (social identity provider) callback. Set only by [buildJourney]. */
 lateinit var redirectUri: Uri
 /** Used by DaVinci's Social Login button. Set only by [buildDaVinci]. Never overwritten by Journey. */
@@ -113,21 +129,23 @@ lateinit var daVinciRedirectUri: Uri
 // Package-level SDK builders (called both at app startup and from ViewModel)
 // ---------------------------------------------------------------------------
 
-internal fun buildJourney(config: JourneyConfigState) {
-    journey = Journey {
-        logger = Logger.STANDARD
-        serverUrl = config.serverUrl
-        realm = config.realm
-        if (config.cookie.isNotBlank()) cookie = config.cookie
-        module(JourneyOidc) {
-            clientId = config.clientId
-            discoveryEndpoint = config.discoveryEndpoint
-            scopes = config.scopes.toScopeSet()
-            redirectUri = config.redirectUri
-            display = config.display
-            storage { fileName = "journey" }
-        }
+private fun createJourney(config: JourneyConfigState): Journey = Journey {
+    logger = Logger.STANDARD
+    serverUrl = config.serverUrl
+    realm = config.realm
+    if (config.cookie.isNotBlank()) cookie = config.cookie
+    module(JourneyOidc) {
+        clientId = config.clientId
+        discoveryEndpoint = config.discoveryEndpoint
+        scopes = config.scopes.toScopeSet()
+        redirectUri = config.redirectUri
+        display = config.display
+        storage { fileName = "journey" }
     }
+}
+
+internal fun buildJourney(config: JourneyConfigState) {
+    journey = createJourney(config)
     oidcClient = OidcClient {
         clientId = config.clientId
         discoveryEndpoint = config.discoveryEndpoint
@@ -168,6 +186,25 @@ internal fun buildWeb(config: OidcConfigState) {
         module(Web) {
             customTabsCustomizer = { setColorScheme(CustomTabsIntent.COLOR_SCHEME_DARK) }
             authTabCustomizer = { setColorScheme(CustomTabsIntent.COLOR_SCHEME_DARK) }
+        }
+    }
+}
+
+internal fun buildDeviceAuthClient(config: DeviceAuthConfigState) {
+    oidcDeviceClient = OidcDeviceClient {
+        logger = Logger.STANDARD
+        clientId = config.clientId
+        discoveryEndpoint = config.discoveryEndpoint
+        scopes = config.scopes.toScopeSet()
+        if (config.acrValues.isNotBlank()) acrValues = config.acrValues
+        storage { fileName = "device_flow" }
+        openIdOverride = {
+            if (config.authorizationEndpoint.isNotBlank()) authorizationEndpoint = config.authorizationEndpoint
+            if (config.tokenEndpoint.isNotBlank()) tokenEndpoint = config.tokenEndpoint
+            if (config.userinfoEndpoint.isNotBlank()) userinfoEndpoint = config.userinfoEndpoint
+            if (config.endSessionEndpoint.isNotBlank()) endSessionEndpoint = config.endSessionEndpoint
+            if (config.revocationEndpoint.isNotBlank()) revocationEndpoint = config.revocationEndpoint
+            if (config.deviceAuthorizationEndpoint.isNotBlank()) deviceAuthorizationEndpoint = config.deviceAuthorizationEndpoint
         }
     }
 }
@@ -218,10 +255,27 @@ suspend fun initConfigs() {
         )
     } ?: defaultWebConfig
 
+    val daConfig = prefs[stringPreferencesKey("da_clientId")]?.let { clientId ->
+        DeviceAuthConfigState(
+            clientId = clientId,
+            discoveryEndpoint = prefs[stringPreferencesKey("da_discoveryEndpoint")] ?: "",
+            scopes = prefs[stringPreferencesKey("da_scopes")] ?: "",
+            display = prefs[stringPreferencesKey("da_display")] ?: "",
+            authorizationEndpoint = prefs[stringPreferencesKey("da_authorizationEndpoint")] ?: "",
+            tokenEndpoint = prefs[stringPreferencesKey("da_tokenEndpoint")] ?: "",
+            userinfoEndpoint = prefs[stringPreferencesKey("da_userinfoEndpoint")] ?: "",
+            endSessionEndpoint = prefs[stringPreferencesKey("da_endSessionEndpoint")] ?: "",
+            revocationEndpoint = prefs[stringPreferencesKey("da_revocationEndpoint")] ?: "",
+            deviceAuthorizationEndpoint = prefs[stringPreferencesKey("da_deviceAuthorizationEndpoint")] ?: "",
+            acrValues = prefs[stringPreferencesKey("da_acrValues")] ?: "",
+        )
+    } ?: defaultDeviceAuthConfig
+
     // Each builder writes to its own global; no ordering dependency.
     buildJourney(jConfig)
     buildWeb(wConfig)
     buildDaVinci(dvConfig)
+    buildDeviceAuthClient(daConfig)
 }
 
 // ---------------------------------------------------------------------------
@@ -275,6 +329,16 @@ class EnvViewModel : ViewModel() {
         ),
     )
 
+    val deviceAuthPresets = listOf(
+        defaultDeviceAuthConfig,
+        DeviceAuthConfigState(
+            clientId = "dummyPingOne",
+            discoveryEndpoint = "https://auth.pingone.ca/dummy/as/.well-known/openid-configuration",
+            scopes = "openid",
+            display = "Dummy",
+        ),
+    )
+
     // -- Currently applied configs -------------------------------------------
 
     var appliedJourneyConfig by mutableStateOf<JourneyConfigState?>(null)
@@ -284,6 +348,9 @@ class EnvViewModel : ViewModel() {
         private set
 
     var appliedWebConfig by mutableStateOf<OidcConfigState?>(null)
+        private set
+
+    var appliedDeviceAuthConfig by mutableStateOf<DeviceAuthConfigState?>(null)
         private set
 
     // -- User-defined custom configs -----------------------------------------
@@ -297,6 +364,9 @@ class EnvViewModel : ViewModel() {
     var customWebConfigs by mutableStateOf<List<OidcConfigState>>(emptyList())
         private set
 
+    var customDeviceAuthConfigs by mutableStateOf<List<DeviceAuthConfigState>>(emptyList())
+        private set
+
     // -- Init ----------------------------------------------------------------
 
     init {
@@ -304,17 +374,21 @@ class EnvViewModel : ViewModel() {
             val jApplied = loadAppliedJourneyFromDataStore()
             val dvApplied = loadAppliedDaVinciFromDataStore()
             val wApplied = loadAppliedWebFromDataStore()
+            val daApplied = loadAppliedDeviceAuthConfig()
             val jCustom = loadCustomJourneyFromDataStore()
             val dvCustom = loadCustomDaVinciFromDataStore()
             val wCustom = loadCustomWebFromDataStore()
+            val daCustom = loadCustomDeviceAuthFromDataStore()
 
             withContext(Dispatchers.Main) {
                 customJourneyConfigs = jCustom
                 customDaVinciConfigs = dvCustom
                 customWebConfigs = wCustom
+                customDeviceAuthConfigs = daCustom
                 appliedJourneyConfig = jApplied
                 appliedDaVinciConfig = dvApplied
                 appliedWebConfig = wApplied
+                appliedDeviceAuthConfig = daApplied
                 buildJourneyInstance(jApplied)
                 buildDaVinciInstance(dvApplied)
                 buildWebInstance(wApplied)
@@ -340,6 +414,12 @@ class EnvViewModel : ViewModel() {
         buildWebInstance(config)
         appliedWebConfig = config
         viewModelScope.launch(Dispatchers.IO) { persistAppliedWeb(config) }
+    }
+
+    fun selectDeviceAuthConfig(config: DeviceAuthConfigState) {
+        buildDeviceAuthClient(config)
+        appliedDeviceAuthConfig = config
+        viewModelScope.launch(Dispatchers.IO) { persistAppliedDeviceAuthConfig(config) }
     }
 
     // -- Custom config CRUD --------------------------------------------------
@@ -419,6 +499,26 @@ class EnvViewModel : ViewModel() {
         viewModelScope.launch(Dispatchers.IO) { persistCustomWebConfigs(customWebConfigs) }
     }
 
+    fun saveCustomDeviceAuthConfig(config: DeviceAuthConfigState, editIndex: Int?) {
+        customDeviceAuthConfigs = if (editIndex == null) {
+            customDeviceAuthConfigs + config
+        } else {
+            customDeviceAuthConfigs.toMutableList().also { it[editIndex] = config }
+        }
+        selectDeviceAuthConfig(config)
+        viewModelScope.launch(Dispatchers.IO) { persistCustomDeviceAuthConfigs(customDeviceAuthConfigs) }
+    }
+
+    fun deleteCustomDeviceAuthConfig(index: Int) {
+        val deleted = customDeviceAuthConfigs[index]
+        customDeviceAuthConfigs = customDeviceAuthConfigs.toMutableList().also { it.removeAt(index) }
+        // If the deleted config was active, fall back to the first preset
+        if (appliedDeviceAuthConfig?.display == deleted.display) {
+            selectDeviceAuthConfig(deviceAuthPresets[0])
+        }
+        viewModelScope.launch(Dispatchers.IO) { persistCustomDeviceAuthConfigs(customDeviceAuthConfigs) }
+    }
+
     // -- SDK instance builders (delegate to package-level functions) ---------
 
     private fun buildJourneyInstance(config: JourneyConfigState) = buildJourney(config)
@@ -467,6 +567,24 @@ class EnvViewModel : ViewModel() {
         )
     }
 
+    private suspend fun loadAppliedDeviceAuthConfig(): DeviceAuthConfigState {
+        val prefs = ContextProvider.context.settingDataStore.data.first()
+        val clientId = prefs[stringPreferencesKey("da_clientId")] ?: return defaultDeviceAuthConfig
+        return DeviceAuthConfigState(
+            clientId = clientId,
+            discoveryEndpoint = prefs[stringPreferencesKey("da_discoveryEndpoint")] ?: "",
+            scopes = prefs[stringPreferencesKey("da_scopes")] ?: "",
+            display = prefs[stringPreferencesKey("da_display")] ?: "",
+            authorizationEndpoint = prefs[stringPreferencesKey("da_authorizationEndpoint")] ?: "",
+            tokenEndpoint = prefs[stringPreferencesKey("da_tokenEndpoint")] ?: "",
+            userinfoEndpoint = prefs[stringPreferencesKey("da_userinfoEndpoint")] ?: "",
+            endSessionEndpoint = prefs[stringPreferencesKey("da_endSessionEndpoint")] ?: "",
+            revocationEndpoint = prefs[stringPreferencesKey("da_revocationEndpoint")] ?: "",
+            deviceAuthorizationEndpoint = prefs[stringPreferencesKey("da_deviceAuthorizationEndpoint")] ?: "",
+            acrValues = prefs[stringPreferencesKey("da_acrValues")] ?: "",
+        )
+    }
+
     // -- DataStore: load custom configs --------------------------------------
 
     private suspend fun loadCustomJourneyFromDataStore(): List<JourneyConfigState> {
@@ -485,6 +603,12 @@ class EnvViewModel : ViewModel() {
         val prefs = ContextProvider.context.settingDataStore.data.first()
         val json = prefs[stringPreferencesKey("w_custom_configs")] ?: return emptyList()
         return deserializeOidcConfigs(json)
+    }
+
+    private suspend fun loadCustomDeviceAuthFromDataStore(): List<DeviceAuthConfigState> {
+        val prefs = ContextProvider.context.settingDataStore.data.first()
+        val json = prefs[stringPreferencesKey("da_custom_configs")] ?: return emptyList()
+        return deserializeDeviceAuthConfigs(json)
     }
 
     // -- DataStore: persist applied configs ----------------------------------
@@ -523,6 +647,22 @@ class EnvViewModel : ViewModel() {
         }
     }
 
+    private suspend fun persistAppliedDeviceAuthConfig(config: DeviceAuthConfigState) {
+        ContextProvider.context.settingDataStore.edit { prefs ->
+            prefs[stringPreferencesKey("da_clientId")] = config.clientId
+            prefs[stringPreferencesKey("da_discoveryEndpoint")] = config.discoveryEndpoint
+            prefs[stringPreferencesKey("da_scopes")] = config.scopes
+            prefs[stringPreferencesKey("da_display")] = config.display
+            prefs[stringPreferencesKey("da_authorizationEndpoint")] = config.authorizationEndpoint
+            prefs[stringPreferencesKey("da_tokenEndpoint")] = config.tokenEndpoint
+            prefs[stringPreferencesKey("da_userinfoEndpoint")] = config.userinfoEndpoint
+            prefs[stringPreferencesKey("da_endSessionEndpoint")] = config.endSessionEndpoint
+            prefs[stringPreferencesKey("da_revocationEndpoint")] = config.revocationEndpoint
+            prefs[stringPreferencesKey("da_deviceAuthorizationEndpoint")] = config.deviceAuthorizationEndpoint
+            prefs[stringPreferencesKey("da_acrValues")] = config.acrValues
+        }
+    }
+
     // -- DataStore: persist custom configs -----------------------------------
 
     private suspend fun persistCustomJourneyConfigs(configs: List<JourneyConfigState>) {
@@ -540,6 +680,12 @@ class EnvViewModel : ViewModel() {
     private suspend fun persistCustomWebConfigs(configs: List<OidcConfigState>) {
         ContextProvider.context.settingDataStore.edit { prefs ->
             prefs[stringPreferencesKey("w_custom_configs")] = serializeOidcConfigs(configs)
+        }
+    }
+
+    private suspend fun persistCustomDeviceAuthConfigs(configs: List<DeviceAuthConfigState>) {
+        ContextProvider.context.settingDataStore.edit { prefs ->
+            prefs[stringPreferencesKey("da_custom_configs")] = serializeDeviceAuthConfigs(configs)
         }
     }
 
@@ -597,6 +743,44 @@ class EnvViewModel : ViewModel() {
                 redirectUri = o.optString("redirectUri", ""),
                 display = o.optString("display", ""),
                 arcValue = o.optString("arcValue", ""),
+            )
+        }
+    }.getOrDefault(emptyList())
+
+    private fun serializeDeviceAuthConfigs(configs: List<DeviceAuthConfigState>): String {
+        val array = JSONArray()
+        configs.forEach { c ->
+            array.put(JSONObject().apply {
+                put("clientId", c.clientId); put("discoveryEndpoint", c.discoveryEndpoint)
+                put("scopes", c.scopes); put("display", c.display)
+                put("authorizationEndpoint", c.authorizationEndpoint)
+                put("tokenEndpoint", c.tokenEndpoint)
+                put("userinfoEndpoint", c.userinfoEndpoint)
+                put("endSessionEndpoint", c.endSessionEndpoint)
+                put("revocationEndpoint", c.revocationEndpoint)
+                put("deviceAuthorizationEndpoint", c.deviceAuthorizationEndpoint)
+                put("acrValues", c.acrValues)
+            })
+        }
+        return array.toString()
+    }
+
+    private fun deserializeDeviceAuthConfigs(json: String): List<DeviceAuthConfigState> = runCatching {
+        val array = JSONArray(json)
+        (0 until array.length()).map {
+            val o = array.getJSONObject(it)
+            DeviceAuthConfigState(
+                clientId = o.optString("clientId", ""),
+                discoveryEndpoint = o.optString("discoveryEndpoint", ""),
+                scopes = o.optString("scopes", ""),
+                display = o.optString("display", ""),
+                authorizationEndpoint = o.optString("authorizationEndpoint", ""),
+                tokenEndpoint = o.optString("tokenEndpoint", ""),
+                userinfoEndpoint = o.optString("userinfoEndpoint", ""),
+                endSessionEndpoint = o.optString("endSessionEndpoint", ""),
+                revocationEndpoint = o.optString("revocationEndpoint", ""),
+                deviceAuthorizationEndpoint = o.optString("deviceAuthorizationEndpoint", ""),
+                acrValues = o.optString("acrValues", ""),
             )
         }
     }.getOrDefault(emptyList())
