@@ -42,11 +42,13 @@ fun UserProfile(
     userProfileViewModel: UserProfileViewModel,
     onBack: (() -> Unit)? = null,
     onAction: ((UserProfileType) -> Unit)? = null,
+    onSelectedUserProfileType: UserProfileType = UserProfileType.JOURNEY,
 ) {
     val state by userProfileViewModel.state.collectAsState()
 
     LaunchedEffect(true) {
         // Not relaunch when recomposition
+        userProfileViewModel.selectTab(onSelectedUserProfileType)
         userProfileViewModel.userinfo()
     }
 
@@ -72,7 +74,6 @@ fun UserProfile(
                 .fillMaxWidth()
                 .padding(paddingValues)
         ) {
-            // Tab Row for Journey, DaVinci, and OIDC
             TabRow(
                 selectedTabIndex = state.selectedTab.ordinal,
                 modifier = Modifier.fillMaxWidth()
@@ -100,6 +101,14 @@ fun UserProfile(
                         userProfileViewModel.userinfo()
                     },
                     text = { Text("OIDC") }
+                )
+                Tab(
+                    selected = state.selectedTab == UserProfileType.AUTH_GRANT,
+                    onClick = {
+                        userProfileViewModel.selectTab(UserProfileType.AUTH_GRANT)
+                        userProfileViewModel.userinfo()
+                    },
+                    text = { Text("Auth Grant") }
                 )
             }
 
@@ -177,6 +186,30 @@ fun UserProfile(
                                 message = "Please authenticate using OIDC to view user profile information.",
                                 actionLabel = "Start OIDC",
                                 onAction = { onAction?.invoke(UserProfileType.OIDC) }
+                            )
+                        }
+                    }
+
+                    UserProfileType.AUTH_GRANT -> {
+                        if (state.authGrantUser != null) {
+                            UserInfoCard(
+                                title = "Auth Grant User Info",
+                                user = state.authGrantUser,
+                                showRawInfo = state.showRawAuthGrantUserInfo,
+                                formattedInfo = userProfileViewModel.formattedAuthGrantUserInfo,
+                                onToggle = { userProfileViewModel.toggleUserInfo() }
+                            )
+                        } else if (state.authGrantError != null) {
+                            ErrorCard(
+                                title = "Auth Grant Error",
+                                error = state.authGrantError.toString()
+                            )
+                        } else {
+                            EmptyStateCard(
+                                title = "No Auth Grant User",
+                                message = "Please authenticate using Device Authorization Grant to view user profile information.",
+                                actionLabel = "Start Auth Grant",
+                                onAction = { onAction?.invoke(UserProfileType.AUTH_GRANT) }
                             )
                         }
                     }

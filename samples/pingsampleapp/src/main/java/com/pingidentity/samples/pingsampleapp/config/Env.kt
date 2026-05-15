@@ -84,6 +84,11 @@ private sealed class SheetContent {
         val config: OidcConfigState = OidcConfigState(),
         val customIndex: Int? = null,
     ) : SheetContent()
+
+    data class DeviceAuthSheet(
+        val config: DeviceAuthConfigState = DeviceAuthConfigState(),
+        val customIndex: Int? = null,
+    ) : SheetContent()
 }
 
 // ---------------------------------------------------------------------------
@@ -162,6 +167,17 @@ fun Env(
                     onAdd = { sheetContent = SheetContent.WebSheet() },
                 )
 
+                // Device Authorization card
+                DeviceAuthCard(
+                    presets = envViewModel.deviceAuthPresets,
+                    customConfigs = envViewModel.customDeviceAuthConfigs,
+                    appliedConfig = envViewModel.appliedDeviceAuthConfig,
+                    onSelect = { envViewModel.selectDeviceAuthConfig(it) },
+                    onEdit = { cfg, idx -> sheetContent = SheetContent.DeviceAuthSheet(cfg, idx) },
+                    onDelete = { envViewModel.deleteCustomDeviceAuthConfig(it) },
+                    onAdd = { sheetContent = SheetContent.DeviceAuthSheet() },
+                )
+
                 Spacer(Modifier.height(8.dp))
             }
         }
@@ -199,6 +215,15 @@ fun Env(
                         isEdit = content.customIndex != null,
                         onSave = { cfg ->
                             envViewModel.saveCustomWebConfig(cfg, content.customIndex)
+                            dismiss()
+                        },
+                        onDismiss = ::dismiss,
+                    )
+                    is SheetContent.DeviceAuthSheet -> DeviceAuthSheetContent(
+                        initial = content.config,
+                        isEdit = content.customIndex != null,
+                        onSave = { cfg ->
+                            envViewModel.saveCustomDeviceAuthConfig(cfg, content.customIndex)
                             dismiss()
                         },
                         onDismiss = ::dismiss,
@@ -273,6 +298,53 @@ private fun OidcCard(
     onAdd: () -> Unit,
 ) {
     ConfigCard(title = title, appliedDisplay = appliedConfig?.display, onAdd = onAdd) {
+        if (presets.isNotEmpty()) {
+            SectionLabel("Presets")
+            presets.forEach { config ->
+                ConfigRow(
+                    display = config.display,
+                    subtitle = "${extractHost(config.discoveryEndpoint)} · ${config.clientId}",
+                    isApplied = appliedConfig == config,
+                    isPreset = true,
+                    onSelect = { onSelect(config) },
+                    onEdit = null,
+                    onDelete = null,
+                )
+            }
+        }
+        if (customConfigs.isNotEmpty()) {
+            if (presets.isNotEmpty()) HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+            SectionLabel("Custom")
+            customConfigs.forEachIndexed { index, config ->
+                ConfigRow(
+                    display = config.display,
+                    subtitle = "${extractHost(config.discoveryEndpoint)} · ${config.clientId}",
+                    isApplied = appliedConfig == config,
+                    isPreset = false,
+                    onSelect = { onSelect(config) },
+                    onEdit = { onEdit(config, index) },
+                    onDelete = { onDelete(index) },
+                )
+            }
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Device Authorization card
+// ---------------------------------------------------------------------------
+
+@Composable
+private fun DeviceAuthCard(
+    presets: List<DeviceAuthConfigState>,
+    customConfigs: List<DeviceAuthConfigState>,
+    appliedConfig: DeviceAuthConfigState?,
+    onSelect: (DeviceAuthConfigState) -> Unit,
+    onEdit: (DeviceAuthConfigState, Int) -> Unit,
+    onDelete: (Int) -> Unit,
+    onAdd: () -> Unit,
+) {
+    ConfigCard(title = "Auth Grant", appliedDisplay = appliedConfig?.display, onAdd = onAdd) {
         if (presets.isNotEmpty()) {
             SectionLabel("Presets")
             presets.forEach { config ->
@@ -532,6 +604,46 @@ private fun OidcSheetContent(
         if (showArcValue) {
             ConfigField("ACR Value", cfg.arcValue) { cfg = cfg.copy(arcValue = it) }
         }
+        SheetActions(onDismiss = onDismiss, onSave = { onSave(cfg) }, canSave = canSave)
+        Spacer(Modifier.height(8.dp))
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Bottom sheet: Device Authorization
+// ---------------------------------------------------------------------------
+
+@Composable
+private fun DeviceAuthSheetContent(
+    initial: DeviceAuthConfigState,
+    isEdit: Boolean,
+    onSave: (DeviceAuthConfigState) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var cfg by remember { mutableStateOf(initial) }
+    val canSave =
+        cfg.clientId.isNotBlank() &&
+        cfg.discoveryEndpoint.isNotBlank() &&
+        cfg.display.isNotBlank()
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .navigationBarsPadding()
+            .imePadding()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 24.dp, vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Text(
+            text = if (isEdit) "Edit Device Authorization Config" else "Add Device Authorization Config",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+        )
+        ConfigField("Client ID", cfg.clientId) { cfg = cfg.copy(clientId = it) }
+        ConfigField("Discovery Endpoint", cfg.discoveryEndpoint) { cfg = cfg.copy(discoveryEndpoint = it) }
+        ConfigField("Scopes (comma-separated)", cfg.scopes) { cfg = cfg.copy(scopes = it) }
+        ConfigField("Display Name", cfg.display) { cfg = cfg.copy(display = it) }
         SheetActions(onDismiss = onDismiss, onSave = { onSave(cfg) }, canSave = canSave)
         Spacer(Modifier.height(8.dp))
     }

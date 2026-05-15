@@ -34,6 +34,7 @@ import androidx.compose.material.icons.filled.LockPerson
 import androidx.compose.material.icons.filled.LogoDev
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.OnDeviceTraining
 import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.Preview
 import androidx.compose.material.icons.filled.QrCodeScanner
@@ -99,6 +100,7 @@ fun HomeApp(
     onDeviceIdClick : () -> Unit,
     onAuthTestScreenClick : () -> Unit,
     onAuthMigrationClick : () -> Unit,
+    onDeviceAuthorizationGrantClick : () -> Unit,
 ) {
     var deviceId by remember { mutableStateOf("Loading Device ID...") }
     var deviceStatus by remember { mutableStateOf("Loading device status...") }
@@ -221,6 +223,13 @@ fun HomeApp(
                     title = stringResource(R.string.text_oidc_title),
                     subtitle = stringResource(R.string.text_oidc_subtitle),
                     onClick = onOIDCLoginClick
+                )
+
+                IconRowItem(
+                    icon = Icons.Default.OnDeviceTraining,
+                    title = stringResource(R.string.text_device_authorization_grant_title),
+                    subtitle = stringResource(R.string.text_device_authorization_grant_subtitle),
+                    onClick = onDeviceAuthorizationGrantClick
                 )
 
                 // User Management Section
@@ -482,7 +491,8 @@ fun PreviewHomeApp() {
         onPushNotificationClick = {},
         onDeviceIdClick = {},
         onAuthTestScreenClick = {},
-        onAuthMigrationClick = {}
+        onAuthMigrationClick = {},
+        onDeviceAuthorizationGrantClick = {},
     )
 }
 
