@@ -25,10 +25,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.pingidentity.davinci.collector.AgreementCollector
+import com.pingidentity.davinci.collector.ReadOnlyTextCollector
 
 @Composable
-fun Agreement(field: AgreementCollector ) {
+fun ReadOnlyText(field: ReadOnlyTextCollector) {
 
     OutlinedCard(
         modifier = Modifier

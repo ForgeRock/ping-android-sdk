@@ -22,7 +22,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.pingidentity.davinci.collector.AgreementCollector
 import com.pingidentity.davinci.collector.DeviceAuthenticationCollector
 import com.pingidentity.davinci.collector.DeviceRegistrationCollector
 import com.pingidentity.davinci.collector.FlowCollector
@@ -30,6 +29,7 @@ import com.pingidentity.davinci.collector.LabelCollector
 import com.pingidentity.davinci.collector.MultiSelectCollector
 import com.pingidentity.davinci.collector.PasswordCollector
 import com.pingidentity.davinci.collector.PhoneNumberCollector
+import com.pingidentity.davinci.collector.ReadOnlyTextCollector
 import com.pingidentity.davinci.collector.PollingCollector
 import com.pingidentity.davinci.collector.QRCodeCollector
 import com.pingidentity.davinci.collector.BooleanCollector
@@ -100,7 +100,7 @@ fun ContinueNode(
                 is SubmitCollector -> SubmitButton(it, onNext)
                 is TextCollector -> Text(it, onNodeUpdated)
                 is LabelCollector -> Label(it)
-                is AgreementCollector -> Agreement(it)
+                is ReadOnlyTextCollector -> ReadOnlyText(it)
                 is MultiSelectCollector -> {
                     if (it.type == "COMBOBOX") {
                         ComboBox(it, onNodeUpdated)
