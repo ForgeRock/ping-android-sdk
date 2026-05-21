@@ -11,6 +11,7 @@ import androidx.test.filters.SmallTest
 import com.pingidentity.davinci.collector.FlowCollector
 import com.pingidentity.davinci.collector.InvalidLength
 import com.pingidentity.davinci.collector.Length
+import com.pingidentity.davinci.collector.MaxRepeat
 import com.pingidentity.davinci.collector.MinCharacters
 import com.pingidentity.davinci.collector.PasswordCollector
 import com.pingidentity.davinci.collector.RegexError
@@ -30,12 +31,16 @@ import com.pingidentity.testrail.TestRailCase
 import com.pingidentity.testrail.TestRailWatcher
 import junit.framework.TestCase.assertFalse
 import junit.framework.TestCase.assertNotNull
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.coroutines.test.runTest
 import org.junit.Rule
 import org.junit.rules.TestWatcher
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 @SmallTest
@@ -44,11 +49,11 @@ class FormFieldValidationTest {
         logger = Logger.STANDARD
 
         module(Oidc) {
-            clientId = "021b83ce-a9b1-4ad4-8c1d-79e576eeab76"
-            discoveryEndpoint = "https://auth.pingone.ca/02fb4743-189a-4bc7-9d6c-a919edfe6447/as/.well-known/openid-configuration"
+            clientId = "a6859a12-5e6e-4f64-96bb-cc8577706bee"
+            discoveryEndpoint = "https://auth.pingone.ca/300c4f2a-39d4-4ba9-a18a-f6de246006f4/as/.well-known/openid-configuration"
             scopes = mutableSetOf("openid", "email", "address", "phone", "profile")
             redirectUri = "org.forgerock.demo://oauth2redirect"
-            acrValues = "210f6b876da11c836ffc1c5fb38f3938"
+            acrValues = "b63ac7fb5db6d893efdd5e29d06a7477"
             //storage = dataStore
         }
     }
@@ -195,6 +200,124 @@ class FormFieldValidationTest {
 
         // Should return empty list this time
         assertTrue(passwordValidationResult.isEmpty())
+    }
+
+    @Test
+    fun passwordMaxRepeatValidationTest() = runTest {
+        // Go to the "Form Fields Validation" form
+        var node = daVinci.start() as ContinueNode
+        (node.collectors[1] as? FlowCollector)?.value = "click"
+        node = node.next() as ContinueNode
+
+        val password = node.collectors[3] as PasswordCollector
+        val policy = password.passwordPolicy()!!
+
+        // Verify the policy actually declares a maxRepeatedCharacters limit
+        val maxRepeated = policy.maxRepeatedCharacters
+        assertTrue(maxRepeated < Int.MAX_VALUE, "Test requires a policy with a maxRepeatedCharacters limit")
+
+        // Build a value where one character repeats maxRepeated+1 times alongside enough
+        // other characters to satisfy all other constraints (length, unique, minCharacters)
+        val excess = "a".repeat(maxRepeated + 1)   // e.g. "aaa" for limit=2
+        val padding = "B1!"                          // uppercase + digit + symbol
+        password.value = excess + padding
+
+        val errors = password.validate()
+        assertTrue(errors.contains(MaxRepeat(maxRepeated)),
+            "Expected MaxRepeat($maxRepeated) in $errors")
+
+        // A password with at most maxRepeated repetitions of any character should not trigger MaxRepeat
+        password.value = "a".repeat(maxRepeated) + "B1!cde"
+        val errorsAfterFix = password.validate()
+        assertFalse(errorsAfterFix.contains(MaxRepeat(maxRepeated)),
+            "MaxRepeat error should be absent when repetitions <= $maxRepeated")
+    }
+
+    @Test
+    fun passwordMaxLengthValidationTest() = runTest {
+        // Go to the "Form Fields Validation" form
+        var node = daVinci.start() as ContinueNode
+        (node.collectors[1] as? FlowCollector)?.value = "click"
+        node = node.next() as ContinueNode
+
+        val password = node.collectors[3] as PasswordCollector
+        val policy = password.passwordPolicy()!!
+        val maxLen = policy.length.max
+
+        // Build a value that exceeds the maximum length while satisfying all other constraints
+        // so that InvalidLength is the only error triggered
+        val overLength = "Aa1!" + "x".repeat(maxLen)   // maxLen+4 chars total
+        password.value = overLength
+
+        val errors = password.validate()
+        assertTrue(errors.contains(InvalidLength(min = policy.length.min, max = maxLen)),
+            "Expected InvalidLength for value longer than max=$maxLen")
+    }
+
+    @Test
+    fun passwordClearPasswordAfterCloseTest() = runTest {
+        // Go to the "Form Fields Validation" form
+        var node = daVinci.start() as ContinueNode
+        (node.collectors[1] as? FlowCollector)?.value = "click"
+        node = node.next() as ContinueNode
+
+        val password = node.collectors[3] as PasswordCollector
+        password.value = "Password123!"
+
+        // Default is clearPassword=true — close() must wipe the value
+        assertTrue(password.clearPassword)
+        password.close()
+        assertEquals("", password.value, "Password should be cleared after close() when clearPassword=true")
+    }
+
+    @Test
+    fun passwordPolicyAdditionalMetadataTest() = runTest {
+        // Go to the "Form Fields Validation" form
+        var node = daVinci.start() as ContinueNode
+        (node.collectors[1] as? FlowCollector)?.value = "click"
+        node = node.next() as ContinueNode
+
+        val password = node.collectors[3] as PasswordCollector
+        val policy = password.passwordPolicy()!!
+
+        // Verify the fields that drive validation logic but were previously unasserted
+        assertTrue(policy.maxRepeatedCharacters < Int.MAX_VALUE,
+            "maxRepeatedCharacters should be set by the 'Standard' policy")
+        assertEquals(4, policy.minCharacters.size,
+            "Standard policy should require exactly 4 character classes")
+
+        // Verify the read-only metadata fields are populated (not blank/zero defaults)
+        assertTrue(policy.createdAt.isNotEmpty(), "createdAt should be set")
+        assertTrue(policy.updatedAt.isNotEmpty(), "updatedAt should be set")
+        assertTrue(policy.populationCount >= 0, "populationCount should be >= 0")
+    }
+
+    @Test
+    fun passwordPolicySourceIsFieldLevelTest() = runTest {
+        // Go to the "Form Fields Validation" form
+        var node = daVinci.start() as ContinueNode
+        (node.collectors[1] as? FlowCollector)?.value = "click"
+        node = node.next() as ContinueNode
+
+        val password = node.collectors[3] as PasswordCollector
+
+        // Verify the policy is embedded directly inside the PASSWORD_VERIFY field JSON (SDKS-4694).
+        val passwordField = node.input["form"]
+            ?.jsonObject?.get("components")
+            ?.jsonObject?.get("fields")
+            ?.jsonArray?.firstOrNull {
+                it.jsonObject["type"]?.jsonPrimitive?.content == "PASSWORD_VERIFY"
+            }?.jsonObject
+        assertNotNull("PASSWORD_VERIFY field not found in form components", passwordField)
+        assertNotNull(
+            "passwordPolicy must be embedded inside the PASSWORD_VERIFY field",
+            passwordField!!["passwordPolicy"])
+
+        // The SDK must surface the field-level policy via passwordPolicy()
+        val policy = password.passwordPolicy()
+        assertNotNull(policy)
+        assertEquals("Standard", policy!!.name)
+        assertEquals(Length(min = 8, max = 255), policy.length)
     }
 
     @TestRailCase(27507)
