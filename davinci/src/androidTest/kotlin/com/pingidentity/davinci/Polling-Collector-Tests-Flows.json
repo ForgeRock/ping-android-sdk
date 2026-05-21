@@ -1,0 +1,1907 @@
+{
+  "companyId": "300c4f2a-39d4-4ba9-a18a-f6de246006f4",
+  "authTokenExpireIds": [],
+  "connectorIds": [
+    "flowConnector",
+    "pingOneFormsConnector",
+    "challengeConnector",
+    "errorConnector",
+    "variablesConnector",
+    "functionsConnector",
+    "httpConnector"
+  ],
+  "createdDate": 1779379639501,
+  "currentVersion": 32,
+  "customerId": "b046b8357f81a6b68a9a60227d631009",
+  "deployedDate": 1779389055294,
+  "description": "Imported on Wed May 20 2026 15:21:11 GMT+0000 (Coordinated Universal Time)",
+  "flowStatus": "enabled",
+  "isOutputSchemaSaved": false,
+  "name": "Automation - Polling Tests",
+  "publishedVersion": 32,
+  "settings": {
+    "csp": "worker-src 'self' blob:; script-src 'self' https://cdn.jsdelivr.net https://code.jquery.com https://devsdk.singularkey.com http://cdnjs.cloudflare.com 'unsafe-inline' 'unsafe-eval';",
+    "intermediateLoadingScreenCSS": "",
+    "intermediateLoadingScreenHTML": "",
+    "customTimeoutErrorScreenMessage": "",
+    "customTimeoutErrorScreenHTML": "",
+    "customTimeoutErrorScreenCSS": "",
+    "logLevel": 4,
+    "flowTimeoutInSeconds": 300,
+    "useV2FlowEngine": true,
+    "pingOneFlow": true
+  },
+  "timeouts": "null",
+  "trigger": {
+    "type": "AUTHENTICATION"
+  },
+  "updatedDate": 1779389055311,
+  "flowId": "03209dede7fdab087a75b012e973916e",
+  "versionId": 32,
+  "graphData": {
+    "elements": {
+      "nodes": [
+        {
+          "data": {
+            "id": "fm42gtef24",
+            "nodeType": "CONNECTION",
+            "connectionId": "2581eb287bb1d9bd29ae9886d675f89f",
+            "connectorId": "flowConnector",
+            "name": "Flow Connector",
+            "label": "Flow [2023-01-24]",
+            "status": "configured",
+            "capabilityName": "oobStart",
+            "type": "trigger",
+            "properties": {
+              "useCustomLink": {
+                "value": false
+              },
+              "customLink": {
+                "value": "[\n  {\n    \"children\": [\n      {\n        \"text\": \"pingid://auth.pingone.com/\"\n      },\n      {\n        \"text\": \"\"\n      },\n      {\n        \"type\": \"link\",\n        \"src\": \"auth.svg\",\n        \"url\": \"companyId\",\n        \"data\": \"{{global.companyId}}\",\n        \"tooltip\": \"{{global.companyId}}\",\n        \"children\": [\n          {\n            \"text\": \"companyId\"\n          }\n        ]\n      },\n      {\n        \"text\": \"\"\n      },\n      {\n        \"text\": \"/davinci/connections/\"\n      },\n      {\n        \"text\": \"\"\n      },\n      {\n        \"text\": \"2fb0ca54c9286625c1f5d6989808ead1\"\n      },\n      {\n        \"text\": \"/callback/oobContinue?challenge=\"\n      }\n    ]\n  }\n]"
+              },
+              "challengeExpiry": {
+                "value": 300
+              }
+            },
+            "isDisabled": false
+          },
+          "position": {
+            "x": 1140,
+            "y": 716
+          },
+          "group": "nodes",
+          "removed": false,
+          "selected": false,
+          "selectable": true,
+          "locked": false,
+          "grabbable": true,
+          "pannable": false,
+          "classes": ""
+        },
+        {
+          "data": {
+            "id": "vo9sum8789",
+            "nodeType": "EVAL"
+          },
+          "position": {
+            "x": 937,
+            "y": 566
+          },
+          "group": "nodes",
+          "removed": false,
+          "selected": false,
+          "selectable": true,
+          "locked": false,
+          "grabbable": true,
+          "pannable": false,
+          "classes": ""
+        },
+        {
+          "data": {
+            "id": "1zibef6q58",
+            "nodeType": "CONNECTION",
+            "connectionId": "eb6a94a33f2f479eff234e8fa5049459",
+            "connectorId": "pingOneFormsConnector",
+            "name": "Form",
+            "label": "PingOne Forms",
+            "status": "configured",
+            "capabilityName": "customForm",
+            "type": "action",
+            "properties": {
+              "formData": {
+                "value": []
+              },
+              "dynamicText": {
+                "value": [
+                  {
+                    "key": "challenge",
+                    "value": "[{\"children\":[{\"text\":\"\"},{\"text\":\"\"},{\"type\":\"link\",\"src\":\"flow-connector.svg\",\"url\":\"continueLink\",\"data\":\"{{local.fm42gtef24.payload.output.continueLink}}\",\"tooltip\":\"{{local.fm42gtef24.payload.output.continueLink}}\",\"children\":[{\"text\":\"continueLink\"}]},{\"text\":\"\"}]}]"
+                  }
+                ]
+              },
+              "form": {
+                "value": "658b150f-da19-461e-afcb-79ea7bb52076"
+              },
+              "enablePolling": {
+                "value": true
+              },
+              "pollRetries": {
+                "value": 3
+              },
+              "challenge": {
+                "value": "[\n  {\n    \"children\": [\n      {\n        \"text\": \"\"\n      },\n      {\n        \"text\": \"\"\n      },\n      {\n        \"type\": \"link\",\n        \"src\": \"flow-connector.svg\",\n        \"url\": \"challenge\",\n        \"data\": \"{{local.fm42gtef24.payload.output.challenge}}\",\n        \"tooltip\": \"{{local.fm42gtef24.payload.output.challenge}}\",\n        \"children\": [\n          {\n            \"text\": \"challenge\"\n          }\n        ]\n      },\n      {\n        \"text\": \"\"\n      }\n    ]\n  }\n]"
+              }
+            },
+            "isDisabled": false,
+            "capabilityClass": "render"
+          },
+          "position": {
+            "x": 1484,
+            "y": 802
+          },
+          "group": "nodes",
+          "removed": false,
+          "selected": false,
+          "selectable": true,
+          "locked": false,
+          "grabbable": true,
+          "pannable": false,
+          "classes": ""
+        },
+        {
+          "data": {
+            "id": "1xfyysl518",
+            "nodeType": "EVAL"
+          },
+          "position": {
+            "x": 1290,
+            "y": 776
+          },
+          "group": "nodes",
+          "removed": false,
+          "selected": false,
+          "selectable": true,
+          "locked": false,
+          "grabbable": true,
+          "pannable": false,
+          "classes": ""
+        },
+        {
+          "data": {
+            "id": "3cjoqszp9p",
+            "nodeType": "EVAL"
+          },
+          "position": {
+            "x": 1920,
+            "y": 746
+          },
+          "group": "nodes",
+          "removed": false,
+          "selected": false,
+          "selectable": true,
+          "locked": false,
+          "grabbable": true,
+          "pannable": false,
+          "classes": ""
+        },
+        {
+          "data": {
+            "id": "dfff42c9rl",
+            "nodeType": "CONNECTION",
+            "connectionId": "eb6a94a33f2f479eff234e8fa5049459",
+            "connectorId": "pingOneFormsConnector",
+            "name": "Form",
+            "label": "PingOne Forms",
+            "status": "configured",
+            "capabilityName": "customForm",
+            "type": "action",
+            "properties": {
+              "formData": {
+                "value": []
+              },
+              "dynamicText": {
+                "value": [
+                  {
+                    "key": "message",
+                    "value": "[\n  {\n    \"children\": [\n      {\n        \"text\": \"\"\n      },\n      {\n        \"text\": \"\"\n      },\n      {\n        \"type\": \"link\",\n        \"src\": \"challenge.svg\",\n        \"url\": \"challengeStatus\",\n        \"data\": \"{{local.d9ef9698ci.payload.output.challengeStatus}}\",\n        \"tooltip\": \"{{local.d9ef9698ci.payload.output.challengeStatus}}\",\n        \"children\": [\n          {\n            \"text\": \"challengeStatus\"\n          }\n        ]\n      },\n      {\n        \"text\": \"\"\n      }\n    ]\n  }\n]"
+                  }
+                ]
+              },
+              "message": {
+                "value": "[\n  {\n    \"children\": [\n      {\n        \"text\": \"Pool Completed \"\n      },\n      {\n        \"text\": \"\"\n      },\n      {\n        \"type\": \"link\",\n        \"src\": \"challenge.svg\",\n        \"url\": \"challengeStatus\",\n        \"data\": \"{{local.d9ef9698ci.payload.output.challengeStatus}}\",\n        \"tooltip\": \"{{local.d9ef9698ci.payload.output.challengeStatus}}\",\n        \"children\": [\n          {\n            \"text\": \"challengeStatus\"\n          }\n        ]\n      },\n      {\n        \"text\": \"\"\n      }\n    ]\n  }\n]"
+              },
+              "form": {
+                "value": "854c055c-cc80-4c17-9c15-7804c7214132"
+              }
+            },
+            "isDisabled": false,
+            "capabilityClass": "render"
+          },
+          "position": {
+            "x": 2100,
+            "y": 776
+          },
+          "group": "nodes",
+          "removed": false,
+          "selected": false,
+          "selectable": true,
+          "locked": false,
+          "grabbable": true,
+          "pannable": false,
+          "classes": ""
+        },
+        {
+          "data": {
+            "id": "d9ef9698ci",
+            "nodeType": "CONNECTION",
+            "connectionId": "94cb18cc8ee6ddaf28e881b16637aec6",
+            "connectorId": "challengeConnector",
+            "name": "Challenge",
+            "label": "Challenge",
+            "status": "configured",
+            "capabilityName": "getChallenge",
+            "type": "action",
+            "properties": {
+              "challenge": {
+                "value": "[\n  {\n    \"children\": [\n      {\n        \"text\": \"\"\n      },\n      {\n        \"text\": \"\"\n      },\n      {\n        \"type\": \"link\",\n        \"src\": \"flow-connector.svg\",\n        \"url\": \"challenge\",\n        \"data\": \"{{local.fm42gtef24.payload.output.challenge}}\",\n        \"tooltip\": \"{{local.fm42gtef24.payload.output.challenge}}\",\n        \"children\": [\n          {\n            \"text\": \"challenge\"\n          }\n        ]\n      },\n      {\n        \"text\": \"\"\n      }\n    ]\n  }\n]"
+              }
+            },
+            "isDisabled": false,
+            "capabilityClass": "backend"
+          },
+          "position": {
+            "x": 1754,
+            "y": 802
+          },
+          "group": "nodes",
+          "removed": false,
+          "selected": false,
+          "selectable": true,
+          "locked": false,
+          "grabbable": true,
+          "pannable": false,
+          "classes": ""
+        },
+        {
+          "data": {
+            "id": "ay4vat2279",
+            "nodeType": "EVAL"
+          },
+          "position": {
+            "x": 1620,
+            "y": 776
+          },
+          "group": "nodes",
+          "removed": false,
+          "selected": false,
+          "selectable": true,
+          "locked": false,
+          "grabbable": true,
+          "pannable": false,
+          "classes": ""
+        },
+        {
+          "data": {
+            "id": "ymknltt5uq",
+            "nodeType": "EVAL"
+          },
+          "position": {
+            "x": 720,
+            "y": 746
+          },
+          "group": "nodes",
+          "removed": false,
+          "selected": false,
+          "selectable": true,
+          "locked": false,
+          "grabbable": true,
+          "pannable": false,
+          "classes": ""
+        },
+        {
+          "data": {
+            "id": "yiwhv9njku",
+            "nodeType": "CONNECTION",
+            "connectionId": "53ab83a4a4ab919d9f2cb02d9e111ac8",
+            "connectorId": "errorConnector",
+            "name": "Error Message",
+            "label": "Error Customize",
+            "status": "configured",
+            "capabilityName": "customErrorMessage",
+            "type": "action",
+            "properties": {
+              "errorMessage": {
+                "value": "[\n  {\n    \"children\": [\n      {\n        \"text\": \"An unexpected error has occurred\"\n      }\n    ]\n  }\n]"
+              },
+              "nodeTitle": {
+                "value": "Received an unexpected value"
+              },
+              "errorDescription": {
+                "value": "[\n  {\n    \"children\": [\n      {\n        \"text\": \"Could not determine which button was selected\"\n      }\n    ]\n  }\n]"
+              },
+              "errorCode": {
+                "value": "[\n  {\n    \"children\": [\n      {\n        \"text\": \"Unexpected value received\"\n      }\n    ]\n  }\n]"
+              },
+              "errorReason": {
+                "value": "[\n  {\n    \"children\": [\n      {\n        \"text\": \"An unexpected value was received for button selection\"\n      }\n    ]\n  }\n]"
+              },
+              "nodeDescription": {
+                "value": "Received an unexpected value for the button selected to submit the form"
+              }
+            },
+            "idUnique": "rge707gdc2",
+            "capabilityClass": "backend"
+          },
+          "position": {
+            "x": 720,
+            "y": 896
+          },
+          "group": "nodes",
+          "removed": false,
+          "selected": false,
+          "selectable": true,
+          "locked": false,
+          "grabbable": true,
+          "pannable": false,
+          "classes": ""
+        },
+        {
+          "data": {
+            "id": "xkjp36pjc9",
+            "nodeType": "EVAL"
+          },
+          "position": {
+            "x": 1830,
+            "y": 536
+          },
+          "group": "nodes",
+          "removed": false,
+          "selected": false,
+          "selectable": true,
+          "locked": false,
+          "grabbable": true,
+          "pannable": false,
+          "classes": ""
+        },
+        {
+          "data": {
+            "id": "3an9yvhvhn",
+            "nodeType": "CONNECTION",
+            "connectionId": "06922a684039827499bdbdd97f49827b",
+            "connectorId": "variablesConnector",
+            "name": "Variables",
+            "label": "Variables",
+            "status": "configured",
+            "capabilityName": "saveValue",
+            "type": "trigger",
+            "properties": {
+              "saveVariables": {
+                "value": [
+                  {
+                    "name": "numberCounter",
+                    "value": "[\n  {\n    \"children\": [\n      {\n        \"text\": \"0\"\n      }\n    ]\n  }\n]",
+                    "key": 0.7740247529585037,
+                    "label": "numberCounter (number - flowInstance)",
+                    "type": "number"
+                  }
+                ]
+              }
+            },
+            "isDisabled": false,
+            "idUnique": "2qamj6w5nr",
+            "capabilityClass": "backend"
+          },
+          "position": {
+            "x": 277,
+            "y": 446
+          },
+          "group": "nodes",
+          "removed": false,
+          "selected": false,
+          "selectable": true,
+          "locked": false,
+          "grabbable": true,
+          "pannable": false,
+          "classes": ""
+        },
+        {
+          "data": {
+            "id": "czys1qteu6",
+            "nodeType": "CONNECTION",
+            "connectionId": "eb6a94a33f2f479eff234e8fa5049459",
+            "connectorId": "pingOneFormsConnector",
+            "name": "Form",
+            "label": "PingOne Forms",
+            "status": "configured",
+            "capabilityName": "customForm",
+            "type": "action",
+            "properties": {
+              "formData": {
+                "value": []
+              },
+              "dynamicText": {
+                "value": [
+                  {
+                    "key": "challenge"
+                  }
+                ]
+              },
+              "form": {
+                "value": "658b150f-da19-461e-afcb-79ea7bb52076"
+              },
+              "enablePolling": {
+                "value": true
+              },
+              "pollRetries": {
+                "value": 3
+              },
+              "challenge": {
+                "value": "[\n  {\n    \"children\": [\n      {\n        \"text\": \"\"\n      },\n      {\n        \"text\": \"\"\n      },\n      {\n        \"type\": \"link\",\n        \"src\": \"flow-connector.svg\",\n        \"url\": \"challenge\",\n        \"data\": \"{{local.s06s8f59cs.payload.output.challenge}}\",\n        \"tooltip\": \"{{local.s06s8f59cs.payload.output.challenge}}\",\n        \"children\": [\n          {\n            \"text\": \"challenge\"\n          }\n        ]\n      },\n      {\n        \"text\": \"\"\n      }\n    ]\n  }\n]"
+              },
+              "pollChallengeStatus": {
+                "value": false
+              },
+              "nodeTitle": {
+                "value": "Automation - Polling"
+              },
+              "pollInterval": {
+                "value": 2000
+              }
+            },
+            "isDisabled": false,
+            "capabilityClass": "render"
+          },
+          "position": {
+            "x": 1147,
+            "y": 386
+          },
+          "group": "nodes",
+          "removed": false,
+          "selected": false,
+          "selectable": true,
+          "locked": false,
+          "grabbable": true,
+          "pannable": false,
+          "classes": ""
+        },
+        {
+          "data": {
+            "id": "5csh5flsjb",
+            "nodeType": "CONNECTION",
+            "connectionId": "de650ca45593b82c49064ead10b9fe17",
+            "connectorId": "functionsConnector",
+            "name": "Functions",
+            "label": "Functions",
+            "status": "configured",
+            "capabilityName": "ALessThanB",
+            "type": "trigger",
+            "properties": {
+              "leftValueA": {
+                "value": "[\n  {\n    \"children\": [\n      {\n        \"text\": \"\"\n      },\n      {\n        \"text\": \"\"\n      },\n      {\n        \"type\": \"link\",\n        \"src\": \"variable.svg\",\n        \"url\": \"numberCounter\",\n        \"data\": \"{{global.variables.numberCounter}}\",\n        \"tooltip\": \"{{global.variables.numberCounter}}\",\n        \"children\": [\n          {\n            \"text\": \"numberCounter\"\n          }\n        ]\n      },\n      {\n        \"text\": \"\"\n      }\n    ]\n  }\n]"
+              },
+              "rightValueB": {
+                "value": "[\n  {\n    \"children\": [\n      {\n        \"text\": \"3\"\n      }\n    ]\n  }\n]"
+              },
+              "type": {
+                "value": "number"
+              }
+            },
+            "isDisabled": false,
+            "idUnique": "0xx3ajrf7q",
+            "capabilityClass": "backend"
+          },
+          "position": {
+            "x": 2010,
+            "y": 386
+          },
+          "group": "nodes",
+          "removed": false,
+          "selected": false,
+          "selectable": true,
+          "locked": false,
+          "grabbable": true,
+          "pannable": false,
+          "classes": ""
+        },
+        {
+          "data": {
+            "id": "a3a58jrrsk",
+            "nodeType": "EVAL"
+          },
+          "position": {
+            "x": 397,
+            "y": 476
+          },
+          "group": "nodes",
+          "removed": false,
+          "selected": false,
+          "selectable": true,
+          "locked": false,
+          "grabbable": true,
+          "pannable": false,
+          "classes": ""
+        },
+        {
+          "data": {
+            "id": "fxopi4maps",
+            "nodeType": "CONNECTION",
+            "connectionId": "867ed4363b2bc21c860085ad2baa817d",
+            "connectorId": "httpConnector",
+            "name": "Http",
+            "label": "Http",
+            "status": "configured",
+            "capabilityName": "continuePolling",
+            "type": "trigger",
+            "properties": {
+              "connectionInstanceId": {}
+            },
+            "isDisabled": false,
+            "idUnique": "zlkvg41nn2"
+          },
+          "position": {
+            "x": 2430,
+            "y": 386
+          },
+          "group": "nodes",
+          "removed": false,
+          "selected": false,
+          "selectable": true,
+          "locked": false,
+          "grabbable": true,
+          "pannable": false,
+          "classes": ""
+        },
+        {
+          "data": {
+            "id": "vn99anhmq3",
+            "nodeType": "CONNECTION",
+            "connectionId": "06922a684039827499bdbdd97f49827b",
+            "connectorId": "variablesConnector",
+            "name": "Variables",
+            "label": "Variables",
+            "status": "configured",
+            "capabilityName": "incrementByN",
+            "type": "action",
+            "properties": {
+              "variable": {
+                "value": "numberCounter"
+              },
+              "incrementCounter": {
+                "value": "[\n  {\n    \"children\": [\n      {\n        \"text\": \"1\"\n      }\n    ]\n  }\n]"
+              }
+            },
+            "isDisabled": false,
+            "idUnique": "5rbqtn10e9",
+            "capabilityClass": "backend"
+          },
+          "position": {
+            "x": 1650,
+            "y": 596
+          },
+          "group": "nodes",
+          "removed": false,
+          "selected": false,
+          "selectable": true,
+          "locked": false,
+          "grabbable": true,
+          "pannable": false,
+          "classes": ""
+        },
+        {
+          "data": {
+            "id": "mo61fr3wwb",
+            "nodeType": "EVAL",
+            "properties": {
+              "mbax39f3ce": {
+                "value": "allTriggersFalse"
+              },
+              "3an9yvhvhn": {
+                "value": "allTriggersFalse"
+              },
+              "i1rmuzlx6t": {
+                "value": "allTriggersFalse"
+              }
+            }
+          },
+          "position": {
+            "x": 2160,
+            "y": 446
+          },
+          "group": "nodes",
+          "removed": false,
+          "selected": false,
+          "selectable": true,
+          "locked": false,
+          "grabbable": true,
+          "pannable": false,
+          "classes": ""
+        },
+        {
+          "data": {
+            "id": "i1rmuzlx6t",
+            "connectionId": "eb6a94a33f2f479eff234e8fa5049459",
+            "nodeType": "CONNECTION",
+            "status": "configured",
+            "connectorId": "pingOneFormsConnector",
+            "name": "Form",
+            "label": "PingOne Forms",
+            "type": "action",
+            "capabilityName": "customForm",
+            "properties": {
+              "message": {
+                "value": "[\n  {\n    \"children\": [\n      {\n        \"text\": \"Done\"\n      }\n    ]\n  }\n]"
+              },
+              "formData": {
+                "value": []
+              },
+              "dynamicText": {
+                "value": [
+                  {
+                    "key": "message",
+                    "value": "[\n  {\n    \"children\": [\n      {\n        \"text\": \"Done\"\n      }\n    ]\n  }\n]"
+                  }
+                ]
+              },
+              "form": {
+                "value": "854c055c-cc80-4c17-9c15-7804c7214132"
+              }
+            },
+            "isDisabled": false,
+            "capabilityClass": "render"
+          },
+          "position": {
+            "x": 2430,
+            "y": 536
+          },
+          "group": "nodes",
+          "removed": false,
+          "selected": false,
+          "selectable": true,
+          "locked": false,
+          "grabbable": true,
+          "pannable": false,
+          "classes": ""
+        },
+        {
+          "data": {
+            "id": "ba0sbapwnk",
+            "connectionId": "53ab83a4a4ab919d9f2cb02d9e111ac8",
+            "nodeType": "CONNECTION",
+            "status": "configured",
+            "connectorId": "errorConnector",
+            "name": "Error Message",
+            "label": "Error Message",
+            "type": "action",
+            "capabilityName": "customErrorMessage",
+            "properties": {
+              "errorMessage": {
+                "value": "[\n  {\n    \"children\": [\n      {\n        \"text\": \"\"\n      },\n      {\n        \"text\": \"\"\n      },\n      {\n        \"type\": \"link\",\n        \"src\": \"pingone-forms.svg\",\n        \"url\": \"message\",\n        \"data\": \"{{local.czys1qteu6.payload.error.message}}\",\n        \"tooltip\": \"{{local.czys1qteu6.payload.error.message}}\",\n        \"children\": [\n          {\n            \"text\": \"message\"\n          }\n        ]\n      },\n      {\n        \"text\": \"\"\n      }\n    ]\n  }\n]"
+              }
+            },
+            "isDisabled": false,
+            "capabilityClass": "backend"
+          },
+          "position": {
+            "x": 1650,
+            "y": 236
+          },
+          "group": "nodes",
+          "removed": false,
+          "selected": false,
+          "selectable": true,
+          "locked": false,
+          "grabbable": true,
+          "pannable": false,
+          "classes": ""
+        },
+        {
+          "data": {
+            "id": "uc4fp6815q",
+            "nodeType": "CONNECTION",
+            "connectionId": "867ed4363b2bc21c860085ad2baa817d",
+            "connectorId": "httpConnector",
+            "name": "Http",
+            "label": "Http",
+            "status": "configured",
+            "capabilityName": "customHTMLTemplate",
+            "type": "trigger",
+            "properties": {
+              "customHTML": {
+                "value": "<div\n    class=\"bg-light d-flex flex-column justify-content-center align-items-center position-absolute top-0 start-0 bottom-0 end-0 overflow-auto\">\n    <div style=\"max-width: 400px; min-width: 400px; width: 100%\">\n        <div class=\"card shadow mb-5\">\n                <h1 class=\"text-center mb-4\">S</h1>\n                <p class=\"text-muted text-center\">Select Test Form</p>\n                <p class=\"text-danger mdi mdi-alert-circle\" data-id=\"feedback\" data-skcomponent=\"skerror\"></p>\n                <form id=\"success\" data-id=\"success\">\n                    <div class=\"d-flex flex-column\">\n                        <button data-id=\"button\" type=\"submit\" class=\"btn btn-primary mb-3\" data-skcomponent=\"skbutton\"\n                            data-skbuttontype=\"form-submit\" data-skform=\"success\" id=\"btnContinuePolling\"\n                            data-skbuttonvalue=\"Continue Polling\">\n                            Continue Polling\n                        </button>\n                        <div class=\"d-flex flex-column\">\n                            <button data-id=\"button\" class=\"btn btn-link\" data-skcomponent=\"skbutton\"\n                                data-skbuttontype=\"form-submit\" data-skform=\"success\" id=\"btnChallengePolling\"\n                                data-skbuttonvalue=\"Challenge Polling\">\n                                Challenge Polling\n                            </button>\n                        </div>\n                </form>\n            </div>\n        </div>\n    </div>\n</div>"
+              },
+              "formFieldsList": {
+                "value": [
+                  {
+                    "preferredControlType": "textField",
+                    "preferredDataType": "string",
+                    "propertyName": "buttonValue"
+                  }
+                ]
+              },
+              "nodeTitle": {
+                "value": "Select Test Form"
+              },
+              "customCSS": {},
+              "nodeDescription": {
+                "value": "Select form for testing"
+              }
+            },
+            "idUnique": "6hy3rb1jbf"
+          },
+          "position": {
+            "x": 517,
+            "y": 446
+          },
+          "group": "nodes",
+          "removed": false,
+          "selected": false,
+          "selectable": true,
+          "locked": false,
+          "grabbable": true,
+          "pannable": false,
+          "classes": ""
+        },
+        {
+          "data": {
+            "id": "nilwin5fab",
+            "nodeType": "EVAL"
+          },
+          "position": {
+            "x": 637,
+            "y": 476
+          },
+          "group": "nodes",
+          "removed": false,
+          "selected": false,
+          "selectable": true,
+          "locked": false,
+          "grabbable": true,
+          "pannable": false,
+          "classes": ""
+        },
+        {
+          "data": {
+            "id": "87uin0o14z",
+            "nodeType": "CONNECTION",
+            "connectionId": "de650ca45593b82c49064ead10b9fe17",
+            "connectorId": "functionsConnector",
+            "name": "Functions",
+            "label": "Functions",
+            "status": "configured",
+            "capabilityName": "AEqualsMultipleB",
+            "type": "trigger",
+            "properties": {
+              "leftValueA": {
+                "value": "[\n  {\n    \"children\": [\n      {\n        \"text\": \"\"\n      },\n      {\n        \"text\": \"\"\n      },\n      {\n        \"type\": \"link\",\n        \"src\": \"http.svg\",\n        \"url\": \"buttonValue\",\n        \"data\": \"{{local.uc4fp6815q.payload.output.buttonValue}}\",\n        \"tooltip\": \"{{local.uc4fp6815q.payload.output.buttonValue}}\",\n        \"children\": [\n          {\n            \"text\": \"buttonValue\"\n          }\n        ]\n      },\n      {\n        \"text\": \"\"\n      }\n    ]\n  }\n]"
+              },
+              "rightValueB": {
+                "value": "[\n  {\n    \"children\": [\n      {\n        \"text\": \"submit\"\n      }\n    ]\n  }\n]"
+              },
+              "nodeTitle": {
+                "value": "Test Selection Button Pressed"
+              },
+              "rightValueMultiple": {
+                "value": [
+                  {
+                    "value": "[\n  {\n    \"children\": [\n      {\n        \"text\": \"\"\n      },\n      {\n        \"text\": \"\"\n      },\n      {\n        \"text\": \"Continue Polling\"\n      }\n    ]\n  }\n]",
+                    "id": "vgii63uk2p"
+                  },
+                  {
+                    "value": "[\n  {\n    \"children\": [\n      {\n        \"text\": \"\"\n      },\n      {\n        \"text\": \"Challenge Polling\"\n      }\n    ]\n  }\n]",
+                    "id": "js0k5824y5"
+                  }
+                ]
+              }
+            },
+            "isDisabled": false,
+            "idUnique": "dwdsvkhd4r",
+            "capabilityClass": "backend"
+          },
+          "position": {
+            "x": 750,
+            "y": 416
+          },
+          "group": "nodes",
+          "removed": false,
+          "selected": false,
+          "selectable": true,
+          "locked": false,
+          "grabbable": true,
+          "pannable": false,
+          "classes": ""
+        },
+        {
+          "data": {
+            "id": "i7szmrdpi9",
+            "nodeType": "EVAL"
+          },
+          "position": {
+            "x": 937,
+            "y": 416
+          },
+          "group": "nodes",
+          "removed": false,
+          "selected": false,
+          "selectable": true,
+          "locked": false,
+          "grabbable": true,
+          "pannable": false,
+          "classes": ""
+        },
+        {
+          "data": {
+            "id": "cbgzopn46e",
+            "connectionId": "de650ca45593b82c49064ead10b9fe17",
+            "nodeType": "CONNECTION",
+            "status": "configured",
+            "connectorId": "functionsConnector",
+            "name": "Functions",
+            "label": "Functions",
+            "type": "trigger",
+            "capabilityName": "AEqualsB",
+            "properties": {
+              "leftValueA": {
+                "value": "[\n  {\n    \"children\": [\n      {\n        \"text\": \"\"\n      },\n      {\n        \"text\": \"\"\n      },\n      {\n        \"type\": \"link\",\n        \"src\": \"pingone-forms.svg\",\n        \"url\": \"type\",\n        \"data\": \"{{local.czys1qteu6.payload.output.event.type}}\",\n        \"tooltip\": \"{{local.czys1qteu6.payload.output.event.type}}\",\n        \"children\": [\n          {\n            \"text\": \"type\"\n          }\n        ]\n      },\n      {\n        \"text\": \"\"\n      }\n    ]\n  }\n]"
+              },
+              "rightValueB": {
+                "value": "[\n  {\n    \"children\": [\n      {\n        \"text\": \"action\"\n      }\n    ]\n  }\n]"
+              }
+            },
+            "capabilityClass": "backend"
+          },
+          "position": {
+            "x": 1470,
+            "y": 416
+          },
+          "group": "nodes",
+          "removed": false,
+          "selected": false,
+          "selectable": true,
+          "locked": false,
+          "grabbable": true,
+          "pannable": false,
+          "classes": ""
+        },
+        {
+          "data": {
+            "id": "txook6po45",
+            "nodeType": "EVAL"
+          },
+          "position": {
+            "x": 1260,
+            "y": 446
+          },
+          "group": "nodes",
+          "removed": false,
+          "selected": false,
+          "selectable": true,
+          "locked": false,
+          "grabbable": true,
+          "pannable": false,
+          "classes": ""
+        },
+        {
+          "data": {
+            "id": "kexobbj140",
+            "nodeType": "EVAL",
+            "properties": {
+              "ba0sbapwnk": {
+                "value": "allTriggersFalse"
+              }
+            }
+          },
+          "position": {
+            "x": 1290,
+            "y": 296
+          },
+          "group": "nodes",
+          "removed": false,
+          "selected": false,
+          "selectable": true,
+          "locked": false,
+          "grabbable": true,
+          "pannable": false,
+          "classes": ""
+        },
+        {
+          "data": {
+            "id": "y53sjwib7t",
+            "nodeType": "EVAL"
+          },
+          "position": {
+            "x": 1927,
+            "y": 504
+          },
+          "group": "nodes",
+          "removed": false,
+          "selected": false,
+          "selectable": true,
+          "locked": false,
+          "grabbable": true,
+          "pannable": false,
+          "classes": ""
+        },
+        {
+          "data": {
+            "id": "dgchywwzd9",
+            "nodeType": "EVAL",
+            "properties": {
+              "vn99anhmq3": {
+                "value": "allTriggersFalse"
+              }
+            }
+          },
+          "position": {
+            "x": 1650,
+            "y": 476
+          },
+          "group": "nodes",
+          "removed": false,
+          "selected": false,
+          "selectable": true,
+          "locked": false,
+          "grabbable": true,
+          "pannable": false,
+          "classes": ""
+        },
+        {
+          "data": {
+            "id": "28qxx87n1l",
+            "nodeType": "CONNECTION",
+            "connectionId": "2581eb287bb1d9bd29ae9886d675f89f",
+            "connectorId": "flowConnector",
+            "name": "Flow Connector",
+            "label": "Flow [2023-01-24]",
+            "status": "configured",
+            "capabilityName": "oobContinue",
+            "type": "action",
+            "properties": {},
+            "isDisabled": false
+          },
+          "position": {
+            "x": 1140,
+            "y": 926
+          },
+          "group": "nodes",
+          "removed": false,
+          "selected": false,
+          "selectable": true,
+          "locked": false,
+          "grabbable": true,
+          "pannable": false,
+          "classes": ""
+        },
+        {
+          "data": {
+            "id": "nzf6fi2kg7",
+            "nodeType": "CONNECTION",
+            "connectionId": "94cb18cc8ee6ddaf28e881b16637aec6",
+            "connectorId": "challengeConnector",
+            "name": "Challenge",
+            "label": "Challenge",
+            "status": "configured",
+            "capabilityName": "updateChallenge",
+            "type": "action",
+            "properties": {
+              "challenge": {
+                "value": "[\n  {\n    \"children\": [\n      {\n        \"text\": \"\"\n      },\n      {\n        \"text\": \"\"\n      },\n      {\n        \"type\": \"link\",\n        \"src\": \"flow-connector.svg\",\n        \"url\": \"challenge\",\n        \"data\": \"{{local.28qxx87n1l.payload.output.challenge}}\",\n        \"tooltip\": \"{{local.28qxx87n1l.payload.output.challenge}}\",\n        \"children\": [\n          {\n            \"text\": \"challenge\"\n          }\n        ]\n      },\n      {\n        \"text\": \"\"\n      }\n    ]\n  }\n]"
+              },
+              "challengeStatus": {
+                "value": "approved"
+              }
+            },
+            "isDisabled": false,
+            "capabilityClass": "backend"
+          },
+          "position": {
+            "x": 1470,
+            "y": 926
+          },
+          "group": "nodes",
+          "removed": false,
+          "selected": false,
+          "selectable": true,
+          "locked": false,
+          "grabbable": true,
+          "pannable": false,
+          "classes": ""
+        },
+        {
+          "data": {
+            "id": "9eye8r09js",
+            "nodeType": "EVAL",
+            "label": "Evaluator"
+          },
+          "position": {
+            "x": 1620,
+            "y": 896
+          },
+          "group": "nodes",
+          "removed": false,
+          "selected": false,
+          "selectable": true,
+          "locked": false,
+          "grabbable": true,
+          "pannable": false,
+          "classes": ""
+        },
+        {
+          "data": {
+            "id": "r81rfpcgfm",
+            "nodeType": "CONNECTION",
+            "connectionId": "867ed4363b2bc21c860085ad2baa817d",
+            "connectorId": "httpConnector",
+            "name": "Http",
+            "label": "Http",
+            "status": "configured",
+            "capabilityName": "customHtmlMessage",
+            "type": "trigger",
+            "properties": {
+              "message": {
+                "value": "[\n  {\n    \"children\": [\n      {\n        \"text\": \"Close me\"\n      }\n    ]\n  }\n]"
+              }
+            },
+            "isDisabled": false
+          },
+          "position": {
+            "x": 1770,
+            "y": 926
+          },
+          "group": "nodes",
+          "removed": false,
+          "selected": false,
+          "selectable": true,
+          "locked": false,
+          "grabbable": true,
+          "pannable": false,
+          "classes": ""
+        },
+        {
+          "data": {
+            "id": "6ifmikdao2",
+            "nodeType": "EVAL"
+          },
+          "position": {
+            "x": 1260,
+            "y": 896
+          },
+          "group": "nodes",
+          "removed": false,
+          "selected": false,
+          "selectable": true,
+          "locked": false,
+          "grabbable": true,
+          "pannable": false,
+          "classes": ""
+        },
+        {
+          "data": {
+            "id": "vy2ry2fgs0",
+            "nodeType": "EVAL"
+          },
+          "position": {
+            "x": 945,
+            "y": 926
+          },
+          "group": "nodes",
+          "removed": false,
+          "selected": false,
+          "selectable": true,
+          "locked": false,
+          "grabbable": true,
+          "pannable": false,
+          "classes": ""
+        }
+      ],
+      "edges": [
+        {
+          "data": {
+            "id": "qc8yc2w93g",
+            "source": "6ifmikdao2",
+            "target": "nzf6fi2kg7"
+          },
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "group": "edges",
+          "removed": false,
+          "selected": false,
+          "selectable": true,
+          "locked": false,
+          "grabbable": true,
+          "pannable": true,
+          "classes": ""
+        },
+        {
+          "data": {
+            "id": "k9s5o4zgjl",
+            "source": "mo61fr3wwb",
+            "target": "i1rmuzlx6t"
+          },
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "group": "edges",
+          "removed": false,
+          "selected": false,
+          "selectable": true,
+          "locked": false,
+          "grabbable": true,
+          "pannable": true,
+          "classes": ""
+        },
+        {
+          "data": {
+            "id": "803xnfq2nd",
+            "source": "d9ef9698ci",
+            "target": "3cjoqszp9p"
+          },
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "group": "edges",
+          "removed": false,
+          "selected": false,
+          "selectable": true,
+          "locked": false,
+          "grabbable": true,
+          "pannable": true,
+          "classes": ""
+        },
+        {
+          "data": {
+            "id": "s8dqimqhra",
+            "source": "3an9yvhvhn",
+            "target": "a3a58jrrsk"
+          },
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "group": "edges",
+          "removed": false,
+          "selected": false,
+          "selectable": true,
+          "locked": false,
+          "grabbable": true,
+          "pannable": true,
+          "classes": ""
+        },
+        {
+          "data": {
+            "id": "6bw0cgyi3j",
+            "source": "a3a58jrrsk",
+            "target": "uc4fp6815q"
+          },
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "group": "edges",
+          "removed": false,
+          "selected": false,
+          "selectable": true,
+          "locked": false,
+          "grabbable": true,
+          "pannable": true,
+          "classes": ""
+        },
+        {
+          "data": {
+            "id": "yk0dn0kel0",
+            "source": "vn99anhmq3",
+            "target": "xkjp36pjc9"
+          },
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "group": "edges",
+          "removed": false,
+          "selected": false,
+          "selectable": true,
+          "locked": false,
+          "grabbable": true,
+          "pannable": true,
+          "classes": ""
+        },
+        {
+          "data": {
+            "id": "ocuqypko8d",
+            "source": "xkjp36pjc9",
+            "target": "5csh5flsjb"
+          },
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "group": "edges",
+          "removed": false,
+          "selected": false,
+          "selectable": true,
+          "locked": false,
+          "grabbable": true,
+          "pannable": true,
+          "classes": ""
+        },
+        {
+          "data": {
+            "id": "81df6odjsl",
+            "source": "87uin0o14z",
+            "target": "ymknltt5uq",
+            "multiValueSourceId": "-1"
+          },
+          "position": {
+            "x": 64,
+            "y": 132
+          },
+          "group": "edges",
+          "removed": false,
+          "selected": false,
+          "selectable": true,
+          "locked": false,
+          "grabbable": true,
+          "pannable": true,
+          "classes": ""
+        },
+        {
+          "data": {
+            "id": "084v07dord",
+            "source": "1zibef6q58",
+            "target": "ay4vat2279"
+          },
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "group": "edges",
+          "removed": false,
+          "selected": false,
+          "selectable": true,
+          "locked": false,
+          "grabbable": true,
+          "pannable": true,
+          "classes": ""
+        },
+        {
+          "data": {
+            "id": "5kp620pqk4",
+            "source": "5csh5flsjb",
+            "target": "mo61fr3wwb"
+          },
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "group": "edges",
+          "removed": false,
+          "selected": false,
+          "selectable": true,
+          "locked": false,
+          "grabbable": true,
+          "pannable": true,
+          "classes": ""
+        },
+        {
+          "data": {
+            "id": "9y5um9zi6y",
+            "source": "3cjoqszp9p",
+            "target": "dfff42c9rl"
+          },
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "group": "edges",
+          "removed": false,
+          "selected": false,
+          "selectable": true,
+          "locked": false,
+          "grabbable": true,
+          "pannable": true,
+          "classes": ""
+        },
+        {
+          "data": {
+            "id": "m4yp83whcc",
+            "source": "87uin0o14z",
+            "target": "i7szmrdpi9",
+            "multiValueSourceId": "vgii63uk2p"
+          },
+          "position": {
+            "x": 64,
+            "y": 52
+          },
+          "group": "edges",
+          "removed": false,
+          "selected": false,
+          "selectable": true,
+          "locked": false,
+          "grabbable": true,
+          "pannable": true,
+          "classes": ""
+        },
+        {
+          "data": {
+            "id": "03ycftmag6",
+            "source": "ay4vat2279",
+            "target": "d9ef9698ci"
+          },
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "group": "edges",
+          "removed": false,
+          "selected": false,
+          "selectable": true,
+          "locked": false,
+          "grabbable": true,
+          "pannable": true,
+          "classes": ""
+        },
+        {
+          "data": {
+            "id": "oppp7ex01q",
+            "source": "ymknltt5uq",
+            "target": "yiwhv9njku"
+          },
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "group": "edges",
+          "removed": false,
+          "selected": false,
+          "selectable": true,
+          "locked": false,
+          "grabbable": true,
+          "pannable": true,
+          "classes": ""
+        },
+        {
+          "data": {
+            "id": "6r4ve57zk4",
+            "source": "uc4fp6815q",
+            "target": "nilwin5fab"
+          },
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "group": "edges",
+          "removed": false,
+          "selected": false,
+          "selectable": true,
+          "locked": false,
+          "grabbable": true,
+          "pannable": true,
+          "classes": ""
+        },
+        {
+          "data": {
+            "id": "csrt68yu07",
+            "source": "i7szmrdpi9",
+            "target": "czys1qteu6"
+          },
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "group": "edges",
+          "removed": false,
+          "selected": false,
+          "selectable": true,
+          "locked": false,
+          "grabbable": true,
+          "pannable": true,
+          "classes": ""
+        },
+        {
+          "data": {
+            "id": "zwrcz4xee7",
+            "source": "fm42gtef24",
+            "target": "1xfyysl518"
+          },
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "group": "edges",
+          "removed": false,
+          "selected": false,
+          "selectable": true,
+          "locked": false,
+          "grabbable": true,
+          "pannable": true,
+          "classes": ""
+        },
+        {
+          "data": {
+            "id": "p0fyjf1o4w",
+            "source": "87uin0o14z",
+            "target": "vo9sum8789",
+            "multiValueSourceId": "js0k5824y5"
+          },
+          "position": {
+            "x": 64,
+            "y": 92
+          },
+          "group": "edges",
+          "removed": false,
+          "selected": false,
+          "selectable": true,
+          "locked": false,
+          "grabbable": true,
+          "pannable": true,
+          "classes": ""
+        },
+        {
+          "data": {
+            "id": "8naeb9la4o",
+            "source": "vo9sum8789",
+            "target": "fm42gtef24"
+          },
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "group": "edges",
+          "removed": false,
+          "selected": false,
+          "selectable": true,
+          "locked": false,
+          "grabbable": true,
+          "pannable": true,
+          "classes": ""
+        },
+        {
+          "data": {
+            "id": "ghjuzzfhz6",
+            "source": "mo61fr3wwb",
+            "target": "fxopi4maps"
+          },
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "group": "edges",
+          "removed": false,
+          "selected": false,
+          "selectable": true,
+          "locked": false,
+          "grabbable": true,
+          "pannable": true,
+          "classes": ""
+        },
+        {
+          "data": {
+            "id": "7wq3y6itzu",
+            "source": "1xfyysl518",
+            "target": "1zibef6q58"
+          },
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "group": "edges",
+          "removed": false,
+          "selected": false,
+          "selectable": true,
+          "locked": false,
+          "grabbable": true,
+          "pannable": true,
+          "classes": ""
+        },
+        {
+          "data": {
+            "id": "ans1j0idlh",
+            "source": "nilwin5fab",
+            "target": "87uin0o14z"
+          },
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "group": "edges",
+          "removed": false,
+          "selected": false,
+          "selectable": true,
+          "locked": false,
+          "grabbable": true,
+          "pannable": true,
+          "classes": ""
+        },
+        {
+          "data": {
+            "id": "35qa5pqbrg",
+            "source": "czys1qteu6",
+            "target": "txook6po45"
+          },
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "group": "edges",
+          "removed": false,
+          "selected": false,
+          "selectable": true,
+          "locked": false,
+          "grabbable": true,
+          "pannable": true,
+          "classes": ""
+        },
+        {
+          "data": {
+            "id": "3fuesooiw9",
+            "source": "txook6po45",
+            "target": "cbgzopn46e"
+          },
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "group": "edges",
+          "removed": false,
+          "selected": false,
+          "selectable": true,
+          "locked": false,
+          "grabbable": true,
+          "pannable": true,
+          "classes": ""
+        },
+        {
+          "data": {
+            "id": "yewbeftu8t",
+            "source": "czys1qteu6",
+            "target": "kexobbj140"
+          },
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "group": "edges",
+          "removed": false,
+          "selected": false,
+          "selectable": true,
+          "locked": false,
+          "grabbable": true,
+          "pannable": true,
+          "classes": ""
+        },
+        {
+          "data": {
+            "id": "z2ta0m5xxm",
+            "source": "kexobbj140",
+            "target": "ba0sbapwnk"
+          },
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "group": "edges",
+          "removed": false,
+          "selected": false,
+          "selectable": true,
+          "locked": false,
+          "grabbable": true,
+          "pannable": true,
+          "classes": ""
+        },
+        {
+          "data": {
+            "id": "ksxwz039d1",
+            "source": "cbgzopn46e",
+            "target": "y53sjwib7t"
+          },
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "group": "edges",
+          "removed": false,
+          "selected": false,
+          "selectable": true,
+          "locked": false,
+          "grabbable": true,
+          "pannable": true,
+          "classes": ""
+        },
+        {
+          "data": {
+            "id": "zf8uzqegq2",
+            "source": "y53sjwib7t",
+            "target": "i1rmuzlx6t"
+          },
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "group": "edges",
+          "removed": false,
+          "selected": false,
+          "selectable": true,
+          "locked": false,
+          "grabbable": true,
+          "pannable": true,
+          "classes": ""
+        },
+        {
+          "data": {
+            "id": "jija0liogt",
+            "source": "cbgzopn46e",
+            "target": "dgchywwzd9"
+          },
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "group": "edges",
+          "removed": false,
+          "selected": false,
+          "selectable": true,
+          "locked": false,
+          "grabbable": true,
+          "pannable": true,
+          "classes": ""
+        },
+        {
+          "data": {
+            "id": "w8mknp9372",
+            "source": "dgchywwzd9",
+            "target": "vn99anhmq3"
+          },
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "group": "edges",
+          "removed": false,
+          "selected": false,
+          "selectable": true,
+          "locked": false,
+          "grabbable": true,
+          "pannable": true,
+          "classes": ""
+        },
+        {
+          "data": {
+            "id": "4j0a8s9jzj",
+            "source": "nzf6fi2kg7",
+            "target": "9eye8r09js"
+          },
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "group": "edges",
+          "removed": false,
+          "selected": false,
+          "selectable": true,
+          "locked": false,
+          "grabbable": true,
+          "pannable": true,
+          "classes": ""
+        },
+        {
+          "data": {
+            "id": "85kvidyhu2",
+            "source": "9eye8r09js",
+            "target": "r81rfpcgfm"
+          },
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "group": "edges",
+          "removed": false,
+          "selected": false,
+          "selectable": true,
+          "locked": false,
+          "grabbable": true,
+          "pannable": true,
+          "classes": ""
+        },
+        {
+          "data": {
+            "id": "ohlq8nx5hx",
+            "source": "28qxx87n1l",
+            "target": "6ifmikdao2"
+          },
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "group": "edges",
+          "removed": false,
+          "selected": false,
+          "selectable": true,
+          "locked": false,
+          "grabbable": true,
+          "pannable": true,
+          "classes": ""
+        },
+        {
+          "data": {
+            "id": "psn6s6qwwu",
+            "source": "87uin0o14z",
+            "target": "vy2ry2fgs0",
+            "multiValueSourceId": "js0k5824y5"
+          },
+          "position": {
+            "x": 77.5,
+            "y": 113
+          },
+          "group": "edges",
+          "removed": false,
+          "selected": false,
+          "selectable": true,
+          "locked": false,
+          "grabbable": true,
+          "pannable": true,
+          "classes": ""
+        },
+        {
+          "data": {
+            "id": "zdut9flea7",
+            "source": "vy2ry2fgs0",
+            "target": "28qxx87n1l"
+          },
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "group": "edges",
+          "removed": false,
+          "selected": false,
+          "selectable": true,
+          "locked": false,
+          "grabbable": true,
+          "pannable": true,
+          "classes": ""
+        }
+      ]
+    },
+    "data": {},
+    "zoomingEnabled": true,
+    "userZoomingEnabled": true,
+    "zoom": 1,
+    "minZoom": 1e-50,
+    "maxZoom": 1e+50,
+    "panningEnabled": true,
+    "userPanningEnabled": true,
+    "pan": {
+      "x": 0,
+      "y": 0
+    },
+    "boxSelectionEnabled": true,
+    "renderer": {
+      "name": "null"
+    }
+  },
+  "flowColor": "#E3F0FF",
+  "savedDate": 1779379639429,
+  "variables": [],
+  "forms": {
+    "658b150f-da19-461e-afcb-79ea7bb52076": {
+      "id": "658b150f-da19-461e-afcb-79ea7bb52076",
+      "environment": {
+        "id": "300c4f2a-39d4-4ba9-a18a-f6de246006f4"
+      },
+      "name": "Automation - Polling",
+      "description": "Used by E2E Automation Tests",
+      "category": "CUSTOM",
+      "components": {
+        "fields": [
+          {
+            "type": "SLATE_TEXTBLOB",
+            "position": {
+              "row": 0,
+              "col": 0
+            },
+            "content": "[{\"type\":\"align-center\",\"children\":[{\"children\":[{\"text\":\"Authenticator App\"}],\"type\":\"heading-1\"}]}]",
+            "key": "title-text",
+            "icon": {
+              "type": "MOBILE_PHONE",
+              "size": "MEDIUM"
+            }
+          },
+          {
+            "type": "ERROR_DISPLAY",
+            "position": {
+              "row": 1,
+              "col": 0
+            }
+          },
+          {
+            "pollingAppearance": "SPINNER",
+            "size": "MEDIUM",
+            "type": "POLLING",
+            "position": {
+              "row": 2,
+              "col": 0
+            },
+            "key": "polling-field"
+          },
+          {
+            "type": "SLATE_TEXTBLOB",
+            "position": {
+              "row": 3,
+              "col": 0
+            },
+            "content": "[{\"children\":[{\"text\":\"Number Challenge {{challenge}}\"}]}]",
+            "key": "rich-text",
+            "icon": {
+              "type": "NONE",
+              "size": "MEDIUM"
+            }
+          },
+          {
+            "type": "FLOW_BUTTON",
+            "position": {
+              "row": 4,
+              "col": 0
+            },
+            "key": "Finish",
+            "label": "[{\"type\":\"paragraph\",\"children\":[{\"text\":\"Finish\"}]}]"
+          }
+        ]
+      },
+      "cols": 4,
+      "markOptional": true,
+      "markRequired": false,
+      "textAutoCompleteEnabled": false,
+      "passwordAutoCompleteEnabled": false,
+      "translationMethod": "TRANSLATE",
+      "created": "2026-05-20T15:21:10.831Z",
+      "modified": "2026-05-21T16:09:12.339Z",
+      "readOnly": false
+    },
+    "854c055c-cc80-4c17-9c15-7804c7214132": {
+      "id": "854c055c-cc80-4c17-9c15-7804c7214132",
+      "environment": {
+        "id": "300c4f2a-39d4-4ba9-a18a-f6de246006f4"
+      },
+      "name": "Automation - Polling Message",
+      "description": "Used by E2E Automation Tests",
+      "category": "CUSTOM",
+      "components": {
+        "fields": [
+          {
+            "type": "ERROR_DISPLAY",
+            "position": {
+              "row": 0,
+              "col": 0
+            }
+          },
+          {
+            "type": "SLATE_TEXTBLOB",
+            "position": {
+              "row": 1,
+              "col": 0
+            },
+            "content": "[{\"children\":[{\"text\":\"Message: {{message}}\"}]}]",
+            "key": "rich-text",
+            "icon": {
+              "type": "NONE",
+              "size": "MEDIUM"
+            }
+          }
+        ]
+      },
+      "cols": 4,
+      "markOptional": true,
+      "markRequired": false,
+      "textAutoCompleteEnabled": false,
+      "passwordAutoCompleteEnabled": false,
+      "translationMethod": "TRANSLATE",
+      "created": "2026-05-20T15:21:10.841Z",
+      "modified": "2026-05-21T16:09:32.625Z",
+      "readOnly": false
+    }
+  },
+  "connections": []
+}
