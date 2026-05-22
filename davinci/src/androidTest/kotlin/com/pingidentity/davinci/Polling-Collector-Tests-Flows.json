@@ -10,15 +10,15 @@
     "functionsConnector",
     "httpConnector"
   ],
-  "createdDate": 1779379639501,
-  "currentVersion": 32,
+  "createdDate": 1779484501987,
+  "currentVersion": 45,
   "customerId": "b046b8357f81a6b68a9a60227d631009",
-  "deployedDate": 1779389055294,
+  "deployedDate": 1779484505141,
   "description": "Imported on Wed May 20 2026 15:21:11 GMT+0000 (Coordinated Universal Time)",
   "flowStatus": "enabled",
   "isOutputSchemaSaved": false,
   "name": "Automation - Polling Tests",
-  "publishedVersion": 32,
+  "publishedVersion": 45,
   "settings": {
     "csp": "worker-src 'self' blob:; script-src 'self' https://cdn.jsdelivr.net https://code.jquery.com https://devsdk.singularkey.com http://cdnjs.cloudflare.com 'unsafe-inline' 'unsafe-eval';",
     "intermediateLoadingScreenCSS": "",
@@ -35,9 +35,9 @@
   "trigger": {
     "type": "AUTHENTICATION"
   },
-  "updatedDate": 1779389055311,
+  "updatedDate": 1779484505158,
   "flowId": "03209dede7fdab087a75b012e973916e",
-  "versionId": 32,
+  "versionId": 45,
   "graphData": {
     "elements": {
       "nodes": [
@@ -61,13 +61,16 @@
               },
               "challengeExpiry": {
                 "value": 300
+              },
+              "generateQr": {
+                "value": false
               }
             },
             "isDisabled": false
           },
           "position": {
             "x": 1140,
-            "y": 716
+            "y": 720
           },
           "group": "nodes",
           "removed": false,
@@ -136,8 +139,8 @@
             "capabilityClass": "render"
           },
           "position": {
-            "x": 1484,
-            "y": 802
+            "x": 1470,
+            "y": 810
           },
           "group": "nodes",
           "removed": false,
@@ -155,7 +158,7 @@
           },
           "position": {
             "x": 1290,
-            "y": 776
+            "y": 780
           },
           "group": "nodes",
           "removed": false,
@@ -173,7 +176,7 @@
           },
           "position": {
             "x": 1920,
-            "y": 746
+            "y": 750
           },
           "group": "nodes",
           "removed": false,
@@ -219,7 +222,7 @@
           },
           "position": {
             "x": 2100,
-            "y": 776
+            "y": 780
           },
           "group": "nodes",
           "removed": false,
@@ -250,8 +253,8 @@
             "capabilityClass": "backend"
           },
           "position": {
-            "x": 1754,
-            "y": 802
+            "x": 1740,
+            "y": 810
           },
           "group": "nodes",
           "removed": false,
@@ -269,7 +272,7 @@
           },
           "position": {
             "x": 1620,
-            "y": 776
+            "y": 780
           },
           "group": "nodes",
           "removed": false,
@@ -576,7 +579,7 @@
           },
           "position": {
             "x": 1650,
-            "y": 596
+            "y": 600
           },
           "group": "nodes",
           "removed": false,
@@ -707,7 +710,7 @@
             "type": "trigger",
             "properties": {
               "customHTML": {
-                "value": "<div\n    class=\"bg-light d-flex flex-column justify-content-center align-items-center position-absolute top-0 start-0 bottom-0 end-0 overflow-auto\">\n    <div style=\"max-width: 400px; min-width: 400px; width: 100%\">\n        <div class=\"card shadow mb-5\">\n                <h1 class=\"text-center mb-4\">S</h1>\n                <p class=\"text-muted text-center\">Select Test Form</p>\n                <p class=\"text-danger mdi mdi-alert-circle\" data-id=\"feedback\" data-skcomponent=\"skerror\"></p>\n                <form id=\"success\" data-id=\"success\">\n                    <div class=\"d-flex flex-column\">\n                        <button data-id=\"button\" type=\"submit\" class=\"btn btn-primary mb-3\" data-skcomponent=\"skbutton\"\n                            data-skbuttontype=\"form-submit\" data-skform=\"success\" id=\"btnContinuePolling\"\n                            data-skbuttonvalue=\"Continue Polling\">\n                            Continue Polling\n                        </button>\n                        <div class=\"d-flex flex-column\">\n                            <button data-id=\"button\" class=\"btn btn-link\" data-skcomponent=\"skbutton\"\n                                data-skbuttontype=\"form-submit\" data-skform=\"success\" id=\"btnChallengePolling\"\n                                data-skbuttonvalue=\"Challenge Polling\">\n                                Challenge Polling\n                            </button>\n                        </div>\n                </form>\n            </div>\n        </div>\n    </div>\n</div>"
+                "value": "<div\n    class=\"bg-light d-flex flex-column justify-content-center align-items-center position-absolute top-0 start-0 bottom-0 end-0 overflow-auto\">\n    <div style=\"max-width: 400px; min-width: 400px; width: 100%\">\n        <div class=\"card shadow mb-5\">\n                <h1 class=\"text-center mb-4\">S</h1>\n                <p class=\"text-muted text-center\">Select Test Form</p>\n                <p class=\"text-danger mdi mdi-alert-circle\" data-id=\"feedback\" data-skcomponent=\"skerror\"></p>\n                <form id=\"success\" data-id=\"success\">\n                    <div class=\"d-flex flex-column\">\n                        <button data-id=\"button\" type=\"submit\" class=\"btn btn-primary mb-3\" data-skcomponent=\"skbutton\"\n                            data-skbuttontype=\"form-submit\" data-skform=\"success\" id=\"btnContinuePolling\"\n                            data-skbuttonvalue=\"Continue Polling\">\n                            Continue Polling\n                        </button>\n                        <div class=\"d-flex flex-column\">\n                            <button data-id=\"button\" class=\"btn btn-link\" data-skcomponent=\"skbutton\"\n                                data-skbuttontype=\"form-submit\" data-skform=\"success\" id=\"btnChallengePolling\"\n                                data-skbuttonvalue=\"Challenge Polling\">\n                                Challenge Polling\n                            </button>\n                        </div>\n                         <div class=\"d-flex flex-column\">\n                            <button data-id=\"button\" class=\"btn btn-link\" data-skcomponent=\"skbutton\"\n                                data-skbuttontype=\"form-submit\" data-skform=\"success\" id=\"btnChallengePollingQRCode\"\n                                data-skbuttonvalue=\"Challenge Polling QRCode\">\n                                Challenge Polling QRCode\n                            </button>\n                        </div>\n                </form>\n            </div>\n        </div>\n    </div>\n</div>"
               },
               "formFieldsList": {
                 "value": [
@@ -789,6 +792,10 @@
                   {
                     "value": "[\n  {\n    \"children\": [\n      {\n        \"text\": \"\"\n      },\n      {\n        \"text\": \"Challenge Polling\"\n      }\n    ]\n  }\n]",
                     "id": "js0k5824y5"
+                  },
+                  {
+                    "value": "[\n  {\n    \"children\": [\n      {\n        \"text\": \"Challenge Polling QRCode\"\n      }\n    ]\n  }\n]",
+                    "id": "c87ygb1l2b"
                   }
                 ]
               }
@@ -960,7 +967,7 @@
           },
           "position": {
             "x": 1140,
-            "y": 926
+            "y": 930
           },
           "group": "nodes",
           "removed": false,
@@ -995,7 +1002,7 @@
           },
           "position": {
             "x": 1470,
-            "y": 926
+            "y": 930
           },
           "group": "nodes",
           "removed": false,
@@ -1014,7 +1021,7 @@
           },
           "position": {
             "x": 1620,
-            "y": 896
+            "y": 900
           },
           "group": "nodes",
           "removed": false,
@@ -1045,7 +1052,7 @@
           },
           "position": {
             "x": 1770,
-            "y": 926
+            "y": 930
           },
           "group": "nodes",
           "removed": false,
@@ -1063,7 +1070,7 @@
           },
           "position": {
             "x": 1260,
-            "y": 896
+            "y": 900
           },
           "group": "nodes",
           "removed": false,
@@ -1080,8 +1087,405 @@
             "nodeType": "EVAL"
           },
           "position": {
-            "x": 945,
-            "y": 926
+            "x": 960,
+            "y": 930
+          },
+          "group": "nodes",
+          "removed": false,
+          "selected": false,
+          "selectable": true,
+          "locked": false,
+          "grabbable": true,
+          "pannable": false,
+          "classes": ""
+        },
+        {
+          "data": {
+            "id": "fnh55etehh",
+            "nodeType": "CONNECTION",
+            "connectionId": "2581eb287bb1d9bd29ae9886d675f89f",
+            "connectorId": "flowConnector",
+            "name": "Flow Connector",
+            "label": "Flow [2023-01-24]",
+            "status": "configured",
+            "capabilityName": "oobStart",
+            "type": "trigger",
+            "properties": {
+              "useCustomLink": {
+                "value": false
+              },
+              "customLink": {
+                "value": "[\n  {\n    \"children\": [\n      {\n        \"text\": \"pingid://auth.pingone.com/\"\n      },\n      {\n        \"text\": \"\"\n      },\n      {\n        \"type\": \"link\",\n        \"src\": \"auth.svg\",\n        \"url\": \"companyId\",\n        \"data\": \"{{global.companyId}}\",\n        \"tooltip\": \"{{global.companyId}}\",\n        \"children\": [\n          {\n            \"text\": \"companyId\"\n          }\n        ]\n      },\n      {\n        \"text\": \"\"\n      },\n      {\n        \"text\": \"/davinci/connections/\"\n      },\n      {\n        \"text\": \"\"\n      },\n      {\n        \"text\": \"2fb0ca54c9286625c1f5d6989808ead1\"\n      },\n      {\n        \"text\": \"/callback/oobContinue?challenge=\"\n      }\n    ]\n  }\n]"
+              },
+              "challengeExpiry": {
+                "value": 300
+              },
+              "generateQr": {
+                "value": true
+              }
+            },
+            "isDisabled": false
+          },
+          "position": {
+            "x": 1020,
+            "y": 1140
+          },
+          "group": "nodes",
+          "removed": false,
+          "selected": false,
+          "selectable": true,
+          "locked": false,
+          "grabbable": true,
+          "pannable": false,
+          "classes": ""
+        },
+        {
+          "data": {
+            "id": "xzhxneu3vg",
+            "nodeType": "CONNECTION",
+            "connectionId": "eb6a94a33f2f479eff234e8fa5049459",
+            "connectorId": "pingOneFormsConnector",
+            "name": "Form",
+            "label": "PingOne Forms",
+            "status": "configured",
+            "capabilityName": "customForm",
+            "type": "action",
+            "properties": {
+              "formData": {
+                "value": []
+              },
+              "dynamicText": {
+                "value": []
+              },
+              "form": {
+                "value": "eddaf29b-84ba-4946-976f-3301986aecb0"
+              },
+              "enablePolling": {
+                "value": true
+              },
+              "pollRetries": {
+                "value": 3
+              },
+              "challenge": {
+                "value": "[\n  {\n    \"children\": [\n      {\n        \"text\": \"\"\n      },\n      {\n        \"text\": \"\"\n      },\n      {\n        \"type\": \"link\",\n        \"src\": \"flow-connector.svg\",\n        \"url\": \"challenge\",\n        \"data\": \"{{local.fnh55etehh.payload.output.challenge}}\",\n        \"tooltip\": \"{{local.fnh55etehh.payload.output.challenge}}\",\n        \"children\": [\n          {\n            \"text\": \"challenge\"\n          }\n        ]\n      },\n      {\n        \"text\": \"\"\n      }\n    ]\n  }\n]"
+              },
+              "nodeTitle": {
+                "value": "QRCode"
+              },
+              "qrCodeContents": {
+                "value": "[\n  {\n    \"children\": [\n      {\n        \"text\": \"\"\n      },\n      {\n        \"text\": \"\"\n      },\n      {\n        \"type\": \"link\",\n        \"src\": \"flow-connector.svg\",\n        \"url\": \"continueQr\",\n        \"data\": \"{{local.fnh55etehh.payload.output.continueQr}}\",\n        \"tooltip\": \"{{local.fnh55etehh.payload.output.continueQr}}\",\n        \"children\": [\n          {\n            \"text\": \"continueQr\"\n          }\n        ]\n      },\n      {\n        \"text\": \"\"\n      }\n    ]\n  }\n]"
+              },
+              "enableRisk": {
+                "value": true
+              }
+            },
+            "isDisabled": false,
+            "capabilityClass": "render"
+          },
+          "position": {
+            "x": 1230,
+            "y": 1290
+          },
+          "group": "nodes",
+          "removed": false,
+          "selected": false,
+          "selectable": true,
+          "locked": false,
+          "grabbable": true,
+          "pannable": false,
+          "classes": ""
+        },
+        {
+          "data": {
+            "id": "sbtlmd892l",
+            "nodeType": "EVAL"
+          },
+          "position": {
+            "x": 1230,
+            "y": 1170
+          },
+          "group": "nodes",
+          "removed": false,
+          "selected": false,
+          "selectable": true,
+          "locked": false,
+          "grabbable": true,
+          "pannable": false,
+          "classes": ""
+        },
+        {
+          "data": {
+            "id": "0f6wy2gll8",
+            "nodeType": "EVAL"
+          },
+          "position": {
+            "x": 1680,
+            "y": 1230
+          },
+          "group": "nodes",
+          "removed": false,
+          "selected": false,
+          "selectable": true,
+          "locked": false,
+          "grabbable": true,
+          "pannable": false,
+          "classes": ""
+        },
+        {
+          "data": {
+            "id": "o84vpl35go",
+            "nodeType": "CONNECTION",
+            "connectionId": "eb6a94a33f2f479eff234e8fa5049459",
+            "connectorId": "pingOneFormsConnector",
+            "name": "Form",
+            "label": "PingOne Forms",
+            "status": "configured",
+            "capabilityName": "customForm",
+            "type": "action",
+            "properties": {
+              "formData": {
+                "value": []
+              },
+              "dynamicText": {
+                "value": [
+                  {
+                    "key": "message",
+                    "value": "[\n  {\n    \"children\": [\n      {\n        \"text\": \"\"\n      },\n      {\n        \"text\": \"\"\n      },\n      {\n        \"type\": \"link\",\n        \"src\": \"challenge.svg\",\n        \"url\": \"challengeStatus\",\n        \"data\": \"{{local.xbm789475f.payload.output.challengeStatus}}\",\n        \"tooltip\": \"{{local.xbm789475f.payload.output.challengeStatus}}\",\n        \"children\": [\n          {\n            \"text\": \"challengeStatus\"\n          }\n        ]\n      },\n      {\n        \"text\": \"\"\n      }\n    ]\n  }\n]"
+                  }
+                ]
+              },
+              "message": {
+                "value": "[\n  {\n    \"children\": [\n      {\n        \"text\": \"Pool Completed \"\n      },\n      {\n        \"text\": \"\"\n      },\n      {\n        \"type\": \"link\",\n        \"src\": \"challenge.svg\",\n        \"url\": \"challengeStatus\",\n        \"data\": \"{{local.xbm789475f.payload.output.challengeStatus}}\",\n        \"tooltip\": \"{{local.xbm789475f.payload.output.challengeStatus}}\",\n        \"children\": [\n          {\n            \"text\": \"challengeStatus\"\n          }\n        ]\n      },\n      {\n        \"text\": \"\"\n      }\n    ]\n  }\n]"
+              },
+              "form": {
+                "value": "854c055c-cc80-4c17-9c15-7804c7214132"
+              },
+              "nodeTitle": {
+                "value": "Automation - Polling Message"
+              }
+            },
+            "isDisabled": false,
+            "capabilityClass": "render"
+          },
+          "position": {
+            "x": 1890,
+            "y": 1260
+          },
+          "group": "nodes",
+          "removed": false,
+          "selected": false,
+          "selectable": true,
+          "locked": false,
+          "grabbable": true,
+          "pannable": false,
+          "classes": ""
+        },
+        {
+          "data": {
+            "id": "xbm789475f",
+            "nodeType": "CONNECTION",
+            "connectionId": "94cb18cc8ee6ddaf28e881b16637aec6",
+            "connectorId": "challengeConnector",
+            "name": "Challenge",
+            "label": "Challenge",
+            "status": "configured",
+            "capabilityName": "getChallenge",
+            "type": "action",
+            "properties": {
+              "challenge": {
+                "value": "[\n  {\n    \"children\": [\n      {\n        \"text\": \"\"\n      },\n      {\n        \"text\": \"\"\n      },\n      {\n        \"type\": \"link\",\n        \"src\": \"flow-connector.svg\",\n        \"url\": \"challenge\",\n        \"data\": \"{{local.fnh55etehh.payload.output.challenge}}\",\n        \"tooltip\": \"{{local.fnh55etehh.payload.output.challenge}}\",\n        \"children\": [\n          {\n            \"text\": \"challenge\"\n          }\n        ]\n      },\n      {\n        \"text\": \"\"\n      }\n    ]\n  }\n]"
+              }
+            },
+            "isDisabled": false,
+            "capabilityClass": "backend"
+          },
+          "position": {
+            "x": 1530,
+            "y": 1290
+          },
+          "group": "nodes",
+          "removed": false,
+          "selected": false,
+          "selectable": true,
+          "locked": false,
+          "grabbable": true,
+          "pannable": false,
+          "classes": ""
+        },
+        {
+          "data": {
+            "id": "8e5vvkn8qs",
+            "nodeType": "EVAL"
+          },
+          "position": {
+            "x": 1380,
+            "y": 1260
+          },
+          "group": "nodes",
+          "removed": false,
+          "selected": false,
+          "selectable": true,
+          "locked": false,
+          "grabbable": true,
+          "pannable": false,
+          "classes": ""
+        },
+        {
+          "data": {
+            "id": "4a1i3k98dx",
+            "nodeType": "CONNECTION",
+            "connectionId": "2581eb287bb1d9bd29ae9886d675f89f",
+            "connectorId": "flowConnector",
+            "name": "Flow Connector",
+            "label": "Flow [2023-01-24]",
+            "status": "configured",
+            "capabilityName": "oobContinue",
+            "type": "action",
+            "properties": {},
+            "isDisabled": false
+          },
+          "position": {
+            "x": 900,
+            "y": 1410
+          },
+          "group": "nodes",
+          "removed": false,
+          "selected": false,
+          "selectable": true,
+          "locked": false,
+          "grabbable": true,
+          "pannable": false,
+          "classes": ""
+        },
+        {
+          "data": {
+            "id": "i5cx97efqa",
+            "nodeType": "CONNECTION",
+            "connectionId": "94cb18cc8ee6ddaf28e881b16637aec6",
+            "connectorId": "challengeConnector",
+            "name": "Challenge",
+            "label": "Challenge",
+            "status": "configured",
+            "capabilityName": "updateChallenge",
+            "type": "action",
+            "properties": {
+              "challenge": {
+                "value": "[\n  {\n    \"children\": [\n      {\n        \"text\": \"\"\n      },\n      {\n        \"text\": \"\"\n      },\n      {\n        \"type\": \"link\",\n        \"src\": \"flow-connector.svg\",\n        \"url\": \"challenge\",\n        \"data\": \"{{local.4a1i3k98dx.payload.output.challenge}}\",\n        \"tooltip\": \"{{local.4a1i3k98dx.payload.output.challenge}}\",\n        \"children\": [\n          {\n            \"text\": \"challenge\"\n          }\n        ]\n      },\n      {\n        \"text\": \"\"\n      }\n    ]\n  }\n]"
+              },
+              "challengeStatus": {
+                "value": "approved"
+              }
+            },
+            "isDisabled": false,
+            "capabilityClass": "backend"
+          },
+          "position": {
+            "x": 1230,
+            "y": 1410
+          },
+          "group": "nodes",
+          "removed": false,
+          "selected": false,
+          "selectable": true,
+          "locked": false,
+          "grabbable": true,
+          "pannable": false,
+          "classes": ""
+        },
+        {
+          "data": {
+            "id": "rvvlbgm39b",
+            "nodeType": "EVAL",
+            "label": "Evaluator"
+          },
+          "position": {
+            "x": 1380,
+            "y": 1380
+          },
+          "group": "nodes",
+          "removed": false,
+          "selected": false,
+          "selectable": true,
+          "locked": false,
+          "grabbable": true,
+          "pannable": false,
+          "classes": ""
+        },
+        {
+          "data": {
+            "id": "zhh7h3vfhx",
+            "nodeType": "CONNECTION",
+            "connectionId": "867ed4363b2bc21c860085ad2baa817d",
+            "connectorId": "httpConnector",
+            "name": "Http",
+            "label": "Http",
+            "status": "configured",
+            "capabilityName": "customHtmlMessage",
+            "type": "trigger",
+            "properties": {
+              "message": {
+                "value": "[\n  {\n    \"children\": [\n      {\n        \"text\": \"Close me\"\n      }\n    ]\n  }\n]"
+              }
+            },
+            "isDisabled": false
+          },
+          "position": {
+            "x": 1530,
+            "y": 1410
+          },
+          "group": "nodes",
+          "removed": false,
+          "selected": false,
+          "selectable": true,
+          "locked": false,
+          "grabbable": true,
+          "pannable": false,
+          "classes": ""
+        },
+        {
+          "data": {
+            "id": "i5a89u3oc4",
+            "nodeType": "EVAL"
+          },
+          "position": {
+            "x": 1020,
+            "y": 1380
+          },
+          "group": "nodes",
+          "removed": false,
+          "selected": false,
+          "selectable": true,
+          "locked": false,
+          "grabbable": true,
+          "pannable": false,
+          "classes": ""
+        },
+        {
+          "data": {
+            "id": "qvyr5ax007",
+            "nodeType": "EVAL"
+          },
+          "position": {
+            "x": 870,
+            "y": 1140
+          },
+          "group": "nodes",
+          "removed": false,
+          "selected": false,
+          "selectable": true,
+          "locked": false,
+          "grabbable": true,
+          "pannable": false,
+          "classes": ""
+        },
+        {
+          "data": {
+            "id": "wpv71omwl1",
+            "nodeType": "EVAL"
+          },
+          "position": {
+            "x": 825,
+            "y": 1410
           },
           "group": "nodes",
           "removed": false,
@@ -1236,7 +1640,7 @@
           },
           "position": {
             "x": 64,
-            "y": 132
+            "y": 172
           },
           "group": "edges",
           "removed": false,
@@ -1732,8 +2136,8 @@
             "multiValueSourceId": "js0k5824y5"
           },
           "position": {
-            "x": 77.5,
-            "y": 113
+            "x": 64,
+            "y": 92
           },
           "group": "edges",
           "removed": false,
@@ -1749,6 +2153,274 @@
             "id": "zdut9flea7",
             "source": "vy2ry2fgs0",
             "target": "28qxx87n1l"
+          },
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "group": "edges",
+          "removed": false,
+          "selected": false,
+          "selectable": true,
+          "locked": false,
+          "grabbable": true,
+          "pannable": true,
+          "classes": ""
+        },
+        {
+          "data": {
+            "id": "5tk1dyfhue",
+            "source": "i5a89u3oc4",
+            "target": "i5cx97efqa"
+          },
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "group": "edges",
+          "removed": false,
+          "selected": false,
+          "selectable": true,
+          "locked": false,
+          "grabbable": true,
+          "pannable": true,
+          "classes": ""
+        },
+        {
+          "data": {
+            "id": "1bdzjma81e",
+            "source": "xbm789475f",
+            "target": "0f6wy2gll8"
+          },
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "group": "edges",
+          "removed": false,
+          "selected": false,
+          "selectable": true,
+          "locked": false,
+          "grabbable": true,
+          "pannable": true,
+          "classes": ""
+        },
+        {
+          "data": {
+            "id": "2lm5svaehe",
+            "source": "xzhxneu3vg",
+            "target": "8e5vvkn8qs"
+          },
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "group": "edges",
+          "removed": false,
+          "selected": false,
+          "selectable": true,
+          "locked": false,
+          "grabbable": true,
+          "pannable": true,
+          "classes": ""
+        },
+        {
+          "data": {
+            "id": "n7oqvbfdne",
+            "source": "0f6wy2gll8",
+            "target": "o84vpl35go"
+          },
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "group": "edges",
+          "removed": false,
+          "selected": false,
+          "selectable": true,
+          "locked": false,
+          "grabbable": true,
+          "pannable": true,
+          "classes": ""
+        },
+        {
+          "data": {
+            "id": "eafikeugb6",
+            "source": "8e5vvkn8qs",
+            "target": "xbm789475f"
+          },
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "group": "edges",
+          "removed": false,
+          "selected": false,
+          "selectable": true,
+          "locked": false,
+          "grabbable": true,
+          "pannable": true,
+          "classes": ""
+        },
+        {
+          "data": {
+            "id": "da2128pc3y",
+            "source": "fnh55etehh",
+            "target": "sbtlmd892l"
+          },
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "group": "edges",
+          "removed": false,
+          "selected": false,
+          "selectable": true,
+          "locked": false,
+          "grabbable": true,
+          "pannable": true,
+          "classes": ""
+        },
+        {
+          "data": {
+            "id": "xqnub884ud",
+            "source": "sbtlmd892l",
+            "target": "xzhxneu3vg"
+          },
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "group": "edges",
+          "removed": false,
+          "selected": false,
+          "selectable": true,
+          "locked": false,
+          "grabbable": true,
+          "pannable": true,
+          "classes": ""
+        },
+        {
+          "data": {
+            "id": "hfp6in9sbq",
+            "source": "i5cx97efqa",
+            "target": "rvvlbgm39b"
+          },
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "group": "edges",
+          "removed": false,
+          "selected": false,
+          "selectable": true,
+          "locked": false,
+          "grabbable": true,
+          "pannable": true,
+          "classes": ""
+        },
+        {
+          "data": {
+            "id": "x2g18eocmy",
+            "source": "rvvlbgm39b",
+            "target": "zhh7h3vfhx"
+          },
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "group": "edges",
+          "removed": false,
+          "selected": false,
+          "selectable": true,
+          "locked": false,
+          "grabbable": true,
+          "pannable": true,
+          "classes": ""
+        },
+        {
+          "data": {
+            "id": "ds3klo90p4",
+            "source": "4a1i3k98dx",
+            "target": "i5a89u3oc4"
+          },
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "group": "edges",
+          "removed": false,
+          "selected": false,
+          "selectable": true,
+          "locked": false,
+          "grabbable": true,
+          "pannable": true,
+          "classes": ""
+        },
+        {
+          "data": {
+            "id": "wq4336sn1e",
+            "source": "87uin0o14z",
+            "target": "qvyr5ax007",
+            "multiValueSourceId": "c87ygb1l2b"
+          },
+          "position": {
+            "x": 77.5,
+            "y": 153
+          },
+          "group": "edges",
+          "removed": false,
+          "selected": false,
+          "selectable": true,
+          "locked": false,
+          "grabbable": true,
+          "pannable": true,
+          "classes": ""
+        },
+        {
+          "data": {
+            "id": "g9i8i881gu",
+            "source": "qvyr5ax007",
+            "target": "fnh55etehh"
+          },
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "group": "edges",
+          "removed": false,
+          "selected": false,
+          "selectable": true,
+          "locked": false,
+          "grabbable": true,
+          "pannable": true,
+          "classes": ""
+        },
+        {
+          "data": {
+            "id": "h5dn1s4dju",
+            "source": "87uin0o14z",
+            "target": "wpv71omwl1",
+            "multiValueSourceId": "c87ygb1l2b"
+          },
+          "position": {
+            "x": 77.5,
+            "y": 153
+          },
+          "group": "edges",
+          "removed": false,
+          "selected": false,
+          "selectable": true,
+          "locked": false,
+          "grabbable": true,
+          "pannable": true,
+          "classes": ""
+        },
+        {
+          "data": {
+            "id": "ouqetzikgs",
+            "source": "wpv71omwl1",
+            "target": "4a1i3k98dx"
           },
           "position": {
             "x": 0,
@@ -1783,7 +2455,7 @@
     }
   },
   "flowColor": "#E3F0FF",
-  "savedDate": 1779379639429,
+  "savedDate": 1779484501750,
   "variables": [],
   "forms": {
     "658b150f-da19-461e-afcb-79ea7bb52076": {
@@ -1900,6 +2572,102 @@
       "translationMethod": "TRANSLATE",
       "created": "2026-05-20T15:21:10.841Z",
       "modified": "2026-05-21T16:09:32.625Z",
+      "readOnly": false
+    },
+    "eddaf29b-84ba-4946-976f-3301986aecb0": {
+      "id": "eddaf29b-84ba-4946-976f-3301986aecb0",
+      "environment": {
+        "id": "300c4f2a-39d4-4ba9-a18a-f6de246006f4"
+      },
+      "name": "Automation - Polling with QR Code",
+      "category": "CUSTOM",
+      "components": {
+        "fields": [
+          {
+            "type": "SLATE_TEXTBLOB",
+            "position": {
+              "row": 0,
+              "col": 0
+            },
+            "content": "[{\"type\":\"align-center\",\"children\":[{\"children\":[{\"text\":\"Authenticator App\"}],\"type\":\"heading-1\"}]}]",
+            "key": "title-text",
+            "icon": {
+              "type": "MOBILE_PHONE",
+              "size": "MEDIUM"
+            }
+          },
+          {
+            "type": "SLATE_TEXTBLOB",
+            "position": {
+              "row": 1,
+              "col": 0
+            },
+            "content": "[{\"type\":\"align-center\",\"children\":[{\"children\":[{\"text\":\"\"}]},{\"children\":[{\"text\":\"Scan the QR code below to approve the challenge polling request.\"}]},{\"children\":[{\"text\":\"\"}]}]}]",
+            "key": "help-text",
+            "icon": {
+              "type": "NONE",
+              "size": "MEDIUM"
+            }
+          },
+          {
+            "type": "ERROR_DISPLAY",
+            "position": {
+              "row": 2,
+              "col": 0
+            }
+          },
+          {
+            "type": "QR_CODE",
+            "position": {
+              "row": 3,
+              "col": 0
+            },
+            "key": "qr-code-field",
+            "alignment": "CENTER",
+            "size": "MEDIUM",
+            "fallbackText": "[{\"type\":\"align-center\",\"children\":[{\"type\":\"paragraph\",\"children\":[{\"color\":\"#7d8389\",\"fontSize\":\"12px\",\"text\":\"\"}]}]}]"
+          },
+          {
+            "pollingAppearance": "SPINNER",
+            "size": "MEDIUM",
+            "type": "POLLING",
+            "position": {
+              "row": 4,
+              "col": 0
+            },
+            "key": "polling-field"
+          },
+          {
+            "type": "FLOW_LINK",
+            "position": {
+              "row": 5,
+              "col": 0
+            },
+            "key": "cancel-link-field",
+            "label": "[{\"type\":\"paragraph\",\"children\":[{\"text\":\"Cancel\"}]}]",
+            "styles": {
+              "alignment": "CENTER",
+              "textColor": "#4462ED",
+              "padding": {
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              },
+              "displayDefaultThemeLinkColor": true,
+              "enabled": true
+            }
+          }
+        ]
+      },
+      "cols": 4,
+      "markOptional": true,
+      "markRequired": false,
+      "textAutoCompleteEnabled": false,
+      "passwordAutoCompleteEnabled": false,
+      "translationMethod": "TRANSLATE",
+      "created": "2026-05-22T20:45:07.758Z",
+      "modified": "2026-05-22T21:31:23.794Z",
       "readOnly": false
     }
   },

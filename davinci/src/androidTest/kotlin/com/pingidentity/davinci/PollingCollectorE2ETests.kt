@@ -12,6 +12,7 @@ import com.pingidentity.davinci.collector.FlowCollector
 import com.pingidentity.davinci.collector.LabelCollector
 import com.pingidentity.davinci.collector.PollingCollector
 import com.pingidentity.davinci.collector.PollingStatus
+import com.pingidentity.davinci.collector.QRCodeCollector
 import com.pingidentity.davinci.collector.SubmitCollector
 import com.pingidentity.davinci.module.Oidc
 import com.pingidentity.davinci.module.name
@@ -31,6 +32,7 @@ import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 /**
@@ -236,6 +238,114 @@ class PollingCollectorE2ETests {
         val approvalJob = async(Dispatchers.IO) {
             delay(3000L)
             java.net.URL(magicLink).openStream().close()
+        }
+
+        approvalJob.await()
+        val statuses = pollJob.await()
+
+        assertTrue(statuses.isNotEmpty())
+        val lastStatus = statuses.last()
+        assertTrue(lastStatus is PollingStatus.Complete)
+        assertEquals("approved", (lastStatus as PollingStatus.Complete).status)
+        assertEquals("approved", pollingCollector.value)
+
+        node = withContext(Dispatchers.IO) { node.next() } as ContinueNode
+        assertEquals("Automation - Polling Message", node.name)
+        val approvedLabel = node.collectors.filterIsInstance<LabelCollector>()
+            .first { it.content == "Message: approved" }
+        assertEquals("Message: approved", approvedLabel.content)
+    }
+
+    // =========================================================================
+    // QR Code + Challenge-Status Polling
+    // =========================================================================
+
+    /**
+     * Decodes the URL encoded in a QR code Bitmap using ZXing.
+     */
+    private fun decodeQrBitmap(bitmap: android.graphics.Bitmap): String {
+        val pixels = IntArray(bitmap.width * bitmap.height)
+        bitmap.getPixels(pixels, 0, bitmap.width, 0, 0, bitmap.width, bitmap.height)
+        val source = com.google.zxing.RGBLuminanceSource(bitmap.width, bitmap.height, pixels)
+        val binaryBitmap = com.google.zxing.BinaryBitmap(com.google.zxing.common.HybridBinarizer(source))
+        return com.google.zxing.MultiFormatReader().decode(binaryBitmap).text
+    }
+
+    /**
+     * The "Challenge Polling QRCode" flow shows a QR_CODE field alongside a POLLING field.
+     * No approval is given; all retries exhaust → TimedOut → 400 ErrorNode.
+     * The test verifies QRCodeCollector properties before polling begins.
+     */
+    @Test
+    fun qrCodeChallengePollingTimeout() = runBlocking {
+        var node = withContext(Dispatchers.IO) { daVinci.start() } as ContinueNode
+        assertEquals("Select Test Form", node.name)
+        assertTrue(node.collectors[2] is FlowCollector)
+        assertEquals("Challenge Polling QRCode", (node.collectors[2] as FlowCollector).label)
+
+        (node.collectors[2] as FlowCollector).value = "click"
+        node = withContext(Dispatchers.IO) { node.next() } as ContinueNode
+
+        assertEquals("QRCode", node.name)
+
+        // Verify QRCodeCollector is present and well-formed
+        val qrCodeCollector = node.collectors.filterIsInstance<QRCodeCollector>().first()
+        assertTrue(qrCodeCollector.content.startsWith("data:image/"), "Expected a data URI, got: ${qrCodeCollector.content}")
+        assertTrue(qrCodeCollector.content.contains("base64,"), "Expected base64 encoding in data URI")
+        assertNotNull(qrCodeCollector.bitmap(), "bitmap() must decode successfully from a valid base64 data URI")
+
+        // Verify PollingCollector is present and configured for challenge-status polling
+        val pollingCollector = node.collectors.filterIsInstance<PollingCollector>().first()
+        assertTrue(pollingCollector.pollChallengeStatus)
+        assertEquals("2000", pollingCollector.pollInterval)
+        assertTrue(pollingCollector.challenge.isNotEmpty())
+
+        // Poll until all retries are exhausted — no OOB approval, so TimedOut is emitted last
+        val statuses = pollingCollector.pollStatus().toList()
+
+        assertTrue(statuses.isNotEmpty())
+        assertTrue(statuses.last() is PollingStatus.TimedOut)
+        assertEquals("timedOut", pollingCollector.value)
+
+        val result = withContext(Dispatchers.IO) { node.next() }
+        assertTrue(result is ErrorNode)
+        assertEquals("timedOut", (result as ErrorNode).message.trim())
+    }
+
+    /**
+     * Simulates scanning the QR code by decoding the URL from the QR bitmap (ZXing) and
+     * GETting it on a background thread while pollStatus() polls concurrently.
+     * The approval lands after a 3 s delay; the last status must be Complete("approved")
+     * and the flow must advance to "Automation - Polling Message".
+     */
+    @Test
+    fun qrCodeChallengePollingApproval() = runBlocking {
+        var node = withContext(Dispatchers.IO) { daVinci.start() } as ContinueNode
+        assertEquals("Select Test Form", node.name)
+        assertTrue(node.collectors[2] is FlowCollector)
+        assertEquals("Challenge Polling QRCode", (node.collectors[2] as FlowCollector).label)
+
+        (node.collectors[2] as FlowCollector).value = "click"
+        node = withContext(Dispatchers.IO) { node.next() } as ContinueNode
+
+        assertEquals("QRCode", node.name)
+
+        // Decode the approval URL from the QR code bitmap
+        val qrCodeCollector = node.collectors.filterIsInstance<QRCodeCollector>().first()
+        val bitmap = qrCodeCollector.bitmap()
+        assertNotNull(bitmap, "bitmap() must decode successfully")
+        val approvalUrl = decodeQrBitmap(bitmap!!)
+        assertTrue(approvalUrl.startsWith("https://"), "Expected an HTTPS URL in QR code, got: $approvalUrl")
+
+        val pollingCollector = node.collectors.filterIsInstance<PollingCollector>().first()
+        assertTrue(pollingCollector.pollChallengeStatus)
+        assertTrue(pollingCollector.challenge.isNotEmpty())
+
+        // Start polling concurrently; visit the approval URL after 3 s to land between poll cycles
+        val pollJob = async(Dispatchers.IO) { pollingCollector.pollStatus().toList() }
+        val approvalJob = async(Dispatchers.IO) {
+            delay(3000L)
+            java.net.URL(approvalUrl).openStream().close()
         }
 
         approvalJob.await()
