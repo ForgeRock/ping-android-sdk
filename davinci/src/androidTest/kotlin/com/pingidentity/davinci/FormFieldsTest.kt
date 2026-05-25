@@ -125,15 +125,15 @@ class FormFieldsTest {
         // No replacement tokens on this label
         assertTrue(richContent2.replacements.isEmpty())
 
-        // labelCollector3: translatable link — richText contains {{token}} placeholders and replacements map contains corresponding entries
         val richContent3 = labelCollector3.richContent
         assertNotNull(richContent3)
-        assertEquals("A translatable rich text to take the user to {{link1}}", richContent3.content)
+        assertEquals("A translatable rich text to take the user to {{link1}} and {{link2}}", richContent3.content)
         assertTrue(richContent3.replacements.containsKey("link1"))
-        val replacement = richContent3.replacements["link1"]
-        assertNotNull(replacement)
-        assertEquals("google.com", replacement.value)
-        assertEquals("https://www.google.com", replacement.href)
+        assertTrue(richContent3.replacements.containsKey("link2"))
+        assertEquals("google.com", richContent3.replacements["link1"]!!.value)
+        assertEquals("https://www.google.com", richContent3.replacements["link1"]!!.href)
+        assertEquals("apple.com", richContent3.replacements["link2"]!!.value)
+        assertEquals("https://www.apple.com", richContent3.replacements["link2"]!!.href)
     }
 
     @Test
@@ -164,6 +164,54 @@ class FormFieldsTest {
             }
         }
         // If no such label is present in the current form, the test is a no-op (no assertion failure)
+    }
+
+    // Verify that a LABEL with two links exposes both replacements with correct values/hrefs.
+    @Test
+    fun labelCollectorMultipleLinksTest() = runTest {
+        var node = daVinci.start() as ContinueNode
+        (node.collectors[0] as? SubmitCollector)?.value = "click"
+        node = node.next() as ContinueNode
+
+        val label = node.collectors[LABEL_RICH_TEXT_INDEX] as LabelCollector
+        val richContent = label.richContent
+        assertNotNull(richContent)
+
+        assertEquals(
+            "A translatable rich text to take the user to {{link1}} and {{link2}}",
+            richContent.content
+        )
+        assertEquals(2, richContent.replacements.size)
+
+        val link1 = richContent.replacements["link1"]
+        assertNotNull(link1)
+        assertEquals("google.com", link1.value)
+        assertEquals("https://www.google.com", link1.href)
+        assertEquals("link", link1.type)
+        assertEquals("_self", link1.target)
+
+        val link2 = richContent.replacements["link2"]
+        assertNotNull(link2)
+        assertEquals("apple.com", link2.value)
+        assertEquals("https://www.apple.com", link2.href)
+        assertEquals("link", link2.type)
+        assertEquals("_blank", link2.target)
+    }
+
+    // Verify mixed open-in-new-tab targets — link1 stays in the same context (_self),
+    // link2 requests a new tab (_blank). Both targets must be independently correct.
+    @Test
+    fun labelCollectorLinkTargetsTest() = runTest {
+        var node = daVinci.start() as ContinueNode
+        (node.collectors[0] as? SubmitCollector)?.value = "click"
+        node = node.next() as ContinueNode
+
+        val label = node.collectors[LABEL_RICH_TEXT_INDEX] as LabelCollector
+        val replacements = label.richContent?.replacements
+        assertNotNull(replacements)
+
+        assertEquals("_self",  replacements["link1"]?.target)
+        assertEquals("_blank", replacements["link2"]?.target)
     }
 
     @TestRailCase(26032, 26031)
