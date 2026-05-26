@@ -23,6 +23,9 @@ class AndroidLibraryConventionPlugin : Plugin<Project> {
             extensions.configure<LibraryExtension> {
                 configureKotlinAndroid(this)
                 namespace = "com.pingidentity.${project.name.replace("-", ".")}"
+                // bcprov-jdk18on 1.83+ contains Java 25 multi-release class files (major version 69).
+                // AGP's default JaCoCo 0.8.12 (ASM 9.7) cannot instrument them; 0.8.13 (ASM 9.8) can.
+                testCoverage { jacocoVersion = "0.8.13" }
                 publishing {
                     singleVariant("release") {
                         withSourcesJar()
