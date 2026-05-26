@@ -44,9 +44,6 @@ class JacocoPlugin : Plugin<Project> {
             plugins.run {
                 apply("jacoco")
             }
-            // JaCoCo 0.8.12 (bundled with Gradle 8.13) cannot instrument Java 25 multi-release JAR
-            // classes (e.g. bcprov-jdk18on:1.84). 0.8.13 adds Java 25 support.
-            jacoco.toolVersion = "0.8.13"
             jacocoAfterEvaluate()
         }
 

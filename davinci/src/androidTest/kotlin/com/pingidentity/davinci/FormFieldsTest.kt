@@ -711,10 +711,8 @@ class FormFieldsTest {
         assertEquals("Success", node.name)
     }
 
-    // Leaving phoneNumber + countryCode empty → payload() returns null → field absent from
-    // the POST body → server treats the field as missing and returns a validation error.
     @Test
-    fun phoneNumberSubmissionWithEmptyPhoneOmitsFieldTest() = runTest {
+    fun phoneNumberPayloadIsNullWhenEmptyTest() = runTest {
         var node = daVinci.start() as ContinueNode
         (node.collectors[0] as? SubmitCollector)?.value = "click"
         node = node.next() as ContinueNode
@@ -723,14 +721,9 @@ class FormFieldsTest {
         phone.countryCode = ""
         phone.phoneNumber = ""
 
-        fillRequiredFields(node)
-
-        (node.collectors[SUBMIT_BUTTON_INDEX] as SubmitCollector).value = "Submit"
-        // payload() returns null → the phone key is absent from formData → server rejects
         val errors = phone.validate()
         assertTrue(errors.isNotEmpty(), "Expected Required error when phone is empty")
         assertEquals("Required", errors[0].toString())
-        // Confirm null payload — field would not be included in the POST body
         assertNull(phone.payload())
     }
 

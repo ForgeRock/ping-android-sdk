@@ -7,7 +7,7 @@
 
 package com.pingidentity.davinci
 
-import androidx.test.filters.SmallTest
+import androidx.test.filters.LargeTest
 import com.pingidentity.davinci.collector.FlowCollector
 import com.pingidentity.davinci.collector.LabelCollector
 import com.pingidentity.davinci.collector.PollingCollector
@@ -21,9 +21,10 @@ import com.pingidentity.logger.Logger
 import com.pingidentity.logger.STANDARD
 import com.pingidentity.orchestrate.ContinueNode
 import com.pingidentity.orchestrate.ErrorNode
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
@@ -40,7 +41,7 @@ import kotlin.test.assertTrue
  *   - Simple polling (pollChallengeStatus=false, 3 retries, 2s interval)
  *   - Challenge-status polling (pollChallengeStatus=true, 2s interval)
  */
-@SmallTest
+@LargeTest
 class PollingCollectorE2ETests {
     private var daVinci = DaVinci {
         logger = Logger.STANDARD
@@ -206,9 +207,10 @@ class PollingCollectorE2ETests {
 
     /**
      * OOB approval is simulated by GETting the magic link (from the LabelCollector) on a
-     * background thread while pollStatus() polls concurrently. The approval is sent after a
-     * 3 s delay to land between poll cycles. The last emitted status must be Complete("approved")
-     * and the flow must advance to the "Automation - Polling Message" form.
+     * background thread while pollStatus() polls concurrently. The approval is sent once the
+     * first Continue status is received, guaranteeing the challenge is registered before the
+     * approval request is sent. The last emitted status must be Complete("approved") and the
+     * flow must advance to the "Automation - Polling Message" form.
      */
     @Test
     fun challengePollingApproval() = runBlocking {
@@ -233,11 +235,22 @@ class PollingCollectorE2ETests {
             .content.substringAfter("Number Challenge ").trim()
         assertTrue(magicLink.startsWith("https://"), "Expected a magic link URL, got: $magicLink")
 
-        // Start polling, then visit the magic link after 3 s so it lands between poll cycles
-        val pollJob = async(Dispatchers.IO) { pollingCollector.pollStatus().toList() }
+        // Fire approval only after the first Continue status is received, guaranteeing the
+        // challenge is registered server-side before the approval request is sent.
+        val firstContinueSeen = CompletableDeferred<Unit>()
+        val pollJob = async(Dispatchers.IO) {
+            pollingCollector.pollStatus()
+                .onEach { if (it is PollingStatus.Continue && !firstContinueSeen.isCompleted) firstContinueSeen.complete(Unit) }
+                .toList()
+        }
         val approvalJob = async(Dispatchers.IO) {
-            delay(3000L)
-            java.net.URL(magicLink).openStream().close()
+            firstContinueSeen.await()
+            (java.net.URL(magicLink).openConnection() as java.net.HttpURLConnection).apply {
+                connectTimeout = 10_000
+                readTimeout = 10_000
+                connect()
+                disconnect()
+            }
         }
 
         approvalJob.await()
@@ -314,9 +327,9 @@ class PollingCollectorE2ETests {
 
     /**
      * Simulates scanning the QR code by decoding the URL from the QR bitmap (ZXing) and
-     * GETting it on a background thread while pollStatus() polls concurrently.
-     * The approval lands after a 3 s delay; the last status must be Complete("approved")
-     * and the flow must advance to "Automation - Polling Message".
+     * GETting it on a background thread while pollStatus() polls concurrently. The approval
+     * is sent once the first Continue status is received; the last status must be
+     * Complete("approved") and the flow must advance to "Automation - Polling Message".
      */
     @Test
     fun qrCodeChallengePollingApproval() = runBlocking {
@@ -341,11 +354,22 @@ class PollingCollectorE2ETests {
         assertTrue(pollingCollector.pollChallengeStatus)
         assertTrue(pollingCollector.challenge.isNotEmpty())
 
-        // Start polling concurrently; visit the approval URL after 3 s to land between poll cycles
-        val pollJob = async(Dispatchers.IO) { pollingCollector.pollStatus().toList() }
+        // Fire approval only after the first Continue status is received, guaranteeing the
+        // challenge is registered server-side before the approval request is sent.
+        val firstContinueSeen = CompletableDeferred<Unit>()
+        val pollJob = async(Dispatchers.IO) {
+            pollingCollector.pollStatus()
+                .onEach { if (it is PollingStatus.Continue && !firstContinueSeen.isCompleted) firstContinueSeen.complete(Unit) }
+                .toList()
+        }
         val approvalJob = async(Dispatchers.IO) {
-            delay(3000L)
-            java.net.URL(approvalUrl).openStream().close()
+            firstContinueSeen.await()
+            (java.net.URL(approvalUrl).openConnection() as java.net.HttpURLConnection).apply {
+                connectTimeout = 10_000
+                readTimeout = 10_000
+                connect()
+                disconnect()
+            }
         }
 
         approvalJob.await()

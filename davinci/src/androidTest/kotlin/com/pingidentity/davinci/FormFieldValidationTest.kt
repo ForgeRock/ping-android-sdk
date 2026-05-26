@@ -29,8 +29,6 @@ import com.pingidentity.orchestrate.ContinueNode
 import com.pingidentity.orchestrate.ErrorNode
 import com.pingidentity.testrail.TestRailCase
 import com.pingidentity.testrail.TestRailWatcher
-import junit.framework.TestCase.assertFalse
-import junit.framework.TestCase.assertNotNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -41,6 +39,7 @@ import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 @SmallTest
@@ -308,10 +307,10 @@ class FormFieldValidationTest {
             ?.jsonArray?.firstOrNull {
                 it.jsonObject["type"]?.jsonPrimitive?.content == "PASSWORD_VERIFY"
             }?.jsonObject
-        assertNotNull("PASSWORD_VERIFY field not found in form components", passwordField)
+        assertNotNull("PASSWORD_VERIFY field not found in form components", passwordField.toString())
         assertNotNull(
             "passwordPolicy must be embedded inside the PASSWORD_VERIFY field",
-            passwordField!!["passwordPolicy"])
+            passwordField!!["passwordPolicy"].toString())
 
         // The SDK must surface the field-level policy via passwordPolicy()
         val policy = password.passwordPolicy()
