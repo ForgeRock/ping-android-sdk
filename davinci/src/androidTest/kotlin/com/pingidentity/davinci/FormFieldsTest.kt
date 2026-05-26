@@ -13,6 +13,7 @@ import com.pingidentity.davinci.collector.LabelCollector
 import com.pingidentity.davinci.collector.MultiSelectCollector
 import com.pingidentity.davinci.collector.PhoneNumberCollector
 import com.pingidentity.davinci.collector.BooleanCollector
+import com.pingidentity.davinci.collector.ReadOnlyTextCollector
 import com.pingidentity.davinci.collector.SingleSelectCollector
 import com.pingidentity.davinci.collector.SubmitCollector
 import com.pingidentity.davinci.collector.TextCollector
@@ -55,6 +56,9 @@ class FormFieldsTest {
         const val FLOW_BUTTON_INDEX = 10
         const val FLOW_LINK_INDEX = 11
         const val SUBMIT_BUTTON_INDEX = 12
+
+        // Agreement Test form (separate flow branch)
+        const val AGREEMENT_TEST_BUTTON_INDEX = 2  // "Agreement Test" flow button on the menu form
     }
 
     private var daVinci = DaVinci {
@@ -588,6 +592,60 @@ class FormFieldsTest {
         singleCheckbox.value = true
         val validationResult = singleCheckbox.validate() // Should return empty list since it's valid
         assertTrue(validationResult.isEmpty())
+    }
+
+    @Test
+    fun agreementCollectorTest() = runTest {
+        // Navigate to the "Agreement Test" form via the menu
+        var node = daVinci.start() as ContinueNode
+        val agreementButton = node.collectors[AGREEMENT_TEST_BUTTON_INDEX] as FlowCollector
+        agreementButton.value = "click"
+        node = node.next() as ContinueNode
+
+        // Form: "Automation - Agreement Tests"
+        assertEquals("Automation - Agreement Tests", node.name)
+
+        val agreement = node.collectors.filterIsInstance<ReadOnlyTextCollector>().first()
+        val checkbox  = node.collectors.filterIsInstance<BooleanCollector>().first()
+        val submit    = node.collectors.filterIsInstance<SubmitCollector>().first()
+
+        // ReadOnlyTextCollector properties
+        assertEquals("agreement", agreement.key)
+        assertEquals("AGREEMENT", agreement.type)
+        assertEquals("Terms of Service Agreement", agreement.title)
+        assertEquals(true, agreement.titleEnabled)
+        assertEquals(true, agreement.enabled)
+        assertEquals(false, agreement.useDynamicAgreement)
+        assertTrue(agreement.content.isNotEmpty())
+
+        // BooleanCollector properties
+        assertEquals("agreement-checkbox", checkbox.key)
+        assertEquals("I have read and agree to terms", checkbox.label)
+        assertEquals(true, checkbox.required)
+        assertEquals("You must agree to the terms to continue.", checkbox.errorMessage)
+
+        // richContent link inside the checkbox label
+        val richContent = checkbox.richContent
+        assertNotNull(richContent)
+        assertEquals("I have read and agree to {{link1}}", richContent.content)
+        val link1 = richContent.replacements["link1"]
+        assertNotNull(link1)
+        assertEquals("terms", link1.value)
+        assertEquals("https://www.pingidentity.com/en/legal/product-terms.html", link1.href)
+        assertEquals("_self", link1.target)
+
+        // Unchecked → validate() must return an error; submission is blocked
+        assertEquals(false, checkbox.value)
+        assertTrue(checkbox.validate().isNotEmpty())
+
+        // Checking the box clears the error
+        checkbox.value = true
+        assertTrue(checkbox.validate().isEmpty())
+
+        // Submit with checkbox checked → flow advances
+        submit.value = "Accept"
+        node = node.next() as ContinueNode
+        assertEquals("Select Test Form", node.name)
     }
 
     @TestRailCase(26033)

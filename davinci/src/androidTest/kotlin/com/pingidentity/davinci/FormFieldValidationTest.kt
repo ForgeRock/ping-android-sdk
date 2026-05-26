@@ -325,7 +325,7 @@ class FormFieldValidationTest {
     fun errorNodeTest() = runTest {
         // Go to the "Error Node" form
         val node = daVinci.start() as ContinueNode
-        (node.collectors[2] as? FlowCollector)?.value = "click"
+        (node.collectors[3] as? FlowCollector)?.value = "click"
         val errorNode = node.next()
         assertTrue(errorNode is ErrorNode)
 
