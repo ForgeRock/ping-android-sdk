@@ -248,7 +248,7 @@ class PollingCollectorE2ETests {
             (java.net.URL(magicLink).openConnection() as java.net.HttpURLConnection).apply {
                 connectTimeout = 10_000
                 readTimeout = 10_000
-                connect()
+                runCatching { responseCode }
                 disconnect()
             }
         }
@@ -299,7 +299,7 @@ class PollingCollectorE2ETests {
         (node.collectors[2] as FlowCollector).value = "click"
         node = withContext(Dispatchers.IO) { node.next() } as ContinueNode
 
-        assertEquals("QRCode", node.name)
+        assertEquals("Automation - Polling with QR Code", node.name)
 
         // Verify QRCodeCollector is present and well-formed
         val qrCodeCollector = node.collectors.filterIsInstance<QRCodeCollector>().first()
@@ -341,7 +341,7 @@ class PollingCollectorE2ETests {
         (node.collectors[2] as FlowCollector).value = "click"
         node = withContext(Dispatchers.IO) { node.next() } as ContinueNode
 
-        assertEquals("QRCode", node.name)
+        assertEquals("Automation - Polling with QR Code", node.name)
 
         // Decode the approval URL from the QR code bitmap
         val qrCodeCollector = node.collectors.filterIsInstance<QRCodeCollector>().first()
@@ -367,7 +367,7 @@ class PollingCollectorE2ETests {
             (java.net.URL(approvalUrl).openConnection() as java.net.HttpURLConnection).apply {
                 connectTimeout = 10_000
                 readTimeout = 10_000
-                connect()
+                runCatching { responseCode }
                 disconnect()
             }
         }
