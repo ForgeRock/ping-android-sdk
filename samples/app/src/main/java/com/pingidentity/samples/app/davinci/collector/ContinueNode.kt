@@ -1,11 +1,11 @@
 /*
- * Copyright (c) 2026 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2024 - 2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
  */
 
-package com.pingidentity.samples.pingsampleapp.davinci.collector
+package com.pingidentity.samples.app.davinci.collector
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -47,7 +47,7 @@ import com.pingidentity.orchestrate.ContinueNode
 import com.pingidentity.protect.davinci.ProtectCollector
 
 @Composable
-fun DaVinciContinueNode(
+fun ContinueNode(
     continueNode: ContinueNode,
     onNodeUpdated: () -> Unit,
     onStart: () -> Unit,
@@ -124,10 +124,10 @@ fun DaVinciContinueNode(
                 is FidoAuthenticationCollector -> FidoAuthentication(it, onStart, onNext)
                 is PhoneNumberCollector -> PhoneNumber(it, onNodeUpdated)
                 is ProtectCollector -> Protect(it, onNodeUpdated)
+                is BooleanCollector -> SingleCheckbox(it, onNodeUpdated)
                 is PollingCollector -> Polling(it, onNext)
                 is QRCodeCollector -> QRCode(it)
 
-                is BooleanCollector -> SingleCheckbox(it, onNodeUpdated)
             }
             if (it is Submittable) {
                 hasAction = true

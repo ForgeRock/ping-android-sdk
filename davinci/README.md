@@ -119,7 +119,7 @@ when (node) {
 For a `ContinueNode`, you can access the list of collectors using `node.collectors()` and provide input to the desired
 `Collector`.
 Currently, the available collectors include `TextCollector`, `PasswordCollector`, `SubmitCollector`, `FlowCollector`,
-`LabelCollector`, `MultiSelectCollector`, `SingleSelectCollector`, `AgreementCollector`. Additional collectors, such as `Fido` and
+`LabelCollector`, `MultiSelectCollector`, `SingleSelectCollector`, `ReadOnlyTextCollector`. Additional collectors, such as `Fido` and
 `IdpCollector`, will be added in the future.
 
 To access the collectors, you can use the following code:

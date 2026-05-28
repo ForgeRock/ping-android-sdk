@@ -7,7 +7,7 @@
 
 package com.pingidentity.davinci
 
-import com.pingidentity.davinci.collector.AgreementCollector
+import com.pingidentity.davinci.collector.ReadOnlyTextCollector
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -17,7 +17,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
-class AgreementCollectorTest {
+class ReadOnlyTextCollectorTest {
 
     // Full JSON as returned by the DaVinci server
     private fun buildFullAgreementJson(): JsonObject = buildJsonObject {
@@ -36,19 +36,19 @@ class AgreementCollectorTest {
 
     @Test
     fun initializesKeyFromJson() {
-        val collector = AgreementCollector().apply { init(buildFullAgreementJson()) }
+        val collector = ReadOnlyTextCollector().apply { init(buildFullAgreementJson()) }
         assertEquals("agreement", collector.key)
     }
 
     @Test
     fun initializesTypeFromJson() {
-        val collector = AgreementCollector().apply { init(buildFullAgreementJson()) }
+        val collector = ReadOnlyTextCollector().apply { init(buildFullAgreementJson()) }
         assertEquals("AGREEMENT", collector.type)
     }
 
     @Test
     fun initializesContentFromJson() {
-        val collector = AgreementCollector().apply { init(buildFullAgreementJson()) }
+        val collector = ReadOnlyTextCollector().apply { init(buildFullAgreementJson()) }
         assertEquals(
             "This is example agreement text, you can edit this text in the agreements section.",
             collector.content
@@ -57,43 +57,43 @@ class AgreementCollectorTest {
 
     @Test
     fun initializesTitleFromJson() {
-        val collector = AgreementCollector().apply { init(buildFullAgreementJson()) }
+        val collector = ReadOnlyTextCollector().apply { init(buildFullAgreementJson()) }
         assertEquals("Terms of Service Agreement", collector.title)
     }
 
     @Test
     fun initializesTitleEnabledFromJson() {
-        val collector = AgreementCollector().apply { init(buildFullAgreementJson()) }
+        val collector = ReadOnlyTextCollector().apply { init(buildFullAgreementJson()) }
         assertTrue(collector.titleEnabled)
     }
 
     @Test
     fun initializesEnabledFromJson() {
-        val collector = AgreementCollector().apply { init(buildFullAgreementJson()) }
+        val collector = ReadOnlyTextCollector().apply { init(buildFullAgreementJson()) }
         assertTrue(collector.enabled)
     }
 
     @Test
     fun initializesAgreementIdFromJson() {
-        val collector = AgreementCollector().apply { init(buildFullAgreementJson()) }
+        val collector = ReadOnlyTextCollector().apply { init(buildFullAgreementJson()) }
         assertEquals("6ff30c9e-cd98-4fe5-85ca-01111ca20702", collector.agreementId)
     }
 
     @Test
     fun initializesUseDynamicAgreementFromJson() {
-        val collector = AgreementCollector().apply { init(buildFullAgreementJson()) }
+        val collector = ReadOnlyTextCollector().apply { init(buildFullAgreementJson()) }
         assertFalse(collector.useDynamicAgreement)
     }
 
     @Test
     fun idReturnsKey() {
-        val collector = AgreementCollector().apply { init(buildFullAgreementJson()) }
+        val collector = ReadOnlyTextCollector().apply { init(buildFullAgreementJson()) }
         assertEquals("agreement", collector.id())
     }
 
     @Test
     fun initializesWithDefaultsWhenJsonIsEmpty() {
-        val collector = AgreementCollector().apply { init(JsonObject(emptyMap())) }
+        val collector = ReadOnlyTextCollector().apply { init(JsonObject(emptyMap())) }
         assertEquals("", collector.key)
         assertEquals("", collector.type)
         assertEquals("", collector.content)
@@ -107,9 +107,8 @@ class AgreementCollectorTest {
     @Test
     fun titleEnabledFalseWhenNotProvided() {
         val input = buildJsonObject { put("key", "agreement") }
-        val collector = AgreementCollector().apply { init(input) }
+        val collector = ReadOnlyTextCollector().apply { init(input) }
         assertFalse(collector.titleEnabled)
     }
 
 }
-
