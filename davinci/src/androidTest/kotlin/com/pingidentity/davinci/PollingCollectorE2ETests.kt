@@ -29,6 +29,7 @@ import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -82,8 +83,8 @@ class PollingCollectorE2ETests {
         assertEquals("Automation - Polling", node.name)
         val pollingCollector = node.collectors.filterIsInstance<PollingCollector>().first()
         assertFalse(pollingCollector.pollChallengeStatus)
-        assertEquals("2000", pollingCollector.pollInterval)
-        assertEquals("3", pollingCollector.pollRetries)
+        assertEquals(2000, pollingCollector.pollInterval.toInt())
+        assertEquals(3, pollingCollector.pollRetries.toInt())
         assertEquals(3, pollingCollector.retriesAllowed)
 
         // Cycle 1 — retriesAllowed 3→2, emits Complete("continue"); server rewinds to same form
@@ -165,20 +166,20 @@ class PollingCollectorE2ETests {
      * The final submit returns a 400 ErrorNode with message "timedOut".
      */
     @Test
-    fun challengePollingTimeout() = runBlocking {
-        var node = withContext(Dispatchers.IO) { daVinci.start() } as ContinueNode
+    fun challengePollingTimeout() = runTest {
+        var node = daVinci.start() as ContinueNode
         assertEquals("Select Test Form", node.name)
         assertTrue(node.collectors[1] is FlowCollector)
         assertEquals("Challenge Polling", (node.collectors[1] as FlowCollector).label)
 
         (node.collectors[1] as FlowCollector).value = "click"
-        node = withContext(Dispatchers.IO) { node.next() } as ContinueNode
+        node = node.next() as ContinueNode
 
         assertEquals("Automation - Polling", node.name)
         val pollingCollector = node.collectors.filterIsInstance<PollingCollector>().first()
         assertTrue(pollingCollector.pollChallengeStatus)
-        assertEquals("2000", pollingCollector.pollInterval)
-        assertEquals("3", pollingCollector.pollRetries)
+        assertEquals(2000, pollingCollector.pollInterval.toInt())
+        assertEquals(3, pollingCollector.pollRetries.toInt())
         assertTrue(pollingCollector.challenge.isNotEmpty())
 
         val statuses = pollingCollector.pollStatus().toList()
@@ -200,7 +201,7 @@ class PollingCollectorE2ETests {
         assertTrue(statuses[3] is PollingStatus.TimedOut)
         assertEquals("timedOut", pollingCollector.value)
 
-        val result = withContext(Dispatchers.IO) { node.next() }
+        val result = node.next()
         assertTrue(result is ErrorNode)
         assertEquals("timedOut", (result as ErrorNode).message.trim())
     }
@@ -211,6 +212,11 @@ class PollingCollectorE2ETests {
      * first Continue status is received, guaranteeing the challenge is registered before the
      * approval request is sent. The last emitted status must be Complete("approved") and the
      * flow must advance to the "Automation - Polling Message" form.
+     *
+     * runBlocking is intentional: the test launches two concurrent real-IO coroutines (poll
+     * loop + OOB approval) that must interleave against a live server. runTest's virtual-time
+     * scheduler would auto-advance delays inside pollStatus(), causing the approval request to
+     * race ahead of the challenge registration and producing non-deterministic failures.
      */
     @Test
     fun challengePollingApproval() = runBlocking {
@@ -244,7 +250,7 @@ class PollingCollectorE2ETests {
                 .toList()
         }
         val approvalJob = async(Dispatchers.IO) {
-            firstContinueSeen.await()
+            withTimeoutOrNull(30_000) { firstContinueSeen.await() } ?: return@async
             (java.net.URL(magicLink).openConnection() as java.net.HttpURLConnection).apply {
                 connectTimeout = 10_000
                 readTimeout = 10_000
@@ -290,14 +296,14 @@ class PollingCollectorE2ETests {
      * The test verifies QRCodeCollector properties before polling begins.
      */
     @Test
-    fun qrCodeChallengePollingTimeout() = runBlocking {
-        var node = withContext(Dispatchers.IO) { daVinci.start() } as ContinueNode
+    fun qrCodeChallengePollingTimeout() = runTest {
+        var node = daVinci.start() as ContinueNode
         assertEquals("Select Test Form", node.name)
         assertTrue(node.collectors[2] is FlowCollector)
         assertEquals("Challenge Polling QRCode", (node.collectors[2] as FlowCollector).label)
 
         (node.collectors[2] as FlowCollector).value = "click"
-        node = withContext(Dispatchers.IO) { node.next() } as ContinueNode
+        node = node.next() as ContinueNode
 
         assertEquals("Automation - Polling with QR Code", node.name)
 
@@ -310,7 +316,7 @@ class PollingCollectorE2ETests {
         // Verify PollingCollector is present and configured for challenge-status polling
         val pollingCollector = node.collectors.filterIsInstance<PollingCollector>().first()
         assertTrue(pollingCollector.pollChallengeStatus)
-        assertEquals("2000", pollingCollector.pollInterval)
+        assertEquals(2000, pollingCollector.pollInterval.toInt())
         assertTrue(pollingCollector.challenge.isNotEmpty())
 
         // Poll until all retries are exhausted — no OOB approval, so TimedOut is emitted last
@@ -320,7 +326,7 @@ class PollingCollectorE2ETests {
         assertTrue(statuses.last() is PollingStatus.TimedOut)
         assertEquals("timedOut", pollingCollector.value)
 
-        val result = withContext(Dispatchers.IO) { node.next() }
+        val result = node.next()
         assertTrue(result is ErrorNode)
         assertEquals("timedOut", (result as ErrorNode).message.trim())
     }
@@ -330,6 +336,11 @@ class PollingCollectorE2ETests {
      * GETting it on a background thread while pollStatus() polls concurrently. The approval
      * is sent once the first Continue status is received; the last status must be
      * Complete("approved") and the flow must advance to "Automation - Polling Message".
+     *
+     * runBlocking is intentional: the test launches two concurrent real-IO coroutines (poll
+     * loop + OOB approval) that must interleave against a live server. runTest's virtual-time
+     * scheduler would auto-advance delays inside pollStatus(), causing the approval request to
+     * race ahead of the challenge registration and producing non-deterministic failures.
      */
     @Test
     fun qrCodeChallengePollingApproval() = runBlocking {
@@ -363,7 +374,7 @@ class PollingCollectorE2ETests {
                 .toList()
         }
         val approvalJob = async(Dispatchers.IO) {
-            firstContinueSeen.await()
+            withTimeoutOrNull(30_000) { firstContinueSeen.await() } ?: return@async
             (java.net.URL(approvalUrl).openConnection() as java.net.HttpURLConnection).apply {
                 connectTimeout = 10_000
                 readTimeout = 10_000

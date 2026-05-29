@@ -307,10 +307,8 @@ class FormFieldValidationTest {
             ?.jsonArray?.firstOrNull {
                 it.jsonObject["type"]?.jsonPrimitive?.content == "PASSWORD_VERIFY"
             }?.jsonObject
-        assertNotNull("PASSWORD_VERIFY field not found in form components", passwordField.toString())
-        assertNotNull(
-            "passwordPolicy must be embedded inside the PASSWORD_VERIFY field",
-            passwordField!!["passwordPolicy"].toString())
+        assertNotNull(passwordField, "PASSWORD_VERIFY field not found in form components")
+        assertNotNull(passwordField!!["passwordPolicy"], "passwordPolicy must be embedded inside the PASSWORD_VERIFY field")
 
         // The SDK must surface the field-level policy via passwordPolicy()
         val policy = password.passwordPolicy()

@@ -60,5 +60,5 @@ dependencies {
     androidTestImplementation(libs.androidx.test.runner)
     androidTestImplementation(project(":foundation:testrail"))
     androidTestImplementation(project(":protect"))
-    androidTestImplementation("com.google.zxing:core:3.5.3")
+    androidTestImplementation(libs.zxing.core)
 }
