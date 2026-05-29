@@ -404,6 +404,21 @@ class EnvViewModel : ViewModel() {
         viewModelScope.launch(Dispatchers.IO) { persistCustomWebConfigs(customWebConfigs) }
     }
 
+    fun duplicateJourneyConfig(config: JourneyConfigState) {
+        customJourneyConfigs = customJourneyConfigs + config.copy(display = "Copy of ${config.display}")
+        viewModelScope.launch(Dispatchers.IO) { persistCustomJourneyConfigs(customJourneyConfigs) }
+    }
+
+    fun duplicateDaVinciConfig(config: OidcConfigState) {
+        customDaVinciConfigs = customDaVinciConfigs + config.copy(display = "Copy of ${config.display}")
+        viewModelScope.launch(Dispatchers.IO) { persistCustomDaVinciConfigs(customDaVinciConfigs) }
+    }
+
+    fun duplicateWebConfig(config: OidcConfigState) {
+        customWebConfigs = customWebConfigs + config.copy(display = "Copy of ${config.display}")
+        viewModelScope.launch(Dispatchers.IO) { persistCustomWebConfigs(customWebConfigs) }
+    }
+
     // -- SDK instance builders (delegate to package-level functions) ---------
 
     private fun buildJourneyInstance(config: JourneyConfigState) = buildJourney(config)
