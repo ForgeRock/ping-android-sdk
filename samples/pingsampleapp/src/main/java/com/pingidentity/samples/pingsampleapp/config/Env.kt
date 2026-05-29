@@ -404,6 +404,7 @@ private fun ConfigRow(
             .fillMaxWidth()
             .combinedClickable(
                 onClick = onTap,
+                onLongClickLabel = "Show actions",
                 onLongClick = { menuExpanded = true },
             )
             .padding(vertical = 4.dp),
