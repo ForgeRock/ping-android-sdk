@@ -7,15 +7,17 @@
 
 package com.pingidentity.pingonemfa.push
 
-//noinspection SuspiciousImport
 import android.R
+import android.annotation.SuppressLint
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
 import android.content.Intent
+import android.content.pm.ServiceInfo
 import android.os.Build
 import androidx.core.app.NotificationCompat
+import androidx.core.app.ServiceCompat
 import com.pingidentity.logger.Logger
 import com.pingidentity.pingidsdkv2.types.DenyReason
 import kotlinx.coroutines.CoroutineDispatcher
@@ -41,8 +43,20 @@ internal class PushApprovalService(
 
     override fun onBind(p0: Intent?) = null
 
+    @SuppressLint("InlinedApi")
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        startForeground(NOTIFICATION_ID, createForegroundNotification())
+        /*
+         * Use ServiceCompat.startForeground to supply the foreground service type at runtime.
+         * On API 34+ the 2-arg startForeground() throws MissingForegroundServiceTypeException
+         * unless the type matches the manifest declaration; ServiceCompat handles the version
+         * branching internally so we don't need a Build.VERSION check here.
+         */
+        ServiceCompat.startForeground(
+            this,
+            NOTIFICATION_ID,
+            createForegroundNotification(),
+            ServiceInfo.FOREGROUND_SERVICE_TYPE_REMOTE_MESSAGING
+        )
 
         val notificationObject =
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {

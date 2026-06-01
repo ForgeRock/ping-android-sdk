@@ -1,3 +1,10 @@
+/*
+ * Copyright (c) 2026 Ping Identity Corporation. All rights reserved.
+ *
+ * This software may be modified and distributed under the terms
+ * of the MIT license. See the LICENSE file for details.
+ */
+
 package com.pingidentity.pingonemfa.push
 
 import android.content.Context
@@ -9,7 +16,6 @@ import com.pingidentity.pingonemfa.commons.PingOneMFAException
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
-import org.junit.Assert.assertTrue
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -150,7 +156,7 @@ class PushNotificationTest {
             title = "t",
             message = "m"
             )
-        assertTrue(notificationObject.numberMatchingOptions == null || notificationObject.numberMatchingOptions.isEmpty())
+        assertTrue(push.notificationObject.numberMatchingOptions == null || push.notificationObject.numberMatchingOptions.isEmpty())
     }
 
     @Test

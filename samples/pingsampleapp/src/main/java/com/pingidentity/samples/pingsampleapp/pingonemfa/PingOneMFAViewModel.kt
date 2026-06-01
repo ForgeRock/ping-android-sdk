@@ -106,10 +106,13 @@ class PingOneMFAViewModel : ViewModel() {
     private fun startOtpCountdown() {
         otpCountdownJob?.cancel()
         otpCountdownJob = viewModelScope.launch {
-            while (_state.value.otpSecondsRemaining > 0) {
+            // Tick down one second at a time. If the code is already at 0 when this
+            // function is called (e.g. the server returned an already-expired OTP), we
+            // still wait at least one tick before re-fetching to avoid a tight loop.
+            do {
                 delay(1_000)
-                _state.update { it.copy(otpSecondsRemaining = it.otpSecondsRemaining - 1) }
-            }
+                _state.update { it.copy(otpSecondsRemaining = maxOf(0, it.otpSecondsRemaining - 1)) }
+            } while (_state.value.otpSecondsRemaining > 0)
             collectOtp()
         }
     }
