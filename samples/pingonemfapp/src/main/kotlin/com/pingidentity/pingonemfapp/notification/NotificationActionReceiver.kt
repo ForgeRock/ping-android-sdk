@@ -27,7 +27,6 @@ class NotificationActionReceiver : BroadcastReceiver() {
         const val ACTION_APPROVE = "com.pingidentity.pingonemfapp.ACTION_APPROVE"
         const val ACTION_DENY = "com.pingidentity.pingonemfapp.ACTION_DENY"
         const val ACTION_BIOMETRIC = "com.pingidentity.pingonemfapp.ACTION_BIOMETRIC"
-        const val EXTRA_NOTIFICATION_ID = "notification_id"
 
         const val EXTRA_NOTIFICATION = "com.pingidentity.pingonemfapp.notification"
     }
@@ -36,24 +35,25 @@ class NotificationActionReceiver : BroadcastReceiver() {
         val notification = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             intent.getParcelableExtra(EXTRA_NOTIFICATION, PushNotification::class.java)
         } else {
+            @Suppress("DEPRECATION") // Suppress deprecation warning for backward compatibility
             intent.getParcelableExtra(EXTRA_NOTIFICATION)
-        }
-        val notificationId = intent.getStringExtra(EXTRA_NOTIFICATION_ID) ?: return
-        val notificationHashCode = notificationId.hashCode()
+        } ?: return
+
+        val notificationHashCode = notification.id.hashCode()
         // Cancel the notification immediately to provide feedback that the action was received
         NotificationManagerCompat.from(context).cancel(notificationHashCode)
         
         when (intent.action) {
             ACTION_APPROVE -> {
-                diagnosticLogger.d("Approve action received for notification: $notificationId")
+                diagnosticLogger.d("Approve action received for notification: ${notification.id}")
                 PingOneMFA.approvePushNotificationFromBanner(notification = notification)
             }
             ACTION_DENY -> {
-                diagnosticLogger.d("Deny action received for notification: $notificationId")
+                diagnosticLogger.d("Deny action received for notification: ${notification.id}")
                 PingOneMFA.denyPushNotificationFromBanner(notification = notification)
             }
             ACTION_BIOMETRIC -> {
-                diagnosticLogger.d("Biometric action received for notification: $notificationId")
+                diagnosticLogger.d("Biometric action received for notification: ${notification.id}")
                 handleBiometricAuthentication(context, notification)
             }
         }
@@ -63,10 +63,9 @@ class NotificationActionReceiver : BroadcastReceiver() {
      * Handles biometric authentication for the notification with the given ID.
      * This launches the BiometricPrompt activity.
      */
-    private fun handleBiometricAuthentication(context: Context, notification: PushNotification?) {
+    private fun handleBiometricAuthentication(context: Context, notification: PushNotification) {
         val intent = Intent(context, BiometricPromptActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK
-            putExtra(EXTRA_NOTIFICATION_ID, notification?.id)
             putExtra(EXTRA_NOTIFICATION, notification)
         }
         context.startActivity(intent)

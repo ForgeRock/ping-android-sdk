@@ -27,7 +27,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import com.pingidentity.pingonemfapp.data.DiagnosticLogger
-import com.pingidentity.pingonemfapp.notification.NotificationActionReceiver.Companion.EXTRA_NOTIFICATION_ID
 import com.pingidentity.pingonemfapp.ui.NotificationResponseScreen
 import com.pingidentity.pingonemfapp.ui.theme.PingIdentityAuthenticatorTheme
 import com.pingidentity.pingonemfa.push.PushNotification
@@ -46,17 +45,15 @@ class PushNotificationActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        
-        // Get notification ID from intent
-        val notificationId = intent?.getStringExtra(EXTRA_NOTIFICATION_ID)
 
         val notification = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             intent?.getParcelableExtra(EXTRA_NOTIFICATION, PushNotification::class.java)
         } else {
+            @Suppress("DEPRECATION") // Suppress deprecation warning for backward compatibility
             intent?.getParcelableExtra(EXTRA_NOTIFICATION)
         }
-        // If no notification ID, log and finish
-        if (notificationId == null) {
+        // If no notification, log and finish
+        if (notification == null) {
             diagnosticLogger.w("No notification ID provided")
             finish()
             return
@@ -111,31 +108,31 @@ class PushNotificationActivity : ComponentActivity() {
                                 onDismiss = { finish() },
                                 onApprove = {
                                     coroutineScope.launch {
-                                        val result = notification?.approveNotification(
+                                        val result = notification.approveNotification(
                                             context,
                                             "user"
                                         )
                                         when {
-                                            result?.isSuccess == true -> {
+                                            result.isSuccess -> {
                                                 finish()
                                             }
-                                            result?.isFailure == true -> {
+                                            result.isFailure -> {
                                                 diagnosticLogger.e("Error approving with challenge: ${result.exceptionOrNull()?.stackTrace}")
                                             }
                                         }
                                     }
                                 },
                                 onBiometricApprove = {
-                                    launchBiometricPrompt(notificationId, notification)
+                                    launchBiometricPrompt(notification)
                                 },
                                 onDeny = {
                                     coroutineScope.launch {
-                                        val result = notification?.denyNotification(context)
+                                        val result = notification.denyNotification(context)
                                         when {
-                                            result?.isSuccess == true -> {
+                                            result.isSuccess -> {
                                                 finish()
                                             }
-                                            result?.isFailure == true -> {
+                                            result.isFailure -> {
                                                 diagnosticLogger.e("Error approving with challenge: ${result.exceptionOrNull()?.stackTrace}")
                                             }
                                         }
@@ -143,16 +140,16 @@ class PushNotificationActivity : ComponentActivity() {
                                 },
                                 onChallengeSolution = { solution ->
                                     coroutineScope.launch {
-                                        val result = notification?.approveNotification(
-                                                context,
-                                                "user",
-                                                solution.toInt()
+                                        val result = notification.approveNotification(
+                                            context,
+                                            "user",
+                                            solution.toInt()
                                         )
                                         when {
-                                            result?.isSuccess == true -> {
+                                            result.isSuccess -> {
                                                 finish()
                                             }
-                                            result?.isFailure == true -> {
+                                            result.isFailure -> {
                                                 diagnosticLogger.e("Error approving with challenge: ${result.exceptionOrNull()?.stackTrace}")
                                             }
                                         }
@@ -169,9 +166,8 @@ class PushNotificationActivity : ComponentActivity() {
     /**
      * Launches the BiometricPromptActivity for biometric authentication.
      */
-    private fun launchBiometricPrompt(notificationId: String, notification: PushNotification?) {
+    private fun launchBiometricPrompt(notification: PushNotification?) {
         val intent = Intent(this, BiometricPromptActivity::class.java).apply {
-            putExtra(EXTRA_NOTIFICATION_ID, notificationId)
             putExtra(EXTRA_NOTIFICATION, notification)
         }
         startActivity(intent)
