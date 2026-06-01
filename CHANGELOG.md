@@ -1,10 +1,16 @@
+## [2.0.1]
+
+#### Fixed
+- Upgraded `bcpkix-jdk18on` from `1.81` to `1.84` to address a security vulnerability (CVE-2026-5588). [SDKS-5037]
+
 ## [2.0.0]
 #### Added
-- Added new `network` module [SDKS-3917]
+- Added new `network` module [SDKS-4505]
 - Added new `journey` module [SDKS-3917]
 - Added new `mfa-commons` module [SDKS-4106]
 - Added new `mfa-oath` module [SDKS-4021]
 - Added new `mfa-push` module [SDKS-4023]
+- Added new `auth-migration` module [SDKS-4716]
 - Added new `fido` module [SDKS-4134]
 - Added new `device-binding`, `device-binding-ui` and `device-binding-migration` modules [SDKS-4115]
 - Added new `device-id` module [SDKS-4120]

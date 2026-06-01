@@ -1,3 +1,5 @@
+[![Ping Identity](https://www.pingidentity.com/content/dam/picr/nav/Ping-Logo-2.svg)](https://github.com/ForgeRock/ping-android-sdk)
+
 # TestRail Module
 
 This module provides TestRail integration for the test classes.
@@ -88,3 +90,9 @@ This setup will automatically report the test results to TestRail based on the p
 Running test with `./gradlew build` will also run the test but may eventually generate a lot of 
 reports, each VM instance will generate a report if `TESTRAIL_RUN_ID` is not set.
 You may want to set the `TESTRAIL_RUN_ID` to avoid this.
+
+## License
+
+This software may be modified and distributed under the terms of the MIT license. See the LICENSE file for details.
+
+© Copyright 2025-2026 Ping Identity Corporation. All rights reserved.

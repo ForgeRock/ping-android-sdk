@@ -298,3 +298,5 @@ For issues, questions, or contributions, please refer to the main Ping Android S
 
 This sample application is licensed under the MIT License. See LICENSE file for details.
 
+
+© Copyright 2025-2026 Ping Identity Corporation. All Rights Reserved

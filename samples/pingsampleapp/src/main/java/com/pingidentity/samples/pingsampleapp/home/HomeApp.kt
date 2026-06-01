@@ -39,6 +39,7 @@ import androidx.compose.material.icons.filled.Preview
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Storage
+import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material.icons.filled.Token
 import androidx.compose.material.icons.filled.VpnKey
 import androidx.compose.material3.Card
@@ -97,6 +98,7 @@ fun HomeApp(
     onPushNotificationClick : () -> Unit,
     onDeviceIdClick : () -> Unit,
     onAuthTestScreenClick : () -> Unit,
+    onAuthMigrationClick : () -> Unit,
 ) {
     var deviceId by remember { mutableStateOf("Loading Device ID...") }
     var deviceStatus by remember { mutableStateOf("Loading device status...") }
@@ -290,6 +292,12 @@ fun HomeApp(
                     subtitle = "Authenticator app test mode",
                     onClick = onAuthTestScreenClick
                 )
+                IconRowItem(
+                    icon = Icons.Default.SwapHoriz,
+                    title = stringResource(R.string.text_auth_migration_title),
+                    subtitle = stringResource(R.string.text_auth_migration_subtitle),
+                    onClick = onAuthMigrationClick
+                )
 
                 // Developer Tools Section
                 Text(
@@ -473,7 +481,8 @@ fun PreviewHomeApp() {
         onOathClick = {},
         onPushNotificationClick = {},
         onDeviceIdClick = {},
-        onAuthTestScreenClick = {}
+        onAuthTestScreenClick = {},
+        onAuthMigrationClick = {}
     )
 }
 

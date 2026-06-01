@@ -22,11 +22,21 @@ import kotlinx.coroutines.launch
  *     implementation(project(":mfa:auth-migration"))
  * }
  * ```
- * This will trigger the automatic migration.
+ * This will trigger the automatic migration. To start automatic migration, please add the following code to your manifest file:
+ * ```xml
+ * <provider
+ *     android:name="androidx.startup.InitializationProvider"
+ *     android:authorities="${applicationId}.androidx-startup"
+ *     android:exported="false">
+ *     <meta-data
+ *         android:name="com.pingidentity.auth.migration.AuthenticationMigrationInitializer"
+ *         android:value="androidx.startup" />
+ * </provider>
+ * ```
  * @see AuthMigration
  */
 class AuthenticationMigrationInitializer : Initializer<Unit> {
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     /**
      * Triggers migration in a background coroutine.
@@ -36,7 +46,9 @@ class AuthenticationMigrationInitializer : Initializer<Unit> {
             try {
                 AuthMigration.start(context)
             } catch (e: Exception) {
-                // Ignore migration errors
+                // start() does not throw on MigrationProgress.Error — errors are logged internally.
+                // This catch handles only unexpected exceptions outside the migration flow
+                // (e.g. failures during setup) to prevent them crashing the app.
                 AuthMigration.logger.e("Authentication migration failed", e)
             }
         }

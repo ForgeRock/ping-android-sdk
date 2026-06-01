@@ -21,6 +21,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -39,6 +40,9 @@ import androidx.navigation.navArgument
 import com.pingidentity.samples.pingsampleapp.PingSampleApplication
 import com.pingidentity.samples.pingsampleapp.authenticator.data.AuthenticatorViewModel
 import com.pingidentity.samples.pingsampleapp.authenticator.ui.AboutScreen
+import com.pingidentity.samples.pingsampleapp.authmigration.AuthMigrationScreen
+import com.pingidentity.samples.pingsampleapp.authmigration.AuthMigrationViewModel
+import com.pingidentity.samples.pingsampleapp.authmigration.MigrationStatus
 import com.pingidentity.samples.pingsampleapp.authenticator.ui.AccountDetailScreen
 import com.pingidentity.samples.pingsampleapp.authenticator.ui.AccountsScreen
 import com.pingidentity.samples.pingsampleapp.authenticator.ui.EditAccountsScreen
@@ -96,6 +100,7 @@ object Route {
     const val ROUTE_AUTH_APP_ACCOUNT = "account/{issuer}/{accountName}"
     fun routeForAuthAppAccount(accountName: String) = "account/$accountName"
     const val ROUTE_AUTH_TEST_APP = "route_auth_test_app"
+    const val AUTH_MIGRATION = "auth_migration"
 
 }
 
@@ -169,6 +174,9 @@ fun AppNavigation(
                 },
                 onAuthTestScreenClick = {
                     navController.navigate(Route.ROUTE_AUTH_TEST_APP)
+                },
+                onAuthMigrationClick = {
+                    navController.navigate(Route.AUTH_MIGRATION)
                 },
             )
         }
@@ -492,6 +500,26 @@ fun AppNavigation(
                     navController.popBackStack()
                 }
             }
+        }
+
+        composable(Route.AUTH_MIGRATION) {
+            val authMigrationViewModel = viewModel<AuthMigrationViewModel>()
+            val migrationState by authMigrationViewModel.state.collectAsState()
+
+            // When migration finishes successfully, close and re-initialize the MFA clients so
+            // their in-memory credential caches are cleared and fresh database connections are
+            // opened — then reload credentials into the UI-bound AuthenticatorViewModel.
+            LaunchedEffect(migrationState.migrationStatus) {
+                if (migrationState.migrationStatus == MigrationStatus.COMPLETED) {
+                    PingSampleApplication.reinitializeMfaClients()
+                    authenticatorViewModel?.refreshCredentials()
+                }
+            }
+
+            AuthMigrationScreen(
+                viewModel = authMigrationViewModel,
+                onBack = { navController.popBackStack() }
+            )
         }
     }
 }

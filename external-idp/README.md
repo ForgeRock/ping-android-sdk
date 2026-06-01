@@ -1,13 +1,51 @@
 [![Ping Identity](https://www.pingidentity.com/content/dam/picr/nav/Ping-Logo-2.svg)](https://github.com/ForgeRock/ping-android-sdk)
 
-# Ping External IDP
+# External IDP Module
+
+The Ping External IDP library integrates seamlessly into Android apps via the davinci and journey modules, enabling authentication through external Identity Providers (IDPs) like Google, Facebook, and Apple. It simplifies the integration by abstracting complex IDP protocols and SDKs, offering a unified API, and improving the user experience with familiar login choices.
+
+## Getting Started
+
+### Prerequisites
+
+- PingOne DaVinci or Ping Advanced Identity Cloud / PingAM [Supported Versions](https://support.pingidentity.com/s/article/Ping-Identity-EOL-Tracker)
+- Android API level 29 or higher
+
+### Installation
+
+To incorporate the Ping External IDP library into your Android project, add the following
+dependencies to your
+app's `build.gradle.kts` (or `build.gradle`) file:
+
+#### For DaVinci Integration
+
+```kotlin
+dependencies {
+    implementation("com.pingidentity.sdks:davinci:<version>") // Ensure you use the latest DaVinci SDK version
+    implementation("com.pingidentity.sdks:external-idp:<version>") // Ensure you use the latest External IDP SDK version
+}
+```
+
+#### For Journey Integration
+
+```kotlin
+dependencies {
+    implementation("com.pingidentity.sdks:journey:<version>") // Ensure you use the latest Journey SDK version
+    implementation("com.pingidentity.sdks:external-idp:<version>") // Ensure you use the latest External IDP SDK version
+}
+```
+
+Replace `<version>` with the most recent stable version of the `journey` , `davinci` and
+`external-idp` libraries. You
+can find the latest versions on Maven Central. After adding these lines, synchronize
+your Gradle project to download and link the libraries.
 
 ## Overview
 
 The Ping External IDP library empowers your Android applications to seamlessly authenticate users
 through various
 external Identity Providers (IDPs) such as Google, Facebook, and Apple. Acting as a plugin for
-the `ping-davinci` and `ping-journey` modules, it streamlines the integration process by providing
+the `davinci` and `journey` modules, it streamlines the integration process by providing
 the necessary
 configurations and functionalities to initiate and manage authentication flows with these external
 services.
@@ -19,37 +57,6 @@ experience by offering
 familiar and convenient login options.
 
 <img src="images/socialLogin.png" width="250">
-
-## Integration
-
-### Adding the Dependency
-
-To incorporate the Ping External IDP library into your Android project, add the following
-dependencies to your
-app's `build.gradle.kts` (or `build.gradle`) file:
-
-#### For DaVinci Integration
-
-```kotlin
-dependencies {
-    implementation("com.pingidentity.sdks:davinci:<latest_version>") // Ensure you use the latest DaVinci SDK version
-    implementation("com.pingidentity.sdks:external-idp:<latest_version>") // Ensure you use the latest External IDP SDK version
-}
-```
-
-#### For Journey Integration
-
-```kotlin
-dependencies {
-    implementation("com.pingidentity.sdks:journey:<latest_version>") // Ensure you use the latest Journey SDK version
-    implementation("com.pingidentity.sdks:external-idp:<latest_version>") // Ensure you use the latest External IDP SDK version
-}
-```
-
-Replace `<latest_version>` with the most recent stable version of the `journey` , `davinci` and
-`external-idp` libraries. You
-can find the latest versions on Maven Central. After adding these lines, synchronize
-your Gradle project to download and link the libraries.
 
 ## Configuration and Usage
 
@@ -420,3 +427,9 @@ more streamlined and
 user-friendly authentication experience when users choose to log in with Google or Facebook. The
 Ping External IDP
 library intelligently handles the integration with these native SDKs when they are present.
+
+## License
+
+This software may be modified and distributed under the terms of the MIT license. See the LICENSE file for details.
+
+© Copyright 2025-2026 Ping Identity Corporation. All rights reserved.

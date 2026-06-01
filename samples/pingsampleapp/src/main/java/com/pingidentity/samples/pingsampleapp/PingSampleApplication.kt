@@ -21,12 +21,14 @@ import com.pingidentity.samples.pingsampleapp.authenticator.managers.JourneyMana
 import com.pingidentity.samples.pingsampleapp.authenticator.managers.OathManager
 import com.pingidentity.samples.pingsampleapp.authenticator.managers.PushManager
 import com.pingidentity.samples.pingsampleapp.authenticator.managers.TestAccountFactory
+import com.pingidentity.samples.pingsampleapp.config.initConfigs
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withContext
 
 /**
  * Main Application class for PingSampleApp.
@@ -87,9 +89,14 @@ class PingSampleApplication : Application() {
 
         // Initialize SDK clients and managers asynchronously
         CoroutineScope(Dispatchers.Default).launch {
+            withContext(Dispatchers.IO) {
+                // Load persisted SDK configs (Journey, DaVinci, OIDC Web) immediately so
+                // all flows are ready before the user visits the Configuration screen.
+                initConfigs()
+            }
             initializeSdkClients()
             initializeManagers()
-            initializeViewModel()
+            initializeAuthenticatorViewModel()
         }
     }
 
@@ -164,7 +171,7 @@ class PingSampleApplication : Application() {
     /**
      * Initializes the AuthenticatorViewModel.
      */
-    private fun initializeViewModel() {
+    private fun initializeAuthenticatorViewModel() {
         try {
             authenticatorViewModel = AuthenticatorViewModel(
                 application = this,
@@ -215,6 +222,32 @@ class PingSampleApplication : Application() {
                 return instance.viewModelDeferred.getCompleted()
             }
             return instance.viewModelDeferred.await()
+        }
+
+        /**
+         * Closes the existing MFA clients (clearing their in-memory credential caches and
+         * SQLite database connections), then re-initializes fresh instances and wires them
+         * back into the managers.
+         *
+         * Call this after a data migration so that stale caches are purged and the new
+         * database connections can see the migrated credentials. Follow up with a call to
+         * [AuthenticatorViewModel.refreshCredentials] to push the new data into the UI.
+         */
+        suspend fun reinitializeMfaClients() {
+            with(instance) {
+                // Close old clients — this clears the in-memory credential caches and
+                // releases the SQLite database connections.
+                oathManager.close()
+                pushManager.close()
+
+                // Create fresh clients with new database connections.
+                initializeSdkClients()
+
+                // Wire the new client instances into the managers so subsequent
+                // operations use the freshly-opened databases.
+                oathManager.setClient(oathClient)
+                pushManager.setClient(pushClient)
+            }
         }
     }
 }

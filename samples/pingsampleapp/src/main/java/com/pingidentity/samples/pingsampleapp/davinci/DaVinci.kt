@@ -40,6 +40,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -51,7 +52,6 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.pingidentity.davinci.plugin.DaVinci
 import com.pingidentity.orchestrate.ContinueNode
 import com.pingidentity.orchestrate.ErrorNode
 import com.pingidentity.orchestrate.FailureNode
@@ -145,8 +145,10 @@ fun DaVinci(
 
                 when (val node = state.node) {
                     is ContinueNode -> {
-                        Render(node = node, onNodeUpdated, onStart) {
-                            onNext(node)
+                        key(node) {
+                            Render(node = node, onNodeUpdated, onStart) {
+                                onNext(node)
+                            }
                         }
                     }
 

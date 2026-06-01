@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 - 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2024 - 2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -24,6 +24,8 @@ import kotlinx.serialization.Serializable
 data class OpenIdConfiguration(
     @SerialName("authorization_endpoint")
     val authorizationEndpoint: String = "",
+    @SerialName("pushed_authorization_request_endpoint")
+    val pushAuthorizationRequestEndpoint: String = "",
     @SerialName("token_endpoint")
     val tokenEndpoint: String = "",
     @SerialName("userinfo_endpoint")

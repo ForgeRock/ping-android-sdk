@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 - 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2024 - 2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -97,6 +97,9 @@ internal class CustomTabActivity : ComponentActivity() {
                 val builder = CustomTabsIntent.Builder()
                 BrowserLauncher.customTabsCustomizer(builder)
                 val customTabsIntent = builder.build()
+                customTabsIntent.intent.apply {
+                    setFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
                 BrowserLauncher.intentCustomizer(customTabsIntent.intent)
                 logger.d("Intent to launch the browser: ${customTabsIntent.intent}")
 

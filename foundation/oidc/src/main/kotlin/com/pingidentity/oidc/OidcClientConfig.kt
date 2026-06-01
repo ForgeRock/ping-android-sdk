@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 - 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2024 - 2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -110,7 +110,19 @@ class OidcClientConfig {
     lateinit var clientId: String
 
     /**
-     * Set of scopes for OIDC.
+     * Enable PAR (Pushed Authorization Request) RFC 9126.
+     *
+     * When enabled:
+     * - Authorization parameters are pushed to the server before authorization
+     * - Improves security by preventing parameter tampering
+     * - Reduces authorization URL length
+     * - Requires PAR endpoint support from the OIDC provider
+     */
+    var par = false
+
+    /**
+     * Set of OAuth2 scopes to request during authorization.
+     * Common scopes include: "openid", "profile", "email", "offline_access"
      */
     var scopes = mutableSetOf<String>()
 
@@ -257,5 +269,6 @@ class OidcClientConfig {
         this.acrValues = other.acrValues
         this.additionalParameters = other.additionalParameters
         this.httpClient = other.httpClient
+        this.par = other.par
     }
 }

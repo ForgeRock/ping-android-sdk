@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 - 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2024 - 2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -59,6 +59,7 @@ import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
+import kotlin.test.assertNotSame
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -105,10 +106,14 @@ class DaVinciTest {
                         respond(authorizeResponse(), HttpStatusCode.OK, authorizeResponseHeaders)
                     }
 
+                    "/par" -> {
+                        respond(parResponse(), HttpStatusCode.Created, headers)
+                    }
+
                     else -> {
                         return@MockEngine respond(
                             content =
-                            ByteReadChannel(""),
+                                ByteReadChannel(""),
                             status = HttpStatusCode.InternalServerError,
                         )
                     }
@@ -179,9 +184,9 @@ class DaVinciTest {
             assertTrue(node is ContinueNode)
             assertTrue { (node as ContinueNode).collectors.size == 5 }
             assertEquals("cq77vwelou", node.id)
-            assertEquals("Username/Password Form",  node.name)
-            assertEquals("Test Description",  node.description)
-            assertEquals("CUSTOM_HTML",  node.category)
+            assertEquals("Username/Password Form", node.name)
+            assertEquals("Test Description", node.description)
+            assertEquals("CUSTOM_HTML", node.category)
 
             (node.collectors[0] as? TextCollector)?.value = "My First Name"
             (node.collectors[1] as? PasswordCollector)?.value = "My Password"
@@ -234,7 +239,10 @@ class DaVinciTest {
 
                 //Make sure the request to signoff is made
                 val signOff = mockEngine.requestHistory[5]
-                assertEquals("https://auth.test-one-pingone.com/signoff?id_token_hint=Dummy+IdToken&client_id=test", signOff.url.toString())
+                assertEquals(
+                    "https://auth.test-one-pingone.com/signoff?id_token_hint=Dummy+IdToken&client_id=test",
+                    signOff.url.toString()
+                )
                 assertContains(signOff.headers["Cookie"].toString(), "ST=session_token")
                 //Ensure storage are removed
                 assertNull(tokenStorage.get())
@@ -355,13 +363,17 @@ class DaVinciTest {
                     }
 
                     "/authorize" -> {
-                        respond(ByteReadChannel(readFile("ResponseWithBasicType.json")), HttpStatusCode.OK, authorizeResponseHeaders)
+                        respond(
+                            ByteReadChannel(readFile("ResponseWithBasicType.json")),
+                            HttpStatusCode.OK,
+                            authorizeResponseHeaders
+                        )
                     }
 
                     else -> {
                         return@MockEngine respond(
                             content =
-                            ByteReadChannel(""),
+                                ByteReadChannel(""),
                             status = HttpStatusCode.InternalServerError,
                         )
                     }
@@ -389,7 +401,12 @@ class DaVinciTest {
         assertEquals(11, node.collectors.size)
 
         (node.collectors[0] as? LabelCollector)?.content?.let { assertEquals("Sign On", it) }
-        (node.collectors[1] as? LabelCollector)?.content?.let { assertEquals("Welcome to Ping Identity", it) }
+        (node.collectors[1] as? LabelCollector)?.content?.let {
+            assertEquals(
+                "Welcome to Ping Identity",
+                it
+            )
+        }
 
         (node.collectors[2] as? TextCollector)?.let {
             assertEquals("TEXT", it.type)
@@ -463,5 +480,164 @@ class DaVinciTest {
             assertEquals(2, it.options.size)
             assertEquals("default-checkbox", it.value)
         }
+    }
+
+    @Test
+    fun `DaVinci with PAR enabled`() = runTest {
+        val tokenStorage = MemoryStorage<Token>()
+        val cookieStorage = MemoryStorage<Cookies>()
+        val daVinci =
+            DaVinci {
+                httpClient = KtorHttpClient(HttpClient(mockEngine))
+                // Oidc as module with PAR enabled
+                module(Oidc) {
+                    clientId = "test"
+                    discoveryEndpoint =
+                        "http://localhost/.well-known/openid-configuration"
+                    scopes = mutableSetOf("openid", "email", "address")
+                    redirectUri = "http://localhost:8080"
+                    storage = { tokenStorage }
+                    par = true // Enable PAR
+                    logger = Logger.STANDARD
+                }
+                module(Cookie) {
+                    storage = { cookieStorage }
+                    persist = mutableListOf("ST")
+                }
+            }
+
+        var node = daVinci.start() // Return first Node
+        assertTrue(node is ContinueNode)
+        assertTrue { (node as ContinueNode).collectors.size == 5 }
+
+        (node.collectors[0] as? TextCollector)?.value = "My First Name"
+        (node.collectors[1] as? PasswordCollector)?.value = "My Password"
+        (node.collectors[2] as? SubmitCollector)?.value = "click me"
+
+        node = node.next()
+        assertTrue(node is SuccessNode)
+
+        mockEngine.requestHistory[0] // well-known
+        val parRequest = mockEngine.requestHistory[1] // par
+        assertEquals("https://auth.test-one-pingone.com/par", parRequest.url.toString())
+        // Verify client_id and response_mode are in the POST body, not URL
+        assertTrue(parRequest.body is FormDataContent)
+        val parBody = parRequest.body as FormDataContent
+        assertEquals("test", parBody.formData["client_id"])
+        assertEquals("code", parBody.formData["response_type"])
+        assertEquals("pi.flow", parBody.formData["response_mode"])
+        assertEquals("openid email address", parBody.formData["scope"])
+        assertEquals("http://localhost:8080", parBody.formData["redirect_uri"])
+        assertNotNull(parBody.formData["code_challenge"])
+        assertEquals("S256", parBody.formData["code_challenge_method"])
+
+
+        // Verify PAR request was made
+        val authorizeRequest =
+            mockEngine.requestHistory[2] // authorize request (after well-known, authorize, customHTMLTemplate)
+        assertEquals(
+            "http://auth.test-one-pingone.com/authorize?response_mode=pi.flow&request_uri=urn%3Aietf%3Aparams%3Aoauth%3Arequest_uri%3Atest-request-uri&client_id=test",
+            authorizeRequest.url.toString()
+        )
+
+        // The token request should use the PAR flow
+        val tokenRequest = mockEngine.requestHistory[4] // token request
+        assertEquals("https://auth.test-one-pingone.com/token", tokenRequest.url.toString())
+    }
+
+    private fun parResponse(): String =
+        """
+        {
+            "request_uri": "urn:ietf:params:oauth:request_uri:test-request-uri",
+            "expires_in": 60
+        }
+        """.trimIndent()
+
+    @Test
+    fun `DaVinci rewindStateToLastRenderedUI returns previous ContinueNode`() = runTest {
+        // Override the mock engine so /customHTMLTemplate returns a rewind event
+        mockEngine = MockEngine { request ->
+            when (request.url.encodedPath) {
+                "/.well-known/openid-configuration" ->
+                    respond(openIdConfigurationResponse(), HttpStatusCode.OK, headers)
+                "/authorize" ->
+                    respond(authorizeResponse(), HttpStatusCode.OK, authorizeResponseHeaders)
+                "/customHTMLTemplate" ->
+                    respond(rewindStateToLastRenderedUIResponse(), HttpStatusCode.OK, customHTMLTemplateHeaders)
+                else ->
+                    respond(ByteReadChannel(""), HttpStatusCode.InternalServerError)
+            }
+        }
+
+        val daVinci = DaVinci {
+            httpClient = KtorHttpClient(HttpClient(mockEngine))
+            module(Oidc) {
+                clientId = "test"
+                discoveryEndpoint = "http://localhost/.well-known/openid-configuration"
+                scopes = mutableSetOf("openid", "email", "address")
+                redirectUri = "http://localhost:8080"
+                storage = { MemoryStorage() }
+            }
+            module(Cookie) {
+                storage = { MemoryStorage() }
+            }
+        }
+
+        // start() stores the returned ContinueNode in FlowContext via the ContinueNode module
+        val firstNode = daVinci.start()
+        assertTrue(firstNode is ContinueNode)
+
+        // next() receives rewindStateToLastRenderedUI → transform retrieves the stored ContinueNode
+        val rewindNode = firstNode.next()
+
+        assertTrue(rewindNode is ContinueNode)
+        // Must be the exact same instance that was stored in FlowContext
+        assertNotSame(firstNode, rewindNode)
+        assertEquals(firstNode.id, rewindNode.id)
+        assertEquals(firstNode.name, rewindNode.name)
+    }
+
+    @Test
+    fun `DaVinci rewindStateToSpecificRenderedUI returns previous ContinueNode`() = runTest {
+        // Override the mock engine so /customHTMLTemplate returns a rewind event
+        mockEngine = MockEngine { request ->
+            when (request.url.encodedPath) {
+                "/.well-known/openid-configuration" ->
+                    respond(openIdConfigurationResponse(), HttpStatusCode.OK, headers)
+                "/authorize" ->
+                    respond(authorizeResponse(), HttpStatusCode.OK, authorizeResponseHeaders)
+                "/customHTMLTemplate" ->
+                    respond(rewindStateToSpecificRenderedUIResponse(), HttpStatusCode.OK, customHTMLTemplateHeaders)
+                else ->
+                    respond(ByteReadChannel(""), HttpStatusCode.InternalServerError)
+            }
+        }
+
+        val daVinci = DaVinci {
+            httpClient = KtorHttpClient(HttpClient(mockEngine))
+            module(Oidc) {
+                clientId = "test"
+                discoveryEndpoint = "http://localhost/.well-known/openid-configuration"
+                scopes = mutableSetOf("openid", "email", "address")
+                redirectUri = "http://localhost:8080"
+                storage = { MemoryStorage() }
+            }
+            module(Cookie) {
+                storage = { MemoryStorage() }
+            }
+        }
+
+        // start() stores the returned ContinueNode in FlowContext via the ContinueNode module
+        val firstNode = daVinci.start()
+        assertTrue(firstNode is ContinueNode)
+
+        // next() receives rewindStateToSpecificRenderedUI → transform retrieves the stored ContinueNode
+        val rewindNode = firstNode.next()
+
+        assertTrue(rewindNode is ContinueNode)
+        // Must be the exact same instance that was stored in FlowContext
+        assertNotSame(firstNode, rewindNode)
+        assertEquals(firstNode.id, rewindNode.id)
+        assertEquals(firstNode.name, rewindNode.name)
     }
 }
