@@ -123,7 +123,6 @@ class PushNotificationService : FirebaseMessagingService() {
                 // Launch the PushNotificationActivity with the notification ID and notification object
                 val intent = Intent(applicationContext, PushNotificationActivity::class.java).apply {
                     flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
-                    putExtra(NotificationActionReceiver.EXTRA_NOTIFICATION_ID, notification.id)
                     putExtra(NotificationActionReceiver.EXTRA_NOTIFICATION, notification)
                 }
 

@@ -8,6 +8,7 @@
 package com.pingidentity.pingonemfapp.notification
 
 import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatActivity
@@ -44,15 +45,17 @@ class BiometricPromptActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        
-        // Get notification ID from intent early
-        val notificationId = intent?.getStringExtra(NotificationActionReceiver.EXTRA_NOTIFICATION_ID)
 
         // Get notification object from intent
-        val notification = intent?.getParcelableExtra(NotificationActionReceiver.EXTRA_NOTIFICATION, PushNotification::class.java)
-        // If no notification ID, log and finish
-        if (notificationId == null) {
-            diagnosticLogger.w("No notification ID provided")
+        val notification = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            intent?.getParcelableExtra(NotificationActionReceiver.EXTRA_NOTIFICATION, PushNotification::class.java)
+        } else {
+            @Suppress("DEPRECATION") // Suppress deprecation warning for backward compatibility
+            intent?.getParcelableExtra(NotificationActionReceiver.EXTRA_NOTIFICATION)
+        }
+        // If no notification, log and finish
+        if (notification == null) {
+            diagnosticLogger.w("No notification provided")
             finish()
             return
         }
@@ -228,7 +231,6 @@ class BiometricPromptActivity : AppCompatActivity() {
             }
             result?.isFailure == true -> {
                 diagnosticLogger.e("Error approving with challenge: ${result.exceptionOrNull()?.stackTrace}")
-                //errorMessage = "Failed to approve: ${result.exceptionOrNull()?.message}"
             }
         }
     }
