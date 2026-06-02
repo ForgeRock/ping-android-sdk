@@ -7,7 +7,7 @@ import kotlin.test.assertEquals
 
 class AccountParserTest {
 
-    private val parser = AccountParser()
+    private val parser = AccountParser
 
     @Test
     fun `single region single user`() {

@@ -61,7 +61,7 @@ class PushNotificationTest {
         assertTrue(result.isFailure)
         // Known SDK failure: message contains the formatted SDK code
         assertTrue { result.exceptionOrNull() is PingOneMFAException }
-        assertTrue { result.exceptionOrNull()!!.message!!.contains("1003") }
+        assertTrue { (result.exceptionOrNull() as PingOneMFAException).internalErrorsList?.get(0)?.code == 1003 }
     }
     @Test
     fun `approveNotification returns failure when exception is thrown`() = runTest {
@@ -116,7 +116,7 @@ class PushNotificationTest {
         assertTrue(result.isFailure)
         // Known SDK failure: message contains the formatted SDK code
         assertTrue { result.exceptionOrNull() is PingOneMFAException }
-        assertTrue { result.exceptionOrNull()!!.message!!.contains("1003") }
+        assertTrue { (result.exceptionOrNull() as PingOneMFAException).internalErrorsList?.get(0)?.code == 1003 }
     }
 
     @Test

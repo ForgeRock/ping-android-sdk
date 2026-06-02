@@ -11,12 +11,14 @@ import com.pingidentity.pingonemfa.commons.PingOneMfaAccount
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
-internal class AccountParser(
+internal object AccountParser {
+
+    /** [Json] instance created once to avoid repeated serializer-registry setup. */
     private val json: Json = Json {
         ignoreUnknownKeys = true
         explicitNulls = false
     }
-) {
+
     fun parseAccounts(rawJson: String): List<PingOneMfaAccount> {
         val decoded: Map<String, RegionDto> = json.decodeFromString(rawJson)
 
@@ -27,7 +29,7 @@ internal class AccountParser(
                     id = it.id.orEmpty(),
                     environment = it.environment?.id.orEmpty(),
                     deviceId = it.device?.id.orEmpty(),
-                    username = it.username,
+                    username = it.username.orEmpty(),
                     name = it.name?.given.orEmpty(),
                     family = it.name?.family.orEmpty()
                 )
@@ -46,7 +48,7 @@ internal data class UserDto(
     val id: String? = null,
     val environment: IdContainer? = null,
     val device: IdContainer? = null,
-    val username: String,
+    val username: String?,
     val name: NameDto? = null
 )
 

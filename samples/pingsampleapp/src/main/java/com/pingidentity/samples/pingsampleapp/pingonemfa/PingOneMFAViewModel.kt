@@ -10,6 +10,7 @@ package com.pingidentity.samples.pingsampleapp.pingonemfa
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.pingidentity.pingonemfa.commons.PingOneMFA
+import com.pingidentity.pingonemfa.commons.PingOneMFAException
 import com.pingidentity.samples.pingsampleapp.authenticator.data.DiagnosticLogger
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -41,9 +42,15 @@ class PingOneMFAViewModel : ViewModel() {
         _state.update { it.copy(isLoadingAccounts = true, error = null) }
         viewModelScope.launch {
             PingOneMFA.getDeviceInfo()
-                .onSuccess { accounts ->
+                .onSuccess { (accounts, errors) ->
                     diagnosticLogger.i("Successfully loaded PingOne MFA accounts: ${accounts.size}")
                     _state.update { it.copy(isLoadingAccounts = false, accounts = accounts) }
+                    if (errors != null) {
+                        diagnosticLogger.w("Device info loaded with partial errors:")
+                        errors.forEach { error ->
+                            diagnosticLogger.w("code=${error.code} message=${error.message} userInfo=${error.userInfo}")
+                        }
+                    }
                 }
                 .onFailure { e ->
                     diagnosticLogger.e("Failed to load accounts", e)
@@ -94,7 +101,7 @@ class PingOneMFAViewModel : ViewModel() {
                 }
                 .onFailure { e ->
                     diagnosticLogger.e("Failed to collect OTP", e)
-                    if (e.message?.contains("Code=10008", ignoreCase = true) == true) {
+                    if ((e as? PingOneMFAException)?.internalErrorsList?.any { it.code == 10008 } == true) {
                         _state.update { it.copy(isLoadingOtp = false, isOtpDeviceNotPaired = true) }
                     } else {
                         _state.update { it.copy(isLoadingOtp = false, error = e.message ?: "Failed to collect OTP") }

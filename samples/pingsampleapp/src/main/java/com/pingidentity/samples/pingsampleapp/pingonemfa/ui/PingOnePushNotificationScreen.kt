@@ -13,18 +13,13 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -40,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import com.pingidentity.pingonemfa.push.PushNotification
 import com.pingidentity.pingonemfa.push.PushType
 import com.pingidentity.samples.pingsampleapp.R
+import com.pingidentity.samples.pingsampleapp.authenticator.ui.components.BackNavigationTopAppBar
 import com.pingidentity.samples.pingsampleapp.pingonemfa.ui.components.ApproveDenyRow
 import com.pingidentity.samples.pingsampleapp.pingonemfa.ui.components.ManualNumberChallenge
 import com.pingidentity.samples.pingsampleapp.pingonemfa.ui.components.NumberChallengeOptions
@@ -128,16 +124,9 @@ fun PingOnePushNotificationScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.text_pingone_mfa_screen_push_title)) },
-                navigationIcon = {
-                    IconButton(onClick = onFinish) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
-                        )
-                    }
-                },
+            BackNavigationTopAppBar(
+                title = stringResource(R.string.text_pingone_mfa_screen_push_title),
+                onBackClick = onFinish,
             )
         },
     ) { padding ->

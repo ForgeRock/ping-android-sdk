@@ -18,6 +18,7 @@ import com.pingidentity.pingonemfa.otp.OtpCodeInfo
 import com.pingidentity.pingonemfa.push.PushApprovalService
 import com.pingidentity.pingonemfa.push.PushNotification
 import com.pingidentity.pingonemfa.util.AccountParser
+import com.pingidentity.pingonemfa.util.ErrorParser
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.sync.Mutex
@@ -91,6 +92,12 @@ object PingOneMFA {
      *
      * Should be called each time Firebase delivers a new token via
      * `FirebaseMessagingService.onNewToken`, and immediately after [initialize] succeeds.
+     *
+     * The native SDK may attempt to register the token across multiple PingOne regions.
+     * Returns [Result.success] when all registrations succeed (or the errors array contains only
+     * nulls — which the SDK uses to indicate no real errors). Returns [Result.failure] wrapping a
+     * [PingOneMFAException] if any region rejects the token; [PingOneMFAException.internalErrorsList]
+     * will contain one [Error] per failed region for diagnostic logging.
      */
     suspend fun setDeviceToken(pushToken: String) : Result<Unit> = withContext(Dispatchers.IO) {
         suspendCancellableCoroutine { continuation ->
@@ -100,17 +107,12 @@ object PingOneMFA {
                     pushToken,
                     NotificationProvider.FCM
                 ) { errors ->
-                    val result =
-                        errors
-                            ?.firstOrNull { it != null }
-                            ?.let { err ->
-                                logger.e("PingOne push token registration failed: ${err.userInfo}")
-                                Result.failure(PingOneMFAException(err))
-                            }
-                            ?: Result.success(Unit)
-
-                    continuation.resume(result)
-
+                    if (errors.isNullOrEmpty() || errors.all { it == null }) {
+                        continuation.resume(Result.success(Unit))
+                    } else {
+                        logger.e("PingOne push token registration failed: ${errors.firstOrNull { it != null }?.userInfo}")
+                        continuation.resume(Result.failure(PingOneMFAException(errors)))
+                    }
                 }
             } catch (e : Exception) {
                 logger.e("PingOne push token registration failed", e)
@@ -145,28 +147,61 @@ object PingOneMFA {
 
     /**
      * Returns metadata for all currently paired PingOne MFA accounts.
-     * Accounts are mapped into [PingOneMfaAccount] wrapper types.
+     *
+     * PingOne MFA supports multiple service regions. The native SDK queries all regions and
+     * aggregates the results. If some regions succeed and others fail, the SDK may return both
+     * account data and error context in the same callback.
+     *
+     * On [Result.success], the value is a [Pair] where:
+     * - `first` — the aggregated list of [PingOneMfaAccount] objects across all regions.
+     * - `second` — an optional `List<Error>` with per-region diagnostic errors from the SDK.
+     *   Non-null only when the SDK returned partial error context alongside valid data.
+     *   **Developer use only** — log these for debugging but do not surface them to users;
+     *   the account list is still valid when this list is present.
+     *
+     * On [Result.failure], all regions failed or no data was returned. The [PingOneMFAException]
+     * contains per-region failure details in [PingOneMFAException.internalErrorsList].
+     *
+     * ```kotlin
+     * PingOneMFA.getDeviceInfo()
+     *     .onSuccess { (accounts, diagnosticErrors) ->
+     *         showAccounts(accounts)
+     *         diagnosticErrors?.forEach { err ->
+     *             Log.w("MFA", "Region diagnostic: code=${err.code} info=${err.userInfo}")
+     *         }
+     *     }
+     *     .onFailure { e ->
+     *         Log.e("MFA", "Failed to load accounts: ${e.message}")
+     *         (e as? PingOneMFAException)?.internalErrorsList?.forEach { err ->
+     *             Log.e("MFA", "Region failure: code=${err.code} info=${err.userInfo}")
+     *         }
+     *     }
+     * ```
      */
-    suspend fun getDeviceInfo(): Result<List<PingOneMfaAccount>> =
+    suspend fun getDeviceInfo(): Result<Pair<List<PingOneMfaAccount>, List<Error>?>> =
         suspendCancellableCoroutine { continuation ->
             try {
                 PingOne.getInfo(
                     ContextProvider.context
                 ) { deviceInfo, errors ->
-                    /*
-                     * Check errors first: if the SDK signaled a problem and deviceInfo is null or empty,
-                     * treat the call as failed.
-                     */
-                    val error = errors.firstOrNull { it != null }
-                    val result = if (error != null && (deviceInfo == null || deviceInfo.isEmpty)) {
-                        logger.e("PingOne getDeviceInfo failed: ${error.userInfo}")
-                        Result.failure(PingOneMFAException(error))
-                    } else if (deviceInfo != null) {
-                        Result.success(AccountParser().parseAccounts(deviceInfo.toString()))
-                    } else {
-                        // Neither errors nor deviceInfo — SDK misbehaved; avoid hanging the coroutine.
-                        logger.e("PingOne getDeviceInfo failed: no data and no error")
-                        Result.failure(PingOneMFAException(Exception("getDeviceInfo failed: no error details provided")))
+                    val result = when {
+                        // Data available — return it along with any diagnostic errors from the SDK.
+                        deviceInfo != null && !deviceInfo.isEmpty -> Result.success(
+                            Pair(
+                                AccountParser.parseAccounts(deviceInfo.toString()),
+                                ErrorParser.fromPingOneSDKErrors(errors)
+                            )
+                        )
+                        // No data and at least one real error — treat as failure.
+                        errors.any { it != null } -> {
+                            logger.e("PingOne getDeviceInfo failed: ${errors.firstOrNull { it != null }?.userInfo}")
+                            Result.failure(PingOneMFAException(errors))
+                        }
+                        // Neither data nor errors — SDK misbehaved; avoid hanging the coroutine.
+                        else -> {
+                            logger.e("PingOne getDeviceInfo failed: no data and no error")
+                            Result.failure(PingOneMFAException(Exception("getDeviceInfo failed: no error details provided")))
+                        }
                     }
                     continuation.resume(result)
                 }

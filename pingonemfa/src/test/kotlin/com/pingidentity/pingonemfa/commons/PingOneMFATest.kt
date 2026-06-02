@@ -157,7 +157,7 @@ class PingOneMFATest {
         // ASSERT — known SDK failure: message is the formatted string, no SDK type needed
         assertTrue(result.isFailure)
         assertTrue { result.exceptionOrNull() is PingOneMFAException }
-        assertTrue { result.exceptionOrNull()!!.message!!.contains("100") }
+        assertTrue { (result.exceptionOrNull() as PingOneMFAException).internalErrorsList?.get(0)?.code == 100 }
     }
 
     @Test
@@ -212,7 +212,7 @@ class PingOneMFATest {
         // Known SDK failure: message contains the formatted SDK code
         assertTrue(result.isFailure)
         assertTrue { result.exceptionOrNull() is PingOneMFAException }
-        assertTrue { result.exceptionOrNull()!!.message!!.contains("10003") }
+        assertTrue { (result.exceptionOrNull() as PingOneMFAException).internalErrorsList?.get(0)?.code == 10003 }
         verify {
             PingOne.setDeviceToken(mockContext, "token", NotificationProvider.FCM, any())
         }
@@ -266,7 +266,7 @@ class PingOneMFATest {
         // Known SDK failure: message contains the formatted SDK code
         assertTrue(result.isFailure)
         assertTrue { result.exceptionOrNull() is PingOneMFAException }
-        assertTrue { result.exceptionOrNull()!!.message!!.contains("10003") }
+        assertTrue { (result.exceptionOrNull() as PingOneMFAException).internalErrorsList?.get(0)?.code == 10003 }
         verify {
             PingOne.pair(mockContext, "PAIR-KEY", any())
         }
@@ -302,7 +302,7 @@ class PingOneMFATest {
 
         assertTrue(result.isSuccess)
 
-        val accounts = result.getOrNull()!!
+        val accounts = result.getOrNull()!!.first
         assertEquals(1, accounts.size)
         assertEquals("user1", accounts.first().id)
         assertEquals("env1", accounts.first().environment)
@@ -327,7 +327,7 @@ class PingOneMFATest {
         // Known SDK failure: message contains the formatted SDK code
         assertTrue(result.isFailure)
         assertTrue { result.exceptionOrNull() is PingOneMFAException }
-        assertTrue { result.exceptionOrNull()!!.message!!.contains("10003") }
+        assertTrue { (result.exceptionOrNull() as PingOneMFAException).internalErrorsList?.get(0)?.message!!.contains("mockedError") }
     }
 
     @Test
@@ -387,7 +387,7 @@ class PingOneMFATest {
         // Known SDK failure: message contains the formatted SDK code
         assertTrue(result.isFailure)
         assertTrue { result.exceptionOrNull() is PingOneMFAException }
-        assertTrue { result.exceptionOrNull()!!.message!!.contains("10003") }
+        assertTrue { (result.exceptionOrNull()!! as PingOneMFAException).internalErrorsList?.get(0)?.code == 10003 }
     }
 
     @Test
@@ -449,7 +449,10 @@ class PingOneMFATest {
         // Known SDK failure: message contains the formatted SDK code
         assertTrue(result.isFailure)
         assertTrue { result.exceptionOrNull() is PingOneMFAException }
-        assertTrue { result.exceptionOrNull()!!.message!!.contains("10003") }
+        assertTrue { (result.exceptionOrNull() as PingOneMFAException).internalErrorsList?.get(0)?.code == 10003 }
+        verify {
+            PingOne.processRemoteNotification(mockContext, mockRemoteMessage, any())
+        }
     }
 
     @Test
@@ -505,7 +508,7 @@ class PingOneMFATest {
         // Known SDK failure: message contains the formatted SDK code
         assertTrue(result.isFailure)
         assertTrue { result.exceptionOrNull() is PingOneMFAException }
-        assertTrue { result.exceptionOrNull()!!.message!!.contains("10003") }
+        assertTrue { result.exceptionOrNull()!!.message!!.contains("mockedError") }
     }
 
     @Test

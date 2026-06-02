@@ -7,6 +7,7 @@
 
 package com.pingidentity.samples.pingsampleapp.pingonemfa.ui
 
+import android.content.ClipData
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,37 +18,34 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
-import com.pingidentity.samples.pingsampleapp.R
-import android.content.ClipData
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.pingidentity.samples.pingsampleapp.R
+import com.pingidentity.samples.pingsampleapp.authenticator.ui.components.BackNavigationTopAppBar
 import com.pingidentity.samples.pingsampleapp.authenticator.ui.components.LoadingIndicator
 import com.pingidentity.samples.pingsampleapp.pingonemfa.PingOneMFAViewModel
+import kotlinx.coroutines.launch
 
 /**
  * Screen that fetches and displays the PingOne mobile payload.
@@ -61,7 +59,7 @@ import com.pingidentity.samples.pingsampleapp.pingonemfa.PingOneMFAViewModel
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PingOnePayloadScreen(
-    onBack: (() -> Unit)? = null,
+    onBack: (() -> Unit),
     viewModel: PingOneMFAViewModel = viewModel(),
 ) {
     val state by viewModel.state.collectAsState()
@@ -83,19 +81,10 @@ fun PingOnePayloadScreen(
 
     Scaffold(
         topBar = {
-            if (onBack != null) {
-                TopAppBar(
-                    title = { Text(stringResource(R.string.text_pingone_mfa_screen_payload_title)) },
-                    navigationIcon = {
-                        IconButton(onClick = onBack) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "Back",
-                            )
-                        }
-                    },
-                )
-            }
+            BackNavigationTopAppBar(
+                title = stringResource(R.string.text_pingone_mfa_screen_payload_title),
+                onBackClick = onBack,
+            )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
     ) { paddingValues ->

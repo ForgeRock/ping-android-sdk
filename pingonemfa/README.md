@@ -93,14 +93,22 @@ Supported regions:
 
 ### 2. Register the FCM Push Token
 
-Call `setDeviceToken()` each time Firebase delivers a new push token — typically from `FirebaseMessagingService.onNewToken`:
+Call `setDeviceToken()` each time Firebase delivers a new push token — typically from `FirebaseMessagingService.onNewToken`. The SDK registers the token across all configured PingOne regions; if any region rejects it the call fails and `internalErrorsList` holds one `Error` per failed region:
 
 ```kotlin
 override fun onNewToken(token: String) {
     CoroutineScope(SupervisorJob()).launch {
-        PingOneMFA.setDeviceToken(token).onFailure { e ->
-            Log.e("MFA", "Token registration failed: ${e.message}")
-        }
+        PingOneMFA.setDeviceToken(token)
+            .onSuccess {
+                // Token registered successfully in all regions
+            }
+            .onFailure { e ->
+                Log.e("MFA", "Token registration failed: ${e.message}")
+                // Per-region failure details (developer logging only)
+                (e as? PingOneMFAException)?.internalErrorsList?.forEach { err ->
+                    Log.e("MFA", "Region failure: code=${err.code} info=${err.userInfo}")
+                }
+            }
     }
 }
 ```
@@ -124,9 +132,14 @@ PingOneMFA.pair(pairingKey)
 ### Retrieve Paired Accounts
 
 ```kotlin
-PingOneMFA.getDeviceInfo().onSuccess { accounts ->
+PingOneMFA.getDeviceInfo().onSuccess { (accounts, diagnosticErrors) ->
     accounts.forEach { account ->
         Log.d("MFA", "${account.username} | region: ${account.region}")
+    }
+    // diagnosticErrors is non-null only when the SDK returned partial error info alongside
+    // valid data — log it for debugging, the account list is still safe to use.
+    diagnosticErrors?.forEach { err ->
+        Log.w("MFA", "Diagnostic: code=${err.code} info=${err.userInfo}")
     }
 }
 ```
@@ -216,7 +229,15 @@ These are required by `PushApprovalService` for background push handling.
 
 ## Error Handling
 
-All `suspend` functions return `Result.failure(PingOneMFAException(...))` on error and never throw. `PingOneMFAException` contains a human-readable `message`.
+All `suspend` functions return `Result.failure(PingOneMFAException(...))` on error and never throw. The native `PingOneSDKError` type is never exposed — all error information is available through `PingOneMFAException`.
+
+### `PingOneMFAException`
+
+| Property | Type | Description |
+|---|---|---|
+| `message` | `String` | Human-readable description of the failure. Always non-null. Use this for logging or user-facing error display. |
+| `cause` | `Throwable?` | The original exception when the failure was not a native SDK error (e.g. a network timeout). Preserved in the stack trace. |
+| `internalErrorsList` | `List<Error>?` | Structured list of `Error` objects parsed from the native SDK error(s). `null` when the failure did not originate from the native SDK. Each entry contains the numeric code, message, and any `userInfo` diagnostic data returned by the server — **for developer logging only, not for user-facing messages**. |
 
 ```kotlin
 PingOneMFA.pair(pairingKey)
@@ -224,10 +245,25 @@ PingOneMFA.pair(pairingKey)
         // success path
     }
     .onFailure { e ->
-        // e is PingOneMFAException — e.message is always non-null
+        // Use message for display or simple logging
         Log.e("MFA", e.message)
+
+        // Use internalErrorsList containing Error objects for detailed diagnostics (developer-only)
+        e.internalErrorsList?.forEach { error ->
+            Log.e("MFA", "code=${error.code} userInfo=${error.userInfo}")
+        }
     }
 ```
+
+### `Error`
+
+Structured representation of a single PingOne SDK error, exposed via `PingOneMFAException.internalErrorsList`.
+
+| Property | Type | Description |
+|---|---|---|
+| `code` | `Int?` | Numeric error code from the native SDK. See [PingOneSDKError documentation](https://pingidentity.github.io/pingone-mobile-sdk-android/-ping-one%20-m-f-a%20-android%20-s-d-k/com.pingidentity.pingidsdkv2.error/-ping-one-s-d-k-error-type/index.html) for the full list. |
+| `message` | `String?` | Human-readable error message from the native SDK. |
+| `userInfo` | `Map<String, String>` | Additional diagnostic key/value pairs returned by the server. Intended for **developer logging and debugging only** — do not display to users. Empty if the server did not include additional context. |
 
 ---
 
@@ -253,9 +289,9 @@ See the [pingsampleapp README](../samples/pingsampleapp/README.md) for build ins
 | Function | Returns | Description |
 |---|---|---|
 | `suspend initialize(geo: Geo)` | `Result<Unit>` | Configure the PingOne SDK for the selected service region. Idempotent after first success. |
-| `suspend setDeviceToken(pushToken)` | `Result<Unit>` | Register or refresh the FCM push token with PingOne. |
+| `suspend setDeviceToken(pushToken)` | `Result<Unit>` | Register or refresh the FCM push token with PingOne across all configured regions. On failure `PingOneMFAException.internalErrorsList` holds one `Error` per failed region. |
 | `suspend pair(pairingKey)` | `Result<Unit>` | Pair a new MFA account. |
-| `suspend getDeviceInfo()` | `Result<List<PingOneMfaAccount>>` | Return all paired accounts. |
+| `suspend getDeviceInfo()` | `Result<Pair<List<PingOneMfaAccount>, List<Error>?>>` | Return all paired accounts. The second element of the pair contains diagnostic errors from the SDK, if any — non-null only when the SDK returned partial error context alongside valid data. |
 | `suspend getOneTimePasscode()` | `Result<OtpCodeInfo>` | Return the current TOTP code and its remaining validity window. |
 | `suspend processRemoteNotification(message)` | `Result<PushNotification>` | Convert an FCM `RemoteMessage` to a typed `PushNotification`. |
 | `suspend generateMobilePayload()` | `Result<String>` | Generate a mobile payload for server-side authentication. |
