@@ -21,7 +21,7 @@ import com.pingidentity.samples.pingsampleapp.authenticator.managers.JourneyMana
 import com.pingidentity.samples.pingsampleapp.authenticator.managers.OathManager
 import com.pingidentity.samples.pingsampleapp.authenticator.managers.PushManager
 import com.pingidentity.samples.pingsampleapp.authenticator.managers.TestAccountFactory
-import com.pingidentity.samples.pingsampleapp.config.initConfigs
+import com.pingidentity.samples.pingsampleapp.config.ConfigurationManager
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -92,7 +92,7 @@ class PingSampleApplication : Application() {
             withContext(Dispatchers.IO) {
                 // Load persisted SDK configs (Journey, DaVinci, OIDC Web) immediately so
                 // all flows are ready before the user visits the Configuration screen.
-                initConfigs()
+                ConfigurationManager.initialize(this@PingSampleApplication)
             }
             initializeSdkClients()
             initializeManagers()

@@ -14,7 +14,7 @@ import com.pingidentity.journey.session
 import com.pingidentity.journey.user
 import com.pingidentity.logger.Logger
 import com.pingidentity.logger.STANDARD
-import com.pingidentity.samples.pingsampleapp.config.journey
+import com.pingidentity.samples.pingsampleapp.config.ConfigurationManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -322,7 +322,7 @@ class DeviceManagementViewModel(
     }
 
     private suspend fun buildDeviceClient(): DeviceClient? {
-        val user = journey.user() ?: return null
+        val user = ConfigurationManager.journey?.user() ?: return null
         return DeviceClient {
             ssoTokenString = user.session().value
             serverUrl = URL("https://openam-sdks.forgeblocks.com/am")

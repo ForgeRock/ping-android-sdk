@@ -9,7 +9,7 @@ package com.pingidentity.samples.pingsampleapp.davinci
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.pingidentity.orchestrate.ContinueNode
-import com.pingidentity.samples.pingsampleapp.config.daVinci
+import com.pingidentity.samples.pingsampleapp.config.ConfigurationManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -41,7 +41,7 @@ class DaVinciViewModel: ViewModel() {
     }
 
     fun start() {
-        if (daVinci == null) {
+        if (ConfigurationManager.daVinci == null) {
             state.update {
                 it.copy(node = null, error = "DaVinci not configured")
             }
@@ -51,7 +51,7 @@ class DaVinciViewModel: ViewModel() {
             true
         }
         viewModelScope.launch {
-            val next = daVinci?.start()
+            val next = ConfigurationManager.daVinci?.start()
 
             state.update {
                 it.copy(node = next, counter = it.counter + 1)

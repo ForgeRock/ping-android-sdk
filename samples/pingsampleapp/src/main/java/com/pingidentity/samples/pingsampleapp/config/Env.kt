@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2026 Ping Identity Corporation. All rights reserved.
+ *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
  */
@@ -30,11 +31,15 @@ import androidx.compose.material.icons.filled.RadioButtonUnchecked
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -43,6 +48,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -59,32 +65,59 @@ import kotlinx.coroutines.launch
 import java.net.URL
 
 // ---------------------------------------------------------------------------
-// Bottom sheet content discriminator
+// Edit sheet state
 // ---------------------------------------------------------------------------
 
-// Blank Journey config used when opening the "Add" bottom sheet.
-// Intentionally has no default values so the new entry is distinct from presets.
-private val blankJourneyConfig = JourneyConfigState(
-    serverUrl = "", realm = "", cookie = "", clientId = "",
-    discoveryEndpoint = "", scopes = "", redirectUri = "", display = ""
+/** Mutable form state used by the add/edit bottom sheet. */
+private data class ConfigFormState(
+    val name: String = "",
+    val type: ConfigType = ConfigType.JOURNEY,
+    val clientId: String = "",
+    val scopes: String = "",
+    val redirectUri: String = "",
+    val discoveryEndpoint: String = "",
+    val environment: String = "",
+    // Journey-only
+    val serverUrl: String = "",
+    val realm: String = "",
+    val cookieName: String = "",
+    // DaVinci / OIDC Web
+    val acrValues: String = "",
+    val par: Boolean = false,
 )
 
-private sealed class SheetContent {
-    data class JourneySheet(
-        val config: JourneyConfigState = blankJourneyConfig,
-        val customIndex: Int? = null,
-    ) : SheetContent()
+private fun ConfigFormState.toConfiguration(): Configuration = Configuration(
+    name = name.trim(),
+    type = type,
+    clientId = clientId.trim(),
+    scopes = scopes.split(",").map { it.trim() }.filter { it.isNotEmpty() },
+    redirectUri = redirectUri.trim(),
+    discoveryEndpoint = discoveryEndpoint.trim(),
+    environment = environment.trim(),
+    serverUrl = serverUrl.trim().ifEmpty { null },
+    realm = realm.trim().ifEmpty { null },
+    cookieName = cookieName.trim().ifEmpty { null },
+    acrValues = acrValues.trim().ifEmpty { null },
+    par = if (par) true else null,
+)
 
-    data class DaVinciSheet(
-        val config: OidcConfigState = OidcConfigState(),
-        val customIndex: Int? = null,
-    ) : SheetContent()
+private fun Configuration.toFormState(): ConfigFormState = ConfigFormState(
+    name = name,
+    type = type,
+    clientId = clientId,
+    scopes = scopes.joinToString(","),
+    redirectUri = redirectUri,
+    discoveryEndpoint = discoveryEndpoint,
+    environment = environment,
+    serverUrl = serverUrl ?: "",
+    realm = realm ?: "",
+    cookieName = cookieName ?: "",
+    acrValues = acrValues ?: "",
+    par = par ?: false,
+)
 
-    data class WebSheet(
-        val config: OidcConfigState = OidcConfigState(),
-        val customIndex: Int? = null,
-    ) : SheetContent()
-}
+/** Sentinel value for "Add new config" — no pre-existing name to update. */
+private val AddMode: String? = null
 
 // ---------------------------------------------------------------------------
 // Main screen
@@ -96,12 +129,39 @@ fun Env(
     envViewModel: EnvViewModel = viewModel(),
     onBack: (() -> Unit)? = null,
 ) {
-    var sheetContent by remember { mutableStateOf<SheetContent?>(null) }
+    val configurations by envViewModel.configurations.collectAsState()
+    val selections by envViewModel.selections.collectAsState()
+
+    // editingOldName: null → Add mode; non-null → Edit mode (holds old name for update call)
+    var editingOldName by remember { mutableStateOf<String?>(null) }
+    var sheetFormState by remember { mutableStateOf<ConfigFormState?>(null) }
+
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
 
+    fun openAdd() {
+        editingOldName = AddMode
+        sheetFormState = ConfigFormState()
+    }
+
+    fun openEdit(config: Configuration) {
+        editingOldName = config.name
+        sheetFormState = config.toFormState()
+    }
+
     fun dismiss() {
-        scope.launch { sheetState.hide() }.invokeOnCompletion { sheetContent = null }
+        scope.launch { sheetState.hide() }.invokeOnCompletion { sheetFormState = null }
+    }
+
+    fun onSave(form: ConfigFormState) {
+        val config = form.toConfiguration()
+        val old = editingOldName
+        if (old == null) {
+            envViewModel.add(config)
+        } else {
+            envViewModel.update(old, config)
+        }
+        dismiss()
     }
 
     AppTheme {
@@ -112,7 +172,10 @@ fun Env(
                         title = { Text("Configuration") },
                         navigationIcon = {
                             IconButton(onClick = onBack) {
-                                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                                Icon(
+                                    Icons.AutoMirrored.Filled.ArrowBack,
+                                    contentDescription = "Back",
+                                )
                             }
                         },
                     )
@@ -127,130 +190,33 @@ fun Env(
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
-                // Journey card
-                JourneyCard(
-                    presets = envViewModel.journeyPresets,
-                    customConfigs = envViewModel.customJourneyConfigs,
-                    appliedConfig = envViewModel.appliedJourneyConfig,
-                    onSelect = { envViewModel.selectJourneyConfig(it) },
-                    onEdit = { cfg, idx -> sheetContent = SheetContent.JourneySheet(cfg, idx) },
-                    onDelete = { envViewModel.deleteCustomJourneyConfig(it) },
-                    onAdd = { sheetContent = SheetContent.JourneySheet() },
-                )
-
-                // DaVinci card
-                OidcCard(
-                    title = "DaVinci",
-                    presets = envViewModel.daVinciPresets,
-                    customConfigs = envViewModel.customDaVinciConfigs,
-                    appliedConfig = envViewModel.appliedDaVinciConfig,
-                    onSelect = { envViewModel.selectDaVinciConfig(it) },
-                    onEdit = { cfg, idx -> sheetContent = SheetContent.DaVinciSheet(cfg, idx) },
-                    onDelete = { envViewModel.deleteCustomDaVinciConfig(it) },
-                    onAdd = { sheetContent = SheetContent.DaVinciSheet() },
-                )
-
-                // OIDC (Web) card
-                OidcCard(
-                    title = "OIDC (Web)",
-                    presets = envViewModel.webPresets,
-                    customConfigs = envViewModel.customWebConfigs,
-                    appliedConfig = envViewModel.appliedWebConfig,
-                    onSelect = { envViewModel.selectWebConfig(it) },
-                    onEdit = { cfg, idx -> sheetContent = SheetContent.WebSheet(cfg, idx) },
-                    onDelete = { envViewModel.deleteCustomWebConfig(it) },
-                    onAdd = { sheetContent = SheetContent.WebSheet() },
-                )
-
+                ConfigType.entries.forEach { type ->
+                    val typeConfigs = configurations.filter { it.type == type }
+                    val selected = selections[type]
+                    ConfigTypeCard(
+                        type = type,
+                        configs = typeConfigs,
+                        selectedConfig = selected,
+                        onSelect = { envViewModel.select(it) },
+                        onEdit = { openEdit(it) },
+                        onDelete = { envViewModel.delete(it) },
+                        onAdd = { openAdd() },
+                    )
+                }
                 Spacer(Modifier.height(8.dp))
             }
         }
 
-        // Bottom sheet (outside Scaffold to avoid inset conflicts)
-        if (sheetContent != null) {
+        if (sheetFormState != null) {
             ModalBottomSheet(
-                onDismissRequest = { sheetContent = null },
+                onDismissRequest = { sheetFormState = null },
                 sheetState = sheetState,
             ) {
-                when (val content = sheetContent) {
-                    is SheetContent.JourneySheet -> JourneySheetContent(
-                        initial = content.config,
-                        isEdit = content.customIndex != null,
-                        onSave = { cfg ->
-                            envViewModel.saveCustomJourneyConfig(cfg, content.customIndex)
-                            dismiss()
-                        },
-                        onDismiss = ::dismiss,
-                    )
-                    is SheetContent.DaVinciSheet -> OidcSheetContent(
-                        title = "DaVinci Config",
-                        initial = content.config,
-                        isEdit = content.customIndex != null,
-                        showArcValue = true,
-                        onSave = { cfg ->
-                            envViewModel.saveCustomDaVinciConfig(cfg, content.customIndex)
-                            dismiss()
-                        },
-                        onDismiss = ::dismiss,
-                    )
-                    is SheetContent.WebSheet -> OidcSheetContent(
-                        title = "OIDC (Web) Config",
-                        initial = content.config,
-                        isEdit = content.customIndex != null,
-                        onSave = { cfg ->
-                            envViewModel.saveCustomWebConfig(cfg, content.customIndex)
-                            dismiss()
-                        },
-                        onDismiss = ::dismiss,
-                    )
-                    null -> Unit
-                }
-            }
-        }
-    }
-}
-
-// ---------------------------------------------------------------------------
-// Journey card
-// ---------------------------------------------------------------------------
-
-@Composable
-private fun JourneyCard(
-    presets: List<JourneyConfigState>,
-    customConfigs: List<JourneyConfigState>,
-    appliedConfig: JourneyConfigState?,
-    onSelect: (JourneyConfigState) -> Unit,
-    onEdit: (JourneyConfigState, Int) -> Unit,
-    onDelete: (Int) -> Unit,
-    onAdd: () -> Unit,
-) {
-    ConfigCard(title = "Journey", appliedDisplay = appliedConfig?.display, onAdd = onAdd) {
-        if (presets.isNotEmpty()) {
-            SectionLabel("Presets")
-            presets.forEach { config ->
-                ConfigRow(
-                    display = config.display,
-                    subtitle = "${extractHost(config.discoveryEndpoint)} · ${config.clientId}",
-                    isApplied = appliedConfig == config,
-                    isPreset = true,
-                    onSelect = { onSelect(config) },
-                    onEdit = null,
-                    onDelete = null,
-                )
-            }
-        }
-        if (customConfigs.isNotEmpty()) {
-            if (presets.isNotEmpty()) HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-            SectionLabel("Custom")
-            customConfigs.forEachIndexed { index, config ->
-                ConfigRow(
-                    display = config.display,
-                    subtitle = "${extractHost(config.discoveryEndpoint)} · ${config.clientId}",
-                    isApplied = appliedConfig == config,
-                    isPreset = false,
-                    onSelect = { onSelect(config) },
-                    onEdit = { onEdit(config, index) },
-                    onDelete = { onDelete(index) },
+                ConfigEditSheet(
+                    initial = sheetFormState!!,
+                    isEdit = editingOldName != null,
+                    onSave = ::onSave,
+                    onDismiss = ::dismiss,
                 )
             }
         }
@@ -258,82 +224,36 @@ private fun JourneyCard(
 }
 
 // ---------------------------------------------------------------------------
-// Generic OIDC card (DaVinci / Web)
+// Card per ConfigType
 // ---------------------------------------------------------------------------
 
 @Composable
-private fun OidcCard(
-    title: String,
-    presets: List<OidcConfigState>,
-    customConfigs: List<OidcConfigState>,
-    appliedConfig: OidcConfigState?,
-    onSelect: (OidcConfigState) -> Unit,
-    onEdit: (OidcConfigState, Int) -> Unit,
-    onDelete: (Int) -> Unit,
+private fun ConfigTypeCard(
+    type: ConfigType,
+    configs: List<Configuration>,
+    selectedConfig: Configuration?,
+    onSelect: (Configuration) -> Unit,
+    onEdit: (Configuration) -> Unit,
+    onDelete: (Configuration) -> Unit,
     onAdd: () -> Unit,
-) {
-    ConfigCard(title = title, appliedDisplay = appliedConfig?.display, onAdd = onAdd) {
-        if (presets.isNotEmpty()) {
-            SectionLabel("Presets")
-            presets.forEach { config ->
-                ConfigRow(
-                    display = config.display,
-                    subtitle = "${extractHost(config.discoveryEndpoint)} · ${config.clientId}",
-                    isApplied = appliedConfig == config,
-                    isPreset = true,
-                    onSelect = { onSelect(config) },
-                    onEdit = null,
-                    onDelete = null,
-                )
-            }
-        }
-        if (customConfigs.isNotEmpty()) {
-            if (presets.isNotEmpty()) HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-            SectionLabel("Custom")
-            customConfigs.forEachIndexed { index, config ->
-                ConfigRow(
-                    display = config.display,
-                    subtitle = "${extractHost(config.discoveryEndpoint)} · ${config.clientId}",
-                    isApplied = appliedConfig == config,
-                    isPreset = false,
-                    onSelect = { onSelect(config) },
-                    onEdit = { onEdit(config, index) },
-                    onDelete = { onDelete(index) },
-                )
-            }
-        }
-    }
-}
-
-// ---------------------------------------------------------------------------
-// Shared card shell
-// ---------------------------------------------------------------------------
-
-@Composable
-private fun ConfigCard(
-    title: String,
-    appliedDisplay: String?,
-    onAdd: () -> Unit,
-    content: @Composable () -> Unit,
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            // Header: title, applied badge, add button
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = title,
+                    text = type.name.replace("_", " "),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.weight(1f),
                 )
-                if (appliedDisplay != null) {
+                if (selectedConfig != null) {
                     Icon(
                         imageVector = Icons.Filled.CheckCircle,
                         contentDescription = null,
@@ -342,7 +262,7 @@ private fun ConfigCard(
                     )
                     Spacer(Modifier.width(4.dp))
                     Text(
-                        text = appliedDisplay,
+                        text = selectedConfig.name,
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.primary,
                     )
@@ -358,7 +278,29 @@ private fun ConfigCard(
             }
             HorizontalDivider()
             Spacer(Modifier.height(4.dp))
-            content()
+
+            if (configs.isEmpty()) {
+                Text(
+                    text = "No configurations",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(vertical = 4.dp),
+                )
+            } else {
+                configs.forEach { config ->
+                    val isSelected = selectedConfig?.name == config.name
+                    val isDefault = ConfigurationDefaults.isDefault(config)
+                    ConfigRow(
+                        display = config.name,
+                        subtitle = "${extractHost(config.discoveryEndpoint)} · ${config.clientId}",
+                        isSelected = isSelected,
+                        isDefault = isDefault,
+                        onSelect = { onSelect(config) },
+                        onEdit = if (!isDefault) ({ onEdit(config) }) else null,
+                        onDelete = if (!isDefault) ({ onDelete(config) }) else null,
+                    )
+                }
+            }
         }
     }
 }
@@ -371,8 +313,8 @@ private fun ConfigCard(
 private fun ConfigRow(
     display: String,
     subtitle: String,
-    isApplied: Boolean,
-    isPreset: Boolean,
+    isSelected: Boolean,
+    isDefault: Boolean,
     onSelect: () -> Unit,
     onEdit: (() -> Unit)?,
     onDelete: (() -> Unit)?,
@@ -400,7 +342,7 @@ private fun ConfigRow(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        if (!isPreset) {
+        if (!isDefault) {
             if (onEdit != null) {
                 IconButton(onClick = onEdit) {
                     Icon(
@@ -424,44 +366,36 @@ private fun ConfigRow(
         }
         IconButton(onClick = onSelect) {
             Icon(
-                imageVector = if (isApplied) Icons.Filled.CheckCircle else Icons.Filled.RadioButtonUnchecked,
-                contentDescription = if (isApplied) "Applied" else "Select",
-                tint = if (isApplied) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                imageVector = if (isSelected) Icons.Filled.CheckCircle else Icons.Filled.RadioButtonUnchecked,
+                contentDescription = if (isSelected) "Selected" else "Select",
+                tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }
     HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f))
 }
 
-@Composable
-private fun SectionLabel(text: String) {
-    Text(
-        text = text.uppercase(),
-        style = MaterialTheme.typography.labelSmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(top = 8.dp, bottom = 2.dp),
-    )
-}
-
 // ---------------------------------------------------------------------------
-// Bottom sheet: Journey
+// Add / Edit bottom sheet
 // ---------------------------------------------------------------------------
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun JourneySheetContent(
-    initial: JourneyConfigState,
+private fun ConfigEditSheet(
+    initial: ConfigFormState,
     isEdit: Boolean,
-    onSave: (JourneyConfigState) -> Unit,
+    onSave: (ConfigFormState) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    var cfg by remember { mutableStateOf(initial) }
-    val canSave =
-        cfg.serverUrl.isNotBlank() &&
-                cfg.realm.isNotBlank() &&
-                cfg.clientId.isNotBlank() &&
-                cfg.discoveryEndpoint.isNotBlank() &&
-                cfg.redirectUri.isNotBlank() &&
-                cfg.display.isNotBlank()
+    var form by remember { mutableStateOf(initial) }
+    var typeMenuExpanded by remember { mutableStateOf(false) }
+
+    val canSave = form.name.isNotBlank() &&
+            form.clientId.isNotBlank() &&
+            form.redirectUri.isNotBlank() &&
+            form.discoveryEndpoint.isNotBlank() &&
+            form.environment.isNotBlank() &&
+            (form.type != ConfigType.JOURNEY || (form.serverUrl.isNotBlank() && form.realm.isNotBlank()))
 
     Column(
         modifier = Modifier
@@ -473,92 +407,83 @@ private fun JourneySheetContent(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Text(
-            text = if (isEdit) "Edit Journey Config" else "Add Journey Config",
+            text = if (isEdit) "Edit Configuration" else "Add Configuration",
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold,
         )
-        ConfigField("Server URL", cfg.serverUrl) { cfg = cfg.copy(serverUrl = it) }
-        ConfigField("Realm", cfg.realm) { cfg = cfg.copy(realm = it) }
-        ConfigField("Cookie", cfg.cookie) { cfg = cfg.copy(cookie = it) }
-        ConfigField("Client ID", cfg.clientId) { cfg = cfg.copy(clientId = it) }
-        ConfigField("Discovery Endpoint", cfg.discoveryEndpoint) { cfg = cfg.copy(discoveryEndpoint = it) }
-        ConfigField("Scopes (comma-separated)", cfg.scopes) { cfg = cfg.copy(scopes = it) }
-        ConfigField("Redirect URI", cfg.redirectUri) { cfg = cfg.copy(redirectUri = it) }
-        ConfigField("Display Name", cfg.display) { cfg = cfg.copy(display = it) }
-        SheetActions(onDismiss = onDismiss, onSave = { onSave(cfg) }, canSave = canSave)
+
+        ConfigField("Name", form.name) { form = form.copy(name = it) }
+
+        // Type dropdown — locked when editing to avoid type mismatch
+        ExposedDropdownMenuBox(
+            expanded = typeMenuExpanded && !isEdit,
+            onExpandedChange = { if (!isEdit) typeMenuExpanded = it },
+        ) {
+            OutlinedTextField(
+                value = form.type.name.replace("_", " "),
+                onValueChange = {},
+                readOnly = true,
+                label = { Text("Type") },
+                trailingIcon = {
+                    if (!isEdit) ExposedDropdownMenuDefaults.TrailingIcon(expanded = typeMenuExpanded)
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .menuAnchor(MenuAnchorType.PrimaryNotEditable),
+                textStyle = MaterialTheme.typography.bodyMedium,
+            )
+            if (!isEdit) {
+                ExposedDropdownMenu(
+                    expanded = typeMenuExpanded,
+                    onDismissRequest = { typeMenuExpanded = false },
+                ) {
+                    ConfigType.entries.forEach { ct ->
+                        DropdownMenuItem(
+                            text = { Text(ct.name.replace("_", " ")) },
+                            onClick = {
+                                form = form.copy(type = ct)
+                                typeMenuExpanded = false
+                            },
+                        )
+                    }
+                }
+            }
+        }
+
+        ConfigField("Client ID", form.clientId) { form = form.copy(clientId = it) }
+        ConfigField("Scopes (comma-separated)", form.scopes) { form = form.copy(scopes = it) }
+        ConfigField("Redirect URI", form.redirectUri) { form = form.copy(redirectUri = it) }
+        ConfigField("Discovery Endpoint", form.discoveryEndpoint) { form = form.copy(discoveryEndpoint = it) }
+        ConfigField("Environment", form.environment) { form = form.copy(environment = it) }
+
+        if (form.type == ConfigType.JOURNEY) {
+            ConfigField("Server URL", form.serverUrl) { form = form.copy(serverUrl = it) }
+            ConfigField("Realm", form.realm) { form = form.copy(realm = it) }
+            ConfigField("Cookie Name", form.cookieName) { form = form.copy(cookieName = it) }
+        }
+
+        if (form.type == ConfigType.DAVINCI || form.type == ConfigType.OIDC_WEB) {
+            ConfigField("ACR Values", form.acrValues) { form = form.copy(acrValues = it) }
+        }
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            OutlinedButton(onClick = onDismiss, modifier = Modifier.weight(1f)) {
+                Text("Cancel")
+            }
+            Button(
+                onClick = { onSave(form) },
+                modifier = Modifier.weight(1f),
+                enabled = canSave,
+            ) {
+                Text("Save & Apply")
+            }
+        }
         Spacer(Modifier.height(8.dp))
-    }
-}
-
-// ---------------------------------------------------------------------------
-// Bottom sheet: DaVinci / OIDC Web
-// ---------------------------------------------------------------------------
-
-@Composable
-private fun OidcSheetContent(
-    title: String,
-    initial: OidcConfigState,
-    isEdit: Boolean,
-    showArcValue: Boolean = false,
-    onSave: (OidcConfigState) -> Unit,
-    onDismiss: () -> Unit,
-) {
-    var cfg by remember { mutableStateOf(initial) }
-    val canSave =
-                cfg.clientId.isNotBlank() &&
-                cfg.discoveryEndpoint.isNotBlank() &&
-                cfg.redirectUri.isNotBlank() &&
-                cfg.display.isNotBlank()
-
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .navigationBarsPadding()
-            .imePadding()
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 24.dp, vertical = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        Text(
-            text = if (isEdit) "Edit $title" else "Add $title",
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold,
-        )
-        ConfigField("Client ID", cfg.clientId) { cfg = cfg.copy(clientId = it) }
-        ConfigField("Discovery Endpoint", cfg.discoveryEndpoint) { cfg = cfg.copy(discoveryEndpoint = it) }
-        ConfigField("Scopes (comma-separated)", cfg.scopes) { cfg = cfg.copy(scopes = it) }
-        ConfigField("Redirect URI", cfg.redirectUri) { cfg = cfg.copy(redirectUri = it) }
-        ConfigField("Display Name", cfg.display) { cfg = cfg.copy(display = it) }
-        if (showArcValue) {
-            ConfigField("ACR Value", cfg.arcValue) { cfg = cfg.copy(arcValue = it) }
-        }
-        SheetActions(onDismiss = onDismiss, onSave = { onSave(cfg) }, canSave = canSave)
-        Spacer(Modifier.height(8.dp))
-    }
-}
-
-// ---------------------------------------------------------------------------
-// Shared bottom sheet Save / Cancel row
-// ---------------------------------------------------------------------------
-
-@Composable
-private fun SheetActions(
-    onDismiss: () -> Unit,
-    onSave: () -> Unit,
-    canSave: Boolean,
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(top = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        OutlinedButton(onClick = onDismiss, modifier = Modifier.weight(1f)) {
-            Text("Cancel")
-        }
-        Button(onClick = onSave, modifier = Modifier.weight(1f), enabled = canSave) {
-            Text("Save & Apply")
-        }
     }
 }
 

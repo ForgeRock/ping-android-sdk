@@ -22,8 +22,10 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import android.net.Uri
 import com.pingidentity.idp.journey.IdpCallback
-import com.pingidentity.samples.pingsampleapp.config.redirectUri
+import com.pingidentity.samples.pingsampleapp.config.ConfigurationManager
+import com.pingidentity.samples.pingsampleapp.config.ConfigType
 
 @Composable
 fun IdPCallback(
@@ -44,6 +46,10 @@ fun IdPCallback(
         CircularProgressIndicator()
 
         LaunchedEffect(true) {
+            val redirectUri = ConfigurationManager.selectedConfig(ConfigType.JOURNEY)
+                ?.redirectUri
+                ?.let { Uri.parse(it) }
+                ?: return@LaunchedEffect
             callback.authorize(redirectUri)
             currentOnNodeUpdated()
         }

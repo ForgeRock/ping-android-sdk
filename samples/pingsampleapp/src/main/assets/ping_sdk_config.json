@@ -1,0 +1,89 @@
+[
+  {
+    "name": "RN Journey (ForgeBlocks)",
+    "type": "Journey",
+    "clientId": "sdkPublicClient",
+    "scopes": ["openid", "email", "profile", "address"],
+    "redirectUri": "org.forgerock.demo://oauth2redirect",
+    "discoveryEndpoint": "https://openam-sdks.forgeblocks.com/am/oauth2/alpha/.well-known/openid-configuration",
+    "environment": "AIC",
+    "cookieName": "5421aeddf91aa20",
+    "serverUrl": "https://openam-sdks.forgeblocks.com/am",
+    "realm": "alpha"
+  },
+  {
+    "name": "Journey Test Config",
+    "type": "Journey",
+    "clientId": "iosClient",
+    "scopes": ["openid", "email", "address"],
+    "redirectUri": "frauth://com.forgerock.ios.frexample",
+    "discoveryEndpoint": "https://openam-sdks.forgeblocks.com/am/oauth2/alpha/.well-known/openid-configuration",
+    "environment": "AIC",
+    "cookieName": "5421aeddf91aa20",
+    "serverUrl": "https://openam-sdks.forgeblocks.com/am",
+    "realm": "alpha"
+  },
+  {
+    "name": "Journey - openam-sdks2",
+    "type": "Journey",
+    "clientId": "iosClient",
+    "scopes": ["openid", "email", "address"],
+    "redirectUri": "frauth://com.forgerock.ios.frexample",
+    "discoveryEndpoint": "https://openam-sdks2.forgeblocks.com/am/oauth2/alpha/.well-known/openid-configuration",
+    "environment": "AIC",
+    "cookieName": "eb2f1fefc540791",
+    "serverUrl": "https://openam-sdks2.forgeblocks.com/am",
+    "realm": "alpha"
+  },
+  {
+    "name": "DaVinci Test Config",
+    "type": "DaVinci",
+    "clientId": "021b83ce-a9b1-4ad4-8c1d-79e576eeab76",
+    "scopes": ["openid", "email", "address", "phone", "profile", "ttl"],
+    "redirectUri": "org.forgerock.demo://oauth2redirect",
+    "signOutUri": "org.forgerock.demo://oauth2redirect",
+    "discoveryEndpoint": "https://auth.pingone.ca/02fb4743-189a-4bc7-9d6c-a919edfe6447/as/.well-known/openid-configuration",
+    "environment": "PingOne",
+    "acrValues": "210f6b876da11c836ffc1c5fb38f3938"
+  },
+  {
+    "name": "DaVinci MFA testing",
+    "type": "DaVinci",
+    "clientId": "b1e50ef5-80d9-4b63-b45d-89e1e628e4ca",
+    "scopes": ["openid", "profile", "email", "address"],
+    "redirectUri": "org.forgerock.demo://oauth2redirect",
+    "signOutUri": "org.forgerock.demo://oauth2redirect",
+    "discoveryEndpoint": "https://pingone.petrov.ca/as/.well-known/openid-configuration",
+    "environment": "PingOne",
+    "acrValues": "28f69709ab22084e4a29c8b18cf574fe"
+  },
+  {
+    "name": "DaVinci - Stoyan",
+    "type": "DaVinci",
+    "clientId": "c12743f9-08e8-4420-a624-71bbb08e9fe1",
+    "scopes": ["openid", "email", "address", "phone", "profile", "ttl"],
+    "redirectUri": "org.forgerock.demo://oauth2redirect",
+    "signOutUri": "org.forgerock.demo://oauth2redirect",
+    "discoveryEndpoint": "https://auth.pingone.ca/02fb4743-189a-4bc7-9d6c-a919edfe6447/as/.well-known/openid-configuration",
+    "environment": "PingOne",
+    "acrValues": "28f69709ab22084e4a29c8b18cf574fe"
+  },
+  {
+    "name": "OIDC Forgeblock",
+    "type": "OIDC (Web)",
+    "clientId": "iosClient",
+    "scopes": ["openid", "email", "address"],
+    "redirectUri": "frauth://com.forgerock.ios.frexample",
+    "discoveryEndpoint": "https://openam-sdks.forgeblocks.com/am/oauth2/alpha/.well-known/openid-configuration",
+    "environment": "AIC"
+  },
+  {
+    "name": "OIDC PingOne",
+    "type": "OIDC (Web)",
+    "clientId": "c12743f9-08e8-4420-a624-71bbb08e9fe1",
+    "scopes": ["openid", "email", "address", "phone", "profile", "ttl"],
+    "redirectUri": "org.forgerock.demo://oauth2redirect",
+    "discoveryEndpoint": "https://auth.test-one-pingone.com/dummy/as/.well-known/openid-configuration",
+    "environment": "PingOne"
+  }
+]

@@ -11,7 +11,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.pingidentity.journey.start
 import com.pingidentity.orchestrate.ContinueNode
-import com.pingidentity.samples.pingsampleapp.config.journey
+import com.pingidentity.samples.pingsampleapp.config.ConfigurationManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -33,7 +33,10 @@ class JourneyViewModel(private val journeyName: String): ViewModel() {
             true
         }
         viewModelScope.launch {
-            val next = journey.start(journeyName)
+            val next = ConfigurationManager.journey?.start(journeyName) ?: run {
+                loading.update { false }
+                return@launch
+            }
             state.update {
                 it.copy(node = next)
             }

@@ -26,7 +26,9 @@ import androidx.compose.ui.unit.dp
 import com.pingidentity.browser.BrowserLauncher
 import com.pingidentity.idp.davinci.IdpCollector
 import com.pingidentity.samples.pingsampleapp.R
-import com.pingidentity.samples.pingsampleapp.config.daVinciRedirectUri
+import android.net.Uri
+import com.pingidentity.samples.pingsampleapp.config.ConfigurationManager
+import com.pingidentity.samples.pingsampleapp.config.ConfigType
 import kotlinx.coroutines.launch
 
 @Composable
@@ -59,6 +61,10 @@ fun SocialLoginButton(
                         .wrapContentWidth(Alignment.CenterHorizontally),
                 onClick = {
                     coroutineScope.launch {
+                        val daVinciRedirectUri = ConfigurationManager.selectedConfig(ConfigType.DAVINCI)
+                            ?.redirectUri
+                            ?.let { Uri.parse(it) }
+                            ?: return@launch
                         BrowserLauncher.customTabsCustomizer = {
                             setShowTitle(false)
                             setUrlBarHidingEnabled(true)
@@ -89,6 +95,10 @@ fun SocialLoginButton(
                     .wrapContentWidth(Alignment.CenterHorizontally)
                     .clickable {
                         coroutineScope.launch {
+                            val daVinciRedirectUri = ConfigurationManager.selectedConfig(ConfigType.DAVINCI)
+                                ?.redirectUri
+                                ?.let { Uri.parse(it) }
+                                ?: return@launch
                             BrowserLauncher.customTabsCustomizer = {
                                 setShowTitle(false)
                                 setUrlBarHidingEnabled(true)

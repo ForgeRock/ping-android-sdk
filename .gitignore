@@ -11,3 +11,4 @@ xcuserdata
 .kotlin
 .polaris/
 .claude/settings.local.json
+.sdk/

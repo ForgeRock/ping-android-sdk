@@ -11,9 +11,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.pingidentity.journey.user as journeyUser
 import com.pingidentity.davinci.user as davinciUser
-import com.pingidentity.samples.pingsampleapp.config.daVinci
-import com.pingidentity.samples.pingsampleapp.config.journey
-import com.pingidentity.samples.pingsampleapp.config.web
+import com.pingidentity.samples.pingsampleapp.config.ConfigurationManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 
@@ -28,30 +26,30 @@ class LogoutViewModel: ViewModel() {
     fun listLogoutOptions() {
         viewModelScope.launch {
             state.value = LogoutState(
-                daVinci = daVinci?.davinciUser() != null,
-                journey = journey.journeyUser() != null,
-                oidc = web?.user() != null,
+                daVinci = ConfigurationManager.daVinci?.davinciUser() != null,
+                journey = ConfigurationManager.journey?.journeyUser() != null,
+                oidc = ConfigurationManager.oidcWebClient?.user() != null,
             )
         }
     }
 
     fun logoutJourney(onCompleted: () -> Unit) {
         viewModelScope.launch {
-            journey.journeyUser()?.logout()
+            ConfigurationManager.journey?.journeyUser()?.logout()
             onCompleted()
         }
     }
 
     fun logoutDaVinci(onCompleted: () -> Unit) {
         viewModelScope.launch {
-            daVinci?.davinciUser()?.logout()
+            ConfigurationManager.daVinci?.davinciUser()?.logout()
             onCompleted()
         }
     }
 
     fun logoutOidcWeb(onCompleted: () -> Unit) {
         viewModelScope.launch {
-            web?.user()?.logout()
+            ConfigurationManager.oidcWebClient?.user()?.logout()
             onCompleted()
         }
     }
@@ -59,9 +57,9 @@ class LogoutViewModel: ViewModel() {
     fun logoutAll(onCompleted: () -> Unit) {
         viewModelScope.launch {
             // Logout from all active sessions
-            journey.journeyUser()?.logout()
-            daVinci?.davinciUser()?.logout()
-            web?.user()?.logout()
+            ConfigurationManager.journey?.journeyUser()?.logout()
+            ConfigurationManager.daVinci?.davinciUser()?.logout()
+            ConfigurationManager.oidcWebClient?.user()?.logout()
             onCompleted()
         }
     }

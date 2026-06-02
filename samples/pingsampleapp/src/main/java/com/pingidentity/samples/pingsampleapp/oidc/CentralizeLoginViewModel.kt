@@ -8,7 +8,7 @@ package com.pingidentity.samples.pingsampleapp.oidc
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.pingidentity.samples.pingsampleapp.config.web
+import com.pingidentity.samples.pingsampleapp.config.ConfigurationManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -18,14 +18,15 @@ class CentralizeLoginViewModel: ViewModel() {
         private set
 
     fun login() {
-        if (web == null) {
+        val client = ConfigurationManager.oidcWebClient
+        if (client == null) {
             state.update {
                 it.copy(error = Exception("Select OiDC from Configuration"))
             }
             return
         }
         viewModelScope.launch {
-            web!!.authorize {
+            client.authorize {
                 // no config
             }.onSuccess { user ->
                 state.update {

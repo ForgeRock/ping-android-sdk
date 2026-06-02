@@ -1,3 +1,7 @@
+## [Unreleased]
+#### Changed
+- Standardized SDK configuration in the sample app to use a JSON config file with a unified Configuration model [SDKS-5065]
+
 ## [2.0.1]
 
 #### Fixed

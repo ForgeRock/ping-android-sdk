@@ -12,9 +12,7 @@ import androidx.lifecycle.viewModelScope
 import com.pingidentity.journey.user as journeyUser
 import com.pingidentity.davinci.user as davinciUser
 import com.pingidentity.oidc.OidcError
-import com.pingidentity.samples.pingsampleapp.config.daVinci
-import com.pingidentity.samples.pingsampleapp.config.journey
-import com.pingidentity.samples.pingsampleapp.config.web
+import com.pingidentity.samples.pingsampleapp.config.ConfigurationManager
 import com.pingidentity.utils.Result
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
@@ -89,7 +87,7 @@ class UserProfileViewModel : ViewModel() {
     // Journey Operations
     private fun journeyUserInfo() {
         viewModelScope.launch {
-            journey.journeyUser()?.let { user ->
+            ConfigurationManager.journey?.journeyUser()?.let { user ->
                 when (val result = user.userinfo(false)) {
                     is Result.Failure ->
                         state.update { s ->
@@ -115,7 +113,7 @@ class UserProfileViewModel : ViewModel() {
     // DaVinci Operations
     private fun daVinciUserInfo() {
         viewModelScope.launch {
-            daVinci?.davinciUser()?.let { user ->
+            ConfigurationManager.daVinci?.davinciUser()?.let { user ->
                 when (val result = user.userinfo(false)) {
                     is Result.Failure ->
                         state.update { s ->
@@ -141,7 +139,7 @@ class UserProfileViewModel : ViewModel() {
     // OIDC Operations
     private fun oidcUserInfo() {
         viewModelScope.launch {
-            web?.user()?.let { user ->
+            ConfigurationManager.oidcWebClient?.user()?.let { user ->
                 when (val result = user.userinfo(false)) {
                     is Result.Failure ->
                         state.update { s ->
