@@ -1,0 +1,11 @@
+# Remote URL for the shared SDK configuration.
+# The app fetches this at startup and caches the result locally.
+# On failure (offline / unreachable) it falls back to the local cache,
+# then to the bundled assets/ping_sdk_config.json.
+#
+# Point this at any public URL that serves a ping_sdk_config.json array:
+#   - Raw GitHub file:  https://raw.githubusercontent.com/ORG/REPO/main/ping_sdk_config.json
+#   - S3 / CDN URL:     https://cdn.example.com/config/ping_sdk_config.json
+#
+# Leave blank (or comment out the URL line) to skip remote fetching entirely.
+
