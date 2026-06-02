@@ -71,7 +71,9 @@ class PingOneMFAException private constructor(
 
     // Internal factory constructors — accept native SDK type but keep it off the public API surface.
     internal constructor(errors: Array<PingOneSDKError>) : this(
-        message = errors[0].message ?: "Unknown error",
+        // errors[0] can be null when the native SDK includes null sentinels in the array;
+        // find the first non-null entry and use its message as the summary.
+        message = errors.firstOrNull { it != null }?.message ?: "Unknown error",
         cause = null,
         internalErrorsList = ErrorParser.fromPingOneSDKErrors(errors)
     )
