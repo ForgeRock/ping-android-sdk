@@ -48,7 +48,7 @@ internal data class UserDto(
     val id: String? = null,
     val environment: IdContainer? = null,
     val device: IdContainer? = null,
-    val username: String?,
+    val username: String? = null,
     val name: NameDto? = null
 )
 
