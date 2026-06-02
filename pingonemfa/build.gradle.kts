@@ -8,6 +8,7 @@ description = "Ping Identity PingOneMFA SDK for Android"
 
 plugins {
     id("com.pingidentity.convention.android.library")
+    id("com.pingidentity.convention.centralPublish")
     id("kotlin-parcelize")
     alias(libs.plugins.androidLibrary)
     alias(libs.plugins.kotlinAndroid)
