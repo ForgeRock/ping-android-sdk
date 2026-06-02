@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 - 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2024 - 2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -100,6 +100,9 @@ private fun option(context: SharedContext, block: Option.() -> Unit = {}) {
     context.apply {
         FORCE_AUTH to option.forceAuth
         NO_SESSION to option.noSession
+        option.parameters.forEach { (key, value) ->
+            this[key] = value
+        }
     }
 }
 
@@ -142,5 +145,15 @@ fun Journey(block: JourneyConfig.() -> Unit = {}): Journey {
  *
  * @property forceAuth Whether to force authentication (default is false).
  * @property noSession Whether to return new session (default is false).
+ * @property parameters Additional key-value parameters to include in the authorization request.
  */
-data class Option(var forceAuth: Boolean = false, var noSession: Boolean = false)
+data class Option(
+    var forceAuth: Boolean = false,
+    var noSession: Boolean = false,
+    internal val parameters: MutableMap<String, Any> = mutableMapOf(),
+) : MutableMap<String, Any> by parameters {
+
+    infix fun String.to(value: Any) {
+        this@Option[this] = value
+    }
+}

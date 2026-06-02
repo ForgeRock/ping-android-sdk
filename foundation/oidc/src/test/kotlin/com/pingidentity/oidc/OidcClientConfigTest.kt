@@ -209,9 +209,9 @@ class OidcClientConfigTest {
                 httpClient = mockk()
             }
 
-        //Ensure there are 22 properties in the class for now.
+        //Ensure there are 23 properties in the class for now.
         val clazz: KClass<OidcClientConfig> = OidcClientConfig::class
-        assertEquals(clazz.memberProperties.size, 22)
+        assertEquals(clazz.memberProperties.size, 23)
 
         val clonedConfig = oidcClientConfig.clone()
 

@@ -182,6 +182,20 @@ class OidcClientConfig {
     lateinit var httpClient: HttpClient
 
     /**
+     * Called once after OpenID discovery completes, allowing callers to patch any field
+     * on the discovered [OpenIdConfiguration] before it is used (e.g. override
+     * [OpenIdConfiguration.deviceAuthorizationEndpoint] for a non-standard server).
+     *
+     * Example:
+     * ```kotlin
+     * openIdOverride = {
+     *     deviceAuthorizationEndpoint = "https://custom.example.com/as/device_authorization"
+     * }
+     * ```
+     */
+    var openIdOverride: (OpenIdConfiguration.() -> Unit)? = null
+
+    /**
      * Adds a scope to the set of scopes.
      *
      * @param scope The scope to add.
@@ -204,7 +218,7 @@ class OidcClientConfig {
             tokenStorage = storage()
         }
         if (!::openId.isInitialized) {
-            openId = discover()
+            openId = discover().also { openIdOverride?.invoke(it) }
         }
         if (!::agent.isInitialized) {
             updateAgent(DefaultAgent)
@@ -248,7 +262,7 @@ class OidcClientConfig {
      * @param other The other configuration to merge.
      */
     operator fun plusAssign(other: OidcClientConfig) {
-        this.openId = other.openId
+        this.openId = other.openId.copy()
         this.refreshThreshold = other.refreshThreshold
         this.agent = other.agent
         this.logger = other.logger
@@ -270,5 +284,6 @@ class OidcClientConfig {
         this.additionalParameters = other.additionalParameters
         this.httpClient = other.httpClient
         this.par = other.par
+        this.openIdOverride = other.openIdOverride
     }
 }
