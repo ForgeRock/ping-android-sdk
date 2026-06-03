@@ -70,6 +70,7 @@ security-crypto = "1.1.0"
 
 play-services-location = "21.3.0"
 google-android-recaptcha = "18.6.1" # This version is compatible with API Level 29 and does not require desugaring.
+zxing = "3.5.3"
 
 [libraries]
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activityCompose" }
@@ -159,6 +160,8 @@ nimbus-jose-jwt = { module = "com.nimbusds:nimbus-jose-jwt", version.ref = "nimb
 
 play-services-location = { module = "com.google.android.gms:play-services-location", version.ref = "play-services-location" }
 google-android-recaptcha = { module = "com.google.android.recaptcha:recaptcha", version.ref = "google-android-recaptcha" }
+
+zxing-core = { module = "com.google.zxing:core", version.ref = "zxing" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }

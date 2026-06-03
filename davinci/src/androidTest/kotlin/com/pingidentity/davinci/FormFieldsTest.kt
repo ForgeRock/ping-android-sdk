@@ -13,6 +13,7 @@ import com.pingidentity.davinci.collector.LabelCollector
 import com.pingidentity.davinci.collector.MultiSelectCollector
 import com.pingidentity.davinci.collector.PhoneNumberCollector
 import com.pingidentity.davinci.collector.BooleanCollector
+import com.pingidentity.davinci.collector.ReadOnlyTextCollector
 import com.pingidentity.davinci.collector.SingleSelectCollector
 import com.pingidentity.davinci.collector.SubmitCollector
 import com.pingidentity.davinci.collector.TextCollector
@@ -26,6 +27,8 @@ import com.pingidentity.testrail.TestRailCase
 import com.pingidentity.testrail.TestRailWatcher
 import junit.framework.TestCase.assertNull
 import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import org.junit.Rule
 import org.junit.rules.TestWatcher
 import kotlin.test.BeforeTest
@@ -52,17 +55,21 @@ class FormFieldsTest {
         const val SINGLE_CHECKBOX_INDEX = 9
         const val FLOW_BUTTON_INDEX = 10
         const val FLOW_LINK_INDEX = 11
+        const val SUBMIT_BUTTON_INDEX = 12
+
+        // Agreement Test form (separate flow branch)
+        const val AGREEMENT_TEST_BUTTON_INDEX = 2  // "Agreement Test" flow button on the menu form
     }
 
     private var daVinci = DaVinci {
         logger = Logger.STANDARD
 
         module(Oidc) {
-            clientId = "021b83ce-a9b1-4ad4-8c1d-79e576eeab76"
-            discoveryEndpoint = "https://auth.pingone.ca/02fb4743-189a-4bc7-9d6c-a919edfe6447/as/.well-known/openid-configuration"
+            clientId = "a6859a12-5e6e-4f64-96bb-cc8577706bee"
+            discoveryEndpoint = "https://auth.pingone.ca/300c4f2a-39d4-4ba9-a18a-f6de246006f4/as/.well-known/openid-configuration"
             scopes = mutableSetOf("openid", "email", "address", "phone", "profile")
             redirectUri = "org.forgerock.demo://oauth2redirect"
-            acrValues = "210f6b876da11c836ffc1c5fb38f3938"
+            acrValues = "b63ac7fb5db6d893efdd5e29d06a7477"
             //storage = dataStore
         }
     }
@@ -122,15 +129,15 @@ class FormFieldsTest {
         // No replacement tokens on this label
         assertTrue(richContent2.replacements.isEmpty())
 
-        // labelCollector3: translatable link — richText contains {{token}} placeholders and replacements map contains corresponding entries
         val richContent3 = labelCollector3.richContent
         assertNotNull(richContent3)
-        assertEquals("A translatable rich text to take the user to {{link1}}", richContent3.content)
+        assertEquals("A translatable rich text to take the user to {{link1}} and {{link2}}", richContent3.content)
         assertTrue(richContent3.replacements.containsKey("link1"))
-        val replacement = richContent3.replacements["link1"]
-        assertNotNull(replacement)
-        assertEquals("google.com", replacement.value)
-        assertEquals("https://www.google.com", replacement.href)
+        assertTrue(richContent3.replacements.containsKey("link2"))
+        assertEquals("google.com", richContent3.replacements["link1"]!!.value)
+        assertEquals("https://www.google.com", richContent3.replacements["link1"]!!.href)
+        assertEquals("apple.com", richContent3.replacements["link2"]!!.value)
+        assertEquals("https://www.apple.com", richContent3.replacements["link2"]!!.href)
     }
 
     @Test
@@ -161,6 +168,54 @@ class FormFieldsTest {
             }
         }
         // If no such label is present in the current form, the test is a no-op (no assertion failure)
+    }
+
+    // Verify that a LABEL with two links exposes both replacements with correct values/hrefs.
+    @Test
+    fun labelCollectorMultipleLinksTest() = runTest {
+        var node = daVinci.start() as ContinueNode
+        (node.collectors[0] as? SubmitCollector)?.value = "click"
+        node = node.next() as ContinueNode
+
+        val label = node.collectors[LABEL_RICH_TEXT_INDEX] as LabelCollector
+        val richContent = label.richContent
+        assertNotNull(richContent)
+
+        assertEquals(
+            "A translatable rich text to take the user to {{link1}} and {{link2}}",
+            richContent.content
+        )
+        assertEquals(2, richContent.replacements.size)
+
+        val link1 = richContent.replacements["link1"]
+        assertNotNull(link1)
+        assertEquals("google.com", link1.value)
+        assertEquals("https://www.google.com", link1.href)
+        assertEquals("link", link1.type)
+        assertEquals("_self", link1.target)
+
+        val link2 = richContent.replacements["link2"]
+        assertNotNull(link2)
+        assertEquals("apple.com", link2.value)
+        assertEquals("https://www.apple.com", link2.href)
+        assertEquals("link", link2.type)
+        assertEquals("_blank", link2.target)
+    }
+
+    // Verify mixed open-in-new-tab targets — link1 stays in the same context (_self),
+    // link2 requests a new tab (_blank). Both targets must be independently correct.
+    @Test
+    fun labelCollectorLinkTargetsTest() = runTest {
+        var node = daVinci.start() as ContinueNode
+        (node.collectors[0] as? SubmitCollector)?.value = "click"
+        node = node.next() as ContinueNode
+
+        val label = node.collectors[LABEL_RICH_TEXT_INDEX] as LabelCollector
+        val replacements = label.richContent?.replacements
+        assertNotNull(replacements)
+
+        assertEquals("_self",  replacements["link1"]?.target)
+        assertEquals("_blank", replacements["link2"]?.target)
     }
 
     @TestRailCase(26032, 26031)
@@ -414,6 +469,97 @@ class FormFieldsTest {
         assertTrue(validationResult.isEmpty())
     }
 
+    // SDKS-4198 / DV-17946: countryCode format change — previously a plain string, now an
+    // object { phoneNumber, countryCode, extension }. Verify that the pre-filled object format
+    // is parsed correctly AND that payload() emits the same object structure (not a string).
+    @Test
+    fun phoneNumberCollectorObjectPayloadTest() = runTest {
+        // Go to the "Form Fields" form
+        var node = daVinci.start() as ContinueNode
+        (node.collectors[0] as? SubmitCollector)?.value = "click"
+        node = node.next() as ContinueNode
+
+        assertTrue(node.collectors[PHONE_NUMBER_INDEX] is PhoneNumberCollector)
+        val phone = node.collectors[PHONE_NUMBER_INDEX] as PhoneNumberCollector
+
+        // Server pre-fills countryCode + phoneNumber as an object (DV-17946 new format).
+        // Verify both fields were parsed from the object — not from a flat string.
+        assertEquals("GB", phone.countryCode)
+        assertEquals("(555)555-1234", phone.phoneNumber)
+
+        // payload() must return a JsonObject (not null and not a primitive string).
+        val payload = phone.payload()
+        assertNotNull(payload)
+        assertTrue(payload is JsonObject, "payload() must return a JsonObject for the new object format")
+        payload as JsonObject
+        assertEquals("GB", payload["countryCode"]?.jsonPrimitive?.content)
+        assertEquals("(555)555-1234", payload["phoneNumber"]?.jsonPrimitive?.content)
+        // extension key must be present in the payload (even when empty)
+        assertTrue(payload.containsKey("extension"), "payload must include the 'extension' key")
+    }
+
+    // Verify that showExtension/extensionLabel schema properties are parsed from the field config,
+    // that extension is correctly included in payload(), and that setting a value is reflected there.
+    @Test
+    fun phoneNumberExtensionSchemaAndPayloadTest() = runTest {
+        var node = daVinci.start() as ContinueNode
+        (node.collectors[0] as? SubmitCollector)?.value = "click"
+        node = node.next() as ContinueNode
+
+        val phone = node.collectors[PHONE_NUMBER_INDEX] as PhoneNumberCollector
+
+        // Schema-level extension properties (parsed from init(JsonObject))
+        assertEquals(true, phone.showExtension)
+
+        // TODO: Enable the following assertion once SDKS-5073 is resolved
+        // assertEquals("Extension", phone.extensionLabel)
+
+        // extension is pre-filled from formData object (DV-17946 new format)
+        assertEquals("4321", phone.extension)
+
+        // Overwrite with a different extension value and verify it appears in payload
+        phone.countryCode = "CA"
+        phone.phoneNumber = "7783177184"
+        phone.extension = "123"
+
+        val payload = phone.payload()
+        assertNotNull(payload)
+        payload as JsonObject
+        assertEquals("CA", payload["countryCode"]?.jsonPrimitive?.content)
+        assertEquals("7783177184", payload["phoneNumber"]?.jsonPrimitive?.content)
+        assertEquals("123", payload["extension"]?.jsonPrimitive?.content)
+    }
+
+    // Verify that validate() is not affected by the extension field — extension is optional and
+    // must never cause or block a Required error regardless of its value.
+    @Test
+    fun phoneNumberExtensionValidationTest() = runTest {
+        var node = daVinci.start() as ContinueNode
+        (node.collectors[0] as? SubmitCollector)?.value = "click"
+        node = node.next() as ContinueNode
+
+        val phone = node.collectors[PHONE_NUMBER_INDEX] as PhoneNumberCollector
+
+        // Extension set, but phone number missing → still Required
+        phone.countryCode = "CA"
+        phone.phoneNumber = ""
+        phone.extension = "999"
+        var validationResult = phone.validate()
+        assertTrue(validationResult.isNotEmpty())
+        assertEquals("Required", validationResult[0].toString())
+
+        // Extension empty, valid phone + country → no errors
+        phone.phoneNumber = "7783177184"
+        phone.extension = ""
+        validationResult = phone.validate()
+        assertTrue(validationResult.isEmpty())
+
+        // Extension set, valid phone + country → still no errors
+        phone.extension = "42"
+        validationResult = phone.validate()
+        assertTrue(validationResult.isEmpty())
+    }
+
     @TestRailCase(/* Add test rail IDs */)
     @Test
     fun booleanCollectorTest() = runTest {
@@ -448,6 +594,60 @@ class FormFieldsTest {
         assertTrue(validationResult.isEmpty())
     }
 
+    @Test
+    fun agreementCollectorTest() = runTest {
+        // Navigate to the "Agreement Test" form via the menu
+        var node = daVinci.start() as ContinueNode
+        val agreementButton = node.collectors[AGREEMENT_TEST_BUTTON_INDEX] as FlowCollector
+        agreementButton.value = "click"
+        node = node.next() as ContinueNode
+
+        // Form: "Automation - Agreement Tests"
+        assertEquals("Automation - Agreement Tests", node.name)
+
+        val agreement = node.collectors.filterIsInstance<ReadOnlyTextCollector>().first()
+        val checkbox  = node.collectors.filterIsInstance<BooleanCollector>().first()
+        val submit    = node.collectors.filterIsInstance<SubmitCollector>().first()
+
+        // ReadOnlyTextCollector properties
+        assertEquals("agreement", agreement.key)
+        assertEquals("AGREEMENT", agreement.type)
+        assertEquals("Terms of Service Agreement", agreement.title)
+        assertEquals(true, agreement.titleEnabled)
+        assertEquals(true, agreement.enabled)
+        assertEquals(false, agreement.useDynamicAgreement)
+        assertTrue(agreement.content.isNotEmpty())
+
+        // BooleanCollector properties
+        assertEquals("agreement-checkbox", checkbox.key)
+        assertEquals("I have read and agree to terms", checkbox.label)
+        assertEquals(true, checkbox.required)
+        assertEquals("You must agree to the terms to continue.", checkbox.errorMessage)
+
+        // richContent link inside the checkbox label
+        val richContent = checkbox.richContent
+        assertNotNull(richContent)
+        assertEquals("I have read and agree to {{link1}}", richContent.content)
+        val link1 = richContent.replacements["link1"]
+        assertNotNull(link1)
+        assertEquals("terms", link1.value)
+        assertEquals("https://www.pingidentity.com/en/legal/product-terms.html", link1.href)
+        assertEquals("_self", link1.target)
+
+        // Unchecked → validate() must return an error; submission is blocked
+        assertEquals(false, checkbox.value)
+        assertTrue(checkbox.validate().isNotEmpty())
+
+        // Checking the box clears the error
+        checkbox.value = true
+        assertTrue(checkbox.validate().isEmpty())
+
+        // Submit with checkbox checked → flow advances
+        submit.value = "Accept"
+        node = node.next() as ContinueNode
+        assertEquals("Select Test Form", node.name)
+    }
+
     @TestRailCase(26033)
     @Test
     fun flowButtonCollectorTest() = runTest {
@@ -472,6 +672,72 @@ class FormFieldsTest {
         assertEquals("Success", node.name)
     }
 
+    // Submitting with countryCode + phoneNumber sends the object format to the server.
+    @Test
+    fun phoneNumberSubmissionWithObjectFormatTest() = runTest {
+        var node = daVinci.start() as ContinueNode
+        (node.collectors[0] as? SubmitCollector)?.value = "click"
+        node = node.next() as ContinueNode
+
+        val phone = node.collectors[PHONE_NUMBER_INDEX] as PhoneNumberCollector
+        phone.countryCode = "CA"
+        phone.phoneNumber = "7783177184"
+        phone.extension = ""
+
+        // Fill required fields so the form can submit successfully
+        fillRequiredFields(node)
+
+        (node.collectors[SUBMIT_BUTTON_INDEX] as SubmitCollector).value = "Submit"
+        node = node.next() as ContinueNode
+        assertEquals("Success", node.name)
+    }
+
+    // Submitting with a non-empty extension sends the value in the request body.
+    @Test
+    fun phoneNumberSubmissionWithExtensionTest() = runTest {
+        var node = daVinci.start() as ContinueNode
+        (node.collectors[0] as? SubmitCollector)?.value = "click"
+        node = node.next() as ContinueNode
+
+        val phone = node.collectors[PHONE_NUMBER_INDEX] as PhoneNumberCollector
+        phone.countryCode = "GB"
+        phone.phoneNumber = "(555)555-1234"
+        phone.extension = "4321"
+
+        fillRequiredFields(node)
+
+        (node.collectors[SUBMIT_BUTTON_INDEX] as SubmitCollector).value = "Submit"
+        node = node.next() as ContinueNode
+        assertEquals("Success", node.name)
+    }
+
+    @Test
+    fun phoneNumberPayloadIsNullWhenEmptyTest() = runTest {
+        var node = daVinci.start() as ContinueNode
+        (node.collectors[0] as? SubmitCollector)?.value = "click"
+        node = node.next() as ContinueNode
+
+        val phone = node.collectors[PHONE_NUMBER_INDEX] as PhoneNumberCollector
+        phone.countryCode = ""
+        phone.phoneNumber = ""
+
+        val errors = phone.validate()
+        assertTrue(errors.isNotEmpty(), "Expected Required error when phone is empty")
+        assertEquals("Required", errors[0].toString())
+        assertNull(phone.payload())
+    }
+
+    // Fills the non-phone required fields in the Form Fields form so that a submission test
+    // targeting the phone field does not fail due to other missing required fields.
+    private fun fillRequiredFields(node: ContinueNode) {
+        (node.collectors[TEXT_INPUT_INDEX] as? TextCollector)?.value = "test"
+        (node.collectors[CHECKBOX_INDEX] as? MultiSelectCollector)?.value = mutableListOf("option1 value")
+        (node.collectors[DROPDOWN_INDEX] as? SingleSelectCollector)?.value = "dropdown-option1-value"
+        (node.collectors[RADIO_INDEX] as? SingleSelectCollector)?.value = "option1 value"
+        (node.collectors[COMBOBOX_INDEX] as? MultiSelectCollector)?.value = mutableListOf("option1 value")
+        (node.collectors[SINGLE_CHECKBOX_INDEX] as? BooleanCollector)?.value = true
+    }
+
     @TestRailCase(26033)
     @Test
     fun flowLinkCollectorTest() = runTest {
@@ -480,7 +746,6 @@ class FormFieldsTest {
         (node.collectors[0] as? SubmitCollector)?.value = "click"
         node = node.next() as ContinueNode
 
-        // 12th collector in the form is a FlowLink (index 11)
         assertTrue(node.collectors[FLOW_LINK_INDEX] is FlowCollector)
         val flowLink = (node.collectors[FLOW_LINK_INDEX] as FlowCollector)
 
