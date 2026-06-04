@@ -12,7 +12,9 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -47,6 +49,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -134,16 +137,15 @@ fun HomeApp(
                 .statusBarsPadding()
                 .navigationBarsPadding()
         ) {
-            // Header row with red background, logo, and version
-            Row(
+            // Header with red background, logo, version, and settings icon
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(colorResource(R.color.primary_dark))
                     .padding(vertical = 24.dp),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(
+                    modifier = Modifier.align(Alignment.Center),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center
                 ) {
@@ -183,6 +185,19 @@ fun HomeApp(
                         color = Color.White,
                         fontSize = 14.sp,
                         modifier = Modifier.padding(top = 4.dp)
+                    )
+                }
+                IconButton(
+                    onClick = onConfigurationClick,
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(end = 12.dp)
+                        .border(1.dp, Color.White, MaterialTheme.shapes.small)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Settings,
+                        contentDescription = stringResource(R.string.text_configuration_title),
+                        tint = Color.White
                     )
                 }
             }
