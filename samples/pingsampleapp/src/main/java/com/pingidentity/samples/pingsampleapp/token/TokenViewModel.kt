@@ -10,6 +10,8 @@ package com.pingidentity.samples.pingsampleapp.token
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.pingidentity.mfa.commons.json
+import com.pingidentity.oidc.Token
 import com.pingidentity.journey.user as journeyUser
 import com.pingidentity.davinci.user as davinciUser
 import com.pingidentity.samples.pingsampleapp.config.daVinci
@@ -19,6 +21,7 @@ import com.pingidentity.samples.pingsampleapp.config.web
 import com.pingidentity.utils.Result.Failure
 import com.pingidentity.utils.Result.Success
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 

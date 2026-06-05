@@ -10,8 +10,6 @@ package com.pingidentity.samples.pingsampleapp.token
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -61,7 +59,6 @@ fun TokenScreen(
     onBack: (() -> Unit)? = null,
 ) {
     val tokenState by tokenViewModel.state.collectAsState()
-    var expanded by remember { mutableStateOf(false) }
 
     LaunchedEffect(true) {
         tokenViewModel.loadAllTokens()
@@ -161,11 +158,13 @@ fun TokenScreen(
                 TokenType.JOURNEY -> tokenState.journeyToken
                 TokenType.DAVINCI -> tokenState.daVinciToken
                 TokenType.OIDC -> tokenState.oidcToken
+                TokenType.AUTH_GRANT -> tokenState.authGrantToken
             }
             val error = when (tokenState.selectedTab) {
                 TokenType.JOURNEY -> tokenState.journeyError
                 TokenType.DAVINCI -> tokenState.daVinciError
                 TokenType.OIDC -> tokenState.oidcError
+                TokenType.AUTH_GRANT -> tokenState.authGrantError
             }
 
             Column(

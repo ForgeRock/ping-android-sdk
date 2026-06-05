@@ -182,6 +182,7 @@ fun Env(
                     onEdit = { cfg, idx -> sheetContent = SheetContent.DeviceAuthSheet(cfg, idx) },
                     onDelete = { envViewModel.deleteCustomDeviceAuthConfig(it) },
                     onAdd = { sheetContent = SheetContent.DeviceAuthSheet() },
+                    onDuplicate = { envViewModel.duplicateDeviceAuthConfig(it) },
                 )
 
                 Spacer(Modifier.height(8.dp))

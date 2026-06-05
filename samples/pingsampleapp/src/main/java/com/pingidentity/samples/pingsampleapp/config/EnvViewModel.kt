@@ -499,6 +499,11 @@ class EnvViewModel : ViewModel() {
         viewModelScope.launch(Dispatchers.IO) { persistCustomWebConfigs(customWebConfigs) }
     }
 
+    fun duplicateDeviceAuthConfig(config: DeviceAuthConfigState) {
+        customDeviceAuthConfigs = customDeviceAuthConfigs + config.copy(display = "Copy of ${config.display}")
+        viewModelScope.launch(Dispatchers.IO) { persistCustomDeviceAuthConfigs(customDeviceAuthConfigs) }
+    }
+
     fun saveCustomDeviceAuthConfig(config: DeviceAuthConfigState, editIndex: Int?) {
         customDeviceAuthConfigs = if (editIndex == null) {
             customDeviceAuthConfigs + config
