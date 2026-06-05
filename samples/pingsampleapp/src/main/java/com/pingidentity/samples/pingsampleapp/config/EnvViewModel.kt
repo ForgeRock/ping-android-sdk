@@ -392,6 +392,7 @@ class EnvViewModel : ViewModel() {
                 buildJourneyInstance(jApplied)
                 buildDaVinciInstance(dvApplied)
                 buildWebInstance(wApplied)
+                buildDeviceAuthInstance(daApplied)
             }
         }
     }
@@ -529,6 +530,7 @@ class EnvViewModel : ViewModel() {
     private fun buildJourneyInstance(config: JourneyConfigState) = buildJourney(config)
     private fun buildDaVinciInstance(config: OidcConfigState) = buildDaVinci(config)
     private fun buildWebInstance(config: OidcConfigState) = buildWeb(config)
+    private fun buildDeviceAuthInstance(config: DeviceAuthConfigState) = buildDeviceAuthClient(config)
 
     // -- DataStore: load applied configs -------------------------------------
 
