@@ -12,47 +12,18 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.pingidentity.journey.user as journeyUser
 import com.pingidentity.davinci.user as davinciUser
-import com.pingidentity.oidc.Token
 import com.pingidentity.samples.pingsampleapp.config.daVinci
 import com.pingidentity.samples.pingsampleapp.config.journey
 import com.pingidentity.samples.pingsampleapp.config.web
 import com.pingidentity.utils.Result.Failure
 import com.pingidentity.utils.Result.Success
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.serialization.json.Json
 
 class TokenViewModel : ViewModel() {
-    private val json: Json = Json {
-        prettyPrint = true
-        ignoreUnknownKeys = true
-        encodeDefaults = true
-    }
-
     var state = MutableStateFlow(TokenState())
         private set
-
-    val formattedToken = state.map { tokenState ->
-        when (tokenState.selectedTab) {
-            TokenType.JOURNEY -> {
-                tokenState.journeyToken?.let {
-                    json.encodeToString(Token.serializer(), it)
-                } ?: tokenState.journeyError?.toString() ?: "No Journey token information is available"
-            }
-            TokenType.DAVINCI -> {
-                tokenState.daVinciToken?.let {
-                    json.encodeToString(Token.serializer(), it)
-                } ?: tokenState.daVinciError?.toString() ?: "No DaVinci token information is available"
-            }
-            TokenType.OIDC -> {
-                tokenState.oidcToken?.let {
-                    json.encodeToString(Token.serializer(), it)
-                } ?: tokenState.oidcError?.toString() ?: "No OIDC token information is available"
-            }
-        }
-    }
 
     fun selectTab(tabType: TokenType) {
         state.update { it.copy(selectedTab = tabType) }

@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -30,6 +31,8 @@ import androidx.compose.material.icons.filled.RadioButtonUnchecked
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -135,6 +138,7 @@ fun Env(
                     onSelect = { envViewModel.selectJourneyConfig(it) },
                     onEdit = { cfg, idx -> sheetContent = SheetContent.JourneySheet(cfg, idx) },
                     onDelete = { envViewModel.deleteCustomJourneyConfig(it) },
+                    onDuplicate = { envViewModel.duplicateJourneyConfig(it) },
                     onAdd = { sheetContent = SheetContent.JourneySheet() },
                 )
 
@@ -147,6 +151,7 @@ fun Env(
                     onSelect = { envViewModel.selectDaVinciConfig(it) },
                     onEdit = { cfg, idx -> sheetContent = SheetContent.DaVinciSheet(cfg, idx) },
                     onDelete = { envViewModel.deleteCustomDaVinciConfig(it) },
+                    onDuplicate = { envViewModel.duplicateDaVinciConfig(it) },
                     onAdd = { sheetContent = SheetContent.DaVinciSheet() },
                 )
 
@@ -159,8 +164,10 @@ fun Env(
                     onSelect = { envViewModel.selectWebConfig(it) },
                     onEdit = { cfg, idx -> sheetContent = SheetContent.WebSheet(cfg, idx) },
                     onDelete = { envViewModel.deleteCustomWebConfig(it) },
+                    onDuplicate = { envViewModel.duplicateWebConfig(it) },
                     onAdd = { sheetContent = SheetContent.WebSheet() },
                 )
+
 
                 Spacer(Modifier.height(8.dp))
             }
@@ -220,8 +227,9 @@ private fun JourneyCard(
     customConfigs: List<JourneyConfigState>,
     appliedConfig: JourneyConfigState?,
     onSelect: (JourneyConfigState) -> Unit,
-    onEdit: (JourneyConfigState, Int) -> Unit,
+    onEdit: (JourneyConfigState, Int?) -> Unit,
     onDelete: (Int) -> Unit,
+    onDuplicate: (JourneyConfigState) -> Unit,
     onAdd: () -> Unit,
 ) {
     ConfigCard(title = "Journey", appliedDisplay = appliedConfig?.display, onAdd = onAdd) {
@@ -233,9 +241,11 @@ private fun JourneyCard(
                     subtitle = "${extractHost(config.discoveryEndpoint)} · ${config.clientId}",
                     isApplied = appliedConfig == config,
                     isPreset = true,
+                    onTap = { onEdit(config, null) },
                     onSelect = { onSelect(config) },
                     onEdit = null,
                     onDelete = null,
+                    onDuplicate = { onDuplicate(config) },
                 )
             }
         }
@@ -248,9 +258,11 @@ private fun JourneyCard(
                     subtitle = "${extractHost(config.discoveryEndpoint)} · ${config.clientId}",
                     isApplied = appliedConfig == config,
                     isPreset = false,
+                    onTap = { onEdit(config, index) },
                     onSelect = { onSelect(config) },
                     onEdit = { onEdit(config, index) },
                     onDelete = { onDelete(index) },
+                    onDuplicate = { onDuplicate(config) },
                 )
             }
         }
@@ -268,8 +280,9 @@ private fun OidcCard(
     customConfigs: List<OidcConfigState>,
     appliedConfig: OidcConfigState?,
     onSelect: (OidcConfigState) -> Unit,
-    onEdit: (OidcConfigState, Int) -> Unit,
+    onEdit: (OidcConfigState, Int?) -> Unit,
     onDelete: (Int) -> Unit,
+    onDuplicate: (OidcConfigState) -> Unit,
     onAdd: () -> Unit,
 ) {
     ConfigCard(title = title, appliedDisplay = appliedConfig?.display, onAdd = onAdd) {
@@ -281,9 +294,11 @@ private fun OidcCard(
                     subtitle = "${extractHost(config.discoveryEndpoint)} · ${config.clientId}",
                     isApplied = appliedConfig == config,
                     isPreset = true,
+                    onTap = { onEdit(config, null) },
                     onSelect = { onSelect(config) },
                     onEdit = null,
                     onDelete = null,
+                    onDuplicate = { onDuplicate(config) },
                 )
             }
         }
@@ -296,9 +311,11 @@ private fun OidcCard(
                     subtitle = "${extractHost(config.discoveryEndpoint)} · ${config.clientId}",
                     isApplied = appliedConfig == config,
                     isPreset = false,
+                    onTap = { onEdit(config, index) },
                     onSelect = { onSelect(config) },
                     onEdit = { onEdit(config, index) },
                     onDelete = { onDelete(index) },
+                    onDuplicate = { onDuplicate(config) },
                 )
             }
         }
@@ -367,19 +384,29 @@ private fun ConfigCard(
 // Single config row
 // ---------------------------------------------------------------------------
 
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 private fun ConfigRow(
     display: String,
     subtitle: String,
     isApplied: Boolean,
     isPreset: Boolean,
+    onTap: () -> Unit,
     onSelect: () -> Unit,
     onEdit: (() -> Unit)?,
     onDelete: (() -> Unit)?,
+    onDuplicate: () -> Unit,
 ) {
+    var menuExpanded by remember { mutableStateOf(false) }
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .combinedClickable(
+                onClick = onTap,
+                onLongClickLabel = "Show actions",
+                onLongClick = { menuExpanded = true },
+            )
             .padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -427,6 +454,19 @@ private fun ConfigRow(
                 imageVector = if (isApplied) Icons.Filled.CheckCircle else Icons.Filled.RadioButtonUnchecked,
                 contentDescription = if (isApplied) "Applied" else "Select",
                 tint = if (isApplied) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+
+        DropdownMenu(
+            expanded = menuExpanded,
+            onDismissRequest = { menuExpanded = false },
+        ) {
+            DropdownMenuItem(
+                text = { Text("Duplicate") },
+                onClick = {
+                    menuExpanded = false
+                    onDuplicate()
+                },
             )
         }
     }
