@@ -13,7 +13,8 @@ import com.pingidentity.oidc.OidcError
 enum class TokenType {
     JOURNEY,
     DAVINCI,
-    OIDC
+    OIDC,
+    AUTH_GRANT
 }
 
 data class TokenState(
@@ -24,4 +25,6 @@ data class TokenState(
     var daVinciError: OidcError? = null,
     var oidcToken: Token? = null,
     var oidcError: OidcError? = null,
+    var authGrantToken: Token? = null,
+    var authGrantError: OidcError? = null,
 )

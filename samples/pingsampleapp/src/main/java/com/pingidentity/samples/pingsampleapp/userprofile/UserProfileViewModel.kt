@@ -14,6 +14,7 @@ import com.pingidentity.davinci.user as davinciUser
 import com.pingidentity.oidc.OidcError
 import com.pingidentity.samples.pingsampleapp.config.daVinci
 import com.pingidentity.samples.pingsampleapp.config.journey
+import com.pingidentity.samples.pingsampleapp.config.oidcDeviceClient
 import com.pingidentity.samples.pingsampleapp.config.web
 import com.pingidentity.utils.Result
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -25,7 +26,8 @@ import kotlinx.serialization.json.JsonObject
 enum class UserProfileType {
     JOURNEY,
     DAVINCI,
-    OIDC
+    OIDC,
+    AUTH_GRANT
 }
 
 data class UserProfileViewState(
@@ -36,9 +38,12 @@ data class UserProfileViewState(
     var daVinciError: OidcError? = null,
     var oidcUser: JsonObject? = null,
     var oidcError: OidcError? = null,
+    var authGrantUser: JsonObject? = null,
+    var authGrantError: OidcError? = null,
     var showRawJourneyUserInfo: Boolean = false,
     var showRawDaVinciUserInfo: Boolean = false,
     var showRawOidcUserInfo: Boolean = false,
+    var showRawAuthGrantUserInfo: Boolean = false,
 )
 
 class UserProfileViewModel : ViewModel() {
@@ -67,6 +72,11 @@ class UserProfileViewModel : ViewModel() {
             json.encodeToString(JsonObject.serializer(), it)
         } ?: state.value.oidcError?.toString() ?: "No user information available"
 
+    val formattedAuthGrantUserInfo: String
+        get() = state.value.authGrantUser?.let {
+            json.encodeToString(JsonObject.serializer(), it)
+        } ?: state.value.authGrantError?.toString() ?: "No user information available"
+
     fun selectTab(tabType: UserProfileType) {
         state.update { it.copy(selectedTab = tabType) }
     }
@@ -76,6 +86,7 @@ class UserProfileViewModel : ViewModel() {
         journeyUserInfo()
         daVinciUserInfo()
         oidcUserInfo()
+        authGrantUserInfo()
     }
 
     fun toggleUserInfo() {
@@ -83,25 +94,21 @@ class UserProfileViewModel : ViewModel() {
             UserProfileType.JOURNEY -> toggleJourneyUserInfo()
             UserProfileType.DAVINCI -> toggleDaVinciUserInfo()
             UserProfileType.OIDC -> toggleOidcUserInfo()
+            UserProfileType.AUTH_GRANT -> toggleAuthGrantUserInfo()
         }
     }
 
     // Journey Operations
     private fun journeyUserInfo() {
         viewModelScope.launch {
-            journey.journeyUser()?.let { user ->
-                when (val result = user.userinfo(false)) {
-                    is Result.Failure ->
-                        state.update { s ->
-                            s.copy(journeyUser = null, journeyError = result.value)
-                        }
-
-                    is Result.Success -> {
-                        state.update { s ->
-                            s.copy(journeyUser = result.value, journeyError = null)
-                        }
-                    }
-                }
+            val user = journey.journeyUser()
+            if (user == null) {
+                state.update { s -> s.copy(journeyUser = null, journeyError = null) }
+                return@launch
+            }
+            when (val result = user.userinfo(false)) {
+                is Result.Failure -> state.update { s -> s.copy(journeyUser = null, journeyError = result.value) }
+                is Result.Success -> state.update { s -> s.copy(journeyUser = result.value, journeyError = null) }
             }
         }
     }
@@ -115,19 +122,14 @@ class UserProfileViewModel : ViewModel() {
     // DaVinci Operations
     private fun daVinciUserInfo() {
         viewModelScope.launch {
-            daVinci?.davinciUser()?.let { user ->
-                when (val result = user.userinfo(false)) {
-                    is Result.Failure ->
-                        state.update { s ->
-                            s.copy(daVinciUser = null, daVinciError = result.value)
-                        }
-
-                    is Result.Success -> {
-                        state.update { s ->
-                            s.copy(daVinciUser = result.value, daVinciError = null)
-                        }
-                    }
-                }
+            val user = daVinci?.davinciUser()
+            if (user == null) {
+                state.update { s -> s.copy(daVinciUser = null, daVinciError = null) }
+                return@launch
+            }
+            when (val result = user.userinfo(false)) {
+                is Result.Failure -> state.update { s -> s.copy(daVinciUser = null, daVinciError = result.value) }
+                is Result.Success -> state.update { s -> s.copy(daVinciUser = result.value, daVinciError = null) }
             }
         }
     }
@@ -141,19 +143,14 @@ class UserProfileViewModel : ViewModel() {
     // OIDC Operations
     private fun oidcUserInfo() {
         viewModelScope.launch {
-            web?.user()?.let { user ->
-                when (val result = user.userinfo(false)) {
-                    is Result.Failure ->
-                        state.update { s ->
-                            s.copy(oidcUser = null, oidcError = result.value)
-                        }
-
-                    is Result.Success -> {
-                        state.update { s ->
-                            s.copy(oidcUser = result.value, oidcError = null)
-                        }
-                    }
-                }
+            val user = web?.user()
+            if (user == null) {
+                state.update { s -> s.copy(oidcUser = null, oidcError = null) }
+                return@launch
+            }
+            when (val result = user.userinfo(false)) {
+                is Result.Failure -> state.update { s -> s.copy(oidcUser = null, oidcError = result.value) }
+                is Result.Success -> state.update { s -> s.copy(oidcUser = result.value, oidcError = null) }
             }
         }
     }
@@ -161,6 +158,27 @@ class UserProfileViewModel : ViewModel() {
     private fun toggleOidcUserInfo() {
         state.update { s ->
             s.copy(showRawOidcUserInfo = !s.showRawOidcUserInfo)
+        }
+    }
+
+    // Auth Grant Operations
+    fun authGrantUserInfo() {
+        viewModelScope.launch {
+            val user = oidcDeviceClient?.user()
+            if (user == null) {
+                state.update { s -> s.copy(authGrantUser = null, authGrantError = null) }
+                return@launch
+            }
+            when (val result = user.userinfo(false)) {
+                is Result.Failure -> state.update { s -> s.copy(authGrantUser = null, authGrantError = result.value) }
+                is Result.Success -> state.update { s -> s.copy(authGrantUser = result.value, authGrantError = null) }
+            }
+        }
+    }
+
+    private fun toggleAuthGrantUserInfo() {
+        state.update { s ->
+            s.copy(showRawAuthGrantUserInfo = !s.showRawAuthGrantUserInfo)
         }
     }
 

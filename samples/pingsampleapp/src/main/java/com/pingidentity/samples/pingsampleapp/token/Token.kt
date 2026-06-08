@@ -144,17 +144,27 @@ fun TokenScreen(
                     },
                     text = { Text("OIDC") },
                 )
+                Tab(
+                    selected = tokenState.selectedTab == TokenType.AUTH_GRANT,
+                    onClick = {
+                        tokenViewModel.selectTab(TokenType.AUTH_GRANT)
+                        tokenViewModel.loadAllTokens()
+                    },
+                    text = { Text("Auth Grant") }
+                )
             }
 
             val token = when (tokenState.selectedTab) {
                 TokenType.JOURNEY -> tokenState.journeyToken
                 TokenType.DAVINCI -> tokenState.daVinciToken
                 TokenType.OIDC -> tokenState.oidcToken
+                TokenType.AUTH_GRANT -> tokenState.authGrantToken
             }
             val error = when (tokenState.selectedTab) {
                 TokenType.JOURNEY -> tokenState.journeyError
                 TokenType.DAVINCI -> tokenState.daVinciError
                 TokenType.OIDC -> tokenState.oidcError
+                TokenType.AUTH_GRANT -> tokenState.authGrantError
             }
 
             Column(
