@@ -7,6 +7,9 @@
 
 package com.pingidentity.oidc
 
+import com.pingidentity.browser.BrowserLauncher.authTabCustomizer
+import com.pingidentity.browser.BrowserLauncher.customTabsCustomizer
+import com.pingidentity.oidc.module.Oidc
 import com.pingidentity.oidc.module.OidcFlow
 import com.pingidentity.oidc.module.PARAMETERS
 import com.pingidentity.oidc.module.Web
@@ -17,6 +20,7 @@ import com.pingidentity.oidc.module.user
 import com.pingidentity.orchestrate.FailureNode
 import com.pingidentity.orchestrate.SuccessNode
 import com.pingidentity.orchestrate.WorkflowConfig
+import kotlinx.serialization.json.JsonObject
 
 /**
  * OIDC Web configuration class.
@@ -63,21 +67,96 @@ class OidcWebClient(val config: OidcWebClientConfig) {
             prepareUser(OidcUser(oidcClientConfig()))
         }
     }
+}
 
-    companion object {
-        /**
-         * Creates an instance of [OidcWebClient] with the provided configuration block.
-         *
-         * @param block The configuration block to apply to the OIDC web configuration.
-         * @return An instance of [OidcWebClient].
-         */
-        operator fun invoke(block: OidcWebClientConfig.() -> Unit = {}): OidcWebClient {
-            val config = OidcWebClientConfig()
-            config.apply {
-                config.module(Web) // register the web module
+/**
+ * Creates an instance of [OidcWebClient] with the provided configuration block.
+ *
+ * @param block The configuration block to apply to the OIDC web configuration.
+ * @return An instance of [OidcWebClient].
+ */
+fun OidcWebClient(block: OidcWebClientConfig.() -> Unit = {}): OidcWebClient {
+    val config = OidcWebClientConfig()
+    config.apply {
+        config.module(Web) // register the web module
+    }
+    config.apply(block) // apply the configuration block
+    return OidcWebClient(config)
+}
+
+/**
+ * Creates an instance of [OidcWebClient] from a JSON configuration.
+ *
+ * Required OIDC fields are nested under `oidc`; web UI settings under `web`. Example:
+ * ```json
+ * {
+ *   "timeout": 30000,
+ *   "log": "STANDARD",
+ *   "oidc": {
+ *     "clientId": "my-client-id",
+ *     "discoveryEndpoint": "https://auth.example.com/.well-known/openid-configuration",
+ *     "scopes": ["openid", "profile"],
+ *     "redirectUri": "myapp://oauth2redirect",
+ *     "signOutRedirectUri": "myapp://logout",
+ *     "refreshThreshold": 60,
+ *     "loginHint": "user@example.com",
+ *     "state": "custom-state",
+ *     "nonce": "custom-nonce",
+ *     "display": "page",
+ *     "prompt": "login",
+ *     "uiLocales": "en-US",
+ *     "acrValues": "Level3",
+ *     "par": true,
+ *     "additionalParameters": { "max_age": "3600" },
+ *     "openId": {
+ *       "authorizationEndpoint": "https://auth.example.com/authorize",
+ *       "tokenEndpoint": "https://auth.example.com/token",
+ *       "userinfoEndpoint": "https://auth.example.com/userinfo",
+ *       "endSessionEndpoint": "https://auth.example.com/logout",
+ *       "revocationEndpoint": "https://auth.example.com/revoke"
+ *     }
+ *   },
+ *   "web": {
+ *     "webCustomTabs": 0,
+ *     "authCustomTabs": 0
+ *   }
+ * }
+ * ```
+ *
+ * @param json The JSON configuration object.
+ * @return A [Result] containing the [OidcWebClient] or an exception if the configuration is invalid.
+ */
+fun OidcWebClient(json: JsonObject): Result<OidcWebClient> {
+    return runCatching {
+        OidcWebClient {
+            val configParser = JsonConfigParser(json)
+            logger = configParser.logLevel()
+            timeout = configParser.timeoutMillis()
+
+            val oidcConfigParser = JsonConfigParser(configParser.required<JsonObject>(JsonConfigKey.OIDC))
+            module(Oidc) {
+                discoveryEndpoint = oidcConfigParser.required<String>(JsonConfigKey.DISCOVERY_ENDPOINT)
+                clientId = oidcConfigParser.required<String>(JsonConfigKey.CLIENT_ID)
+                scopes = oidcConfigParser.scopeSet(JsonConfigKey.SCOPES)
+                redirectUri = oidcConfigParser.required<String>(JsonConfigKey.REDIRECT_URI)
+                update(oidcConfigParser)
             }
-            config.apply(block) // apply the configuration block
-            return OidcWebClient(config)
+            val webConfig =
+                configParser.optional<JsonObject?>(JsonConfigKey.WEB, null) ?: return@OidcWebClient
+            // No web configuration, skip UI settings
+            val webJsonConfig = JsonConfigParser(webConfig)
+            if (JsonConfigKey.WEB_CUSTOM_TAB_COLOR_SCHEME in webConfig) {
+                val customTabColorScheme = webJsonConfig.required<Int>(JsonConfigKey.WEB_CUSTOM_TAB_COLOR_SCHEME)
+                customTabsCustomizer = {
+                    setColorScheme(customTabColorScheme)
+                }
+            }
+            if (JsonConfigKey.WEB_AUTH_TAB_COLOR_SCHEME in webConfig) {
+                val authTabColorScheme = webJsonConfig.required<Int>(JsonConfigKey.WEB_AUTH_TAB_COLOR_SCHEME)
+                authTabCustomizer = {
+                    setColorScheme(authTabColorScheme)
+                }
+            }
         }
     }
 }

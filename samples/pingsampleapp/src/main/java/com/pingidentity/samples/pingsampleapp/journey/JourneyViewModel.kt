@@ -36,11 +36,11 @@ class JourneyViewModel(
         loading.update { true }
         viewModelScope.launch {
             val next = if (!verificationUri.isNullOrBlank()) {
-                journey.start(journeyName) {
+                journey?.start(journeyName) {
                     VERIFICATION_URI_COMPLETE to verificationUri.toUri()
                 }
             } else {
-                journey.start(journeyName)
+                journey?.start(journeyName)
             }
             state.update { it.copy(node = next) }
             loading.update { false }

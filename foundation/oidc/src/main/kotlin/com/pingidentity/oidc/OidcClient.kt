@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 - 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2024 - 2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -38,6 +38,104 @@ import kotlin.coroutines.coroutineContext
 inline fun OidcClient(block: OidcClientConfig.() -> Unit = {}): OidcClient {
     val oidcClientConfig = OidcClientConfig().apply(block)
     return OidcClient(oidcClientConfig)
+}
+
+/**
+ * Factory function to create an instance of [OidcClient] from a JSON configuration.
+ *
+ * Required fields are nested under the `oidc` key. Example:
+ * ```json
+ * {
+ *   "log": "STANDARD",
+ *   "oidc": {
+ *     "clientId": "my-client-id",
+ *     "discoveryEndpoint": "https://auth.example.com/.well-known/openid-configuration",
+ *     "scopes": ["openid", "profile"],
+ *     "redirectUri": "myapp://oauth2redirect",
+ *     "signOutRedirectUri": "myapp://logout",
+ *     "refreshThreshold": 60,
+ *     "loginHint": "user@example.com",
+ *     "state": "custom-state",
+ *     "nonce": "custom-nonce",
+ *     "display": "page",
+ *     "prompt": "login",
+ *     "uiLocales": "en-US",
+ *     "acrValues": "Level3",
+ *     "par": true,
+ *     "additionalParameters": { "max_age": "3600" },
+ *     "openId": {
+ *       "authorizationEndpoint": "https://auth.example.com/authorize",
+ *       "tokenEndpoint": "https://auth.example.com/token",
+ *       "userinfoEndpoint": "https://auth.example.com/userinfo",
+ *       "endSessionEndpoint": "https://auth.example.com/logout",
+ *       "revocationEndpoint": "https://auth.example.com/revoke"
+ *     }
+ *   }
+ * }
+ * ```
+ *
+ * @param json The JSON configuration object.
+ * @return A [Result] containing the [OidcClient] instance or an error if the configuration is invalid.
+ */
+fun OidcClient(json: JsonObject): kotlin.Result<OidcClient> {
+    return runCatching {
+        val jsonConfigParser = JsonConfigParser(json)
+        val oidcJsonConfig = JsonConfigParser(jsonConfigParser.required<JsonObject>(JsonConfigKey.OIDC))
+        OidcClient {
+            logger = jsonConfigParser.logLevel()
+            clientId = oidcJsonConfig.required<String>(JsonConfigKey.CLIENT_ID)
+            discoveryEndpoint = oidcJsonConfig.required<String>(JsonConfigKey.DISCOVERY_ENDPOINT)
+            scopes = oidcJsonConfig.scopeSet(JsonConfigKey.SCOPES)
+            redirectUri = oidcJsonConfig.required<String>(JsonConfigKey.REDIRECT_URI)
+            update(oidcJsonConfig)
+        }
+    }
+}
+
+/**
+ * Applies all optional OIDC fields from [oidcJsonConfig] to this [OidcClientConfig].
+ *
+ * Mandatory fields (`clientId`, `discoveryEndpoint`, `scopes`, `redirectUri`) are set by each
+ * JSON factory independently. This function handles every optional field:
+ * `display`, `par`, `loginHint`, `state`, `nonce`, `prompt`, `uiLocales`, `acrValues`,
+ * `signOutRedirectUri`, `refreshThreshold`, `additionalParameters`, `storageFilename`,
+ * and the `openId` endpoint-override sub-object.
+ *
+ * @param oidcJsonConfig Parser wrapping the `oidc` sub-object of the top-level JSON config.
+ */
+fun OidcClientConfig.update(oidcJsonConfig: JsonConfigParser) {
+    display = oidcJsonConfig.optional<String?>(JsonConfigKey.DISPLAY, null)
+    par = oidcJsonConfig.optional<Boolean>(JsonConfigKey.PAR, false)
+    loginHint = oidcJsonConfig.optional<String?>(JsonConfigKey.LOGIN_HINT, null)
+    state = oidcJsonConfig.optional<String?>(JsonConfigKey.STATE, null)
+    nonce = oidcJsonConfig.optional<String?>(JsonConfigKey.NONCE, null)
+    prompt = oidcJsonConfig.optional<String?>(JsonConfigKey.PROMPT, null)
+    uiLocales = oidcJsonConfig.optional<String?>(JsonConfigKey.UI_LOCALES, null)
+    acrValues = oidcJsonConfig.optional<String?>(JsonConfigKey.ACR_VALUES, null)
+    signOutRedirectUri = oidcJsonConfig.optional<String?>(JsonConfigKey.SIGN_OUT_REDIRECT_URI, null)
+    refreshThreshold = oidcJsonConfig.optional<Long>(JsonConfigKey.REFRESH_THRESHOLD, 0L)
+    val additionalParams = oidcJsonConfig.additionalParameters(JsonConfigKey.ADDITIONAL_PARAMETERS)
+    if (additionalParams != null) {
+        additionalParameters = additionalParams
+    }
+    val storageFilename = oidcJsonConfig.optional<String>(JsonConfigKey.STORAGE_FILENAME, "")
+    if (storageFilename.isNotEmpty()) {
+        storage {
+            fileName = storageFilename
+        }
+    }
+    val openIdJson = oidcJsonConfig.optional<JsonObject?>(JsonConfigKey.OPEN_ID, null)
+    if (openIdJson != null) {
+        val openIdParser = JsonConfigParser(openIdJson)
+        openIdOverride = {
+            openIdParser.optional<String?>(JsonConfigKey.AUTHORIZATION_ENDPOINT, null)?.let { authorizationEndpoint = it }
+            openIdParser.optional<String?>(JsonConfigKey.TOKEN_ENDPOINT, null)?.let { tokenEndpoint = it }
+            openIdParser.optional<String?>(JsonConfigKey.USER_INFO_ENDPOINT, null)?.let { userinfoEndpoint = it }
+            openIdParser.optional<String?>(JsonConfigKey.END_SESSION_ENDPOINT, null)?.let { endSessionEndpoint = it }
+            openIdParser.optional<String?>(JsonConfigKey.REVOCATION_ENDPOINT, null)?.let { revocationEndpoint = it }
+            openIdParser.optional<String?>(JsonConfigKey.DEVICE_AUTHORIZATION_ENDPOINT, null)?.let { deviceAuthorizationEndpoint = it }
+        }
+    }
 }
 
 internal typealias IdToken = String

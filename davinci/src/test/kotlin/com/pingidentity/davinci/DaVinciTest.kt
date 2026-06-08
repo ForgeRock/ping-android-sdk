@@ -26,6 +26,7 @@ import com.pingidentity.davinci.plugin.collectors
 import com.pingidentity.logger.Logger
 import com.pingidentity.logger.STANDARD
 import com.pingidentity.network.ktor.KtorHttpClient
+import com.pingidentity.oidc.JsonConfigKey
 import com.pingidentity.oidc.Token
 import com.pingidentity.oidc.module.VERIFICATION_URI_COMPLETE
 import com.pingidentity.oidc.module.user
@@ -50,8 +51,12 @@ import io.ktor.http.content.TextContent
 import io.ktor.utils.io.ByteReadChannel
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.add
+import kotlinx.serialization.json.buildJsonArray
+import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.put
 import org.junit.Rule
 import org.junit.rules.TestWatcher
 import org.junit.runner.RunWith
@@ -745,6 +750,105 @@ class DaVinciTest {
         assertTrue(paths.contains("/token"), "normal flow must call /token")
         assertTrue(paths.none { it.contains("deviceFlow") }, "deviceFlow must not be called in normal flow")
         assertNotNull(tokenStorage.get())
+    }
+
+    // -------------------------------------------------------------------------
+    // createDaVinci JSON config
+    // -------------------------------------------------------------------------
+
+    @Test
+    fun `createDaVinci succeeds with valid JSON config`() {
+        val json = buildJsonObject {
+            put(JsonConfigKey.OIDC, buildJsonObject {
+                put(JsonConfigKey.CLIENT_ID, "my-client")
+                put(JsonConfigKey.DISCOVERY_ENDPOINT, "https://auth.pingone.ca/env-id/as/.well-known/openid-configuration")
+                put(JsonConfigKey.SCOPES, buildJsonArray { add("openid"); add("profile") })
+                put(JsonConfigKey.REDIRECT_URI, "myapp://oauth2redirect")
+            })
+        }
+        assertTrue(DaVinci(json).isSuccess)
+    }
+
+    @Test
+    fun `createDaVinci fails when oidc block is missing from JSON`() {
+        assertTrue(DaVinci(buildJsonObject {}).isFailure)
+    }
+
+    @Test
+    fun `createDaVinci fails when clientId is missing from JSON`() {
+        val json = buildJsonObject {
+            put(JsonConfigKey.OIDC, buildJsonObject {
+                put(JsonConfigKey.DISCOVERY_ENDPOINT, "https://auth.pingone.ca/env-id/as/.well-known/openid-configuration")
+                put(JsonConfigKey.SCOPES, buildJsonArray { add("openid") })
+                put(JsonConfigKey.REDIRECT_URI, "myapp://oauth2redirect")
+            })
+        }
+        assertTrue(DaVinci(json).isFailure)
+    }
+
+    @Test
+    fun `createDaVinci fails when redirectUri is missing from JSON`() {
+        val json = buildJsonObject {
+            put(JsonConfigKey.OIDC, buildJsonObject {
+                put(JsonConfigKey.CLIENT_ID, "my-client")
+                put(JsonConfigKey.DISCOVERY_ENDPOINT, "https://auth.pingone.ca/env-id/as/.well-known/openid-configuration")
+                put(JsonConfigKey.SCOPES, buildJsonArray { add("openid") })
+            })
+        }
+        assertTrue(DaVinci(json).isFailure)
+    }
+
+    @Test
+    fun `createDaVinci succeeds with optional acrValues in JSON`() {
+        val json = buildJsonObject {
+            put(JsonConfigKey.OIDC, buildJsonObject {
+                put(JsonConfigKey.CLIENT_ID, "my-client")
+                put(JsonConfigKey.DISCOVERY_ENDPOINT, "https://auth.pingone.ca/env-id/as/.well-known/openid-configuration")
+                put(JsonConfigKey.SCOPES, buildJsonArray { add("openid") })
+                put(JsonConfigKey.REDIRECT_URI, "myapp://oauth2redirect")
+                put(JsonConfigKey.ACR_VALUES, "urn:acr:silver")
+            })
+        }
+        assertTrue(DaVinci(json).isSuccess)
+    }
+
+    @Test
+    fun `createDaVinci succeeds with scopes as comma-separated string`() {
+        val json = buildJsonObject {
+            put(JsonConfigKey.OIDC, buildJsonObject {
+                put(JsonConfigKey.CLIENT_ID, "my-client")
+                put(JsonConfigKey.DISCOVERY_ENDPOINT, "https://auth.pingone.ca/env-id/as/.well-known/openid-configuration")
+                put(JsonConfigKey.SCOPES, "openid,profile")
+                put(JsonConfigKey.REDIRECT_URI, "myapp://oauth2redirect")
+            })
+        }
+        assertTrue(DaVinci(json).isSuccess)
+    }
+
+    @Test
+    fun `createDaVinci succeeds with all optional OIDC fields`() {
+        val json = buildJsonObject {
+            put(JsonConfigKey.OIDC, buildJsonObject {
+                put(JsonConfigKey.CLIENT_ID, "my-client")
+                put(JsonConfigKey.DISCOVERY_ENDPOINT, "https://auth.pingone.ca/env-id/as/.well-known/openid-configuration")
+                put(JsonConfigKey.SCOPES, buildJsonArray { add("openid") })
+                put(JsonConfigKey.REDIRECT_URI, "myapp://oauth2redirect")
+                put(JsonConfigKey.PAR, true)
+                put(JsonConfigKey.LOGIN_HINT, "user@example.com")
+                put(JsonConfigKey.STATE, "custom-state")
+                put(JsonConfigKey.NONCE, "custom-nonce")
+                put(JsonConfigKey.DISPLAY, "page")
+                put(JsonConfigKey.PROMPT, "login")
+                put(JsonConfigKey.UI_LOCALES, "en-US")
+                put(JsonConfigKey.ACR_VALUES, "Level3")
+                put(JsonConfigKey.SIGN_OUT_REDIRECT_URI, "myapp://logout")
+                put(JsonConfigKey.REFRESH_THRESHOLD, 60L)
+                put(JsonConfigKey.ADDITIONAL_PARAMETERS, buildJsonObject {
+                    put("custom_param", "custom_value")
+                })
+            })
+        }
+        assertTrue(DaVinci(json).isSuccess)
     }
 
     private fun parResponse(): String =

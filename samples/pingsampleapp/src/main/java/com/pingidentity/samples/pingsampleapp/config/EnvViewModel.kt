@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2026 - 2026 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -23,33 +23,34 @@ import com.pingidentity.davinci.plugin.DaVinci
 import com.pingidentity.journey.Journey
 import com.pingidentity.logger.Logger
 import com.pingidentity.logger.STANDARD
+import com.pingidentity.oidc.JsonConfigKey
 import com.pingidentity.oidc.OidcClient
 import com.pingidentity.oidc.OidcWebClient
-import com.pingidentity.oidc.module.Web
 import com.pingidentity.oidc.OidcDeviceClient
+import com.pingidentity.oidc.toScopesJsonArray
 import com.pingidentity.samples.pingsampleapp.settingDataStore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import org.json.JSONArray
 import org.json.JSONObject
-import com.pingidentity.davinci.module.Oidc as DaVinciOidc
-import com.pingidentity.journey.module.Oidc as JourneyOidc
 
 // ---------------------------------------------------------------------------
 // Config state data classes
 // ---------------------------------------------------------------------------
 
 data class JourneyConfigState(
-    val serverUrl: String = "https://www.example.com/am",
-    val realm: String = "alpha",
+    val serverUrl: String = "",
+    val realm: String = "",
     val cookie: String = "",
-    val clientId: String = "dummy",
-    val discoveryEndpoint: String = "https://www.example.com/am/oauth2/alpha/.well-known/openid-configuration",
-    val scopes: String = "openid,email,address,profile,phone",
-    val redirectUri: String = "org.forgerock.demo:/oauth2redirect",
-    val display: String = "Journey Test Config",
+    val clientId: String = "",
+    val discoveryEndpoint: String = "",
+    val scopes: String = "",
+    val redirectUri: String = "",
+    val display: String = "",
 )
 
 data class OidcConfigState(
@@ -79,7 +80,16 @@ data class DeviceAuthConfigState(
 // Default preset configs (used as fallbacks when no saved config exists)
 // ---------------------------------------------------------------------------
 
-internal val defaultJourneyConfig = JourneyConfigState()
+internal val defaultJourneyConfig = JourneyConfigState(
+    serverUrl = "https://www.example.com/am",
+    realm = "alpha",
+    cookie = "",
+    clientId = "dummy",
+    discoveryEndpoint = "https://www.example.com/am/oauth2/alpha/.well-known/openid-configuration",
+    scopes = "openid,email,address,profile,phone",
+    redirectUri = "org.forgerock.demo:/oauth2redirect",
+    display = "Journey Test Config",
+)
 
 internal val defaultDaVinciConfig = OidcConfigState(
     clientId = "dummy",
@@ -115,7 +125,7 @@ internal val defaultWebConfig = OidcConfigState(
 // Global SDK instance holders (consumed by other ViewModels)
 // ---------------------------------------------------------------------------
 
-var journey: Journey = createJourney(defaultJourneyConfig)
+var journey: Journey? = null
 var oidcClient: OidcClient? = null
 var daVinci: DaVinci? = null
 var web: OidcWebClient? = null
@@ -129,84 +139,133 @@ lateinit var daVinciRedirectUri: Uri
 // Package-level SDK builders (called both at app startup and from ViewModel)
 // ---------------------------------------------------------------------------
 
-private fun createJourney(config: JourneyConfigState): Journey = Journey {
-    logger = Logger.STANDARD
-    serverUrl = config.serverUrl
-    realm = config.realm
-    if (config.cookie.isNotBlank()) cookie = config.cookie
-    module(JourneyOidc) {
-        clientId = config.clientId
-        discoveryEndpoint = config.discoveryEndpoint
-        scopes = config.scopes.toScopeSet()
-        redirectUri = config.redirectUri
-        display = config.display
-        storage { fileName = "journey" }
-    }
-}
-
 internal fun buildJourney(config: JourneyConfigState) {
-    journey = createJourney(config)
-    oidcClient = OidcClient {
-        clientId = config.clientId
-        discoveryEndpoint = config.discoveryEndpoint
-        scopes = config.scopes.toScopeSet()
-        redirectUri = config.redirectUri
-        display = config.display
-    }
+    Journey(
+        buildJsonObject {
+            put(JsonConfigKey.LOG, "STANDARD")
+            put(JsonConfigKey.JOURNEY, buildJsonObject {
+                put(JsonConfigKey.SERVER_URL, config.serverUrl)
+                put(JsonConfigKey.REALM, config.realm)
+                if (config.cookie.isNotBlank()) put(JsonConfigKey.COOKIE_NAME, config.cookie)
+            })
+            put(JsonConfigKey.OIDC, buildJsonObject {
+                put(JsonConfigKey.CLIENT_ID, config.clientId)
+                put(JsonConfigKey.DISCOVERY_ENDPOINT, config.discoveryEndpoint)
+                put(JsonConfigKey.SCOPES, config.scopes.toScopesJsonArray())
+                put(JsonConfigKey.REDIRECT_URI, config.redirectUri)
+                put(JsonConfigKey.DISPLAY, config.display)
+                put(JsonConfigKey.STORAGE_FILENAME, "journey")
+            })
+        }
+    ).onSuccess { journey = it }
+        .onFailure {
+            Logger.STANDARD.d("Failed to create Journey instance: ${it.message}")
+            journey = null
+        }
+    OidcClient(
+        buildJsonObject {
+            put(JsonConfigKey.OIDC, buildJsonObject {
+                put(JsonConfigKey.CLIENT_ID, config.clientId)
+                put(JsonConfigKey.DISCOVERY_ENDPOINT, config.discoveryEndpoint)
+                put(JsonConfigKey.SCOPES, config.scopes.toScopesJsonArray())
+                put(JsonConfigKey.REDIRECT_URI, config.redirectUri)
+                put(JsonConfigKey.DISPLAY, config.display)
+            })
+        }
+    ).onSuccess { oidcClient = it }
+        .onFailure {
+            Logger.STANDARD.d("Failed to create OIDC client instance: ${it.message}")
+            oidcClient = null
+        }
     redirectUri = config.redirectUri.toUri()
 }
 
 internal fun buildDaVinci(config: OidcConfigState) {
-    daVinci = DaVinci {
-        logger = Logger.STANDARD
-        module(DaVinciOidc) {
-            clientId = config.clientId
-            discoveryEndpoint = config.discoveryEndpoint
-            scopes = config.scopes.toScopeSet()
-            redirectUri = config.redirectUri
-            display = config.display
-            if (config.arcValue.isNotBlank()) acrValues = config.arcValue
-            storage { fileName = "daVinci" }
+    DaVinci(
+        buildJsonObject {
+            put(JsonConfigKey.LOG, "STANDARD")
+            put(JsonConfigKey.OIDC, buildJsonObject {
+                put(JsonConfigKey.CLIENT_ID, config.clientId)
+                put(JsonConfigKey.DISCOVERY_ENDPOINT, config.discoveryEndpoint)
+                put(JsonConfigKey.SCOPES, config.scopes.toScopesJsonArray())
+                put(JsonConfigKey.REDIRECT_URI, config.redirectUri)
+                put(JsonConfigKey.DISPLAY, config.display)
+                if (config.arcValue.isNotBlank()) put(JsonConfigKey.ACR_VALUES, config.arcValue)
+                put(JsonConfigKey.STORAGE_FILENAME, "daVinci")
+            })
         }
-    }
+    ).onSuccess { daVinci = it }
+        .onFailure { Logger.STANDARD.d("Failed to create DaVinci instance: ${it.message}") }
     // Store in the DaVinci-specific global so it never overwrites Journey's redirectUri
     daVinciRedirectUri = config.redirectUri.toUri()
 }
 
 internal fun buildWeb(config: OidcConfigState) {
-    web = OidcWebClient {
-        logger = Logger.STANDARD
-        module(com.pingidentity.oidc.module.Oidc) {
-            clientId = config.clientId
-            discoveryEndpoint = config.discoveryEndpoint
-            scopes = config.scopes.toScopeSet()
-            redirectUri = config.redirectUri
-            display = config.display
+    OidcWebClient(
+        buildJsonObject {
+            put(JsonConfigKey.LOG, "STANDARD")
+            put(JsonConfigKey.OIDC, buildJsonObject {
+                put(JsonConfigKey.CLIENT_ID, config.clientId)
+                put(JsonConfigKey.DISCOVERY_ENDPOINT, config.discoveryEndpoint)
+                put(JsonConfigKey.SCOPES, config.scopes.toScopesJsonArray())
+                put(JsonConfigKey.REDIRECT_URI, config.redirectUri)
+                put(JsonConfigKey.DISPLAY, config.display)
+            })
+            put(JsonConfigKey.WEB, buildJsonObject {
+                put(JsonConfigKey.WEB_CUSTOM_TAB_COLOR_SCHEME, CustomTabsIntent.COLOR_SCHEME_DARK)
+                put(JsonConfigKey.WEB_AUTH_TAB_COLOR_SCHEME, CustomTabsIntent.COLOR_SCHEME_DARK)
+            })
         }
-        module(Web) {
-            customTabsCustomizer = { setColorScheme(CustomTabsIntent.COLOR_SCHEME_DARK) }
-            authTabCustomizer = { setColorScheme(CustomTabsIntent.COLOR_SCHEME_DARK) }
+    ).onSuccess { web = it }
+        .onFailure {
+            Logger.STANDARD.d("Failed to create OIDC Web client instance: ${it.message}")
+            web = null
         }
-    }
 }
 
 internal fun buildDeviceAuthClient(config: DeviceAuthConfigState) {
-    oidcDeviceClient = OidcDeviceClient {
-        logger = Logger.STANDARD
-        clientId = config.clientId
-        discoveryEndpoint = config.discoveryEndpoint
-        scopes = config.scopes.toScopeSet()
-        if (config.acrValues.isNotBlank()) acrValues = config.acrValues
-        storage { fileName = "device_flow" }
-        openIdOverride = {
-            if (config.authorizationEndpoint.isNotBlank()) authorizationEndpoint = config.authorizationEndpoint
-            if (config.tokenEndpoint.isNotBlank()) tokenEndpoint = config.tokenEndpoint
-            if (config.userinfoEndpoint.isNotBlank()) userinfoEndpoint = config.userinfoEndpoint
-            if (config.endSessionEndpoint.isNotBlank()) endSessionEndpoint = config.endSessionEndpoint
-            if (config.revocationEndpoint.isNotBlank()) revocationEndpoint = config.revocationEndpoint
-            if (config.deviceAuthorizationEndpoint.isNotBlank()) deviceAuthorizationEndpoint = config.deviceAuthorizationEndpoint
+    OidcDeviceClient(
+        buildJsonObject {
+            put(JsonConfigKey.OIDC, buildJsonObject {
+                put(JsonConfigKey.CLIENT_ID, config.clientId)
+                put(JsonConfigKey.DISCOVERY_ENDPOINT, config.discoveryEndpoint)
+                put(JsonConfigKey.SCOPES, config.scopes.toScopesJsonArray())
+                put(JsonConfigKey.DISPLAY, config.display)
+                put(JsonConfigKey.STORAGE_FILENAME, "device_flow")
+                if (config.acrValues.isNotBlank()) put(JsonConfigKey.ACR_VALUES, config.acrValues)
+                put(JsonConfigKey.OPEN_ID, buildJsonObject {
+                    if (config.authorizationEndpoint.isNotBlank()) put(
+                        JsonConfigKey.AUTHORIZATION_ENDPOINT,
+                        config.authorizationEndpoint
+                    )
+                    if (config.tokenEndpoint.isNotBlank()) put(
+                        JsonConfigKey.TOKEN_ENDPOINT,
+                        config.tokenEndpoint
+                    )
+                    if (config.userinfoEndpoint.isNotBlank()) put(
+                        JsonConfigKey.USER_INFO_ENDPOINT,
+                        config.userinfoEndpoint
+                    )
+                    if (config.endSessionEndpoint.isNotBlank()) put(
+                        JsonConfigKey.END_SESSION_ENDPOINT,
+                        config.endSessionEndpoint
+                    )
+                    if (config.revocationEndpoint.isNotBlank()) put(
+                        JsonConfigKey.REVOCATION_ENDPOINT,
+                        config.revocationEndpoint
+                    )
+                    if (config.deviceAuthorizationEndpoint.isNotBlank()) put(
+                        JsonConfigKey.DEVICE_AUTHORIZATION_ENDPOINT,
+                        config.deviceAuthorizationEndpoint
+                    )
+                })
+            })
         }
-    }
+    ).onSuccess { oidcDeviceClient = it }
+        .onFailure {
+            Logger.STANDARD.d("Failed to create OIDC Device client instance: ${it.message}")
+            oidcDeviceClient = null
+        }
 }
 
 // ---------------------------------------------------------------------------
@@ -792,10 +851,3 @@ class EnvViewModel : ViewModel() {
         }
     }.getOrDefault(emptyList())
 }
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-private fun String.toScopeSet(): MutableSet<String> =
-    split(",").map { it.trim() }.filter { it.isNotEmpty() }.toMutableSet()
