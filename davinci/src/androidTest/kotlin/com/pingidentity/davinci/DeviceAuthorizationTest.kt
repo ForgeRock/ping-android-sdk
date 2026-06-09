@@ -76,6 +76,7 @@ class DeviceAuthorizationTest {
     fun setUp(): Unit = runBlocking {
         // Clear any leftover token from a previous test run so each test starts fresh.
         client.user()?.logout()
+        approvingDaVinci.user()?.logout()
     }
 
     /**
@@ -110,6 +111,7 @@ class DeviceAuthorizationTest {
         // Wait for the first Polling emission, then cancel — no need to wait for expiry.
         pollingChannel.receive()
         job.cancel()
+        job.join()
 
         // --- Started state ---
         val started = statuses.first()
