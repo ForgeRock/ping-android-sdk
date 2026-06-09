@@ -64,11 +64,11 @@ jobs:
       - name: List build tools versions
         run: ls $ANDROID_HOME/build-tools/
 
-      # Sign app-debug.apk
-      - name: Sign app-debug.apk
+      # Sign pingsampleapp-debug.apk
+      - name: Sign pingsampleapp-debug.apk
         uses: r0adkll/sign-android-release@v1
         with:
-          releaseDirectory: samples/app/build/outputs/apk/debug
+          releaseDirectory: samples/pingsampleapp/build/outputs/apk/debug
           signingKeyBase64: ${{ secrets.SIGNING_KEYSTORE }}
           alias: ${{ secrets.SIGNING_ALIAS }}
           keyStorePassword: ${{ secrets.SIGNING_KEYSTORE_PASSWORD }}
@@ -125,12 +125,12 @@ jobs:
           BUILD_TOOLS_VERSION: "35.0.0"
 
       # Publish the signed APKs as build artifacts
-      - name: Publish app-debug.apk
+      - name: Publish app-debug-signed.apk
         uses: actions/upload-artifact@v4
         if: success()
         with:
           name: app-debug-signed.apk
-          path: samples/app/build/outputs/apk/debug/app-debug-signed.apk
+          path: samples/pingsampleapp/build/outputs/apk/debug/pingsampleapp-debug-signed.apk
 
       - name: Publish davinci-debug-androidTest.apk
         uses: actions/upload-artifact@v4
