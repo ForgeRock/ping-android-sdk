@@ -53,9 +53,8 @@ class DeviceAuthorizationTest {
 
     private val client = OidcDeviceClient {
         logger = Logger.STANDARD
-        clientId = "d6505e10-d019-4f9d-ae76-d0648ca9c9c3"
-        discoveryEndpoint =
-            "https://auth.pingone.ca/300c4f2a-39d4-4ba9-a18a-f6de246006f4/as/.well-known/openid-configuration"
+        clientId = DaVinciTestConfig.deviceClientId
+        discoveryEndpoint = DaVinciTestConfig.deviceDiscoveryEndpoint
         scopes = mutableSetOf("openid", "email", "address", "phone", "profile")
         storage { fileName = "device_flow_test" }
     }
@@ -64,12 +63,11 @@ class DeviceAuthorizationTest {
     private val approvingDaVinci = DaVinci {
         logger = Logger.STANDARD
         module(Oidc) {
-            clientId = "a6859a12-5e6e-4f64-96bb-cc8577706bee"
-            discoveryEndpoint =
-                "https://auth.pingone.ca/300c4f2a-39d4-4ba9-a18a-f6de246006f4/as/.well-known/openid-configuration"
+            clientId = DaVinciTestConfig.deviceApproverClientId
+            discoveryEndpoint = DaVinciTestConfig.deviceApproverDiscoveryEndpoint
             scopes = mutableSetOf("openid", "email", "address", "phone", "profile")
-            redirectUri = "org.forgerock.demo://oauth2redirect"
-            acrValues = "25abee29d6271102825e4b076c8de7c3"
+            redirectUri = DaVinciTestConfig.deviceApproverRedirectUri
+            acrValues = DaVinciTestConfig.deviceApproverAcrValues
             storage { fileName = "device_flow_approver_test" }
         }
     }
@@ -192,8 +190,8 @@ class DeviceAuthorizationTest {
         node = node as ContinueNode
 
         // Step 1 — Sign On form: username + password.
-        (node.collectors[0] as? TextCollector)?.value = "e2euser"
-        (node.collectors[1] as? PasswordCollector)?.value = "2222"
+        (node.collectors[0] as? TextCollector)?.value = DaVinciTestConfig.deviceUsername
+        (node.collectors[1] as? PasswordCollector)?.value = DaVinciTestConfig.devicePassword
         (node.collectors[2] as? SubmitCollector)?.value = "Sign On"
         node = node.next()
         node = node as ContinueNode
@@ -260,8 +258,8 @@ class DeviceAuthorizationTest {
         node = node as ContinueNode
 
         // Step 1 — Sign On form.
-        (node.collectors[0] as? TextCollector)?.value = "e2euser"
-        (node.collectors[1] as? PasswordCollector)?.value = "2222"
+        (node.collectors[0] as? TextCollector)?.value = DaVinciTestConfig.deviceUsername
+        (node.collectors[1] as? PasswordCollector)?.value = DaVinciTestConfig.devicePassword
         (node.collectors[2] as? SubmitCollector)?.value = "Sign On"
         node = node.next()
         node = node as ContinueNode
