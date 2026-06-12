@@ -7,6 +7,7 @@
 
 package com.pingidentity.mfa.oath
 
+import com.pingidentity.mfa.commons.exception.InvalidUriException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -164,9 +165,14 @@ class OathCredentialTest {
         assertNotNull(credential.id)
     }
 
-    @Test(expected = IllegalArgumentException::class)
+    @Test
     fun `test from URI with invalid scheme`() = runTest {
-        OathCredential.fromUri("invalid://totp/Test%20Issuer:testuser@example.com?secret=JBSWY3DPEHPK3PXP")
+        try {
+            OathCredential.fromUri("invalid://totp/Test%20Issuer:testuser@example.com?secret=JBSWY3DPEHPK3PXP")
+            fail("Expected InvalidUriException for invalid scheme")
+        } catch (e: InvalidUriException) {
+            assertTrue(e.message?.contains("scheme") == true)
+        }
     }
 
     @Test

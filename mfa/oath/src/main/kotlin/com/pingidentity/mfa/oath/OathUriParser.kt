@@ -9,6 +9,7 @@ package com.pingidentity.mfa.oath
 
 import android.net.Uri
 import com.pingidentity.mfa.commons.UriParser
+import com.pingidentity.mfa.commons.exception.InvalidUriException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
@@ -44,7 +45,10 @@ object OathUriParser : UriParser() {
      *
      * @param uri The URI string.
      * @return An OathCredential.
-     * @throws IllegalArgumentException if the URI is invalid.
+     * @throws InvalidUriException if the URI is structurally invalid (bad scheme, unknown OATH type,
+     *   missing required parameters, or any unexpected parse failure).
+     * @throws IllegalArgumentException if a parameter value fails validation (e.g. digits not 6 or 8,
+     *   period ≤ 0, counter < 0).
      */
     suspend fun parse(uri: String): OathCredential = withContext(Dispatchers.IO) {
         try {
@@ -53,14 +57,14 @@ object OathUriParser : UriParser() {
             // Check scheme
             val scheme = parsedUri.scheme?.lowercase() ?: ""
             if (scheme != OTPAUTH_SCHEME && scheme != MFAUTH_SCHEME) {
-                throw IllegalArgumentException("Invalid URI scheme: $scheme, expected: $OTPAUTH_SCHEME or $MFAUTH_SCHEME")
+                throw InvalidUriException("Invalid URI scheme: $scheme, expected: $OTPAUTH_SCHEME or $MFAUTH_SCHEME")
             }
             
             // Get type
             val type = when (val typeStr = parsedUri.authority?.lowercase()) {
                 TOTP -> OathType.TOTP
                 HOTP -> OathType.HOTP
-                else -> throw IllegalArgumentException("Invalid OATH type: $typeStr, expected: $TOTP or $HOTP")
+                else -> throw InvalidUriException("Invalid OATH type: $typeStr, expected: $TOTP or $HOTP")
             }
             
             // Parse label (path without leading '/')
@@ -79,7 +83,7 @@ object OathUriParser : UriParser() {
             
             // Get required parameters
             val secret = parsedUri.getQueryParameter(SECRET_PARAM)
-                ?: throw IllegalArgumentException("Missing required parameter: $SECRET_PARAM")
+                ?: throw InvalidUriException("Missing required parameter: $SECRET_PARAM")
 
             // Get optional parameters or use defaults
             val algorithmStr = parsedUri.getQueryParameter(ALGORITHM_PARAM)?.uppercase() ?: DEFAULT_ALGORITHM
@@ -163,10 +167,10 @@ object OathUriParser : UriParser() {
             )
         } catch (e: Exception) {
             coroutineContext.ensureActive()
-            if (e is IllegalArgumentException) {
+            if (e is InvalidUriException || e is IllegalArgumentException) {
                 throw e
             } else {
-                throw IllegalArgumentException("Invalid OATH URI: $uri", e)
+                throw InvalidUriException("Invalid OATH URI: $uri", e)
             }
         }
     }
