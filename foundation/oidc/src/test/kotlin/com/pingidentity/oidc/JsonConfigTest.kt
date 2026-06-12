@@ -120,8 +120,20 @@ class JsonConfigTest {
     }
 
     @Test
+    fun `logLevel returns STANDARD for info string`() {
+        val parser = JsonConfigParser(buildJsonObject { put("log", "INFO") })
+        assertEquals(Logger.STANDARD, parser.logLevel())
+    }
+
+    @Test
     fun `logLevel returns WARN for warn string`() {
         val parser = JsonConfigParser(buildJsonObject { put("log", "WARN") })
+        assertEquals(Logger.WARN, parser.logLevel())
+    }
+
+    @Test
+    fun `logLevel returns WARN for error string`() {
+        val parser = JsonConfigParser(buildJsonObject { put("log", "ERROR") })
         assertEquals(Logger.WARN, parser.logLevel())
     }
 

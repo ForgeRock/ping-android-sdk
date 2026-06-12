@@ -187,8 +187,8 @@ class JsonConfigParser(@PublishedApi internal val json: JsonObject) {
         val levelStr = json[JsonConfigKey.LOG]?.jsonPrimitive?.content ?: return default
         return runCatching {
             when (levelStr.uppercase()) {
-                "DEBUG", "STANDARD" -> Logger.STANDARD
-                "WARN" -> Logger.WARN
+                "INFO", "DEBUG", "STANDARD" -> Logger.STANDARD
+                "ERROR", "WARN" -> Logger.WARN
                 "CONSOLE" -> Logger.CONSOLE
                 "NONE" -> Logger.NONE
                 else -> throw IllegalArgumentException("Unknown log level: $levelStr")
