@@ -1,6 +1,6 @@
 ## [Unreleased]
 #### Fixed
-- Fixed OATH URI parser to throw typed `InvalidUriException` instead of generic `IllegalArgumentException` for structural URI errors [SDKS-5074]
+- Fixed OATH and Push URI parsers to propagate typed `InvalidUriException` for structural URI parse errors [SDKS-5074]
 
 ## [2.0.1]
 
