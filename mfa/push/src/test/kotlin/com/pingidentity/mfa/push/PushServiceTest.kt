@@ -14,6 +14,7 @@ import com.pingidentity.mfa.commons.exception.MfaException
 import com.pingidentity.mfa.push.exception.DeviceTokenMissingException
 import com.pingidentity.mfa.push.exception.NotificationExpiredException
 import com.pingidentity.mfa.push.exception.NotificationNotFoundException
+import com.pingidentity.mfa.push.exception.PushNumberChallengeException
 import com.pingidentity.mfa.push.storage.PushStorage
 import com.pingidentity.network.ktor.KtorHttpClient
 import io.ktor.client.HttpClient
@@ -1329,7 +1330,7 @@ class PushServiceTest {
     fun `test approve expired notification throws NotificationExpiredException`() = runTest {
         // Given
         val expiredNotification = testNotification.copy(
-            createdAt = java.util.Date(System.currentTimeMillis() - 120000), // 2 minutes ago
+            createdAt = Date(System.currentTimeMillis() - 120000), // 2 minutes ago
             ttl = 60 // 60 seconds TTL
         )
         coEvery { mockStorage.retrievePushNotification(testNotificationId) } returns expiredNotification
@@ -1349,7 +1350,7 @@ class PushServiceTest {
     fun `test deny expired notification throws NotificationExpiredException`() = runTest {
         // Given
         val expiredNotification = testNotification.copy(
-            createdAt = java.util.Date(System.currentTimeMillis() - 120000), // 2 minutes ago
+            createdAt = Date(System.currentTimeMillis() - 120000), // 2 minutes ago
             ttl = 60 // 60 seconds TTL
         )
         coEvery { mockStorage.retrievePushNotification(testNotificationId) } returns expiredNotification
@@ -1453,6 +1454,33 @@ class PushServiceTest {
         } catch (e: DeviceTokenMissingException) {
             assert(e.message?.contains("Device token not set") == true)
             assert(e.message?.contains("Call setDeviceToken()") == true)
+        }
+    }
+
+    @Test
+    fun `test approveNotification propagates PushNumberChallengeException`() = runTest {
+        // Given
+        val mockHandler = mockk<PushHandler>()
+        val pushService = PushService(
+            storage = mockStorage,
+            configuration = configWithCache,
+            httpClient = KtorHttpClient(mockHttpClient),
+            policyEvaluator = mockPolicyEvaluator,
+            handlers = mapOf(PushPlatform.PING_AM.name to mockHandler)
+        )
+
+        val notificationWithNumberChallenge = testNotification.copy(numbersChallenge = "23 45 67")
+        coEvery { mockStorage.retrievePushNotification(testNotificationId) } returns notificationWithNumberChallenge
+        coEvery { mockStorage.retrievePushCredential(testCredentialId) } returns testCredential
+        coEvery { mockHandler.sendApproval(any(), any(), any()) } throws
+            PushNumberChallengeException(400, "Number challenge failed: the selected number was incorrect")
+
+        // When/Then — PushNumberChallengeException must not be swallowed into MfaException
+        try {
+            pushService.approveNotification(testNotificationId)
+            assert(false) { "Expected PushNumberChallengeException" }
+        } catch (e: PushNumberChallengeException) {
+            assertEquals(400, e.status)
         }
     }
 }

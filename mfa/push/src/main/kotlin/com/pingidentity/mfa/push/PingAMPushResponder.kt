@@ -12,15 +12,19 @@ import com.pingidentity.exception.ApiException
 import com.pingidentity.logger.Logger
 import com.pingidentity.mfa.commons.util.JwtUtils
 import com.pingidentity.mfa.push.PushConstants.RESPONSE_ALGORITHM
+import com.pingidentity.mfa.push.exception.PushNumberChallengeException
 import com.pingidentity.network.HttpClient
 import com.pingidentity.network.HttpResponse
 import com.pingidentity.network.isSuccess
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import java.net.URL
 import java.security.InvalidKeyException
@@ -37,7 +41,7 @@ import javax.crypto.spec.SecretKeySpec
  */
 class PingAMPushResponder(
     private val httpClient: HttpClient,
-    private val logger: Logger = Logger.Companion.logger
+    private val logger: Logger = Logger.logger
 ) {
 
     /**
@@ -245,10 +249,19 @@ class PingAMPushResponder(
             // Check if the response was successful
             if (response.status.isSuccess()) {
                 return@withContext true
+            } else if (response.status == 400 && notification.numbersChallenge != null) {
+                val body = response.body()
+                val message = runCatching {
+                    Json.parseToJsonElement(body).jsonObject["message"]?.jsonPrimitive?.content
+                }.getOrNull() ?: body
+                throw PushNumberChallengeException(response.status, message)
             } else {
                 throw ApiException(response.status, response.body())
             }
-        } catch (e: Exception) {
+        } catch (e: PushNumberChallengeException) {
+            logger.e("Number challenge failed", e)
+            throw e
+         } catch (e: Exception) {
             coroutineContext.ensureActive()
             logger.e("Authentication response failed", e)
             return@withContext false

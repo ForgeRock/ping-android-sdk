@@ -33,6 +33,7 @@ import com.pingidentity.mfa.push.PushConstants.KEY_USERNAME
 import com.pingidentity.mfa.push.exception.DeviceTokenMissingException
 import com.pingidentity.mfa.push.exception.NotificationExpiredException
 import com.pingidentity.mfa.push.exception.NotificationNotFoundException
+import com.pingidentity.mfa.push.exception.PushNumberChallengeException
 import com.pingidentity.mfa.push.storage.PushStorage
 import com.pingidentity.network.HttpClient
 import kotlinx.coroutines.currentCoroutineContext
@@ -746,6 +747,8 @@ internal class PushService(
         } catch (e: CredentialNotFoundException) {
             throw e
         } catch (e: CredentialLockedException) {
+            throw e
+        } catch (e: PushNumberChallengeException) {
             throw e
         } catch (e: Exception) {
             currentCoroutineContext().ensureActive()
