@@ -31,10 +31,6 @@ object JsonConfigKey {
     const val SERVER_URL = "serverUrl"
     const val REALM = "realm"
     const val COOKIE_NAME = "cookieName"
-    const val WEB = "web"
-    const val WEB_CUSTOM_TAB_COLOR_SCHEME = "webCustomTabs"
-    const val WEB_AUTH_TAB_COLOR_SCHEME = "authCustomTabs"
-
     // OIDC keys - Required
     const val CLIENT_ID = "clientId"
     const val DISCOVERY_ENDPOINT = "discoveryEndpoint"
@@ -53,7 +49,6 @@ object JsonConfigKey {
     const val UI_LOCALES = "uiLocales"
     const val ACR_VALUES = "acrValues"
     const val ADDITIONAL_PARAMETERS = "additionalParameters"
-    const val STORAGE_FILENAME = "storageFilename"
 
     // OPEN ID
     const val OPEN_ID = "openId"

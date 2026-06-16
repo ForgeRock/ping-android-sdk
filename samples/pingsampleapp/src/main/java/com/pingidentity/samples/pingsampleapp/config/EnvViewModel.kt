@@ -154,7 +154,6 @@ internal fun buildJourney(config: JourneyConfigState) {
                 put(JsonConfigKey.SCOPES, config.scopes.toScopesJsonArray())
                 put(JsonConfigKey.REDIRECT_URI, config.redirectUri)
                 put(JsonConfigKey.DISPLAY, config.display)
-                put(JsonConfigKey.STORAGE_FILENAME, "journey")
             })
         }
     ).onSuccess { journey = it }
@@ -191,7 +190,6 @@ internal fun buildDaVinci(config: OidcConfigState) {
                 put(JsonConfigKey.REDIRECT_URI, config.redirectUri)
                 put(JsonConfigKey.DISPLAY, config.display)
                 if (config.arcValue.isNotBlank()) put(JsonConfigKey.ACR_VALUES, config.arcValue)
-                put(JsonConfigKey.STORAGE_FILENAME, "daVinci")
             })
         }
     ).onSuccess { daVinci = it }
@@ -211,10 +209,6 @@ internal fun buildWeb(config: OidcConfigState) {
                 put(JsonConfigKey.REDIRECT_URI, config.redirectUri)
                 put(JsonConfigKey.DISPLAY, config.display)
             })
-            put(JsonConfigKey.WEB, buildJsonObject {
-                put(JsonConfigKey.WEB_CUSTOM_TAB_COLOR_SCHEME, CustomTabsIntent.COLOR_SCHEME_DARK)
-                put(JsonConfigKey.WEB_AUTH_TAB_COLOR_SCHEME, CustomTabsIntent.COLOR_SCHEME_DARK)
-            })
         }
     ).onSuccess { web = it }
         .onFailure {
@@ -231,7 +225,6 @@ internal fun buildDeviceAuthClient(config: DeviceAuthConfigState) {
                 put(JsonConfigKey.DISCOVERY_ENDPOINT, config.discoveryEndpoint)
                 put(JsonConfigKey.SCOPES, config.scopes.toScopesJsonArray())
                 put(JsonConfigKey.DISPLAY, config.display)
-                put(JsonConfigKey.STORAGE_FILENAME, "device_flow")
                 if (config.acrValues.isNotBlank()) put(JsonConfigKey.ACR_VALUES, config.acrValues)
                 put(JsonConfigKey.OPEN_ID, buildJsonObject {
                     if (config.authorizationEndpoint.isNotBlank()) put(

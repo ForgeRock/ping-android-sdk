@@ -116,10 +116,6 @@ fun OidcWebClient(block: OidcWebClientConfig.() -> Unit = {}): OidcWebClient {
  *       "revocationEndpoint": "https://auth.example.com/revoke"
  *     }
  *   },
- *   "web": {
- *     "webCustomTabs": 0,
- *     "authCustomTabs": 0
- *   }
  * }
  * ```
  *
@@ -140,22 +136,6 @@ fun OidcWebClient(json: JsonObject): Result<OidcWebClient> {
                 scopes = oidcConfigParser.scopeSet(JsonConfigKey.SCOPES)
                 redirectUri = oidcConfigParser.required<String>(JsonConfigKey.REDIRECT_URI)
                 update(oidcConfigParser)
-            }
-            val webConfig =
-                configParser.optional<JsonObject?>(JsonConfigKey.WEB, null) ?: return@OidcWebClient
-            // No web configuration, skip UI settings
-            val webJsonConfig = JsonConfigParser(webConfig)
-            if (JsonConfigKey.WEB_CUSTOM_TAB_COLOR_SCHEME in webConfig) {
-                val customTabColorScheme = webJsonConfig.required<Int>(JsonConfigKey.WEB_CUSTOM_TAB_COLOR_SCHEME)
-                customTabsCustomizer = {
-                    setColorScheme(customTabColorScheme)
-                }
-            }
-            if (JsonConfigKey.WEB_AUTH_TAB_COLOR_SCHEME in webConfig) {
-                val authTabColorScheme = webJsonConfig.required<Int>(JsonConfigKey.WEB_AUTH_TAB_COLOR_SCHEME)
-                authTabCustomizer = {
-                    setColorScheme(authTabColorScheme)
-                }
             }
         }
     }

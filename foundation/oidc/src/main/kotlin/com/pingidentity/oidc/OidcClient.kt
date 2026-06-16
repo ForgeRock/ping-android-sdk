@@ -98,7 +98,7 @@ fun OidcClient(json: JsonObject): kotlin.Result<OidcClient> {
  * Mandatory fields (`clientId`, `discoveryEndpoint`, `scopes`, `redirectUri`) are set by each
  * JSON factory independently. This function handles every optional field:
  * `display`, `par`, `loginHint`, `state`, `nonce`, `prompt`, `uiLocales`, `acrValues`,
- * `signOutRedirectUri`, `refreshThreshold`, `additionalParameters`, `storageFilename`,
+ * `signOutRedirectUri`, `refreshThreshold`, `additionalParameters`,
  * and the `openId` endpoint-override sub-object.
  *
  * @param oidcJsonConfig Parser wrapping the `oidc` sub-object of the top-level JSON config.
@@ -117,12 +117,6 @@ fun OidcClientConfig.update(oidcJsonConfig: JsonConfigParser) {
     val additionalParams = oidcJsonConfig.additionalParameters(JsonConfigKey.ADDITIONAL_PARAMETERS)
     if (additionalParams != null) {
         additionalParameters = additionalParams
-    }
-    val storageFilename = oidcJsonConfig.optional<String>(JsonConfigKey.STORAGE_FILENAME, "")
-    if (storageFilename.isNotEmpty()) {
-        storage {
-            fileName = storageFilename
-        }
     }
     val openIdJson = oidcJsonConfig.optional<JsonObject?>(JsonConfigKey.OPEN_ID, null)
     if (openIdJson != null) {

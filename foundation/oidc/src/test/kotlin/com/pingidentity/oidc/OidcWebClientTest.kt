@@ -404,37 +404,6 @@ class OidcWebClientTest {
     }
 
     @Test
-    fun `createOidcWebClient succeeds with web block and color scheme keys`() {
-        val json = buildJsonObject {
-            put(JsonConfigKey.OIDC, buildJsonObject {
-                put(JsonConfigKey.CLIENT_ID, "my-client")
-                put(JsonConfigKey.DISCOVERY_ENDPOINT, "https://auth.example.com/.well-known/openid-configuration")
-                put(JsonConfigKey.SCOPES, buildJsonArray { add("openid") })
-                put(JsonConfigKey.REDIRECT_URI, "myapp://oauth2redirect")
-            })
-            put(JsonConfigKey.WEB, buildJsonObject {
-                put(JsonConfigKey.WEB_CUSTOM_TAB_COLOR_SCHEME, 0)
-                put(JsonConfigKey.WEB_AUTH_TAB_COLOR_SCHEME, 1)
-            })
-        }
-        assertTrue(OidcWebClient(json).isSuccess)
-    }
-
-    @Test
-    fun `createOidcWebClient succeeds with empty web block - no forced dark mode`() {
-        val json = buildJsonObject {
-            put(JsonConfigKey.OIDC, buildJsonObject {
-                put(JsonConfigKey.CLIENT_ID, "my-client")
-                put(JsonConfigKey.DISCOVERY_ENDPOINT, "https://auth.example.com/.well-known/openid-configuration")
-                put(JsonConfigKey.SCOPES, buildJsonArray { add("openid") })
-                put(JsonConfigKey.REDIRECT_URI, "myapp://oauth2redirect")
-            })
-            put(JsonConfigKey.WEB, buildJsonObject {})
-        }
-        assertTrue(OidcWebClient(json).isSuccess)
-    }
-
-    @Test
     fun `createOidcWebClient succeeds with all optional OIDC fields`() {
         val json = buildJsonObject {
             put(JsonConfigKey.OIDC, buildJsonObject {

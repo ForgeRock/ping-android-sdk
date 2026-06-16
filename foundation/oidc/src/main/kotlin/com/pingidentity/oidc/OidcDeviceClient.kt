@@ -74,7 +74,6 @@ fun OidcDeviceClient(block: OidcClientConfig.() -> Unit = {}): OidcDeviceClient 
  *     "acrValues": "urn:mace:incommon:iap:silver",
  *     "par": true,
  *     "additionalParameters": { "max_age": "3600" },
- *     "storageFilename": "oidc_device_storage",
  *     "openId": {
  *       "deviceAuthorizationEndpoint": "https://auth.example.com/device/code",
  *       "authorizationEndpoint": "https://auth.example.com/authorize",
