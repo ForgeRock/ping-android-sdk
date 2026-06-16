@@ -31,7 +31,7 @@ class LogoutViewModel: ViewModel() {
         viewModelScope.launch {
             state.value = LogoutState(
                 daVinci = daVinci?.davinciUser() != null,
-                journey = journey.journeyUser() != null,
+                journey = journey?.journeyUser() != null,
                 oidc = web?.user() != null,
                 oidcDeviceClient = oidcDeviceClient?.user() != null,
             )
@@ -40,7 +40,7 @@ class LogoutViewModel: ViewModel() {
 
     fun logoutJourney(onCompleted: () -> Unit) {
         viewModelScope.launch {
-            journey.journeyUser()?.logout()
+            journey?.journeyUser()?.logout()
             onCompleted()
         }
     }
@@ -70,7 +70,7 @@ class LogoutViewModel: ViewModel() {
         viewModelScope.launch {
             // Logout from all active sessions
             try {
-                runCatching { journey.journeyUser()?.logout() }
+                runCatching { journey?.journeyUser()?.logout() }
                 runCatching { daVinci?.davinciUser()?.logout() }
                 runCatching { web?.user()?.logout() }
                 runCatching { oidcDeviceClient?.user()?.logout() }

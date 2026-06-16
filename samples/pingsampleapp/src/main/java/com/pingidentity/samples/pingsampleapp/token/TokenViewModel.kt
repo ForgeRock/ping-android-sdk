@@ -108,7 +108,7 @@ class TokenViewModel : ViewModel() {
     // Journey Token Operations
     private fun journeyAccessToken() {
         viewModelScope.launch {
-            journey.journeyUser()?.let {
+            journey?.journeyUser()?.let {
                 when (val result = it.token()) {
                     is Failure -> {
                         state.update { state ->
@@ -131,7 +131,7 @@ class TokenViewModel : ViewModel() {
 
     private fun journeyRevoke() {
         viewModelScope.launch {
-            journey.journeyUser()?.revoke()
+            journey?.journeyUser()?.revoke()
             state.update {
                 it.copy(journeyToken = null, journeyError = null)
             }
@@ -140,7 +140,7 @@ class TokenViewModel : ViewModel() {
 
     private fun journeyRefresh() {
         viewModelScope.launch {
-            journey.journeyUser()?.let {
+            journey?.journeyUser()?.let {
                 when (val result = it.refresh()) {
                     is Failure -> {
                         state.update { state ->
