@@ -8,7 +8,6 @@
 package com.pingidentity.samples.pingsampleapp.config
 
 import android.net.Uri
-import androidx.browser.customtabs.CustomTabsIntent
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -33,10 +32,15 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
-import org.json.JSONArray
-import org.json.JSONObject
+import kotlinx.serialization.json.buildJsonArray
+
 
 // ---------------------------------------------------------------------------
 // Config state data classes
@@ -69,12 +73,140 @@ data class DeviceAuthConfigState(
     val display: String = "Device Authorization",
     val authorizationEndpoint: String = "",
     val tokenEndpoint: String = "",
-    val userinfoEndpoint: String = "",
+    val userInfoEndpoint: String = "",
     val endSessionEndpoint: String = "",
     val revocationEndpoint: String = "",
     val deviceAuthorizationEndpoint: String = "",
     val acrValues: String = "",
 )
+
+// ---------------------------------------------------------------------------
+// JSON asset file loader
+// ---------------------------------------------------------------------------
+
+internal enum class AssetConfigType { JOURNEY, DAVINCI, WEB, DEVICE_AUTH }
+
+internal data class AssetConfigs(
+    val journey: List<JourneyConfigState> = emptyList(),
+    val davinci: List<OidcConfigState> = emptyList(),
+    val web: List<OidcConfigState> = emptyList(),
+    val deviceAuth: List<DeviceAuthConfigState> = emptyList(),
+)
+
+/**
+ * Scans all `*.json` files in the `assets/` directory and parses each one as an SDK-native
+ * configuration object. The results are surfaced as read-only presets in the configuration UI.
+ *
+ * Each file must follow the SDK's native JSON shape:
+ * ```json
+ * {
+ *   "journey": { "serverUrl": "...", "realm": "...", "cookieName": "..." },
+ *   "oidc":    { "clientId": "...", "discoveryEndpoint": "...", ... }
+ * }
+ * ```
+ *
+ * The **filename** (without the `.json` extension) is used as the display name in the UI.
+ * For example, `journey-prod.json` appears as `journey-prod` in the preset list.
+ *
+ * Config type is inferred from the JSON structure — no explicit `"type"` field is needed:
+ * - `"journey"` key present → [JourneyConfigState]
+ * - `"oidc.openId"` key present → [DeviceAuthConfigState]
+ * - Neither of the above → [OidcConfigState] (DaVinci)
+ *
+ * Files that do not contain an `"oidc"` object are silently skipped.
+ * Any parse error for an individual file is silently ignored; other files are still processed.
+ *
+ * @return [AssetConfigs] containing the parsed configs grouped by type.
+ */
+internal fun loadAssetConfigs(): AssetConfigs {
+    val context = ContextProvider.context
+    val fileNames = context.assets.list("") ?: return AssetConfigs()
+    val journey = mutableListOf<JourneyConfigState>()
+    val davinci = mutableListOf<OidcConfigState>()
+    val web = mutableListOf<OidcConfigState>()
+    val deviceAuth = mutableListOf<DeviceAuthConfigState>()
+
+    fun JsonObject.str(key: String) = this[key]?.jsonPrimitive?.content ?: ""
+
+    for (fileName in fileNames) {
+        if (!fileName.endsWith(".json")) continue
+        val displayName = fileName.removeSuffix(".json")
+        runCatching {
+            val root = Json.parseToJsonElement(
+                context.assets.open(fileName).bufferedReader().readText()
+            ).jsonObject
+            val isDaVinci = root.contains("journey").not()
+            val oidc = root["oidc"]?.jsonObject ?: return@runCatching
+            val journeyObj = root["journey"]?.jsonObject
+            val openIdObj = oidc["openId"]?.jsonObject
+
+            val scopes = oidc["scopes"]?.let { el ->
+                runCatching { el.jsonArray.joinToString(",") { it.jsonPrimitive.content } }
+                    .getOrElse { el.jsonPrimitive.content }
+            } ?: ""
+            val clientId = oidc.str("clientId")
+            val discoveryEndpoint = oidc.str("discoveryEndpoint")
+            val redirectUri = oidc.str("redirectUri")
+
+            val type: AssetConfigType = when {
+                journeyObj != null -> AssetConfigType.JOURNEY
+                openIdObj != null -> AssetConfigType.DEVICE_AUTH
+                isDaVinci -> AssetConfigType.DAVINCI
+                else -> AssetConfigType.WEB
+            }
+
+            when (type) {
+                AssetConfigType.JOURNEY -> journey.add(JourneyConfigState(
+                    serverUrl = journeyObj?.str("serverUrl") ?: "",
+                    realm = journeyObj?.str("realm") ?: "",
+                    cookie = journeyObj?.str("cookieName") ?: "",
+                    clientId = clientId,
+                    discoveryEndpoint = discoveryEndpoint,
+                    scopes = scopes,
+                    redirectUri = redirectUri,
+                    display = displayName,
+                ))
+                AssetConfigType.DAVINCI -> davinci.add(OidcConfigState(
+                    clientId = clientId,
+                    discoveryEndpoint = discoveryEndpoint,
+                    scopes = scopes,
+                    redirectUri = redirectUri,
+                    display = displayName,
+                    arcValue = oidc.str("acrValues"),
+                ))
+                AssetConfigType.DEVICE_AUTH -> deviceAuth.add(DeviceAuthConfigState(
+                    clientId = clientId,
+                    discoveryEndpoint = discoveryEndpoint,
+                    scopes = scopes,
+                    display = displayName,
+                    acrValues = oidc.str("acrValues"),
+                    authorizationEndpoint = openIdObj?.str("authorizationEndpoint") ?: "",
+                    tokenEndpoint = openIdObj?.str("tokenEndpoint") ?: "",
+                    userInfoEndpoint = openIdObj?.str("userInfoEndpoint") ?: "",
+                    endSessionEndpoint = openIdObj?.str("endSessionEndpoint") ?: "",
+                    revocationEndpoint = openIdObj?.str("revocationEndpoint") ?: "",
+                    deviceAuthorizationEndpoint = openIdObj?.str("deviceAuthorizationEndpoint") ?: "",
+                ))
+                else -> web.add(OidcConfigState(
+                    clientId = clientId,
+                    discoveryEndpoint = discoveryEndpoint,
+                    scopes = scopes,
+                    redirectUri = redirectUri,
+                    display = displayName,
+                ))
+            }
+            web.add(OidcConfigState(
+                clientId = clientId,
+                discoveryEndpoint = discoveryEndpoint,
+                scopes = scopes,
+                redirectUri = redirectUri,
+                display = displayName,
+            ))
+        }
+    }
+    return AssetConfigs(journey, davinci, web, deviceAuth)
+}
+
 
 // ---------------------------------------------------------------------------
 // Default preset configs (used as fallbacks when no saved config exists)
@@ -107,7 +239,7 @@ internal val defaultDeviceAuthConfig = DeviceAuthConfigState(
     display = "Device Authorization",
     authorizationEndpoint = "https://example.com/am/oauth2/alpha/authorize",
     tokenEndpoint = "https://example.com/am/oauth2/alpha/access_token",
-    userinfoEndpoint = "https://example.com/am/oauth2/alpha/userinfo",
+    userInfoEndpoint = "https://example.com/am/oauth2/alpha/userinfo",
     endSessionEndpoint = "https://example.com/am/oauth2/alpha/session/end",
     revocationEndpoint = "https://example.com/am/oauth2/alpha/token/revoke",
     deviceAuthorizationEndpoint = "https://example.com/am/oauth2/realms/root/realms/alpha/device/code",
@@ -235,9 +367,9 @@ internal fun buildDeviceAuthClient(config: DeviceAuthConfigState) {
                         JsonConfigKey.TOKEN_ENDPOINT,
                         config.tokenEndpoint
                     )
-                    if (config.userinfoEndpoint.isNotBlank()) put(
+                    if (config.userInfoEndpoint.isNotBlank()) put(
                         JsonConfigKey.USER_INFO_ENDPOINT,
-                        config.userinfoEndpoint
+                        config.userInfoEndpoint
                     )
                     if (config.endSessionEndpoint.isNotBlank()) put(
                         JsonConfigKey.END_SESSION_ENDPOINT,
@@ -315,7 +447,7 @@ suspend fun initConfigs() {
             display = prefs[stringPreferencesKey("da_display")] ?: "",
             authorizationEndpoint = prefs[stringPreferencesKey("da_authorizationEndpoint")] ?: "",
             tokenEndpoint = prefs[stringPreferencesKey("da_tokenEndpoint")] ?: "",
-            userinfoEndpoint = prefs[stringPreferencesKey("da_userinfoEndpoint")] ?: "",
+            userInfoEndpoint = prefs[stringPreferencesKey("da_userInfoEndpoint")] ?: "",
             endSessionEndpoint = prefs[stringPreferencesKey("da_endSessionEndpoint")] ?: "",
             revocationEndpoint = prefs[stringPreferencesKey("da_revocationEndpoint")] ?: "",
             deviceAuthorizationEndpoint = prefs[stringPreferencesKey("da_deviceAuthorizationEndpoint")] ?: "",
@@ -336,9 +468,9 @@ suspend fun initConfigs() {
 
 class EnvViewModel : ViewModel() {
 
-    // -- Preset lists (read-only, built-in) ----------------------------------
+    // -- Built-in preset lists (asset files are prepended in init) ------------
 
-    val journeyPresets = listOf(
+    private val builtInJourneyPresets = listOf(
         defaultJourneyConfig,
         JourneyConfigState(
             serverUrl = "http://192.168.86.32:8080/openam",
@@ -352,7 +484,7 @@ class EnvViewModel : ViewModel() {
         ),
     )
 
-    val daVinciPresets = listOf(
+    private val builtInDaVinciPresets = listOf(
         defaultDaVinciConfig,
         OidcConfigState(
             clientId = "dummy",
@@ -370,7 +502,7 @@ class EnvViewModel : ViewModel() {
         ),
     )
 
-    val webPresets = listOf(
+    private val builtInWebPresets = listOf(
         defaultWebConfig,
         OidcConfigState(
             clientId = "dummy",
@@ -381,7 +513,7 @@ class EnvViewModel : ViewModel() {
         ),
     )
 
-    val deviceAuthPresets = listOf(
+    private val builtInDeviceAuthPresets = listOf(
         defaultDeviceAuthConfig,
         DeviceAuthConfigState(
             clientId = "dummyPingOne",
@@ -390,6 +522,18 @@ class EnvViewModel : ViewModel() {
             display = "Dummy",
         ),
     )
+
+    var journeyPresets by mutableStateOf(builtInJourneyPresets)
+        private set
+
+    var daVinciPresets by mutableStateOf(builtInDaVinciPresets)
+        private set
+
+    var webPresets by mutableStateOf(builtInWebPresets)
+        private set
+
+    var deviceAuthPresets by mutableStateOf(builtInDeviceAuthPresets)
+        private set
 
     // -- Currently applied configs -------------------------------------------
 
@@ -423,6 +567,7 @@ class EnvViewModel : ViewModel() {
 
     init {
         viewModelScope.launch(Dispatchers.IO) {
+            val assetConfigs = loadAssetConfigs()
             val jApplied = loadAppliedJourneyFromDataStore()
             val dvApplied = loadAppliedDaVinciFromDataStore()
             val wApplied = loadAppliedWebFromDataStore()
@@ -433,6 +578,10 @@ class EnvViewModel : ViewModel() {
             val daCustom = loadCustomDeviceAuthFromDataStore()
 
             withContext(Dispatchers.Main) {
+                if (assetConfigs.journey.isNotEmpty()) journeyPresets = assetConfigs.journey + builtInJourneyPresets
+                if (assetConfigs.davinci.isNotEmpty()) daVinciPresets = assetConfigs.davinci + builtInDaVinciPresets
+                if (assetConfigs.web.isNotEmpty()) webPresets = assetConfigs.web + builtInWebPresets
+                if (assetConfigs.deviceAuth.isNotEmpty()) deviceAuthPresets = assetConfigs.deviceAuth + builtInDeviceAuthPresets
                 customJourneyConfigs = jCustom
                 customDaVinciConfigs = dvCustom
                 customWebConfigs = wCustom
@@ -636,7 +785,7 @@ class EnvViewModel : ViewModel() {
             display = prefs[stringPreferencesKey("da_display")] ?: "",
             authorizationEndpoint = prefs[stringPreferencesKey("da_authorizationEndpoint")] ?: "",
             tokenEndpoint = prefs[stringPreferencesKey("da_tokenEndpoint")] ?: "",
-            userinfoEndpoint = prefs[stringPreferencesKey("da_userinfoEndpoint")] ?: "",
+            userInfoEndpoint = prefs[stringPreferencesKey("da_userInfoEndpoint")] ?: "",
             endSessionEndpoint = prefs[stringPreferencesKey("da_endSessionEndpoint")] ?: "",
             revocationEndpoint = prefs[stringPreferencesKey("da_revocationEndpoint")] ?: "",
             deviceAuthorizationEndpoint = prefs[stringPreferencesKey("da_deviceAuthorizationEndpoint")] ?: "",
@@ -714,7 +863,7 @@ class EnvViewModel : ViewModel() {
             prefs[stringPreferencesKey("da_display")] = config.display
             prefs[stringPreferencesKey("da_authorizationEndpoint")] = config.authorizationEndpoint
             prefs[stringPreferencesKey("da_tokenEndpoint")] = config.tokenEndpoint
-            prefs[stringPreferencesKey("da_userinfoEndpoint")] = config.userinfoEndpoint
+            prefs[stringPreferencesKey("da_userInfoEndpoint")] = config.userInfoEndpoint
             prefs[stringPreferencesKey("da_endSessionEndpoint")] = config.endSessionEndpoint
             prefs[stringPreferencesKey("da_revocationEndpoint")] = config.revocationEndpoint
             prefs[stringPreferencesKey("da_deviceAuthorizationEndpoint")] = config.deviceAuthorizationEndpoint
@@ -750,96 +899,81 @@ class EnvViewModel : ViewModel() {
 
     // -- JSON serialization --------------------------------------------------
 
-    private fun serializeJourneyConfigs(configs: List<JourneyConfigState>): String {
-        val array = JSONArray()
-        configs.forEach { c ->
-            array.put(JSONObject().apply {
-                put("serverUrl", c.serverUrl); put("realm", c.realm); put("cookie", c.cookie)
-                put("clientId", c.clientId); put("discoveryEndpoint", c.discoveryEndpoint)
-                put("scopes", c.scopes); put("redirectUri", c.redirectUri); put("display", c.display)
-            })
-        }
-        return array.toString()
-    }
+    private fun serializeJourneyConfigs(configs: List<JourneyConfigState>): String =
+        buildJsonArray {
+            configs.forEach { c ->
+                add(buildJsonObject {
+                    put("serverUrl", c.serverUrl); put("realm", c.realm); put("cookie", c.cookie)
+                    put("clientId", c.clientId); put("discoveryEndpoint", c.discoveryEndpoint)
+                    put("scopes", c.scopes); put("redirectUri", c.redirectUri); put("display", c.display)
+                })
+            }
+        }.toString()
 
     private fun deserializeJourneyConfigs(json: String): List<JourneyConfigState> = runCatching {
-        val array = JSONArray(json)
-        (0 until array.length()).map {
-            val o = array.getJSONObject(it)
+        Json.parseToJsonElement(json).jsonArray.map { el ->
+            val o = el.jsonObject
+            fun str(k: String) = o[k]?.jsonPrimitive?.content ?: ""
             JourneyConfigState(
-                serverUrl = o.optString("serverUrl", ""),
-                realm = o.optString("realm", ""),
-                cookie = o.optString("cookie", ""),
-                clientId = o.optString("clientId", ""),
-                discoveryEndpoint = o.optString("discoveryEndpoint", ""),
-                scopes = o.optString("scopes", ""),
-                redirectUri = o.optString("redirectUri", ""),
-                display = o.optString("display", ""),
+                serverUrl = str("serverUrl"), realm = str("realm"), cookie = str("cookie"),
+                clientId = str("clientId"), discoveryEndpoint = str("discoveryEndpoint"),
+                scopes = str("scopes"), redirectUri = str("redirectUri"), display = str("display"),
             )
         }
     }.getOrDefault(emptyList())
 
-    private fun serializeOidcConfigs(configs: List<OidcConfigState>): String {
-        val array = JSONArray()
-        configs.forEach { c ->
-            array.put(JSONObject().apply {
-                put("clientId", c.clientId); put("discoveryEndpoint", c.discoveryEndpoint)
-                put("scopes", c.scopes); put("redirectUri", c.redirectUri); put("display", c.display)
-                put("arcValue", c.arcValue)
-            })
-        }
-        return array.toString()
-    }
+    private fun serializeOidcConfigs(configs: List<OidcConfigState>): String =
+        buildJsonArray {
+            configs.forEach { c ->
+                add(buildJsonObject {
+                    put("clientId", c.clientId); put("discoveryEndpoint", c.discoveryEndpoint)
+                    put("scopes", c.scopes); put("redirectUri", c.redirectUri)
+                    put("display", c.display); put("arcValue", c.arcValue)
+                })
+            }
+        }.toString()
 
     private fun deserializeOidcConfigs(json: String): List<OidcConfigState> = runCatching {
-        val array = JSONArray(json)
-        (0 until array.length()).map {
-            val o = array.getJSONObject(it)
+        Json.parseToJsonElement(json).jsonArray.map { el ->
+            val o = el.jsonObject
+            fun str(k: String) = o[k]?.jsonPrimitive?.content ?: ""
             OidcConfigState(
-                clientId = o.optString("clientId", ""),
-                discoveryEndpoint = o.optString("discoveryEndpoint", ""),
-                scopes = o.optString("scopes", ""),
-                redirectUri = o.optString("redirectUri", ""),
-                display = o.optString("display", ""),
-                arcValue = o.optString("arcValue", ""),
+                clientId = str("clientId"), discoveryEndpoint = str("discoveryEndpoint"),
+                scopes = str("scopes"), redirectUri = str("redirectUri"),
+                display = str("display"), arcValue = str("arcValue"),
             )
         }
     }.getOrDefault(emptyList())
 
-    private fun serializeDeviceAuthConfigs(configs: List<DeviceAuthConfigState>): String {
-        val array = JSONArray()
-        configs.forEach { c ->
-            array.put(JSONObject().apply {
-                put("clientId", c.clientId); put("discoveryEndpoint", c.discoveryEndpoint)
-                put("scopes", c.scopes); put("display", c.display)
-                put("authorizationEndpoint", c.authorizationEndpoint)
-                put("tokenEndpoint", c.tokenEndpoint)
-                put("userinfoEndpoint", c.userinfoEndpoint)
-                put("endSessionEndpoint", c.endSessionEndpoint)
-                put("revocationEndpoint", c.revocationEndpoint)
-                put("deviceAuthorizationEndpoint", c.deviceAuthorizationEndpoint)
-                put("acrValues", c.acrValues)
-            })
-        }
-        return array.toString()
-    }
+    private fun serializeDeviceAuthConfigs(configs: List<DeviceAuthConfigState>): String =
+        buildJsonArray {
+            configs.forEach { c ->
+                add(buildJsonObject {
+                    put("clientId", c.clientId); put("discoveryEndpoint", c.discoveryEndpoint)
+                    put("scopes", c.scopes); put("display", c.display)
+                    put("authorizationEndpoint", c.authorizationEndpoint)
+                    put("tokenEndpoint", c.tokenEndpoint); put("userInfoEndpoint", c.userInfoEndpoint)
+                    put("endSessionEndpoint", c.endSessionEndpoint)
+                    put("revocationEndpoint", c.revocationEndpoint)
+                    put("deviceAuthorizationEndpoint", c.deviceAuthorizationEndpoint)
+                    put("acrValues", c.acrValues)
+                })
+            }
+        }.toString()
 
     private fun deserializeDeviceAuthConfigs(json: String): List<DeviceAuthConfigState> = runCatching {
-        val array = JSONArray(json)
-        (0 until array.length()).map {
-            val o = array.getJSONObject(it)
+        Json.parseToJsonElement(json).jsonArray.map { el ->
+            val o = el.jsonObject
+            fun str(k: String) = o[k]?.jsonPrimitive?.content ?: ""
             DeviceAuthConfigState(
-                clientId = o.optString("clientId", ""),
-                discoveryEndpoint = o.optString("discoveryEndpoint", ""),
-                scopes = o.optString("scopes", ""),
-                display = o.optString("display", ""),
-                authorizationEndpoint = o.optString("authorizationEndpoint", ""),
-                tokenEndpoint = o.optString("tokenEndpoint", ""),
-                userinfoEndpoint = o.optString("userinfoEndpoint", ""),
-                endSessionEndpoint = o.optString("endSessionEndpoint", ""),
-                revocationEndpoint = o.optString("revocationEndpoint", ""),
-                deviceAuthorizationEndpoint = o.optString("deviceAuthorizationEndpoint", ""),
-                acrValues = o.optString("acrValues", ""),
+                clientId = str("clientId"), discoveryEndpoint = str("discoveryEndpoint"),
+                scopes = str("scopes"), display = str("display"),
+                authorizationEndpoint = str("authorizationEndpoint"),
+                tokenEndpoint = str("tokenEndpoint"), userInfoEndpoint = str("userInfoEndpoint"),
+                endSessionEndpoint = str("endSessionEndpoint"),
+                revocationEndpoint = str("revocationEndpoint"),
+                deviceAuthorizationEndpoint = str("deviceAuthorizationEndpoint"),
+                acrValues = str("acrValues"),
             )
         }
     }.getOrDefault(emptyList())
