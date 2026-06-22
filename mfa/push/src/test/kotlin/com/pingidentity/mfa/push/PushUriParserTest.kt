@@ -14,6 +14,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import android.util.Base64
+import com.pingidentity.mfa.commons.exception.InvalidUriException
 
 /**
  * Unit tests for PushUriParser class.
@@ -212,6 +213,13 @@ class PushUriParserTest {
         assertEquals(credential.sharedSecret, reparsedCredential.sharedSecret)
     }
     
+    @Test(expected = InvalidUriException::class)
+    fun `test parse URI with mismatched issuer param throws InvalidUriException`() {
+        // Label says "forgerock" but issuer= param says "Acme" — parseLabelComponents throws InvalidUriException
+        val uri = "pushauth://push/forgerock:user?a=aHR0cDovL2Rldi5vcGVuYW0uZXhhbXBsZS5jb206ODA4MS9vcGVuYW0vanNvbi9kZXYvcHVzaC9zbnMvbWVzc2FnZT9fYWN0aW9uPWF1dGhlbnRpY2F0ZQ&r=aHR0cDovL2Rldi5vcGVuYW0uZXhhbXBsZS5jb206ODA4MS9vcGVuYW0vanNvbi9kZXYvcHVzaC9zbnMvbWVzc2FnZT9fYWN0aW9uPXJlZ2lzdGVy&s=b3uYLkQ7dRPjBaIzV0t_aijoXRgMq-NP5AwVAvRfa_E&issuer=Acme"
+        PushUriParser.parse(uri)
+    }
+
     @Test(expected = IllegalArgumentException::class)
     fun `test parse URI with missing registration endpoint`() {
         val uri = "pushauth://push/forgerock:user?a=aHR0cDovL2Rldi5vcGVuYW0uZXhhbXBsZS5jb206ODA4MS9vcGVuYW0vanNvbi9kZXYvcHVzaC9zbnMvbWVzc2FnZT9fYWN0aW9uPWF1dGhlbnRpY2F0ZQ&s=b3uYLkQ7dRPjBaIzV0t_aijoXRgMq-NP5AwVAvRfa_E"

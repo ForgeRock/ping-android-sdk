@@ -7,12 +7,16 @@
 
 package com.pingidentity.mfa.oath
 
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotNull
-import org.junit.Test
+import com.pingidentity.mfa.commons.exception.InvalidUriException
+import com.pingidentity.mfa.commons.exception.MfaException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
+import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
@@ -236,5 +240,109 @@ class OathUriParserTest {
         assertEquals(6, credential.digits)
         assertEquals(1, credential.period)
     }
-    
+
+    // --- Task 4.1: InvalidUriException thrown for URI-structure failures ---
+
+    @Test
+    fun `test parse URI with invalid scheme throws InvalidUriException`() = runTest {
+        val uri = "https://totp/Example:alice@example.com?secret=JBSWY3DPEHPK3PXP&issuer=Example"
+        try {
+            OathUriParser.parse(uri)
+            fail("Expected InvalidUriException for invalid scheme")
+        } catch (e: InvalidUriException) {
+            assertNotNull(e.message)
+        }
+    }
+
+    @Test
+    fun `test parse URI with invalid OATH type throws InvalidUriException`() = runTest {
+        val uri = "otpauth://wrong/Example:alice@example.com?secret=JBSWY3DPEHPK3PXP&issuer=Example"
+        try {
+            OathUriParser.parse(uri)
+            fail("Expected InvalidUriException for invalid OATH type")
+        } catch (e: InvalidUriException) {
+            assertNotNull(e.message)
+        }
+    }
+
+    @Test
+    fun `test parse URI with missing secret throws InvalidUriException`() = runTest {
+        val uri = "otpauth://totp/Example:alice@example.com?issuer=Example"
+        try {
+            OathUriParser.parse(uri)
+            fail("Expected InvalidUriException for missing secret")
+        } catch (e: InvalidUriException) {
+            assertNotNull(e.message)
+        }
+    }
+
+    @Test
+    fun `test parse URI with issuer label mismatch throws InvalidUriException`() = runTest {
+        // Label says "A" but issuer param says "B" — parseLabelComponents raises InvalidUriException
+        val uri = "otpauth://totp/A:bob@example.com?secret=JBSWY3DPEHPK3PXP&issuer=B"
+        try {
+            OathUriParser.parse(uri)
+            fail("Expected InvalidUriException for issuer/label mismatch")
+        } catch (e: InvalidUriException) {
+            assertNotNull(e.message)
+        }
+    }
+
+    // --- Task 4.2: Family consistency and split-boundary regression ---
+
+    @Test
+    fun `InvalidUriException is catchable as MfaException`() = runTest {
+        val uri = "https://totp/Example:alice@example.com?secret=JBSWY3DPEHPK3PXP&issuer=Example"
+        var caught: Exception? = null
+        try {
+            OathUriParser.parse(uri)
+        } catch (e: MfaException) {
+            caught = e
+        }
+        assertNotNull("Expected MfaException to be thrown", caught)
+        assertTrue(
+            "InvalidUriException must be an instance of MfaException",
+            caught is InvalidUriException,
+        )
+    }
+
+    @Test
+    fun `value-validation failures are IllegalArgumentException and not InvalidUriException`() = runTest {
+        // digits violation
+        val digitsUri = "otpauth://totp/Example:alice@example.com?secret=JBSWY3DPEHPK3PXP&issuer=Example&digits=7"
+        var digitsEx: Exception? = null
+        try {
+            OathUriParser.parse(digitsUri)
+        } catch (e: Exception) {
+            digitsEx = e
+        }
+        assertNotNull("Expected exception for invalid digits", digitsEx)
+        assertTrue("digits violation must be IllegalArgumentException", digitsEx is IllegalArgumentException)
+        assertFalse("digits violation must NOT be InvalidUriException", digitsEx is InvalidUriException)
+
+        // period violation
+        val periodUri = "otpauth://totp/Example:alice@example.com?secret=JBSWY3DPEHPK3PXP&issuer=Example&period=0"
+        var periodEx: Exception? = null
+        try {
+            OathUriParser.parse(periodUri)
+        } catch (e: Exception) {
+            periodEx = e
+        }
+        assertNotNull("Expected exception for invalid period", periodEx)
+        assertTrue("period violation must be IllegalArgumentException", periodEx is IllegalArgumentException)
+        assertFalse("period violation must NOT be InvalidUriException", periodEx is InvalidUriException)
+
+        // counter violation
+        val counterUri = "otpauth://hotp/Example:alice@example.com?secret=JBSWY3DPEHPK3PXP&issuer=Example&counter=-1"
+        var counterEx: Exception? = null
+        try {
+            OathUriParser.parse(counterUri)
+        } catch (e: Exception) {
+            counterEx = e
+        }
+        assertNotNull("Expected exception for invalid counter", counterEx)
+        assertTrue("counter violation must be IllegalArgumentException", counterEx is IllegalArgumentException)
+        assertFalse("counter violation must NOT be InvalidUriException", counterEx is InvalidUriException)
+    }
+
 }

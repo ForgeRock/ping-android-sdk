@@ -97,6 +97,22 @@ class MfaPolicyViolationException(
 ) : MfaException(message, cause)
 
 /**
+ * Exception thrown when an MFA URI is structurally invalid or cannot be parsed.
+ *
+ * Reusable across OATH and Push URI parsers. Thrown for scheme mismatches, unrecognised
+ * OATH types, missing required parameters (e.g. `secret`), issuer/label mismatches, and
+ * any other structural parse failures. Value-validation errors (e.g. `digits` out of
+ * range) remain as [IllegalArgumentException] at the throw site.
+ *
+ * @param message A human-readable description of the parse failure.
+ * @param cause The underlying cause of the exception, if any.
+ */
+class InvalidUriException(
+    message: String? = null,
+    cause: Throwable? = null
+) : MfaException(message, cause)
+
+/**
  * Exception thrown when attempting to register a credential that already exists.
  * 
  * This exception is thrown when a credential with the same issuer and account name

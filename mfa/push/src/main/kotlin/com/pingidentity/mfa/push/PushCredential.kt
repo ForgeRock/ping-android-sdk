@@ -12,11 +12,13 @@ import kotlinx.serialization.EncodeDefault
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerializationException
 import kotlinx.serialization.descriptors.PrimitiveKind
 import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
 import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
+import com.pingidentity.mfa.commons.exception.InvalidUriException
 import java.util.Date
 import java.util.UUID
 
@@ -94,7 +96,7 @@ data class PushCredential(
          *
          * @param jsonString The JSON string.
          * @return A PushCredential.
-         * @throws kotlinx.serialization.SerializationException if the JSON is invalid.
+         * @throws SerializationException if the JSON is invalid.
          */
         fun fromJson(jsonString: String): PushCredential {
             return json.decodeFromString(jsonString)
@@ -106,7 +108,8 @@ data class PushCredential(
          *
          * @param uri The URI string.
          * @return A PushCredential.
-         * @throws IllegalArgumentException if the URI is invalid.
+         * @throws InvalidUriException if the URI is structurally invalid (scheme mismatch, missing required parameters).
+         * @throws IllegalArgumentException if a URI parameter value fails validation.
          */
         fun fromUri(uri: String): PushCredential {
             return PushUriParser.parse(uri)

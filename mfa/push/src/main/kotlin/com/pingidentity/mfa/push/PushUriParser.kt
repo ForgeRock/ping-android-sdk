@@ -9,6 +9,7 @@ package com.pingidentity.mfa.push
 
 import android.net.Uri
 import com.pingidentity.mfa.commons.UriParser
+import com.pingidentity.mfa.commons.exception.InvalidUriException
 import androidx.core.net.toUri
 
 /**
@@ -36,7 +37,8 @@ object PushUriParser : UriParser() {
      *
      * @param uri The URI string.
      * @return A PushCredential.
-     * @throws IllegalArgumentException if the URI is invalid.
+     * @throws InvalidUriException if the URI is structurally invalid (scheme mismatch, issuer/label mismatch).
+     * @throws IllegalArgumentException if a required parameter is missing.
      */
     fun parse(uri: String): PushCredential {
         try {
@@ -144,10 +146,10 @@ object PushUriParser : UriParser() {
             )
 
         } catch (e: Exception) {
-            if (e is IllegalArgumentException) {
+            if (e is InvalidUriException || e is IllegalArgumentException) {
                 throw e
             } else {
-                throw IllegalArgumentException("Invalid Push URI: $uri", e)
+                throw InvalidUriException("Invalid Push URI: $uri", e)
             }
         }
     }
