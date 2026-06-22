@@ -108,55 +108,49 @@ class TokenViewModel : ViewModel() {
     // Journey Token Operations
     private fun journeyAccessToken() {
         viewModelScope.launch {
-            journey?.journeyUser()?.let {
-                when (val result = it.token()) {
-                    is Failure -> {
-                        state.update { state ->
+            try {
+                journey?.journeyUser()?.let {
+                    when (val result = it.token()) {
+                        is Failure -> state.update { state ->
                             state.copy(journeyToken = null, journeyError = result.value)
                         }
-                    }
-                    is Success -> {
-                        state.update { state ->
+                        is Success -> state.update { state ->
                             state.copy(journeyToken = result.value, journeyError = null)
                         }
                     }
-                }
-            } ?: run {
-                state.update {
-                    it.copy(journeyToken = null, journeyError = null)
-                }
+                } ?: state.update { it.copy(journeyToken = null, journeyError = null) }
+            } catch (e: Exception) {
+                state.update { it.copy(journeyToken = null, journeyError = null) }
             }
         }
     }
 
     private fun journeyRevoke() {
         viewModelScope.launch {
-            journey?.journeyUser()?.revoke()
-            state.update {
-                it.copy(journeyToken = null, journeyError = null)
+            try {
+                journey?.journeyUser()?.revoke()
+            } catch (e: Exception) {
+                // ignore revoke errors
             }
+            state.update { it.copy(journeyToken = null, journeyError = null) }
         }
     }
 
     private fun journeyRefresh() {
         viewModelScope.launch {
-            journey?.journeyUser()?.let {
-                when (val result = it.refresh()) {
-                    is Failure -> {
-                        state.update { state ->
+            try {
+                journey?.journeyUser()?.let {
+                    when (val result = it.refresh()) {
+                        is Failure -> state.update { state ->
                             state.copy(journeyToken = null, journeyError = result.value)
                         }
-                    }
-                    is Success -> {
-                        state.update { state ->
+                        is Success -> state.update { state ->
                             state.copy(journeyToken = result.value, journeyError = null)
                         }
                     }
-                }
-            } ?: run {
-                state.update {
-                    it.copy(journeyToken = null, journeyError = null)
-                }
+                } ?: state.update { it.copy(journeyToken = null, journeyError = null) }
+            } catch (e: Exception) {
+                state.update { it.copy(journeyToken = null, journeyError = null) }
             }
         }
     }
@@ -164,55 +158,49 @@ class TokenViewModel : ViewModel() {
     // DaVinci Token Operations
     private fun daVinciAccessToken() {
         viewModelScope.launch {
-            daVinci?.davinciUser()?.let {
-                when (val result = it.token()) {
-                    is Failure -> {
-                        state.update { state ->
+            try {
+                daVinci?.davinciUser()?.let {
+                    when (val result = it.token()) {
+                        is Failure -> state.update { state ->
                             state.copy(daVinciToken = null, daVinciError = result.value)
                         }
-                    }
-                    is Success -> {
-                        state.update { state ->
+                        is Success -> state.update { state ->
                             state.copy(daVinciToken = result.value, daVinciError = null)
                         }
                     }
-                }
-            } ?: run {
-                state.update {
-                    it.copy(daVinciToken = null, daVinciError = null)
-                }
+                } ?: state.update { it.copy(daVinciToken = null, daVinciError = null) }
+            } catch (e: Exception) {
+                state.update { it.copy(daVinciToken = null, daVinciError = null) }
             }
         }
     }
 
     private fun daVinciRevoke() {
         viewModelScope.launch {
-            daVinci?.davinciUser()?.revoke()
-            state.update {
-                it.copy(daVinciToken = null, daVinciError = null)
+            try {
+                daVinci?.davinciUser()?.revoke()
+            } catch (e: Exception) {
+                // ignore revoke errors
             }
+            state.update { it.copy(daVinciToken = null, daVinciError = null) }
         }
     }
 
     private fun daVinciRefresh() {
         viewModelScope.launch {
-            daVinci?.davinciUser()?.let {
-                when (val result = it.refresh()) {
-                    is Failure -> {
-                        state.update { state ->
+            try {
+                daVinci?.davinciUser()?.let {
+                    when (val result = it.refresh()) {
+                        is Failure -> state.update { state ->
                             state.copy(daVinciToken = null, daVinciError = result.value)
                         }
-                    }
-                    is Success -> {
-                        state.update { state ->
+                        is Success -> state.update { state ->
                             state.copy(daVinciToken = result.value, daVinciError = null)
                         }
                     }
-                }
-            } ?: run {
-                state.update {
-                    it.copy(daVinciToken = null, daVinciError = null)
-                }
+                } ?: state.update { it.copy(daVinciToken = null, daVinciError = null) }
+            } catch (e: Exception) {
+                state.update { it.copy(daVinciToken = null, daVinciError = null) }
             }
         }
     }
@@ -220,55 +208,49 @@ class TokenViewModel : ViewModel() {
     // OIDC Token Operations
     private fun oidcAccessToken() {
         viewModelScope.launch {
-            web?.user()?.let {
-                when (val result = it.token()) {
-                    is Failure -> {
-                        state.update { state ->
+            try {
+                web?.user()?.let {
+                    when (val result = it.token()) {
+                        is Failure -> state.update { state ->
                             state.copy(oidcToken = null, oidcError = result.value)
                         }
-                    }
-                    is Success -> {
-                        state.update { state ->
+                        is Success -> state.update { state ->
                             state.copy(oidcToken = result.value, oidcError = null)
                         }
                     }
-                }
-            } ?: run {
-                state.update {
-                    it.copy(oidcToken = null, oidcError = null)
-                }
+                } ?: state.update { it.copy(oidcToken = null, oidcError = null) }
+            } catch (e: Exception) {
+                state.update { it.copy(oidcToken = null, oidcError = null) }
             }
         }
     }
 
     private fun oidcRevoke() {
         viewModelScope.launch {
-            web?.user()?.revoke()
-            state.update {
-                it.copy(oidcToken = null, oidcError = null)
+            try {
+                web?.user()?.revoke()
+            } catch (e: Exception) {
+                // ignore revoke errors
             }
+            state.update { it.copy(oidcToken = null, oidcError = null) }
         }
     }
 
     private fun oidcRefresh() {
         viewModelScope.launch {
-            web?.user()?.let {
-                when (val result = it.refresh()) {
-                    is Failure -> {
-                        state.update { state ->
+            try {
+                web?.user()?.let {
+                    when (val result = it.refresh()) {
+                        is Failure -> state.update { state ->
                             state.copy(oidcToken = null, oidcError = result.value)
                         }
-                    }
-                    is Success -> {
-                        state.update { state ->
+                        is Success -> state.update { state ->
                             state.copy(oidcToken = result.value, oidcError = null)
                         }
                     }
-                }
-            } ?: run {
-                state.update {
-                    it.copy(oidcToken = null, oidcError = null)
-                }
+                } ?: state.update { it.copy(oidcToken = null, oidcError = null) }
+            } catch (e: Exception) {
+                state.update { it.copy(oidcToken = null, oidcError = null) }
             }
         }
     }
@@ -276,60 +258,52 @@ class TokenViewModel : ViewModel() {
     // Auth Grant Token Operations
     private fun authGrantAccessToken() {
         viewModelScope.launch {
-            oidcDeviceClient?.user()?.let {
-                when (val result = it.token()) {
-                    is Failure -> {
-                        state.update { state ->
+            try {
+                oidcDeviceClient?.user()?.let {
+                    when (val result = it.token()) {
+                        is Failure -> state.update { state ->
                             state.copy(authGrantToken = null, authGrantError = result.value)
                         }
-                    }
-                    is Success -> {
-                        state.update { state ->
+                        is Success -> state.update { state ->
                             state.copy(authGrantToken = result.value, authGrantError = null)
                         }
                     }
-                }
-            } ?: run {
-                state.update {
-                    it.copy(authGrantToken = null, authGrantError = null)
-                }
+                } ?: state.update { it.copy(authGrantToken = null, authGrantError = null) }
+            } catch (e: Exception) {
+                state.update { it.copy(authGrantToken = null, authGrantError = null) }
             }
         }
     }
 
     private fun authGrantRevoke() {
         viewModelScope.launch {
-            oidcDeviceClient?.user()?.revoke()
-            state.update {
-                it.copy(authGrantToken = null, authGrantError = null)
+            try {
+                oidcDeviceClient?.user()?.revoke()
+            } catch (e: Exception) {
+                // ignore revoke errors
             }
+            state.update { it.copy(authGrantToken = null, authGrantError = null) }
         }
     }
 
     private fun authGrantRefresh() {
         viewModelScope.launch {
-            oidcDeviceClient?.user()?.let {
-                when (val result = it.refresh()) {
-                    is Failure -> {
-                        state.update { state ->
+            try {
+                oidcDeviceClient?.user()?.let {
+                    when (val result = it.refresh()) {
+                        is Failure -> state.update { state ->
                             state.copy(authGrantToken = null, authGrantError = result.value)
                         }
-                    }
-                    is Success -> {
-                        state.update { state ->
+                        is Success -> state.update { state ->
                             state.copy(authGrantToken = result.value, authGrantError = null)
                         }
                     }
-                }
-            } ?: run {
-                state.update {
-                    it.copy(authGrantToken = null, authGrantError = null)
-                }
+                } ?: state.update { it.copy(authGrantToken = null, authGrantError = null) }
+            } catch (e: Exception) {
+                state.update { it.copy(authGrantToken = null, authGrantError = null) }
             }
         }
     }
-
-
 
     companion object {
         fun factory(): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
