@@ -84,8 +84,6 @@ data class DeviceAuthConfigState(
 // JSON asset file loader
 // ---------------------------------------------------------------------------
 
-internal enum class AssetConfigType { JOURNEY, DAVINCI, WEB, DEVICE_AUTH }
-
 internal data class AssetConfigs(
     val journey: List<JourneyConfigState> = emptyList(),
     val davinci: List<OidcConfigState> = emptyList(),
@@ -108,10 +106,11 @@ internal data class AssetConfigs(
  * The **filename** (without the `.json` extension) is used as the display name in the UI.
  * For example, `journey-prod.json` appears as `journey-prod` in the preset list.
  *
- * Config type is inferred from the JSON structure — no explicit `"type"` field is needed:
- * - `"journey"` key present → [JourneyConfigState]
- * - `"oidc.openId"` key present → [DeviceAuthConfigState]
- * - Neither of the above → [OidcConfigState] (DaVinci)
+ * A single file can populate multiple config types — checks are independent:
+ * - `"journey"` key present → adds a [JourneyConfigState]
+ * - `"oidc.openId"` key present → adds a [DeviceAuthConfigState]
+ * - No `"journey"` key → adds a DaVinci [OidcConfigState]
+ * - A Web [OidcConfigState] config will always be added.
  *
  * Files that do not contain an `"oidc"` object are silently skipped.
  * Any parse error for an individual file is silently ignored; other files are still processed.
@@ -148,53 +147,38 @@ internal fun loadAssetConfigs(): AssetConfigs {
             val discoveryEndpoint = oidc.str("discoveryEndpoint")
             val redirectUri = oidc.str("redirectUri")
 
-            val type: AssetConfigType = when {
-                journeyObj != null -> AssetConfigType.JOURNEY
-                openIdObj != null -> AssetConfigType.DEVICE_AUTH
-                isDaVinci -> AssetConfigType.DAVINCI
-                else -> AssetConfigType.WEB
-            }
+            if (journeyObj != null) journey.add(JourneyConfigState(
+                serverUrl = journeyObj.str("serverUrl"),
+                realm = journeyObj.str("realm"),
+                cookie = journeyObj.str("cookieName"),
+                clientId = clientId,
+                discoveryEndpoint = discoveryEndpoint,
+                scopes = scopes,
+                redirectUri = redirectUri,
+                display = displayName,
+            ))
+            if (openIdObj != null) deviceAuth.add(DeviceAuthConfigState(
+                clientId = clientId,
+                discoveryEndpoint = discoveryEndpoint,
+                scopes = scopes,
+                display = displayName,
+                acrValues = oidc.str("acrValues"),
+                authorizationEndpoint = openIdObj.str("authorizationEndpoint"),
+                tokenEndpoint = openIdObj.str("tokenEndpoint"),
+                userInfoEndpoint = openIdObj.str("userInfoEndpoint"),
+                endSessionEndpoint = openIdObj.str("endSessionEndpoint"),
+                revocationEndpoint = openIdObj.str("revocationEndpoint"),
+                deviceAuthorizationEndpoint = openIdObj.str("deviceAuthorizationEndpoint"),
+            ))
+            if (isDaVinci) davinci.add(OidcConfigState(
+                clientId = clientId,
+                discoveryEndpoint = discoveryEndpoint,
+                scopes = scopes,
+                redirectUri = redirectUri,
+                display = displayName,
+                arcValue = oidc.str("acrValues"),
+            ))
 
-            when (type) {
-                AssetConfigType.JOURNEY -> journey.add(JourneyConfigState(
-                    serverUrl = journeyObj?.str("serverUrl") ?: "",
-                    realm = journeyObj?.str("realm") ?: "",
-                    cookie = journeyObj?.str("cookieName") ?: "",
-                    clientId = clientId,
-                    discoveryEndpoint = discoveryEndpoint,
-                    scopes = scopes,
-                    redirectUri = redirectUri,
-                    display = displayName,
-                ))
-                AssetConfigType.DAVINCI -> davinci.add(OidcConfigState(
-                    clientId = clientId,
-                    discoveryEndpoint = discoveryEndpoint,
-                    scopes = scopes,
-                    redirectUri = redirectUri,
-                    display = displayName,
-                    arcValue = oidc.str("acrValues"),
-                ))
-                AssetConfigType.DEVICE_AUTH -> deviceAuth.add(DeviceAuthConfigState(
-                    clientId = clientId,
-                    discoveryEndpoint = discoveryEndpoint,
-                    scopes = scopes,
-                    display = displayName,
-                    acrValues = oidc.str("acrValues"),
-                    authorizationEndpoint = openIdObj?.str("authorizationEndpoint") ?: "",
-                    tokenEndpoint = openIdObj?.str("tokenEndpoint") ?: "",
-                    userInfoEndpoint = openIdObj?.str("userInfoEndpoint") ?: "",
-                    endSessionEndpoint = openIdObj?.str("endSessionEndpoint") ?: "",
-                    revocationEndpoint = openIdObj?.str("revocationEndpoint") ?: "",
-                    deviceAuthorizationEndpoint = openIdObj?.str("deviceAuthorizationEndpoint") ?: "",
-                ))
-                else -> web.add(OidcConfigState(
-                    clientId = clientId,
-                    discoveryEndpoint = discoveryEndpoint,
-                    scopes = scopes,
-                    redirectUri = redirectUri,
-                    display = displayName,
-                ))
-            }
             web.add(OidcConfigState(
                 clientId = clientId,
                 discoveryEndpoint = discoveryEndpoint,
