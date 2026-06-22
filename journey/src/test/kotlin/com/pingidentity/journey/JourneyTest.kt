@@ -23,6 +23,7 @@ import com.pingidentity.logger.CONSOLE
 import com.pingidentity.logger.Logger
 import com.pingidentity.logger.STANDARD
 import com.pingidentity.network.ktor.KtorHttpClient
+import com.pingidentity.oidc.JsonConfigKey
 import com.pingidentity.oidc.Token
 import com.pingidentity.oidc.module.VERIFICATION_URI_COMPLETE
 import com.pingidentity.orchestrate.ContinueNode
@@ -47,9 +48,13 @@ import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.add
+import kotlinx.serialization.json.buildJsonArray
+import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.put
 import org.junit.Rule
 import org.junit.rules.TestWatcher
 import org.junit.runner.RunWith
@@ -913,7 +918,7 @@ class JourneyTest {
 
         var node = journey.start("myLogin") // Return first Node
         assertTrue(node is ContinueNode)
-        assertTrue { (node as ContinueNode).callbacks.size == 2 }
+        assertTrue { node.callbacks.size == 2 }
 
         (node.callbacks[0] as? NameCallback)?.name = "My First Name"
         (node.callbacks[1] as? PasswordCallback)?.password = "My Password"
@@ -1148,6 +1153,146 @@ class JourneyTest {
         assertTrue(paths.contains("/access_token"))
         // No device flow request
         assertTrue(paths.none { it.contains("deviceFlow") })
+    }
+
+    // -------------------------------------------------------------------------
+    // createJourney JSON config
+    // -------------------------------------------------------------------------
+
+    @Test
+    fun `createJourney succeeds with valid JSON config`() {
+        val json = buildJsonObject {
+            put(JsonConfigKey.JOURNEY, buildJsonObject {
+                put(JsonConfigKey.SERVER_URL, "https://openam.example.com/am")
+                put(JsonConfigKey.REALM, "alpha")
+            })
+            put(JsonConfigKey.OIDC, buildJsonObject {
+                put(JsonConfigKey.CLIENT_ID, "my-client")
+                put(JsonConfigKey.DISCOVERY_ENDPOINT, "https://openam.example.com/am/oauth2/alpha/.well-known/openid-configuration")
+                put(JsonConfigKey.SCOPES, buildJsonArray { add("openid"); add("profile") })
+                put(JsonConfigKey.REDIRECT_URI, "myapp://oauth2redirect")
+            })
+        }
+        val result = Journey(json)
+        assertTrue(result.isSuccess)
+        val journey = result.getOrThrow()
+        assertEquals("https://openam.example.com/am", journey.options.serverUrl)
+        assertEquals("alpha", journey.options.realm)
+    }
+
+    @Test
+    fun `createJourney uses default realm when absent from JSON`() {
+        val json = buildJsonObject {
+            put(JsonConfigKey.JOURNEY, buildJsonObject {
+                put(JsonConfigKey.SERVER_URL, "https://openam.example.com/am")
+            })
+            put(JsonConfigKey.OIDC, buildJsonObject {
+                put(JsonConfigKey.CLIENT_ID, "my-client")
+                put(JsonConfigKey.DISCOVERY_ENDPOINT, "https://openam.example.com/.well-known/openid-configuration")
+                put(JsonConfigKey.SCOPES, buildJsonArray { add("openid") })
+                put(JsonConfigKey.REDIRECT_URI, "myapp://oauth2redirect")
+            })
+        }
+        val result = Journey(json)
+        assertTrue(result.isSuccess)
+        assertEquals(Constants.REALM, (result.getOrThrow().config as JourneyConfig).realm)
+    }
+
+    @Test
+    fun `createJourney fails when journey block is missing from JSON`() {
+        val json = buildJsonObject {
+            put(JsonConfigKey.OIDC, buildJsonObject {
+                put(JsonConfigKey.CLIENT_ID, "my-client")
+                put(JsonConfigKey.DISCOVERY_ENDPOINT, "https://openam.example.com/.well-known/openid-configuration")
+                put(JsonConfigKey.SCOPES, buildJsonArray { add("openid") })
+                put(JsonConfigKey.REDIRECT_URI, "myapp://oauth2redirect")
+            })
+        }
+        assertTrue(Journey(json).isFailure)
+    }
+
+    @Test
+    fun `createJourney fails when serverUrl is missing from journey block`() {
+        val json = buildJsonObject {
+            put(JsonConfigKey.JOURNEY, buildJsonObject {
+                put(JsonConfigKey.REALM, "alpha")
+            })
+            put(JsonConfigKey.OIDC, buildJsonObject {
+                put(JsonConfigKey.CLIENT_ID, "my-client")
+                put(JsonConfigKey.DISCOVERY_ENDPOINT, "https://openam.example.com/.well-known/openid-configuration")
+                put(JsonConfigKey.SCOPES, buildJsonArray { add("openid") })
+                put(JsonConfigKey.REDIRECT_URI, "myapp://oauth2redirect")
+            })
+        }
+        assertTrue(Journey(json).isFailure)
+    }
+
+    @Test
+    fun `createJourney fails when oidc block is missing from JSON`() {
+        assertTrue(Journey(buildJsonObject {
+            put(JsonConfigKey.JOURNEY, buildJsonObject { put(JsonConfigKey.SERVER_URL, "https://openam.example.com/am") })
+        }).isFailure)
+    }
+
+    @Test
+    fun `createJourney fails when clientId is missing from oidc JSON`() {
+        val json = buildJsonObject {
+            put(JsonConfigKey.JOURNEY, buildJsonObject {
+                put(JsonConfigKey.SERVER_URL, "https://openam.example.com/am")
+            })
+            put(JsonConfigKey.OIDC, buildJsonObject {
+                put(JsonConfigKey.DISCOVERY_ENDPOINT, "https://openam.example.com/.well-known/openid-configuration")
+                put(JsonConfigKey.SCOPES, buildJsonArray { add("openid") })
+                put(JsonConfigKey.REDIRECT_URI, "myapp://oauth2redirect")
+            })
+        }
+        assertTrue(Journey(json).isFailure)
+    }
+
+    @Test
+    fun `createJourney succeeds with scopes as comma-separated string`() {
+        val json = buildJsonObject {
+            put(JsonConfigKey.JOURNEY, buildJsonObject {
+                put(JsonConfigKey.SERVER_URL, "https://openam.example.com/am")
+            })
+            put(JsonConfigKey.OIDC, buildJsonObject {
+                put(JsonConfigKey.CLIENT_ID, "my-client")
+                put(JsonConfigKey.DISCOVERY_ENDPOINT, "https://openam.example.com/.well-known/openid-configuration")
+                put(JsonConfigKey.SCOPES, "openid,profile")
+                put(JsonConfigKey.REDIRECT_URI, "myapp://oauth2redirect")
+            })
+        }
+        assertTrue(Journey(json).isSuccess)
+    }
+
+    @Test
+    fun `createJourney succeeds with all optional OIDC fields`() {
+        val json = buildJsonObject {
+            put(JsonConfigKey.JOURNEY, buildJsonObject {
+                put(JsonConfigKey.SERVER_URL, "https://openam.example.com/am")
+                put(JsonConfigKey.REALM, "alpha")
+            })
+            put(JsonConfigKey.OIDC, buildJsonObject {
+                put(JsonConfigKey.CLIENT_ID, "my-client")
+                put(JsonConfigKey.DISCOVERY_ENDPOINT, "https://openam.example.com/.well-known/openid-configuration")
+                put(JsonConfigKey.SCOPES, buildJsonArray { add("openid") })
+                put(JsonConfigKey.REDIRECT_URI, "myapp://oauth2redirect")
+                put(JsonConfigKey.PAR, true)
+                put(JsonConfigKey.LOGIN_HINT, "user@example.com")
+                put(JsonConfigKey.STATE, "custom-state")
+                put(JsonConfigKey.NONCE, "custom-nonce")
+                put(JsonConfigKey.DISPLAY, "page")
+                put(JsonConfigKey.PROMPT, "login")
+                put(JsonConfigKey.UI_LOCALES, "en-US")
+                put(JsonConfigKey.ACR_VALUES, "Level3")
+                put(JsonConfigKey.SIGN_OUT_REDIRECT_URI, "myapp://logout")
+                put(JsonConfigKey.REFRESH_THRESHOLD, 60L)
+                put(JsonConfigKey.ADDITIONAL_PARAMETERS, buildJsonObject {
+                    put("custom_param", "custom_value")
+                })
+            })
+        }
+        assertTrue(Journey(json).isSuccess)
     }
 
     private fun parResponse(): String =

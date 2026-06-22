@@ -11,4 +11,5 @@ xcuserdata
 .kotlin
 .polaris/
 .claude/settings.local.json
+.playwright-mcp/
 .sdk/

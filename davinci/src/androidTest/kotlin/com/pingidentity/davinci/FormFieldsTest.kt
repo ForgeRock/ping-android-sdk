@@ -65,11 +65,11 @@ class FormFieldsTest {
         logger = Logger.STANDARD
 
         module(Oidc) {
-            clientId = "a6859a12-5e6e-4f64-96bb-cc8577706bee"
-            discoveryEndpoint = "https://auth.pingone.ca/300c4f2a-39d4-4ba9-a18a-f6de246006f4/as/.well-known/openid-configuration"
+            clientId = DaVinciTestConfig.davinciFormClientId
+            discoveryEndpoint = DaVinciTestConfig.davinciFormDiscoveryEndpoint
             scopes = mutableSetOf("openid", "email", "address", "phone", "profile")
-            redirectUri = "org.forgerock.demo://oauth2redirect"
-            acrValues = "b63ac7fb5db6d893efdd5e29d06a7477"
+            redirectUri = DaVinciTestConfig.davinciRedirectUri
+            acrValues = DaVinciTestConfig.davinciFormFieldsAcrValues
             //storage = dataStore
         }
     }

@@ -101,7 +101,7 @@ class UserProfileViewModel : ViewModel() {
     // Journey Operations
     private fun journeyUserInfo() {
         viewModelScope.launch {
-            val user = journey.journeyUser()
+            val user = journey?.journeyUser()
             if (user == null) {
                 state.update { s -> s.copy(journeyUser = null, journeyError = null) }
                 return@launch

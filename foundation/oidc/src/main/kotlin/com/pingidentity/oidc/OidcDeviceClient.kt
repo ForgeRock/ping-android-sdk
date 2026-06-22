@@ -28,6 +28,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+import kotlinx.serialization.json.JsonObject
 import java.net.URL
 
 // Error codes defined by RFC 8628 §3.5
@@ -55,6 +56,52 @@ private const val SLOW_DOWN_INCREMENT_SECONDS = 5
 fun OidcDeviceClient(block: OidcClientConfig.() -> Unit = {}): OidcDeviceClient {
     val config = OidcClientConfig().apply(block)
     return OidcDeviceClient(config)
+}
+
+/**
+ * Factory function to create an [OidcDeviceClient] from a JSON configuration object.
+ *
+ * Required OIDC fields are nested under the `oidc` key. The `deviceAuthorizationEndpoint`
+ * can be overridden via the `openId` sub-object inside `oidc`. Example:
+ * ```json
+ * {
+ *   "log": "STANDARD",
+ *   "oidc": {
+ *     "clientId": "my-client-id",
+ *     "discoveryEndpoint": "https://auth.example.com/.well-known/openid-configuration",
+ *     "scopes": ["openid", "profile"],
+ *     "redirectUri": "myapp://oauth2redirect",
+ *     "acrValues": "urn:mace:incommon:iap:silver",
+ *     "par": true,
+ *     "additionalParameters": { "max_age": "3600" },
+ *     "openId": {
+ *       "deviceAuthorizationEndpoint": "https://auth.example.com/device/code",
+ *       "authorizationEndpoint": "https://auth.example.com/authorize",
+ *       "tokenEndpoint": "https://auth.example.com/token",
+ *       "userinfoEndpoint": "https://auth.example.com/userinfo",
+ *       "endSessionEndpoint": "https://auth.example.com/logout",
+ *       "revocationEndpoint": "https://auth.example.com/revoke"
+ *     }
+ *   }
+ * }
+ * ```
+ *
+ * @param json The JSON configuration object.
+ * @return A [Result] containing the configured [OidcDeviceClient] or an exception if the configuration is invalid.
+ */
+fun OidcDeviceClient(json: JsonObject): Result<OidcDeviceClient> {
+    return runCatching {
+        val configParser = JsonConfigParser(json)
+        val oidcConfigParser = JsonConfigParser(configParser.required<JsonObject>(JsonConfigKey.OIDC))
+        OidcDeviceClient {
+            logger = configParser.logLevel()
+            discoveryEndpoint = oidcConfigParser.required<String>(JsonConfigKey.DISCOVERY_ENDPOINT)
+            clientId = oidcConfigParser.required<String>(JsonConfigKey.CLIENT_ID)
+            scopes = oidcConfigParser.scopeSet(JsonConfigKey.SCOPES)
+            redirectUri = oidcConfigParser.optional<String>(JsonConfigKey.REDIRECT_URI, "")
+            update(oidcConfigParser)
+        }
+    }
 }
 
 /**

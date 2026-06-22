@@ -32,6 +32,9 @@ on:
       E2E_CONFIG:
         description: 'Variables for the e2e tests'
         required: true
+      DAVINCI_E2E_CONFIG:
+        description: 'Variables for the DaVinci e2e tests'
+        required: true
 jobs:
   integration-tests:
     runs-on: ubuntu-latest
@@ -53,6 +56,7 @@ jobs:
       - name: Setup config file for e2e tests
         run: |
           echo "${{ secrets.E2E_CONFIG }}" > journey/src/main/assets/test_config.properties
+          echo "${{ secrets.DAVINCI_E2E_CONFIG }}" > davinci/src/main/assets/davinci_test_config.properties
 
       # Setup JDK and cache and restore dependencies.
       - name: Setup JDK 17
