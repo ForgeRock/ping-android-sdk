@@ -692,7 +692,7 @@ private fun DeviceAuthSheetContent(
         ConfigField("ACR Values", cfg.acrValues) { cfg = cfg.copy(acrValues = it) }
         ConfigField("Authorization Endpoint", cfg.authorizationEndpoint) { cfg = cfg.copy(authorizationEndpoint = it) }
         ConfigField("Token Endpoint", cfg.tokenEndpoint) { cfg = cfg.copy(tokenEndpoint = it) }
-        ConfigField("Userinfo Endpoint", cfg.userinfoEndpoint) { cfg = cfg.copy(userinfoEndpoint = it) }
+        ConfigField("Userinfo Endpoint", cfg.userInfoEndpoint) { cfg = cfg.copy(userInfoEndpoint = it) }
         ConfigField("End Session Endpoint", cfg.endSessionEndpoint) { cfg = cfg.copy(endSessionEndpoint = it) }
         ConfigField("Revocation Endpoint", cfg.revocationEndpoint) { cfg = cfg.copy(revocationEndpoint = it) }
         ConfigField("Device Authorization Endpoint", cfg.deviceAuthorizationEndpoint) { cfg = cfg.copy(deviceAuthorizationEndpoint = it) }

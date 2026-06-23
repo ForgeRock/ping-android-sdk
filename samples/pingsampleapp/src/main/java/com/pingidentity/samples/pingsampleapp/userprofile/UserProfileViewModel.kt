@@ -101,14 +101,18 @@ class UserProfileViewModel : ViewModel() {
     // Journey Operations
     private fun journeyUserInfo() {
         viewModelScope.launch {
-            val user = journey?.journeyUser()
-            if (user == null) {
+            try {
+                val user = journey?.journeyUser()
+                if (user == null) {
+                    state.update { s -> s.copy(journeyUser = null, journeyError = null) }
+                    return@launch
+                }
+                when (val result = user.userinfo(false)) {
+                    is Result.Failure -> state.update { s -> s.copy(journeyUser = null, journeyError = result.value) }
+                    is Result.Success -> state.update { s -> s.copy(journeyUser = result.value, journeyError = null) }
+                }
+            } catch (e: Exception) {
                 state.update { s -> s.copy(journeyUser = null, journeyError = null) }
-                return@launch
-            }
-            when (val result = user.userinfo(false)) {
-                is Result.Failure -> state.update { s -> s.copy(journeyUser = null, journeyError = result.value) }
-                is Result.Success -> state.update { s -> s.copy(journeyUser = result.value, journeyError = null) }
             }
         }
     }
@@ -122,14 +126,18 @@ class UserProfileViewModel : ViewModel() {
     // DaVinci Operations
     private fun daVinciUserInfo() {
         viewModelScope.launch {
-            val user = daVinci?.davinciUser()
-            if (user == null) {
+            try {
+                val user = daVinci?.davinciUser()
+                if (user == null) {
+                    state.update { s -> s.copy(daVinciUser = null, daVinciError = null) }
+                    return@launch
+                }
+                when (val result = user.userinfo(false)) {
+                    is Result.Failure -> state.update { s -> s.copy(daVinciUser = null, daVinciError = result.value) }
+                    is Result.Success -> state.update { s -> s.copy(daVinciUser = result.value, daVinciError = null) }
+                }
+            } catch (e: Exception) {
                 state.update { s -> s.copy(daVinciUser = null, daVinciError = null) }
-                return@launch
-            }
-            when (val result = user.userinfo(false)) {
-                is Result.Failure -> state.update { s -> s.copy(daVinciUser = null, daVinciError = result.value) }
-                is Result.Success -> state.update { s -> s.copy(daVinciUser = result.value, daVinciError = null) }
             }
         }
     }
@@ -143,14 +151,18 @@ class UserProfileViewModel : ViewModel() {
     // OIDC Operations
     private fun oidcUserInfo() {
         viewModelScope.launch {
-            val user = web?.user()
-            if (user == null) {
+            try {
+                val user = web?.user()
+                if (user == null) {
+                    state.update { s -> s.copy(oidcUser = null, oidcError = null) }
+                    return@launch
+                }
+                when (val result = user.userinfo(false)) {
+                    is Result.Failure -> state.update { s -> s.copy(oidcUser = null, oidcError = result.value) }
+                    is Result.Success -> state.update { s -> s.copy(oidcUser = result.value, oidcError = null) }
+                }
+            } catch (e: Exception) {
                 state.update { s -> s.copy(oidcUser = null, oidcError = null) }
-                return@launch
-            }
-            when (val result = user.userinfo(false)) {
-                is Result.Failure -> state.update { s -> s.copy(oidcUser = null, oidcError = result.value) }
-                is Result.Success -> state.update { s -> s.copy(oidcUser = result.value, oidcError = null) }
             }
         }
     }
@@ -164,14 +176,18 @@ class UserProfileViewModel : ViewModel() {
     // Auth Grant Operations
     fun authGrantUserInfo() {
         viewModelScope.launch {
-            val user = oidcDeviceClient?.user()
-            if (user == null) {
+            try {
+                val user = oidcDeviceClient?.user()
+                if (user == null) {
+                    state.update { s -> s.copy(authGrantUser = null, authGrantError = null) }
+                    return@launch
+                }
+                when (val result = user.userinfo(false)) {
+                    is Result.Failure -> state.update { s -> s.copy(authGrantUser = null, authGrantError = result.value) }
+                    is Result.Success -> state.update { s -> s.copy(authGrantUser = result.value, authGrantError = null) }
+                }
+            } catch (e: Exception) {
                 state.update { s -> s.copy(authGrantUser = null, authGrantError = null) }
-                return@launch
-            }
-            when (val result = user.userinfo(false)) {
-                is Result.Failure -> state.update { s -> s.copy(authGrantUser = null, authGrantError = result.value) }
-                is Result.Success -> state.update { s -> s.copy(authGrantUser = result.value, authGrantError = null) }
             }
         }
     }
