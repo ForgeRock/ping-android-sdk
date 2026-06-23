@@ -329,7 +329,7 @@ class PushServiceTest {
         val mockHandler = mockk<PushHandler>()
 
         // Mock handler methods - sendApproval is a suspend function
-        coEvery { mockHandler.sendApproval(any(), any(), any()) } returns true
+        coEvery { mockHandler.sendApproval(any(), any(), any()) } returns Result.success(true)
 
         val pushService = PushService(
             storage = mockStorage,
@@ -358,7 +358,7 @@ class PushServiceTest {
         val mockHandler = mockk<PushHandler>()
 
         // Mock handler methods - sendDenial is a suspend function
-        coEvery { mockHandler.sendDenial(any(), any(), any()) } returns true
+        coEvery { mockHandler.sendDenial(any(), any(), any()) } returns Result.success(true)
 
         val pushService = PushService(
             storage = mockStorage,
@@ -1090,7 +1090,7 @@ class PushServiceTest {
 
         coEvery { mockStorage.retrievePushNotification(testNotificationId) } returns testNotification
         coEvery { mockStorage.retrievePushCredential(testCredentialId) } returns testCredential
-        coEvery { mockHandler.sendApproval(any(), any(), any()) } returns false
+        coEvery { mockHandler.sendApproval(any(), any(), any()) } returns Result.success(false)
 
         // When
         val result = pushService.approveNotification(testNotificationId)
@@ -1114,7 +1114,7 @@ class PushServiceTest {
 
         coEvery { mockStorage.retrievePushNotification(testNotificationId) } returns testNotification
         coEvery { mockStorage.retrievePushCredential(testCredentialId) } returns testCredential
-        coEvery { mockHandler.sendDenial(any(), any(), any()) } returns false
+        coEvery { mockHandler.sendDenial(any(), any(), any()) } returns Result.success(false)
 
         // When
         val result = pushService.denyNotification(testNotificationId)
@@ -1472,8 +1472,8 @@ class PushServiceTest {
         val notificationWithNumberChallenge = testNotification.copy(numbersChallenge = "23 45 67")
         coEvery { mockStorage.retrievePushNotification(testNotificationId) } returns notificationWithNumberChallenge
         coEvery { mockStorage.retrievePushCredential(testCredentialId) } returns testCredential
-        coEvery { mockHandler.sendApproval(any(), any(), any()) } throws
-            PushNumberChallengeException(400, "Number challenge failed: the selected number was incorrect")
+        coEvery { mockHandler.sendApproval(any(), any(), any()) } returns
+            Result.failure(PushNumberChallengeException(400, "Number challenge failed: the selected number was incorrect"))
 
         // When/Then — PushNumberChallengeException must not be swallowed into MfaException
         try {

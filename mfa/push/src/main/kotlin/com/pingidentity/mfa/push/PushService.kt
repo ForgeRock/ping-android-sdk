@@ -729,7 +729,7 @@ internal class PushService(
             val handler = pushHandlers[platform] ?: throw MfaException("No handler for platform: $platform")
 
             // Send the approval with any additional parameters
-            val result = handler.sendApproval(credential, notification, params)
+            val result = handler.sendApproval(credential, notification, params).getOrThrow()
             if (result) {
                 // Update the notification status
                 notification.markApproved()
@@ -801,7 +801,7 @@ internal class PushService(
             val handler = pushHandlers[platform] ?: throw MfaException("No handler for platform: $platform")
 
             // Send the denial with any additional parameters
-            val result = handler.sendDenial(credential, notification, params)
+            val result = handler.sendDenial(credential, notification, params).getOrThrow()
             if (result) {
                 // Update the notification status
                 notification.markDenied()

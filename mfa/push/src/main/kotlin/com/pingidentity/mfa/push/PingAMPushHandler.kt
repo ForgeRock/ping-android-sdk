@@ -252,7 +252,7 @@ internal class PingAMPushHandler(
         credential: PushCredential,
         notification: PushNotification,
         params: Map<String, Any>
-    ): Boolean {
+    ): Result<Boolean> {
         logger.d("Sending PingAM approval for notification: ${notification.id}")
 
         var challengeResponse: String? = null
@@ -264,7 +264,7 @@ internal class PingAMPushHandler(
 
                 if (userProvidedResponse == null) {
                     logger.w("Challenge response is required for challenge-based authentication")
-                    return false
+                    return Result.success(false)
                 }
 
                 // Use the user-provided challenge response directly
@@ -285,12 +285,14 @@ internal class PingAMPushHandler(
         }
 
         // Send the authentication response
-        return pushResponder.authenticate(
-            credential = credential,
-            notification = notification,
-            approve = true,
-            challengeResponse = challengeResponse
-        )
+        return runCatching {
+            pushResponder.authenticate(
+                credential = credential,
+                notification = notification,
+                approve = true,
+                challengeResponse = challengeResponse
+            )
+        }
     }
     
     /**
@@ -305,16 +307,18 @@ internal class PingAMPushHandler(
         credential: PushCredential,
         notification: PushNotification,
         params: Map<String, Any>
-    ): Boolean {
+    ): Result<Boolean> {
         logger.d("Sending PingAM denial for notification: ${notification.id}")
 
         // Send the authentication response with deny=true
-        return pushResponder.authenticate(
-            credential = credential,
-            notification = notification,
-            approve = false,
-            challengeResponse = null // No challenge response needed for denial
-        )
+        return runCatching {
+            pushResponder.authenticate(
+                credential = credential,
+                notification = notification,
+                approve = false,
+                challengeResponse = null // No challenge response needed for denial
+            )
+        }
     }
 
     /**

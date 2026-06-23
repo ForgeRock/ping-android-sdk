@@ -26,6 +26,7 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
+import java.net.HttpURLConnection
 import java.net.URL
 import java.security.InvalidKeyException
 import java.security.NoSuchAlgorithmException
@@ -249,7 +250,7 @@ class PingAMPushResponder(
             // Check if the response was successful
             if (response.status.isSuccess()) {
                 return@withContext true
-            } else if (response.status == 400 && notification.numbersChallenge != null) {
+            } else if (response.status == HttpURLConnection.HTTP_BAD_REQUEST && notification.numbersChallenge != null) {
                 val body = response.body()
                 val message = runCatching {
                     Json.parseToJsonElement(body).jsonObject["message"]?.jsonPrimitive?.content
