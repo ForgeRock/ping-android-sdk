@@ -13,7 +13,7 @@ package com.pingidentity.pingonemfa.push
  * The value is determined by the server and delivered inside the push payload.
  * UI components should switch on this type to decide which approval flow to present.
  */
-enum class PushType {
+enum class  PushType {
     /**
      * A standard authentication request. The user approves or denies with a single tap.
      */

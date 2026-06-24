@@ -107,6 +107,10 @@ class PushNotificationService : FirebaseMessagingService() {
                 PingOneMFA.processRemoteNotification(remoteMessage)
                     .onSuccess {
                         diagnosticLogger.d("Successfully collected PingOne MFA push notification")
+                        if (it == null) {
+                            diagnosticLogger.d("PingOne MFA push notification is silent, ignoring")
+                            return@onSuccess
+                        }
                         // Handle the notification (this will display a system notification or full-screen notification based on app state)
                         handlePingOneNotification(it)
                     }

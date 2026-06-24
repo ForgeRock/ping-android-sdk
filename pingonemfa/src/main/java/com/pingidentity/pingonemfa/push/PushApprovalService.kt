@@ -36,7 +36,7 @@ import kotlin.coroutines.resumeWithException
  */
 internal class PushApprovalService(
     dispatcher: CoroutineDispatcher = Dispatchers.IO
-) : Service(){
+) : Service() {
 
     private val scope = CoroutineScope(SupervisorJob() + dispatcher)
     private val logger: Logger = Logger.logger
@@ -76,7 +76,7 @@ internal class PushApprovalService(
             try {
                 if (userAction.equals("approve", ignoreCase = true)) {
                     approveNotificationWithAppInBackground(notificationObject, authMethod)
-                }else{
+                } else {
                     denyNotificationWithAppInBackground(notificationObject)
                 }
             } catch (e: Exception) {
@@ -126,6 +126,7 @@ internal class PushApprovalService(
             if (cont.isActive) cont.resumeWithException(e)
         }
     }
+
     private suspend fun denyNotificationWithAppInBackground(
         notification: PushNotification
     ) = suspendCancellableCoroutine { cont ->
@@ -133,7 +134,7 @@ internal class PushApprovalService(
             notification.notificationObject.deny(
                 this,
                 DenyReason.NONE
-            ){ error ->
+        ) { error ->
                 if (!cont.isActive) return@deny
                 if (error == null) cont.resume(Unit)
                 else cont.resumeWithException(Exception(error.message ?: "Deny action failed"))

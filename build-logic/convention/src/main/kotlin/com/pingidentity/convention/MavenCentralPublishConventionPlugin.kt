@@ -30,7 +30,6 @@ class MavenCentralPublishConventionPlugin : Plugin<Project> {
             with(pluginManager) {
                 apply("maven-publish")
                 apply("kotlin-android")
-                apply("signing")
                 apply("org.jetbrains.dokka")
             }
 
@@ -127,22 +126,32 @@ class MavenCentralPublishConventionPlugin : Plugin<Project> {
                 }
             }
 
-            extensions.configure<SigningExtension> {
-                useInMemoryPgpKeys(
-                    System.getenv("OSS_SIGNING_KEY_ID"),
-                    System.getenv("OSS_SIGNING_KEY"),
-                    System.getenv("OSS_SIGNING_PASSWORD")
-                )
-                val publishing = extensions.getByType<PublishingExtension>()
-                sign(publishing.publications)
-            }
-
-
-            // https://github.com/gradle/gradle/issues/26091
-            tasks.withType<AbstractPublishToMaven>().configureEach {
-                val signingTasks = tasks.withType<Sign>()
-                mustRunAfter(signingTasks)
-            }
+//            // Signing is only configured when the key is present — this allows
+//            // `publishToMavenLocal` to work without any env vars set locally, while
+//            // CI (which exports OSS_SIGNING_KEY) still produces signed artifacts.
+//            val signingKey = System.getenv("OSS_SIGNING_KEY")
+//            if (!signingKey.isNullOrBlank()) {
+//                pluginManager.apply("signing")
+//                extensions.configure<SigningExtension> {
+//                    useInMemoryPgpKeys(
+//                        System.getenv("OSS_SIGNING_KEY_ID"),
+//                        signingKey,
+//                        System.getenv("OSS_SIGNING_PASSWORD")
+//                    )
+//                    val publishing = extensions.getByType<PublishingExtension>()
+//                    sign(publishing.publications)
+//                }
+//            }
+//
+//
+//            // https://github.com/gradle/gradle/issues/26091
+//            // Only wire the mustRunAfter ordering when signing is actually applied.
+//            if (!System.getenv("OSS_SIGNING_KEY").isNullOrBlank()) {
+//                tasks.withType<AbstractPublishToMaven>().configureEach {
+//                    val signingTasks = tasks.withType<Sign>()
+//                    mustRunAfter(signingTasks)
+//                }
+//            }
         }
     }
 }

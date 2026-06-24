@@ -30,8 +30,8 @@ internal object AccountParser {
                     environment = it.environment?.id.orEmpty(),
                     deviceId = it.device?.id.orEmpty(),
                     username = it.username.orEmpty(),
-                    name = it.name?.given.orEmpty(),
-                    family = it.name?.family.orEmpty()
+                    name = it.name?.given,
+                    family = it.name?.family
                 )
             }
         }

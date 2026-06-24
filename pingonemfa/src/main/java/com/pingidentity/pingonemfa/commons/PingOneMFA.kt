@@ -80,7 +80,7 @@ object PingOneMFA {
                         }
                     )
                 }
-            }catch (e: Exception){
+            } catch (e: Exception) {
                 logger.e("PingOne initialization failed", e)
                 continuation.resume(Result.failure(PingOneMFAException(e)))
             }
@@ -205,7 +205,7 @@ object PingOneMFA {
                     }
                     continuation.resume(result)
                 }
-            }catch (e: Exception){
+            } catch (e: Exception) {
                 logger.e("PingOne getDeviceInfo failed", e)
                 continuation.resume(Result.failure(PingOneMFAException(e)))
             }
@@ -256,16 +256,19 @@ object PingOneMFA {
      * contains the `"PingOne"` key. The resulting [PushNotification] provides [PushNotification.getPushType],
      * [PushNotification.approveNotification], [PushNotification.denyNotification], and
      * [PushNotification.isCancelAuthentication] for the full push response lifecycle.
+     *
+     * Returns `Result.success(null)` when the native SDK returns both nulls — this indicates
+     * the message was a "silent" (extra verification) PingOne MFA push and should be silently ignored by the caller.
      */
-    suspend fun processRemoteNotification(message: RemoteMessage): Result<PushNotification> =
+    suspend fun processRemoteNotification(message: RemoteMessage): Result<PushNotification?> =
         suspendCancellableCoroutine { continuation ->
             try {
                 PingOne.processRemoteNotification(
                     ContextProvider.context,
                     message
                 ) { notificationObject, error ->
-                    val result = notificationObject?.let {
-                        Result.success(
+                    val result = when {
+                        notificationObject != null -> Result.success(
                             PushNotification(
                                 notificationObject = notificationObject,
                                 /*
@@ -276,21 +279,16 @@ object PingOneMFA {
                                 message = getBodyFromRemoteMessageData(message.data["aps"])
                             )
                         )
-                    } ?: run {
-                        /*
-                         * notificationObject is null but error may also be null if the SDK
-                         * misbehaves; fall back to a generic exception so the coroutine is
-                         * never left hanging
-                         */
-                        logger.e("PingOne processRemoteNotification failed: ${error?.userInfo}")
-                        Result.failure(error?.let {
-                            PingOneMFAException(it)
-                        } ?: PingOneMFAException(Exception("processRemoteNotification failed: no error details provided"))
-                        )
+                        error != null -> {
+                            logger.e("PingOne processRemoteNotification failed: ${error.userInfo}")
+                            Result.failure(PingOneMFAException(error))
+                        }
+                        // Both null — a silent PingOne MFA message; no action needed.
+                        else -> Result.success(null)
                     }
                     continuation.resume(result)
                 }
-            }catch (e: Exception){
+            } catch (e: Exception) {
                 logger.e("PingOne processRemoteNotification failed", e)
                 continuation.resume(Result.failure(PingOneMFAException(e)))
             }
@@ -321,7 +319,7 @@ object PingOneMFA {
                 }
                 continuation.resume(result)
             }
-        }catch (e: Exception){
+        } catch (e: Exception) {
             logger.e("PingOne generateMobilePayload failed", e)
             continuation.resume(Result.failure(PingOneMFAException(e)))
         }
@@ -335,7 +333,7 @@ object PingOneMFA {
      * under Android's background execution restrictions. The outcome is not surfaced back to
      * the UI — add a custom broadcast or shared state if your app needs to react to it.
      */
-    fun approvePushNotificationFromBanner(notification: PushNotification){
+    fun approvePushNotificationFromBanner(notification: PushNotification) {
         val appContext = ContextProvider.context
         val intent = Intent(appContext, PushApprovalService::class.java).apply {
             putExtra("notification", notification)
@@ -353,7 +351,7 @@ object PingOneMFA {
      * under Android's background execution restrictions. The outcome is not surfaced back to
      * the UI — add a custom broadcast or shared state if your app needs to react to it.
      */
-    fun denyPushNotificationFromBanner(notification: PushNotification){
+    fun denyPushNotificationFromBanner(notification: PushNotification) {
         val appContext = ContextProvider.context
         val intent = Intent(appContext, PushApprovalService::class.java).apply {
             putExtra("notification", notification)
