@@ -74,7 +74,7 @@ class AccountParserTest {
     }
 
     @Test
-    fun `missing nested objects produce empty strings`() {
+    fun `missing nested objects produce empty strings for required fields and null for optional`() {
         val json = """
     {
       "NA": {
@@ -87,8 +87,8 @@ class AccountParserTest {
 
         assertEquals("", account.environment)
         assertEquals("", account.deviceId)
-        assertEquals("", account.name)
-        assertEquals("", account.family)
+        assertEquals(null, account.name)
+        assertEquals(null, account.family)
     }
 
     @Test
@@ -106,7 +106,7 @@ class AccountParserTest {
         val account = parser.parseAccounts(json).first()
 
         assertEquals("Alice", account.name)
-        assertEquals("", account.family)
+        assertEquals(null, account.family)
     }
 
     @Test

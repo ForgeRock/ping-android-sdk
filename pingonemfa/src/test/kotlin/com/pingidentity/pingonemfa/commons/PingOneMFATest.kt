@@ -456,8 +456,8 @@ class PingOneMFATest {
     }
 
     @Test
-    fun `collectPush returns error when both notificationObject and error are null`() = runTest {
-        // Defensive case: SDK returns null notification and null error — should not hang
+    fun `collectPush returns success with null when both notificationObject and error are null`() = runTest {
+        // Both-null means the message was not a PingOne MFA push — no-op success.
         every {
             PingOne.processRemoteNotification(any(), any<RemoteMessage>(), any())
         } answers {
@@ -465,10 +465,8 @@ class PingOneMFATest {
             callback.onComplete(null, null)
         }
         val result = PingOneMFA.processRemoteNotification(mockRemoteMessage)
-        // Fallback exception path: cause carries the generic message
-        assertTrue(result.isFailure)
-        assertTrue { result.exceptionOrNull() is PingOneMFAException }
-        assertEquals("processRemoteNotification failed: no error details provided", result.exceptionOrNull()!!.message)
+        assertTrue(result.isSuccess)
+        assertEquals(null, result.getOrNull())
     }
 
     @Test
