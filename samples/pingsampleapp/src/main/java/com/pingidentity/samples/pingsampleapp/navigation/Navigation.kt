@@ -207,6 +207,7 @@ fun AppNavigation(
                 },
                 onPingOneQrScannerClick = {
                     navController.navigate(Route.ROUTE_PINGONE_QR_SCANNER)
+                },
                 onDeviceAuthorizationGrantClick = {
                     navController.navigate(Route.DEVICE_AUTHORIZATION_GRANT)
                 }
@@ -596,6 +597,8 @@ fun AppNavigation(
             PingOneQrScannerScreen(
                 onBack = { navController.popBackStack() },
                 onPairComplete = { navController.popBackStack() }
+            )
+        }
 
         composable(Route.DEVICE_AUTHORIZATION_GRANT) {
             DeviceAuthorizationGrantScreen(

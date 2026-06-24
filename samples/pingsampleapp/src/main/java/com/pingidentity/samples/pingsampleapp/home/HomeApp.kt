@@ -554,7 +554,7 @@ fun PreviewHomeApp() {
         onPingOneAccountsClick = {},
         onPingOneOTPClick = {},
         onPingOnePayloadClick = {},
-        onPingOneQrScannerClick = {}
+        onPingOneQrScannerClick = {},
         onDeviceAuthorizationGrantClick = {},
     )
 }
