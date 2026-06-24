@@ -34,6 +34,10 @@ import io.mockk.slot
 import junit.framework.TestCase.assertNotNull
 import junit.framework.TestCase.assertNull
 import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.json.add
+import kotlinx.serialization.json.buildJsonArray
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import java.net.URL
@@ -42,6 +46,7 @@ import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
@@ -312,6 +317,137 @@ class OidcWebClientTest {
         assertTrue(!urlQuery.contains("code_challenge="))
 
         parMockEngine.close()
+    }
+
+    // -------------------------------------------------------------------------
+    // OidcWebClient JSON factory
+    // -------------------------------------------------------------------------
+
+    @Test
+    fun `createOidcWebClient succeeds with valid JSON config`() {
+        val json = buildJsonObject {
+            put(JsonConfigKey.OIDC, buildJsonObject {
+                put(JsonConfigKey.CLIENT_ID, "my-client")
+                put(JsonConfigKey.DISCOVERY_ENDPOINT, "https://auth.example.com/.well-known/openid-configuration")
+                put(JsonConfigKey.SCOPES, buildJsonArray { add("openid"); add("profile") })
+                put(JsonConfigKey.REDIRECT_URI, "myapp://oauth2redirect")
+            })
+        }
+        assertTrue(OidcWebClient(json).isSuccess)
+    }
+
+    @Test
+    fun `createOidcWebClient succeeds with scopes as comma-separated string`() {
+        val json = buildJsonObject {
+            put(JsonConfigKey.OIDC, buildJsonObject {
+                put(JsonConfigKey.CLIENT_ID, "my-client")
+                put(JsonConfigKey.DISCOVERY_ENDPOINT, "https://auth.example.com/.well-known/openid-configuration")
+                put(JsonConfigKey.SCOPES, "openid,profile")
+                put(JsonConfigKey.REDIRECT_URI, "myapp://oauth2redirect")
+            })
+        }
+        assertTrue(OidcWebClient(json).isSuccess)
+    }
+
+    @Test
+    fun `createOidcWebClient fails when oidc block is missing`() {
+        assertTrue(OidcWebClient(buildJsonObject {}).isFailure)
+    }
+
+    @Test
+    fun `createOidcWebClient fails when clientId is missing`() {
+        val json = buildJsonObject {
+            put(JsonConfigKey.OIDC, buildJsonObject {
+                put(JsonConfigKey.DISCOVERY_ENDPOINT, "https://auth.example.com/.well-known/openid-configuration")
+                put(JsonConfigKey.SCOPES, buildJsonArray { add("openid") })
+                put(JsonConfigKey.REDIRECT_URI, "myapp://oauth2redirect")
+            })
+        }
+        assertTrue(OidcWebClient(json).isFailure)
+    }
+
+    @Test
+    fun `createOidcWebClient fails when discoveryEndpoint is missing`() {
+        val json = buildJsonObject {
+            put(JsonConfigKey.OIDC, buildJsonObject {
+                put(JsonConfigKey.CLIENT_ID, "my-client")
+                put(JsonConfigKey.SCOPES, buildJsonArray { add("openid") })
+                put(JsonConfigKey.REDIRECT_URI, "myapp://oauth2redirect")
+            })
+        }
+        assertTrue(OidcWebClient(json).isFailure)
+    }
+
+    @Test
+    fun `createOidcWebClient fails when scopes is missing`() {
+        val json = buildJsonObject {
+            put(JsonConfigKey.OIDC, buildJsonObject {
+                put(JsonConfigKey.CLIENT_ID, "my-client")
+                put(JsonConfigKey.DISCOVERY_ENDPOINT, "https://auth.example.com/.well-known/openid-configuration")
+                put(JsonConfigKey.REDIRECT_URI, "myapp://oauth2redirect")
+            })
+        }
+        assertTrue(OidcWebClient(json).isFailure)
+    }
+
+    @Test
+    fun `createOidcWebClient succeeds without web block`() {
+        val json = buildJsonObject {
+            put(JsonConfigKey.OIDC, buildJsonObject {
+                put(JsonConfigKey.CLIENT_ID, "my-client")
+                put(JsonConfigKey.DISCOVERY_ENDPOINT, "https://auth.example.com/.well-known/openid-configuration")
+                put(JsonConfigKey.SCOPES, buildJsonArray { add("openid") })
+                put(JsonConfigKey.REDIRECT_URI, "myapp://oauth2redirect")
+            })
+        }
+        assertTrue(OidcWebClient(json).isSuccess)
+    }
+
+    @Test
+    fun `createOidcWebClient succeeds with all optional OIDC fields`() {
+        val json = buildJsonObject {
+            put(JsonConfigKey.OIDC, buildJsonObject {
+                put(JsonConfigKey.CLIENT_ID, "my-client")
+                put(JsonConfigKey.DISCOVERY_ENDPOINT, "https://auth.example.com/.well-known/openid-configuration")
+                put(JsonConfigKey.SCOPES, buildJsonArray { add("openid") })
+                put(JsonConfigKey.REDIRECT_URI, "myapp://oauth2redirect")
+                put(JsonConfigKey.SIGN_OUT_REDIRECT_URI, "myapp://logout")
+                put(JsonConfigKey.REFRESH_THRESHOLD, 60L)
+                put(JsonConfigKey.LOGIN_HINT, "user@example.com")
+                put(JsonConfigKey.STATE, "custom-state")
+                put(JsonConfigKey.NONCE, "custom-nonce")
+                put(JsonConfigKey.DISPLAY, "page")
+                put(JsonConfigKey.PROMPT, "login")
+                put(JsonConfigKey.UI_LOCALES, "en-US")
+                put(JsonConfigKey.ACR_VALUES, "Level3")
+                put(JsonConfigKey.PAR, true)
+                put(JsonConfigKey.ADDITIONAL_PARAMETERS, buildJsonObject {
+                    put("custom_param", "custom_value")
+                })
+                put(JsonConfigKey.OPEN_ID, buildJsonObject {
+                    put(JsonConfigKey.AUTHORIZATION_ENDPOINT, "https://auth.example.com/authorize")
+                    put(JsonConfigKey.TOKEN_ENDPOINT, "https://auth.example.com/token")
+                    put(JsonConfigKey.USER_INFO_ENDPOINT, "https://auth.example.com/userinfo")
+                    put(JsonConfigKey.END_SESSION_ENDPOINT, "https://auth.example.com/logout")
+                    put(JsonConfigKey.REVOCATION_ENDPOINT, "https://auth.example.com/revoke")
+                })
+            })
+        }
+        assertTrue(OidcWebClient(json).isSuccess)
+    }
+
+    @Test
+    fun `createOidcWebClient returns failure with typed error when required field is missing`() {
+        val json = buildJsonObject {
+            put(JsonConfigKey.OIDC, buildJsonObject {
+                put(JsonConfigKey.DISCOVERY_ENDPOINT, "https://auth.example.com/.well-known/openid-configuration")
+                put(JsonConfigKey.SCOPES, buildJsonArray { add("openid") })
+                put(JsonConfigKey.REDIRECT_URI, "myapp://oauth2redirect")
+            })
+        }
+        val result = OidcWebClient(json)
+        assertTrue(result.isFailure)
+        assertIs<JsonConfigError.MissingRequiredField>(result.exceptionOrNull())
     }
 
 }

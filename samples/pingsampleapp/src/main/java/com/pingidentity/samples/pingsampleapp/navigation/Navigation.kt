@@ -53,6 +53,7 @@ import com.pingidentity.samples.pingsampleapp.authenticator.ui.QrScannerScreen
 import com.pingidentity.samples.pingsampleapp.authenticator.ui.SettingsScreen
 import com.pingidentity.samples.pingsampleapp.authenticator.ui.TestScreen
 import com.pingidentity.samples.pingsampleapp.authenticator.util.NavigationAnimations
+import com.pingidentity.samples.pingsampleapp.authgrant.DeviceAuthorizationGrantScreen
 import com.pingidentity.samples.pingsampleapp.config.Env
 import com.pingidentity.samples.pingsampleapp.davinci.DaVinci
 import com.pingidentity.samples.pingsampleapp.devicemanagement.DeviceManagement
@@ -86,7 +87,9 @@ object Route {
     const val JOURNEY = "journey"
     const val OIDC = "oidc"
     const val ACCESS_TOKEN = "access_token"
-    const val USER_PROFILE = "user_profile"
+    internal const val USER_PROFILE_ROUTE = "user_profile?type={type}"
+    fun userProfile(type: UserProfileType? = null) =
+        if (type != null) "user_profile?type=${type.name}" else "user_profile?type=${UserProfileType.JOURNEY.name}"
     const val DEVICE_MANAGEMENT = "device_management"
     const val LOGOUT = "logout"
     const val DEVICE_INFO = "device_info"
@@ -109,6 +112,14 @@ object Route {
     const val ROUTE_PINGONE_OTP = "pingone_otp"
     const val ROUTE_PINGONE_PAYLOAD = "pingone_payload"
     const val ROUTE_PINGONE_QR_SCANNER = "pingone_qr_scanner"
+    const val DEVICE_AUTHORIZATION_GRANT = "device_authorization_grant"
+    const val DAVINCI_DEVICE_APPROVE = "davinci_device_approve?uri={uri}"
+    const val JOURNEY_DEVICE_APPROVAL = "journey_device_approval?uri={uri}"
+    internal const val JOURNEY_WITH_VERIFICATION = "$JOURNEY/{name}?verificationUri={verificationUri}"
+    fun daVinciDeviceApprove(uri: String) = "davinci_device_approve?uri=${android.net.Uri.encode(uri)}"
+    fun journeyDeviceApproval(uri: String) = "journey_device_approval?uri=${android.net.Uri.encode(uri)}"
+    fun journeyWithVerification(name: String, uri: String) =
+        "$JOURNEY/$name?verificationUri=${android.net.Uri.encode(uri)}"
 }
 
 /**
@@ -144,7 +155,7 @@ fun AppNavigation(
                     navController.navigate(Route.ACCESS_TOKEN)
                 },
                 onUserProfileClick = {
-                    navController.navigate(Route.USER_PROFILE)
+                    navController.navigate(Route.userProfile())
                 },
                 onDeviceManagementClick = {
                     navController.navigate(Route.DEVICE_MANAGEMENT)
@@ -196,6 +207,8 @@ fun AppNavigation(
                 },
                 onPingOneQrScannerClick = {
                     navController.navigate(Route.ROUTE_PINGONE_QR_SCANNER)
+                onDeviceAuthorizationGrantClick = {
+                    navController.navigate(Route.DEVICE_AUTHORIZATION_GRANT)
                 }
             )
         }
@@ -203,7 +216,7 @@ fun AppNavigation(
         composable(Route.DAVINCI) {
             DaVinci(
                 onSuccess = {
-                    navController.navigate(Route.USER_PROFILE) {
+                    navController.navigate(Route.userProfile(UserProfileType.DAVINCI)) {
                         popUpTo(Route.HOME) {
                             inclusive = false
                         }
@@ -233,34 +246,41 @@ fun AppNavigation(
             )
         }
         
-        composable(Route.JOURNEY +  "/{name}", arguments = listOf(
-            navArgument("name") { type = NavType.StringType }
-        )) {
-            it.arguments?.getString("name")?.apply {
-                val journeyViewModel = viewModel<JourneyViewModel>(
-                    factory = JourneyViewModel.factory(this)
-                )
-                JourneyScreen(
-                    journeyViewModel,
-                    onSuccess = {
-                        navController.navigate(Route.USER_PROFILE) {
-                            popUpTo(Route.HOME) {
-                                inclusive = false
-                            }
-                        }
-                    },
-                    onBack = {
-                        navController.navigateUp()
+        composable(
+            route = Route.JOURNEY_WITH_VERIFICATION,
+            arguments = listOf(
+                navArgument("name") { type = NavType.StringType },
+                navArgument("verificationUri") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                },
+            )
+        ) { backStackEntry ->
+            val name = backStackEntry.arguments?.getString("name") ?: return@composable
+            val verificationUri = backStackEntry.arguments?.getString("verificationUri")
+            val journeyViewModel = viewModel<JourneyViewModel>(
+                factory = if (!verificationUri.isNullOrBlank())
+                    JourneyViewModel.factory(name, verificationUri)
+                else
+                    JourneyViewModel.factory(name)
+            )
+            JourneyScreen(
+                journeyViewModel = journeyViewModel,
+                onSuccess = {
+                    navController.navigate(Route.userProfile(UserProfileType.JOURNEY)) {
+                        popUpTo(Route.HOME) { inclusive = false }
                     }
-                )
-            }
+                },
+                onBack = { navController.navigateUp() },
+            )
         }
 
         
         composable(Route.OIDC) {
             Centralize(
                 onSuccess = {
-                    navController.navigate(Route.USER_PROFILE)
+                    navController.navigate(Route.userProfile(UserProfileType.OIDC))
                 },
                 onBack = {
                     navController.navigateUp()
@@ -277,12 +297,22 @@ fun AppNavigation(
             }
         }
         
-        composable(Route.USER_PROFILE) {
+        composable(
+            route = Route.USER_PROFILE_ROUTE,
+            arguments = listOf(navArgument("type") {
+                type = NavType.StringType
+                defaultValue = UserProfileType.JOURNEY.name
+            })
+        ) { backStackEntry ->
+            val initialTab = backStackEntry.arguments?.getString("type")
+                ?.let { runCatching { UserProfileType.valueOf(it) }.getOrNull() }
+                ?: UserProfileType.JOURNEY
             val userProfileViewModel = viewModel<UserProfileViewModel>(
                 factory = UserProfileViewModel.factory()
             )
             UserProfile(
                 userProfileViewModel = userProfileViewModel,
+                onSelectedUserProfileType = initialTab,
                 onBack = {
                     // Navigate to home and clear the entire back stack
                     navController.navigate(Route.HOME) {
@@ -302,6 +332,9 @@ fun AppNavigation(
                         }
                         UserProfileType.OIDC -> {
                             navController.navigate(Route.OIDC)
+                        }
+                        UserProfileType.AUTH_GRANT -> {
+                            navController.navigate(Route.DEVICE_AUTHORIZATION_GRANT)
                         }
                     }
                 }
@@ -563,6 +596,55 @@ fun AppNavigation(
             PingOneQrScannerScreen(
                 onBack = { navController.popBackStack() },
                 onPairComplete = { navController.popBackStack() }
+
+        composable(Route.DEVICE_AUTHORIZATION_GRANT) {
+            DeviceAuthorizationGrantScreen(
+                onBack = { navController.popBackStack() },
+                onSuccess = {
+                    navController.navigate(Route.ACCESS_TOKEN) {
+                        popUpTo(Route.HOME) {
+                            inclusive = false
+                        }
+                    }
+                },
+                onApproveWithDaVinci = { uri ->
+                    navController.navigate(Route.daVinciDeviceApprove(uri))
+                },
+                onApproveWithJourney = { uri ->
+                    navController.navigate(Route.journeyDeviceApproval(uri))
+                },
+            )
+        }
+
+        composable(
+            route = Route.DAVINCI_DEVICE_APPROVE,
+            arguments = listOf(navArgument("uri") { type = NavType.StringType }),
+        ) { backStackEntry ->
+            val uri = backStackEntry.arguments?.getString("uri") ?: ""
+            DaVinci(
+                verificationUri = uri,
+                onSuccess = {
+                    navController.navigate(Route.userProfile(UserProfileType.DAVINCI)) {
+                        popUpTo(Route.HOME) { inclusive = false }
+                    }
+                },
+                onBack = { navController.navigateUp() },
+            )
+        }
+        composable(
+            route = Route.JOURNEY_DEVICE_APPROVAL,
+            arguments = listOf(navArgument("uri") { type = NavType.StringType }),
+        ) { backStackEntry ->
+            val uri = backStackEntry.arguments?.getString("uri") ?: ""
+            val preferenceViewModel = viewModel<PreferenceViewModel>(
+                factory = PreferenceViewModel.factory(LocalContext.current)
+            )
+            JourneyRoute(
+                preferenceViewModel = preferenceViewModel,
+                onSubmit = { journeyName ->
+                    navController.navigate(Route.journeyWithVerification(journeyName, uri))
+                },
+                onBack = { navController.navigateUp() },
             )
         }
     }

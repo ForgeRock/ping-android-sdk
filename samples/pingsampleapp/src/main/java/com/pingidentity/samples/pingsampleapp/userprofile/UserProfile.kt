@@ -9,6 +9,7 @@ package com.pingidentity.samples.pingsampleapp.userprofile
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -35,6 +36,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonPrimitive
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -42,11 +46,13 @@ fun UserProfile(
     userProfileViewModel: UserProfileViewModel,
     onBack: (() -> Unit)? = null,
     onAction: ((UserProfileType) -> Unit)? = null,
+    onSelectedUserProfileType: UserProfileType = UserProfileType.JOURNEY,
 ) {
     val state by userProfileViewModel.state.collectAsState()
 
     LaunchedEffect(true) {
         // Not relaunch when recomposition
+        userProfileViewModel.selectTab(onSelectedUserProfileType)
         userProfileViewModel.userinfo()
     }
 
@@ -72,7 +78,6 @@ fun UserProfile(
                 .fillMaxWidth()
                 .padding(paddingValues)
         ) {
-            // Tab Row for Journey, DaVinci, and OIDC
             TabRow(
                 selectedTabIndex = state.selectedTab.ordinal,
                 modifier = Modifier.fillMaxWidth()
@@ -100,6 +105,14 @@ fun UserProfile(
                         userProfileViewModel.userinfo()
                     },
                     text = { Text("OIDC") }
+                )
+                Tab(
+                    selected = state.selectedTab == UserProfileType.AUTH_GRANT,
+                    onClick = {
+                        userProfileViewModel.selectTab(UserProfileType.AUTH_GRANT)
+                        userProfileViewModel.userinfo()
+                    },
+                    text = { Text("Auth Grant") }
                 )
             }
 
@@ -180,6 +193,30 @@ fun UserProfile(
                             )
                         }
                     }
+
+                    UserProfileType.AUTH_GRANT -> {
+                        if (state.authGrantUser != null) {
+                            UserInfoCard(
+                                title = "Auth Grant User Info",
+                                user = state.authGrantUser,
+                                showRawInfo = state.showRawAuthGrantUserInfo,
+                                formattedInfo = userProfileViewModel.formattedAuthGrantUserInfo,
+                                onToggle = { userProfileViewModel.toggleUserInfo() }
+                            )
+                        } else if (state.authGrantError != null) {
+                            ErrorCard(
+                                title = "Auth Grant Error",
+                                error = state.authGrantError.toString()
+                            )
+                        } else {
+                            EmptyStateCard(
+                                title = "No Auth Grant User",
+                                message = "Please authenticate using Device Authorization Grant to view user profile information.",
+                                actionLabel = "Start Auth Grant",
+                                onAction = { onAction?.invoke(UserProfileType.AUTH_GRANT) }
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -189,50 +226,70 @@ fun UserProfile(
 @Composable
 private fun UserInfoCard(
     title: String,
-    user: kotlinx.serialization.json.JsonObject?,
+    user: JsonObject?,
     showRawInfo: Boolean,
     formattedInfo: String,
     onToggle: () -> Unit
 ) {
-    Card(
-        elevation = CardDefaults.cardElevation(defaultElevation = 10.dp),
-        modifier = Modifier.fillMaxWidth().padding(8.dp),
-        shape = MaterialTheme.shapes.medium,
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp)
     ) {
         Text(
             text = title,
             style = MaterialTheme.typography.titleMedium,
-            modifier = Modifier.padding(8.dp)
+            modifier = Modifier.padding(bottom = 12.dp)
         )
-        Text(
-            "First name: ${user?.get("name") ?: "N/A"}",
-            Modifier.fillMaxWidth().padding(4.dp)
-        )
-        Spacer(modifier = Modifier.padding(horizontal = 4.dp))
-        Text(
-            "Family name: ${user?.get("family_name") ?: "N/A"}",
-            Modifier.fillMaxWidth().padding(4.dp)
-        )
-        Spacer(modifier = Modifier.padding(horizontal = 4.dp))
-        Text(
-            "Email: ${user?.get("email") ?: "N/A"}",
-            Modifier.fillMaxWidth().padding(4.dp)
-        )
+        UserInfoField("First Name", user?.stringClaim("given_name")
+            ?: user?.stringClaim("name"))
+        UserInfoField("Family Name", user?.stringClaim("family_name"))
+        UserInfoField("Email", user?.stringClaim("email"))
+        UserInfoField("Username", user?.stringClaim("preferred_username"))
 
         Button(
-            modifier = Modifier.padding(8.dp).align(Alignment.End),
+            modifier = Modifier
+                .padding(top = 12.dp)
+                .align(Alignment.End),
             onClick = onToggle
         ) {
-            Text(text = if (showRawInfo) "Hide Info" else "Show Raw User Info")
+            Text(text = if (showRawInfo) "Hide Raw Info" else "Show Raw Info")
         }
 
         if (showRawInfo) {
             Text(
-                modifier = Modifier.padding(4.dp),
+                modifier = Modifier.padding(top = 8.dp),
                 text = formattedInfo,
+                style = MaterialTheme.typography.bodySmall,
             )
         }
     }
+}
+
+@Composable
+private fun UserInfoField(label: String, value: String?) {
+    if (value == null) return
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+    ) {
+        Text(
+            text = label.uppercase(),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.height(2.dp))
+        Text(
+            text = value.ifBlank { "N/A" },
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+    }
+    androidx.compose.material3.HorizontalDivider(
+        modifier = Modifier.padding(vertical = 4.dp),
+        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f),
+    )
 }
 
 @Composable
@@ -313,3 +370,6 @@ fun PreviewUserProfile() {
         onBack = {}
     )
 }
+
+private fun JsonObject.stringClaim(key: String): String? =
+    this[key]?.jsonPrimitive?.contentOrNull

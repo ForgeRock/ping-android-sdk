@@ -23,7 +23,8 @@ fun openIdConfigurationResponse() =
           "userinfo_endpoint" : "https://auth.test-one-pingone.com/userinfo",
           "end_session_endpoint" : "https://auth.test-one-pingone.com/signoff",
           "revocation_endpoint" : "https://auth.test-one-pingone.com/revoke",
-          "pushed_authorization_request_endpoint" : "https://auth.test-one-pingone.com/par"
+          "pushed_authorization_request_endpoint" : "https://auth.test-one-pingone.com/par",
+          "device_authorization_endpoint" : "https://auth.test-one-pingone.com/tenantId/as/device_authorization"
         }
         """,
     )

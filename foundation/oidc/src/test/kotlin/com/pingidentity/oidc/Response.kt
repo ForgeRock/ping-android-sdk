@@ -76,3 +76,16 @@ fun parResponse() =
             "}",
     )
 
+fun openIdConfigurationWithDeviceEndpointResponse() =
+    ByteReadChannel(
+        "{\n" +
+            "  \"authorization_endpoint\" : \"http://auth.test-one-pingone.com/authorize\",\n" +
+            "  \"token_endpoint\" : \"https://auth.test-one-pingone.com/token\",\n" +
+            "  \"userinfo_endpoint\" : \"https://auth.test-one-pingone.com/userinfo\",\n" +
+            "  \"end_session_endpoint\" : \"https://auth.test-one-pingone.com/signoff\",\n" +
+            "  \"ping_end_idp_session_endpoint\" : \"https://auth.test-one-pingone.com/idp/signoff\",\n" +
+            "  \"revocation_endpoint\" : \"https://auth.test-one-pingone.com/revoke\",\n" +
+            "  \"device_authorization_endpoint\" : \"https://auth.test-one-pingone.com/device_authorization\"\n" +
+            "}",
+    )
+

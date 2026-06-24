@@ -7,6 +7,7 @@
 
 package com.pingidentity.davinci
 
+import android.net.Uri
 import com.pingidentity.davinci.collector.FlowCollector
 import com.pingidentity.davinci.collector.LabelCollector
 import com.pingidentity.davinci.collector.MultiSelectCollector
@@ -25,9 +26,12 @@ import com.pingidentity.davinci.plugin.collectors
 import com.pingidentity.logger.Logger
 import com.pingidentity.logger.STANDARD
 import com.pingidentity.network.ktor.KtorHttpClient
+import com.pingidentity.oidc.JsonConfigKey
 import com.pingidentity.oidc.Token
+import com.pingidentity.oidc.module.VERIFICATION_URI_COMPLETE
 import com.pingidentity.oidc.module.user
 import com.pingidentity.orchestrate.ContinueNode
+import com.pingidentity.orchestrate.FailureNode
 import com.pingidentity.orchestrate.SuccessNode
 import com.pingidentity.orchestrate.module.Cookie
 import com.pingidentity.orchestrate.module.Cookies
@@ -47,8 +51,12 @@ import io.ktor.http.content.TextContent
 import io.ktor.utils.io.ByteReadChannel
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.add
+import kotlinx.serialization.json.buildJsonArray
+import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.put
 import org.junit.Rule
 import org.junit.rules.TestWatcher
 import org.junit.runner.RunWith
@@ -108,6 +116,10 @@ class DaVinciTest {
 
                     "/par" -> {
                         respond(parResponse(), HttpStatusCode.Created, headers)
+                    }
+
+                    "/tenantId/applications/test/deviceFlow" -> {
+                        respond(customHTMLTemplate(), HttpStatusCode.OK, customHTMLTemplateHeaders)
                     }
 
                     else -> {
@@ -543,6 +555,300 @@ class DaVinciTest {
         // The token request should use the PAR flow
         val tokenRequest = mockEngine.requestHistory[4] // token request
         assertEquals("https://auth.test-one-pingone.com/token", tokenRequest.url.toString())
+    }
+
+    @Test
+    fun `DaVinci with device user code navigates to deviceFlow URL on start`() = runTest {
+        val tokenStorage = MemoryStorage<Token>()
+        val verificationUriComplete =
+            "https://auth.test-one-pingone.com/tenantId/applications/test/deviceFlow?user_code=WDJB-MJHT"
+
+        val daVinci = DaVinci {
+            httpClient = KtorHttpClient(HttpClient(mockEngine))
+            module(Oidc) {
+                clientId = "test"
+                discoveryEndpoint = "http://localhost/.well-known/openid-configuration"
+                scopes = mutableSetOf("openid", "email", "address")
+                redirectUri = "http://localhost:8080"
+                storage = { tokenStorage }
+            }
+            module(Cookie) {
+                storage = { MemoryStorage() }
+                persist = mutableListOf("ST")
+            }
+        }
+
+        val node = daVinci.start {
+            VERIFICATION_URI_COMPLETE to Uri.parse(verificationUriComplete)
+        }
+
+        assertTrue(node is SuccessNode)
+
+        // Verify the device flow verification GET was made (not the normal /authorize)
+        val paths = mockEngine.requestHistory.map { it.url.encodedPath }
+        assertTrue(paths.none { it == "/authorize" }, "authorize should not be called in device flow")
+        assertTrue(
+            paths.any { it == "/tenantId/applications/test/deviceFlow" },
+            "deviceFlow endpoint should be called"
+        )
+
+        // Verify the deviceFlow request has userCode as a query parameter
+        val deviceFlowReq = mockEngine.requestHistory.first { it.url.encodedPath == "/tenantId/applications/test/deviceFlow" }
+        assertEquals("WDJB-MJHT", deviceFlowReq.url.parameters["userCode"])
+    }
+
+    @Test
+    fun `DaVinci with device user code skips token exchange on success`() = runTest {
+        val tokenStorage = MemoryStorage<Token>()
+        val verificationUriComplete =
+            "https://auth.test-one-pingone.com/tenantId/applications/test/deviceFlow?user_code=WDJB-MJHT"
+
+        val daVinci = DaVinci {
+            httpClient = KtorHttpClient(HttpClient(mockEngine))
+            module(Oidc) {
+                clientId = "test"
+                discoveryEndpoint = "http://localhost/.well-known/openid-configuration"
+                scopes = mutableSetOf("openid", "email", "address")
+                redirectUri = "http://localhost:8080"
+                storage = { tokenStorage }
+            }
+            module(Cookie) {
+                storage = { MemoryStorage() }
+                persist = mutableListOf("ST")
+            }
+        }
+
+        val node = daVinci.start {
+            VERIFICATION_URI_COMPLETE to Uri.parse(verificationUriComplete)
+        }
+
+        assertTrue(node is SuccessNode)
+
+        // Token exchange must be skipped — /token should not appear in request history
+        val paths = mockEngine.requestHistory.map { it.url.encodedPath }
+        assertTrue(paths.none { it == "/token" }, "token endpoint should not be called in device flow")
+        // Token storage must remain empty because exchange was skipped
+        // The approving device completes auth, the token is held by the requesting device
+        assertNull(tokenStorage.get())
+    }
+
+    @Test
+    fun `DaVinci with device user code returns ErrorNode when deviceFlow endpoint returns 4xx`() = runTest {
+        val failingEngine = MockEngine { request ->
+            when (request.url.encodedPath) {
+                "/.well-known/openid-configuration" ->
+                    respond(openIdConfigurationResponse(), HttpStatusCode.OK, headers)
+                "/tenantId/applications/test/deviceFlow" ->
+                    respond(
+                        ByteReadChannel("""{"message":"User denied access"}"""),
+                        HttpStatusCode.Forbidden,
+                        headers
+                    )
+                else -> respond(ByteReadChannel(""), HttpStatusCode.InternalServerError)
+            }
+        }
+
+        val daVinci = DaVinci {
+            httpClient = KtorHttpClient(HttpClient(failingEngine))
+            module(Oidc) {
+                clientId = "test"
+                discoveryEndpoint = "http://localhost/.well-known/openid-configuration"
+                scopes = mutableSetOf("openid", "email", "address")
+                redirectUri = "http://localhost:8080"
+                storage = { MemoryStorage() }
+            }
+            module(Cookie) {
+                storage = { MemoryStorage() }
+            }
+        }
+
+        val node = daVinci.start {
+            VERIFICATION_URI_COMPLETE to
+                Uri.parse("https://auth.test-one-pingone.com/tenantId/applications/test/deviceFlow?user_code=WDJB-MJHT")
+        }
+
+        // DaVinci treats non-timeout 4xx as ErrorNode (recoverable)
+        assertTrue(node is com.pingidentity.orchestrate.ErrorNode)
+        assertEquals("User denied access", node.message)
+
+        failingEngine.close()
+    }
+
+    @Test
+    fun `DaVinci with device user code returns FailureNode when deviceFlow endpoint returns 5xx`() = runTest {
+        val failingEngine = MockEngine { request ->
+            when (request.url.encodedPath) {
+                "/.well-known/openid-configuration" ->
+                    respond(openIdConfigurationResponse(), HttpStatusCode.OK, headers)
+                "/tenantId/applications/test/deviceFlow" ->
+                    respond(
+                        ByteReadChannel("""{"message":"Internal server error"}"""),
+                        HttpStatusCode.InternalServerError,
+                        headers
+                    )
+                else -> respond(ByteReadChannel(""), HttpStatusCode.InternalServerError)
+            }
+        }
+
+        val daVinci = DaVinci {
+            httpClient = KtorHttpClient(HttpClient(failingEngine))
+            module(Oidc) {
+                clientId = "test"
+                discoveryEndpoint = "http://localhost/.well-known/openid-configuration"
+                scopes = mutableSetOf("openid", "email", "address")
+                redirectUri = "http://localhost:8080"
+                storage = { MemoryStorage() }
+            }
+            module(Cookie) {
+                storage = { MemoryStorage() }
+            }
+        }
+
+        val node = daVinci.start {
+            VERIFICATION_URI_COMPLETE to
+                Uri.parse("https://auth.test-one-pingone.com/tenantId/applications/test/deviceFlow?user_code=WDJB-MJHT")
+        }
+
+        assertTrue(node is FailureNode)
+        assertTrue(node.cause is com.pingidentity.exception.ApiException)
+        assertEquals(500, (node.cause as com.pingidentity.exception.ApiException).status)
+
+        failingEngine.close()
+    }
+
+    @Test
+    fun `DaVinci without device user code proceeds with normal authorize flow`() = runTest {
+        val tokenStorage = MemoryStorage<Token>()
+
+        val daVinci = DaVinci {
+            httpClient = KtorHttpClient(HttpClient(mockEngine))
+            module(Oidc) {
+                clientId = "test"
+                discoveryEndpoint = "http://localhost/.well-known/openid-configuration"
+                scopes = mutableSetOf("openid", "email", "address")
+                redirectUri = "http://localhost:8080"
+                storage = { tokenStorage }
+            }
+            module(Cookie) {
+                storage = { MemoryStorage() }
+                persist = mutableListOf("ST")
+            }
+        }
+
+        var node = daVinci.start()
+        assertTrue(node is ContinueNode)
+        (node.collectors[0] as? TextCollector)?.value = "My First Name"
+        (node.collectors[1] as? PasswordCollector)?.value = "My Password"
+        (node.collectors[2] as? SubmitCollector)?.value = "click me"
+
+        node = node.next()
+        assertTrue(node is SuccessNode)
+
+        // Normal flow goes through /authorize and /token
+        val paths = mockEngine.requestHistory.map { it.url.encodedPath }
+        assertTrue(paths.contains("/authorize"), "normal flow must call /authorize")
+        assertTrue(paths.contains("/token"), "normal flow must call /token")
+        assertTrue(paths.none { it.contains("deviceFlow") }, "deviceFlow must not be called in normal flow")
+        assertNotNull(tokenStorage.get())
+    }
+
+    // -------------------------------------------------------------------------
+    // createDaVinci JSON config
+    // -------------------------------------------------------------------------
+
+    @Test
+    fun `createDaVinci succeeds with valid JSON config`() {
+        val json = buildJsonObject {
+            put(JsonConfigKey.OIDC, buildJsonObject {
+                put(JsonConfigKey.CLIENT_ID, "my-client")
+                put(JsonConfigKey.DISCOVERY_ENDPOINT, "https://auth.pingone.ca/env-id/as/.well-known/openid-configuration")
+                put(JsonConfigKey.SCOPES, buildJsonArray { add("openid"); add("profile") })
+                put(JsonConfigKey.REDIRECT_URI, "myapp://oauth2redirect")
+            })
+        }
+        assertTrue(DaVinci(json).isSuccess)
+    }
+
+    @Test
+    fun `createDaVinci fails when oidc block is missing from JSON`() {
+        assertTrue(DaVinci(buildJsonObject {}).isFailure)
+    }
+
+    @Test
+    fun `createDaVinci fails when clientId is missing from JSON`() {
+        val json = buildJsonObject {
+            put(JsonConfigKey.OIDC, buildJsonObject {
+                put(JsonConfigKey.DISCOVERY_ENDPOINT, "https://auth.pingone.ca/env-id/as/.well-known/openid-configuration")
+                put(JsonConfigKey.SCOPES, buildJsonArray { add("openid") })
+                put(JsonConfigKey.REDIRECT_URI, "myapp://oauth2redirect")
+            })
+        }
+        assertTrue(DaVinci(json).isFailure)
+    }
+
+    @Test
+    fun `createDaVinci fails when redirectUri is missing from JSON`() {
+        val json = buildJsonObject {
+            put(JsonConfigKey.OIDC, buildJsonObject {
+                put(JsonConfigKey.CLIENT_ID, "my-client")
+                put(JsonConfigKey.DISCOVERY_ENDPOINT, "https://auth.pingone.ca/env-id/as/.well-known/openid-configuration")
+                put(JsonConfigKey.SCOPES, buildJsonArray { add("openid") })
+            })
+        }
+        assertTrue(DaVinci(json).isFailure)
+    }
+
+    @Test
+    fun `createDaVinci succeeds with optional acrValues in JSON`() {
+        val json = buildJsonObject {
+            put(JsonConfigKey.OIDC, buildJsonObject {
+                put(JsonConfigKey.CLIENT_ID, "my-client")
+                put(JsonConfigKey.DISCOVERY_ENDPOINT, "https://auth.pingone.ca/env-id/as/.well-known/openid-configuration")
+                put(JsonConfigKey.SCOPES, buildJsonArray { add("openid") })
+                put(JsonConfigKey.REDIRECT_URI, "myapp://oauth2redirect")
+                put(JsonConfigKey.ACR_VALUES, "urn:acr:silver")
+            })
+        }
+        assertTrue(DaVinci(json).isSuccess)
+    }
+
+    @Test
+    fun `createDaVinci succeeds with scopes as comma-separated string`() {
+        val json = buildJsonObject {
+            put(JsonConfigKey.OIDC, buildJsonObject {
+                put(JsonConfigKey.CLIENT_ID, "my-client")
+                put(JsonConfigKey.DISCOVERY_ENDPOINT, "https://auth.pingone.ca/env-id/as/.well-known/openid-configuration")
+                put(JsonConfigKey.SCOPES, "openid,profile")
+                put(JsonConfigKey.REDIRECT_URI, "myapp://oauth2redirect")
+            })
+        }
+        assertTrue(DaVinci(json).isSuccess)
+    }
+
+    @Test
+    fun `createDaVinci succeeds with all optional OIDC fields`() {
+        val json = buildJsonObject {
+            put(JsonConfigKey.OIDC, buildJsonObject {
+                put(JsonConfigKey.CLIENT_ID, "my-client")
+                put(JsonConfigKey.DISCOVERY_ENDPOINT, "https://auth.pingone.ca/env-id/as/.well-known/openid-configuration")
+                put(JsonConfigKey.SCOPES, buildJsonArray { add("openid") })
+                put(JsonConfigKey.REDIRECT_URI, "myapp://oauth2redirect")
+                put(JsonConfigKey.PAR, true)
+                put(JsonConfigKey.LOGIN_HINT, "user@example.com")
+                put(JsonConfigKey.STATE, "custom-state")
+                put(JsonConfigKey.NONCE, "custom-nonce")
+                put(JsonConfigKey.DISPLAY, "page")
+                put(JsonConfigKey.PROMPT, "login")
+                put(JsonConfigKey.UI_LOCALES, "en-US")
+                put(JsonConfigKey.ACR_VALUES, "Level3")
+                put(JsonConfigKey.SIGN_OUT_REDIRECT_URI, "myapp://logout")
+                put(JsonConfigKey.REFRESH_THRESHOLD, 60L)
+                put(JsonConfigKey.ADDITIONAL_PARAMETERS, buildJsonObject {
+                    put("custom_param", "custom_value")
+                })
+            })
+        }
+        assertTrue(DaVinci(json).isSuccess)
     }
 
     private fun parResponse(): String =

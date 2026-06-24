@@ -12,7 +12,9 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -28,6 +30,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.AccountBox
 import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.Aod
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.DeviceHub
 import androidx.compose.material.icons.filled.Key
@@ -50,6 +53,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -106,6 +110,7 @@ fun HomeApp(
     onPingOneOTPClick : () -> Unit,
     onPingOnePayloadClick : () -> Unit,
     onPingOneQrScannerClick : () -> Unit,
+    onDeviceAuthorizationGrantClick : () -> Unit,
 ) {
     var deviceId by remember { mutableStateOf("Loading Device ID...") }
     var deviceStatus by remember { mutableStateOf("Loading device status...") }
@@ -141,16 +146,15 @@ fun HomeApp(
                 .statusBarsPadding()
                 .navigationBarsPadding()
         ) {
-            // Header row with red background, logo, and version
-            Row(
+            // Header with red background, logo, version, and settings icon
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(colorResource(R.color.primary_dark))
                     .padding(vertical = 24.dp),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(
+                    modifier = Modifier.align(Alignment.Center),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center
                 ) {
@@ -192,6 +196,19 @@ fun HomeApp(
                         modifier = Modifier.padding(top = 4.dp)
                     )
                 }
+                IconButton(
+                    onClick = onConfigurationClick,
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(end = 12.dp)
+                        .border(1.dp, Color.White, MaterialTheme.shapes.small)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Settings,
+                        contentDescription = stringResource(R.string.text_configuration_title),
+                        tint = Color.White
+                    )
+                }
             }
 
             // Existing content
@@ -228,6 +245,13 @@ fun HomeApp(
                     title = stringResource(R.string.text_oidc_title),
                     subtitle = stringResource(R.string.text_oidc_subtitle),
                     onClick = onOIDCLoginClick
+                )
+
+                IconRowItem(
+                    icon = Icons.Default.Aod,
+                    title = stringResource(R.string.text_device_authorization_grant_title),
+                    subtitle = stringResource(R.string.text_device_authorization_grant_subtitle),
+                    onClick = onDeviceAuthorizationGrantClick
                 )
 
                 // User Management Section
@@ -531,6 +555,7 @@ fun PreviewHomeApp() {
         onPingOneOTPClick = {},
         onPingOnePayloadClick = {},
         onPingOneQrScannerClick = {}
+        onDeviceAuthorizationGrantClick = {},
     )
 }
 

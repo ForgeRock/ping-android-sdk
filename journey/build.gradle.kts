@@ -70,6 +70,7 @@ dependencies {
     androidTestImplementation(project(":protect"))
     androidTestImplementation(project(":foundation:device:device-profile"))
     androidTestImplementation(project(":foundation:device:device-id"))
+    androidTestImplementation(project(":foundation:browser"))
     androidTestImplementation(project(":recaptcha-enterprise"))
     androidTestImplementation(project(":mfa:binding"))
     androidTestImplementation(libs.bcpkix.jdk18on)

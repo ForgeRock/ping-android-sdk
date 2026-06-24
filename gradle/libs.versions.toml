@@ -58,6 +58,7 @@ com-pingidentity-pingonemfa = "2.3.0"
 kotlin-playservices-coroutine = "1.10.2"
 
 barcodeScanning = "17.3.0"
+zXingQR = "3.4.1"
 cameraCamera2 = "1.4.2"
 lifecycleRuntimeKtx = "2.9.3"
 playServicesAuthBlockstore = "16.4.0"
@@ -72,6 +73,8 @@ security-crypto = "1.1.0"
 play-services-location = "21.3.0"
 google-android-recaptcha = "18.6.1" # This version is compatible with API Level 29 and does not require desugaring.
 google-gson-lib = "2.10.1"
+zxing = "3.5.3"
+
 [libraries]
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activityCompose" }
 androidx-core-splashscreen = { module = "androidx.core:core-splashscreen", version.ref = "coreSplashscreen" }
@@ -158,10 +161,14 @@ osmdroid-android = { module = "org.osmdroid:osmdroid-android", version.ref = "os
 androidx-biometric = { module = "androidx.biometric:biometric", version.ref = "biometric" }
 androidx-biometric-ktx = { module = "androidx.biometric:biometric-ktx", version.ref = "biometric" }
 nimbus-jose-jwt = { module = "com.nimbusds:nimbus-jose-jwt", version.ref = "nimbus-jose-jwt" }
+zxing-qr-generator = { module = "com.google.zxing:core", version.ref = "zXingQR" }
 
 play-services-location = { module = "com.google.android.gms:play-services-location", version.ref = "play-services-location" }
 google-android-recaptcha = { module = "com.google.android.recaptcha:recaptcha", version.ref = "google-android-recaptcha" }
 google-gson-lib = {module = "com.google.code.gson:gson", version.ref = "google-gson-lib"}
+
+zxing-core = { module = "com.google.zxing:core", version.ref = "zxing" }
+
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
 androidLibrary = { id = "com.android.library", version.ref = "agp" }

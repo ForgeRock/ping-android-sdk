@@ -49,11 +49,11 @@ class FormMFADevicesTest {
         logger = Logger.STANDARD
 
         module(Oidc) {
-            clientId = "021b83ce-a9b1-4ad4-8c1d-79e576eeab76"
-            discoveryEndpoint = "https://auth.pingone.ca/02fb4743-189a-4bc7-9d6c-a919edfe6447/as/.well-known/openid-configuration"
+            clientId = DaVinciTestConfig.davinciClientId
+            discoveryEndpoint = DaVinciTestConfig.davinciDiscoveryEndpoint
             scopes = mutableSetOf("openid", "email", "address", "phone", "profile")
-            redirectUri = "org.forgerock.demo://oauth2redirect"
-            acrValues = "1557008a3c8b6105d5f4e8e053ac7a29"
+            redirectUri = DaVinciTestConfig.davinciRedirectUri
+            acrValues = DaVinciTestConfig.davinciMfaAcrValues
         }
     }
 
@@ -78,7 +78,7 @@ class FormMFADevicesTest {
     @BeforeTest
     fun setUp() = runTest {
         usernamePrefix = "MFA"
-        password = "Demo1234#1"
+        password = DaVinciTestConfig.davinciPassword
         username = usernamePrefix + System.currentTimeMillis() + "@example.com"
         userFname = "GAGA"
         userLname = "User"

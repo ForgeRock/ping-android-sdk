@@ -29,7 +29,11 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.add
+import kotlinx.serialization.json.buildJsonArray
+import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.put
 import org.junit.Rule
 import org.junit.rules.TestWatcher
 import org.junit.runner.RunWith
@@ -691,6 +695,124 @@ class OidcClientTest {
             // Verify token was obtained successfully
             assertEquals("Dummy AccessToken", result.value.accessToken)
         }
+
+    // -------------------------------------------------------------------------
+    // createOidcClient JSON config
+    // -------------------------------------------------------------------------
+
+    @Test
+    fun `createOidcClient succeeds with valid JSON config`() {
+        val json = buildJsonObject {
+            put(JsonConfigKey.OIDC, buildJsonObject {
+                put(JsonConfigKey.CLIENT_ID, "my-client")
+                put(JsonConfigKey.DISCOVERY_ENDPOINT, "https://auth.pingone.ca/env-id/as/.well-known/openid-configuration")
+                put(JsonConfigKey.SCOPES, "openid,profile")
+                put(JsonConfigKey.REDIRECT_URI, "myapp://oauth2redirect")
+            })
+        }
+        assertTrue(OidcClient(json).isSuccess)
+    }
+
+    @Test
+    fun `createOidcClient fails when oidc block is missing from JSON`() {
+        val json = buildJsonObject {
+            put(JsonConfigKey.CLIENT_ID, "my-client")
+            put(JsonConfigKey.DISCOVERY_ENDPOINT, "https://auth.pingone.ca/env-id/as/.well-known/openid-configuration")
+            put(JsonConfigKey.SCOPES, "openid")
+            put(JsonConfigKey.REDIRECT_URI, "myapp://oauth2redirect")
+        }
+        assertTrue(OidcClient(json).isFailure)
+    }
+
+    @Test
+    fun `createOidcClient fails when clientId is missing from JSON`() {
+        val json = buildJsonObject {
+            put(JsonConfigKey.OIDC, buildJsonObject {
+                put(JsonConfigKey.DISCOVERY_ENDPOINT, "https://auth.pingone.ca/env-id/as/.well-known/openid-configuration")
+                put(JsonConfigKey.SCOPES, "openid")
+                put(JsonConfigKey.REDIRECT_URI, "myapp://oauth2redirect")
+            })
+        }
+        assertTrue(OidcClient(json).isFailure)
+    }
+
+    @Test
+    fun `createOidcClient fails when discoveryEndpoint is missing from JSON`() {
+        val json = buildJsonObject {
+            put(JsonConfigKey.OIDC, buildJsonObject {
+                put(JsonConfigKey.CLIENT_ID, "my-client")
+                put(JsonConfigKey.SCOPES, "openid")
+                put(JsonConfigKey.REDIRECT_URI, "myapp://oauth2redirect")
+            })
+        }
+        assertTrue(OidcClient(json).isFailure)
+    }
+
+    @Test
+    fun `createOidcClient fails when redirectUri is missing from JSON`() {
+        val json = buildJsonObject {
+            put(JsonConfigKey.OIDC, buildJsonObject {
+                put(JsonConfigKey.CLIENT_ID, "my-client")
+                put(JsonConfigKey.DISCOVERY_ENDPOINT, "https://auth.pingone.ca/env-id/as/.well-known/openid-configuration")
+                put(JsonConfigKey.SCOPES, "openid")
+            })
+        }
+        assertTrue(OidcClient(json).isFailure)
+    }
+
+    @Test
+    fun `createOidcClient fails when scopes is missing from JSON`() {
+        val json = buildJsonObject {
+            put(JsonConfigKey.OIDC, buildJsonObject {
+                put(JsonConfigKey.CLIENT_ID, "my-client")
+                put(JsonConfigKey.DISCOVERY_ENDPOINT, "https://auth.pingone.ca/env-id/as/.well-known/openid-configuration")
+                put(JsonConfigKey.REDIRECT_URI, "myapp://oauth2redirect")
+            })
+        }
+        assertTrue(OidcClient(json).isFailure)
+    }
+
+    @Test
+    fun `createOidcClient succeeds with scopes as JsonArray`() {
+        val json = buildJsonObject {
+            put(JsonConfigKey.OIDC, buildJsonObject {
+                put(JsonConfigKey.CLIENT_ID, "my-client")
+                put(JsonConfigKey.DISCOVERY_ENDPOINT, "https://auth.pingone.ca/env-id/as/.well-known/openid-configuration")
+                put(JsonConfigKey.SCOPES, buildJsonArray {
+                    add("openid")
+                    add("profile")
+                })
+                put(JsonConfigKey.REDIRECT_URI, "myapp://oauth2redirect")
+            })
+        }
+        assertTrue(OidcClient(json).isSuccess)
+    }
+
+    @Test
+    fun `createOidcClient succeeds with all optional OIDC fields`() {
+        val json = buildJsonObject {
+            put(JsonConfigKey.OIDC, buildJsonObject {
+                put(JsonConfigKey.CLIENT_ID, "my-client")
+                put(JsonConfigKey.DISCOVERY_ENDPOINT, "https://auth.pingone.ca/env-id/as/.well-known/openid-configuration")
+                put(JsonConfigKey.SCOPES, "openid")
+                put(JsonConfigKey.REDIRECT_URI, "myapp://oauth2redirect")
+                put(JsonConfigKey.PAR, true)
+                put(JsonConfigKey.LOGIN_HINT, "user@example.com")
+                put(JsonConfigKey.STATE, "custom-state")
+                put(JsonConfigKey.NONCE, "custom-nonce")
+                put(JsonConfigKey.DISPLAY, "page")
+                put(JsonConfigKey.PROMPT, "login")
+                put(JsonConfigKey.UI_LOCALES, "en-US")
+                put(JsonConfigKey.ACR_VALUES, "Level3")
+                put(JsonConfigKey.SIGN_OUT_REDIRECT_URI, "myapp://logout")
+                put(JsonConfigKey.REFRESH_THRESHOLD, 60L)
+                put(JsonConfigKey.ADDITIONAL_PARAMETERS, buildJsonObject {
+                    put("custom_param", "custom_value")
+                })
+            })
+        }
+        assertTrue(OidcClient(json).isSuccess)
+    }
 
     @Test
     fun `token with PAR enabled fails when PAR endpoint returns an error`() =

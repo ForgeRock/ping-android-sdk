@@ -1,0 +1,8 @@
+{
+  "oidc": {
+    "clientId": "AndroidTest",
+    "discoveryEndpoint": "https://openam-sdks.forgeblocks.com/am/oauth2/alpha/.well-known/openid-configuration",
+    "scopes": ["openid", "profile", "email"],
+    "redirectUri": "frauth://oauth2redirect"
+  }
+}

@@ -61,11 +61,16 @@ import com.pingidentity.samples.pingsampleapp.davinci.collector.DaVinciContinueN
 
 @Composable
 fun DaVinci(
-    daVinciViewModel: DaVinciViewModel = viewModel<DaVinciViewModel>(),
+    verificationUri: String? = null,
     onSuccess: (() -> Unit)? = null,
     onLogoClick: (() -> Unit)? = null,
     onBack: (() -> Unit)? = null,
 ) {
+    val daVinciViewModel: DaVinciViewModel = if (verificationUri != null)
+        viewModel(factory = DaVinciViewModel.factory(verificationUri))
+    else
+        viewModel()
+
     BackHandler(enabled = onBack != null) {
         onBack?.invoke()
     }
