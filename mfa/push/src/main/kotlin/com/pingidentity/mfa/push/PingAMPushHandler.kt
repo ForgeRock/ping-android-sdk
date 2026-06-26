@@ -29,6 +29,7 @@ import com.pingidentity.mfa.push.PushConstants.KEY_TIME_INTERVAL
 import com.pingidentity.mfa.push.PushConstants.KEY_TTL
 import com.pingidentity.mfa.push.PushConstants.KEY_USERNAME
 import com.pingidentity.network.HttpClient
+import kotlin.coroutines.cancellation.CancellationException
 
 /**
  * This class processes push notifications from PingAM service, handling the parsing of JWT messages,
@@ -292,7 +293,7 @@ internal class PingAMPushHandler(
                 approve = true,
                 challengeResponse = challengeResponse
             )
-        }
+        }.onFailure { if (it is CancellationException) throw it }
     }
     
     /**
@@ -318,7 +319,7 @@ internal class PingAMPushHandler(
                 approve = false,
                 challengeResponse = null // No challenge response needed for denial
             )
-        }
+        }.onFailure { if (it is CancellationException) throw it }
     }
 
     /**
