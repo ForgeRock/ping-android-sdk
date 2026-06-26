@@ -60,5 +60,9 @@ dependencies {
     androidTestImplementation(libs.androidx.test.runner)
     androidTestImplementation(project(":foundation:testrail"))
     androidTestImplementation(project(":protect"))
+    androidTestImplementation(project(":foundation:browser"))
     androidTestImplementation(libs.zxing.core)
+    androidTestImplementation(libs.ktor.client.core)
+    androidTestImplementation(libs.mockk)
+    androidTestImplementation(libs.mockk.android)
 }
