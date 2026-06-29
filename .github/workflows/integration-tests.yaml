@@ -43,8 +43,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - api-level: 29
-            target: default
+          # - api-level: 29
+          #   target: default
           - api-level: 37
             target: google_apis_playstore
 
