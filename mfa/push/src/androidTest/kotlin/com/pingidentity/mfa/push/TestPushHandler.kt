@@ -132,18 +132,18 @@ class TestPushHandler(private val logger: Logger = Logger.logger) : PushHandler 
         credential: PushCredential,
         notification: PushNotification,
         params: Map<String, Any>
-    ): Boolean {
+    ): Result<Boolean> {
         // For testing purposes, always return success
-        return true
+        return Result.success(true)
     }
     
     override suspend fun sendDenial(
         credential: PushCredential,
         notification: PushNotification,
         params: Map<String, Any>
-    ): Boolean {
+    ): Result<Boolean> {
         // For testing purposes, always return success
-        return true
+        return Result.success(true)
     }
     
     override suspend fun setDeviceToken(
