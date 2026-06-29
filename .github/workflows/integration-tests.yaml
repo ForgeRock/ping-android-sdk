@@ -92,18 +92,25 @@ jobs:
           fi
           echo "SDKMANAGER=$SDKMANAGER" >> $GITHUB_ENV
 
+      # Accept all SDK licenses up front (required for preview packages)
+      - name: Accept Android SDK licenses
+        if: matrix.api-level == 37
+        run: yes | $SDKMANAGER --licenses || true
+
       # List available Android 37 packages to identify the correct system image name
       - name: List available Android 37 packages
         if: matrix.api-level == 37
         run: |
           $SDKMANAGER --channel=3 --list 2>/dev/null | grep -i "android-37" || true
 
-      # Install API 37 system image from the canary channel (not yet in stable sdkmanager)
+      # Install API 37 system image and platform from the canary channel
+      # Also installs platforms;android-37 (without .0) since android-emulator-runner looks for that name internally
       - name: Install Android 37 system image
         if: matrix.api-level == 37
         run: |
-          $SDKMANAGER --channel=3 "system-images;android-37.0;google_apis_playstore_ps16k;x86_64"
-          $SDKMANAGER --channel=3 "platforms;android-37.0"
+          yes | $SDKMANAGER --channel=3 "system-images;android-37.0;google_apis_playstore_ps16k;x86_64"
+          yes | $SDKMANAGER --channel=3 "platforms;android-37.0"
+          yes | $SDKMANAGER --channel=3 "platforms;android-37" || true
 
       - name: AVD cache
         uses: actions/cache@v4
