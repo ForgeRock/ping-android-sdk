@@ -47,7 +47,7 @@ jobs:
           #   target: default
           #   arch: x86_64
           #   channel: stable
-          - api-level: 37
+          - api-level: "37.0"
             target: google_apis_playstore
             arch: x86_64
             channel: canary
@@ -73,6 +73,24 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
           cache: 'gradle'
+
+      # Pre-install Android 37 platform and build tools via canary channel.
+      # android-emulator-runner installs these without --channel flag (stable only),
+      # so they must already be present before the action runs.
+      - name: Pre-install Android 37 SDK components
+        if: matrix.api-level == '37.0'
+        run: |
+          SDKMANAGER=$(find $ANDROID_SDK_ROOT/cmdline-tools -name sdkmanager -type f 2>/dev/null | sort | tail -1)
+          if [ -z "$SDKMANAGER" ]; then
+            echo "sdkmanager not found, installing cmdline-tools..."
+            wget -q https://dl.google.com/android/repository/commandlinetools-linux-14742923_latest.zip -O /tmp/cmdline-tools.zip
+            unzip -q /tmp/cmdline-tools.zip -d /tmp/cmdline-tools
+            mkdir -p $ANDROID_SDK_ROOT/cmdline-tools/latest
+            mv /tmp/cmdline-tools/cmdline-tools/* $ANDROID_SDK_ROOT/cmdline-tools/latest/
+            SDKMANAGER=$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager
+          fi
+          yes | $SDKMANAGER --licenses > /dev/null || true
+          yes | $SDKMANAGER --channel=3 "platforms;android-37.0" "build-tools;37.0.0" > /dev/null
 
       # Enable KVM for the emulators
       - name: Enable KVM
