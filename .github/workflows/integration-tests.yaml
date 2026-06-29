@@ -45,8 +45,12 @@ jobs:
         include:
           # - api-level: 29
           #   target: default
+          #   arch: x86_64
+          #   channel: stable
           - api-level: 37
             target: google_apis_playstore
+            arch: x86_64
+            channel: canary
 
     steps:
       # Clone the repo
@@ -77,40 +81,6 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
 
-      # Ensure sdkmanager is available, install cmdline-tools if missing
-      - name: Ensure sdkmanager is available
-        if: matrix.api-level == 37
-        run: |
-          SDKMANAGER=$(find $ANDROID_SDK_ROOT/cmdline-tools -name sdkmanager -type f 2>/dev/null | sort | tail -1)
-          if [ -z "$SDKMANAGER" ]; then
-            echo "sdkmanager not found, installing cmdline-tools..."
-            wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O /tmp/cmdline-tools.zip
-            unzip -q /tmp/cmdline-tools.zip -d /tmp/cmdline-tools
-            mkdir -p $ANDROID_SDK_ROOT/cmdline-tools/latest
-            mv /tmp/cmdline-tools/cmdline-tools/* $ANDROID_SDK_ROOT/cmdline-tools/latest/
-            SDKMANAGER=$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager
-          fi
-          echo "SDKMANAGER=$SDKMANAGER" >> $GITHUB_ENV
-
-      # Accept all SDK licenses up front (required for preview packages)
-      - name: Accept Android SDK licenses
-        if: matrix.api-level == 37
-        run: yes | $SDKMANAGER --licenses || true
-
-      # List available Android 37 packages to identify the correct system image name
-      - name: List available Android 37 packages
-        if: matrix.api-level == 37
-        run: |
-          $SDKMANAGER --channel=3 --list 2>/dev/null | grep -i "android-37" || true
-
-      # Install API 37 system image and platform from the canary channel
-      # Also installs platforms;android-37 (without .0) since android-emulator-runner looks for that name internally
-      - name: Install Android 37 system image
-        if: matrix.api-level == 37
-        run: |
-          yes | $SDKMANAGER --channel=3 "system-images;android-37.0;google_apis_playstore_ps16k;x86_64"
-          yes | $SDKMANAGER --channel=3 "platforms;android-37.0"
-          yes | $SDKMANAGER --channel=3 "platforms;android-37" || true
 
       - name: AVD cache
         uses: actions/cache@v4
@@ -127,6 +97,8 @@ jobs:
         with:
           api-level: ${{ matrix.api-level }}
           target: ${{ matrix.target }}
+          arch: ${{ matrix.arch }}
+          channel: ${{ matrix.channel }}
           force-avd-creation: false
           emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: true
@@ -160,6 +132,8 @@ jobs:
         with:
           api-level: ${{ matrix.api-level }}
           target: ${{ matrix.target }}
+          arch: ${{ matrix.arch }}
+          channel: ${{ matrix.channel }}
           force-avd-creation: false
           emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: true
