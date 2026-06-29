@@ -42,7 +42,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        api-level: [29, 37]
+        include:
+          - api-level: 29
+            target: default
+          - api-level: 37
+            target: google_apis
 
     steps:
       # Clone the repo
@@ -73,6 +77,13 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
 
+      # Install API 37 system image from the beta channel (not yet in stable sdkmanager)
+      - name: Install Android 37 system image
+        if: matrix.api-level == 37
+        run: |
+          sdkmanager --channel=3 "system-images;android-37;google_apis;x86_64"
+          sdkmanager --channel=3 "platforms;android-37"
+
       - name: AVD cache
         uses: actions/cache@v4
         id: avd-cache
@@ -80,13 +91,14 @@ jobs:
           path: |
             ~/.android/avd/*
             ~/.android/adb*
-          key: avd-${{ matrix.api-level }}
+          key: avd-${{ matrix.api-level }}-${{ matrix.target }}
 
       - name: create AVD and generate snapshot for caching
         if: steps.avd-cache.outputs.cache-hit != 'true'
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: ${{ matrix.api-level }}
+          target: ${{ matrix.target }}
           force-avd-creation: false
           emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: true
@@ -119,6 +131,7 @@ jobs:
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: ${{ matrix.api-level }}
+          target: ${{ matrix.target }}
           force-avd-creation: false
           emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: true
