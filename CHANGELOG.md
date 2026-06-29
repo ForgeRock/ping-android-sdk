@@ -1,4 +1,7 @@
 ## [Unreleased]
+#### Added
+- Raised `compileSdk` and `targetSdk` to 37 (Android 17 support) [SDKS-5191]
+
 #### Fixed
 - Fixed OATH and Push URI parsers to propagate typed `InvalidUriException` for structural URI parse errors [SDKS-5074]
 
