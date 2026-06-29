@@ -81,8 +81,9 @@ jobs:
       - name: Install Android 37 system image
         if: matrix.api-level == 37
         run: |
-          $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --channel=3 "system-images;android-37;default;x86_64"
-          $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --channel=3 "platforms;android-37"
+          SDKMANAGER=$(find $ANDROID_SDK_ROOT/cmdline-tools -name sdkmanager -type f 2>/dev/null | sort | tail -1)
+          $SDKMANAGER --channel=3 "system-images;android-37;default;x86_64"
+          $SDKMANAGER --channel=3 "platforms;android-37"
 
       - name: AVD cache
         uses: actions/cache@v4
