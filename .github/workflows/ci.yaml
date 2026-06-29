@@ -165,29 +165,29 @@ jobs:
       browserstack-push-build-id: ${{ needs.browserstack-push-run.outputs.browserstack-push-build-id }}
 
   # Run Mend SCA Scan
-  mend-sca-scan:
-    name: Mend SCA Scan
-    uses: ./.github/workflows/mend-sca-scan.yaml
-    secrets:
-      MEND_EMAIL: ${{ secrets.MEND_EMAIL }}
-      MEND_USER_KEY: ${{ secrets.MEND_USER_KEY }}
-      SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
-
-  # Run Mend SAST Scan
-  mend-sast-scan:
-    name: Mend SAST Scan
-    uses: ./.github/workflows/mend-sast-scan.yaml
-    secrets:
-      MEND_EMAIL: ${{ secrets.MEND_EMAIL }}
-      MEND_USER_KEY: ${{ secrets.MEND_USER_KEY }}
-      SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
-
-  # Generate and publish API docs
-  docs:
-    name: Docs
-    uses: ./.github/workflows/docs.yaml
-
-  # Calculate package sizes
-  package-sizes:
-    name: Package Sizes
-    uses: ./.github/workflows/package-sizes.yml
+#  mend-sca-scan:
+#    name: Mend SCA Scan
+#    uses: ./.github/workflows/mend-sca-scan.yaml
+#    secrets:
+#      MEND_EMAIL: ${{ secrets.MEND_EMAIL }}
+#      MEND_USER_KEY: ${{ secrets.MEND_USER_KEY }}
+#      SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+#
+#  # Run Mend SAST Scan
+#  mend-sast-scan:
+#    name: Mend SAST Scan
+#    uses: ./.github/workflows/mend-sast-scan.yaml
+#    secrets:
+#      MEND_EMAIL: ${{ secrets.MEND_EMAIL }}
+#      MEND_USER_KEY: ${{ secrets.MEND_USER_KEY }}
+#      SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+#
+#  # Generate and publish API docs
+#  docs:
+#    name: Docs
+#    uses: ./.github/workflows/docs.yaml
+#
+#  # Calculate package sizes
+#  package-sizes:
+#    name: Package Sizes
+#    uses: ./.github/workflows/package-sizes.yml

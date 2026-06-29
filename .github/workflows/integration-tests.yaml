@@ -46,7 +46,7 @@ jobs:
           - api-level: 29
             target: default
           - api-level: 37
-            target: google_apis
+            target: default
 
     steps:
       # Clone the repo
@@ -77,11 +77,11 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
 
-      # Install API 37 system image from the beta channel (not yet in stable sdkmanager)
+      # Install API 37 system image from the canary channel (not yet in stable sdkmanager)
       - name: Install Android 37 system image
         if: matrix.api-level == 37
         run: |
-          $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --channel=3 "system-images;android-37;google_apis;x86_64"
+          $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --channel=3 "system-images;android-37;default;x86_64"
           $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --channel=3 "platforms;android-37"
 
       - name: AVD cache
