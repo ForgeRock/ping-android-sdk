@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2025 - 2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -12,7 +12,6 @@ import com.pingidentity.network.HttpClient
 import com.pingidentity.network.HttpClientConfig
 import com.pingidentity.network.HttpRequest
 import io.ktor.client.engine.cio.CIO
-import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.api.createClientPlugin
 import io.ktor.client.plugins.logging.LogLevel
 import io.ktor.client.plugins.logging.Logging
@@ -36,6 +35,10 @@ fun HttpClient(config: HttpClientConfig.() -> Unit): HttpClient {
     val ktorClient = KtorClient(CIO) {
         followRedirects = false
 
+        engine {
+            requestTimeout = configure.timeout.toLong(DurationUnit.MILLISECONDS)
+        }
+
         if (configure.logger !is None) {
             install(Logging) {
                 this.logger = object : io.ktor.client.plugins.logging.Logger {
@@ -45,10 +48,6 @@ fun HttpClient(config: HttpClientConfig.() -> Unit): HttpClient {
                 }
                 level = LogLevel.ALL
             }
-        }
-
-        install(HttpTimeout) {
-            requestTimeoutMillis = configure.timeout.toLong(DurationUnit.MILLISECONDS)
         }
 
         for (interceptor in configure.requestInterceptors) {

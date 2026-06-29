@@ -1,6 +1,7 @@
 ## [Unreleased]
 #### Fixed
 - Fixed OATH and Push URI parsers to propagate typed `InvalidUriException` for structural URI parse errors [SDKS-5074]
+- Fixed Ktor CIO engine dropping repeated `Set-Cookie` headers with mixed casing (KTOR-8614 workaround) [SDKS-4742]
 
 ## [2.0.1]
 
