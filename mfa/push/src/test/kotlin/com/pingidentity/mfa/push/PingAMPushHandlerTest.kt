@@ -196,9 +196,9 @@ class PingAMPushHandlerTest {
             testNotification.copy(pushType = PushType.CHALLENGE),
             mapOf("challengeResponse" to "test-response")
         )
-        
+
         // Verify result
-        assertTrue(result)
+        assertTrue(result.getOrThrow())
         
         // Verify responder was called with correct parameters
         coVerify { 
@@ -229,9 +229,9 @@ class PingAMPushHandlerTest {
             testNotification,
             emptyMap()
         )
-        
+
         // Verify result
-        assertTrue(result)
+        assertTrue(result.getOrThrow())
         
         // Verify responder was called with correct parameters
         coVerify { 
@@ -535,9 +535,9 @@ class PingAMPushHandlerTest {
             biometricNotification,
             mapOf("authenticationMethod" to "fingerprint")
         )
-        
+
         // Verify result
-        assertTrue(result)
+        assertTrue(result.getOrThrow())
         
         // Verify responder was called with null challengeResponse for biometric
         coVerify { 
@@ -561,9 +561,9 @@ class PingAMPushHandlerTest {
             challengeNotification,
             emptyMap()
         )
-        
+
         // Verify result is false (because challengeResponse is required)
-        assertFalse(result)
+        assertFalse(result.getOrThrow())
         
         // Verify responder was NOT called
         coVerify(exactly = 0) { 
@@ -592,9 +592,9 @@ class PingAMPushHandlerTest {
             defaultNotification,
             emptyMap()
         )
-        
+
         // Verify result
-        assertTrue(result)
+        assertTrue(result.getOrThrow())
         
         // Verify responder was called with null challengeResponse for default type
         coVerify { 
