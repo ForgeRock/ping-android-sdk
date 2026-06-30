@@ -254,7 +254,7 @@ class PingAMPushResponder(
                 val body = response.body()
                 val message = runCatching {
                     Json.parseToJsonElement(body).jsonObject["message"]?.jsonPrimitive?.content
-                }.getOrNull() ?: body
+                }.getOrNull() ?: "Number challenge predicate not met"
                 throw PushNumberChallengeException(response.status, message)
             } else {
                 throw ApiException(response.status, response.body())

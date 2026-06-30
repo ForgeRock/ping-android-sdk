@@ -809,6 +809,56 @@ class PingAMPushResponderTest {
     }
 
     @Test
+    fun `test authenticate 400 on number challenge with empty body uses default message`() = runTest {
+        val mockEngine = MockEngine.Companion { _ ->
+            respond(
+                content = "",
+                status = HttpStatusCode.BadRequest,
+                headers = headersOf("Content-Type", "application/json")
+            )
+        }
+        val httpClient = KtorHttpClient(HttpClient(mockEngine))
+        val pushResponder = PingAMPushResponder(httpClient, mockLogger)
+
+        val notificationWithNumberChallenge = testNotification.copy(numbersChallenge = "23 45 67")
+
+        try {
+            pushResponder.authenticate(testCredential, notificationWithNumberChallenge, true, "45")
+            Assert.fail("Expected PushNumberChallengeException to be thrown")
+        } catch (e: PushNumberChallengeException) {
+            Assert.assertEquals(400, e.status)
+            Assert.assertEquals("Number challenge predicate not met", e.message)
+        }
+
+        httpClient.close()
+    }
+
+    @Test
+    fun `test authenticate 400 on number challenge with body missing message field uses default message`() = runTest {
+        val mockEngine = MockEngine.Companion { _ ->
+            respond(
+                content = """{"code":400,"reason":"Bad Request"}""",
+                status = HttpStatusCode.BadRequest,
+                headers = headersOf("Content-Type", "application/json")
+            )
+        }
+        val httpClient = KtorHttpClient(HttpClient(mockEngine))
+        val pushResponder = PingAMPushResponder(httpClient, mockLogger)
+
+        val notificationWithNumberChallenge = testNotification.copy(numbersChallenge = "23 45 67")
+
+        try {
+            pushResponder.authenticate(testCredential, notificationWithNumberChallenge, true, "45")
+            Assert.fail("Expected PushNumberChallengeException to be thrown")
+        } catch (e: PushNumberChallengeException) {
+            Assert.assertEquals(400, e.status)
+            Assert.assertEquals("Number challenge predicate not met", e.message)
+        }
+
+        httpClient.close()
+    }
+
+    @Test
     fun `test authenticate 400 without number challenge returns false`() = runTest {
         val mockEngine = MockEngine.Companion { _ ->
             respondError(HttpStatusCode.BadRequest)
