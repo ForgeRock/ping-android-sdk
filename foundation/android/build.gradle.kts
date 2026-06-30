@@ -19,6 +19,10 @@ android {
     namespace = "com.pingidentity.android"
 }
 
+tasks.withType<com.android.build.gradle.tasks.factory.AndroidUnitTest>().configureEach {
+    failOnNoDiscoveredTests = false
+}
+
 dependencies {
     implementation(libs.androidx.startup.runtime)
 }

@@ -19,6 +19,10 @@ android {
     namespace = "com.pingidentity.device.binding.ui"
 }
 
+tasks.withType<com.android.build.gradle.tasks.factory.AndroidUnitTest>().configureEach {
+    failOnNoDiscoveredTests = false
+}
+
 dependencies {
     val composeBom = platform(libs.androidx.compose.bom)
     implementation(composeBom)
