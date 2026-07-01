@@ -1,4 +1,8 @@
 ## [Unreleased]
+#### Added
+- Added new `recognize` module with Journey support for PingOne Recognize biometric enrollment (`PingOneRecognizeEnrollCallback`) and authentication (`PingOneRecognizeAuthenticateCallback`) [MOB-3655]
+- `PingOneRecognizeAuthenticateCallback` now handles a server-supplied `clientState` during authentication: checks enrollment via `validateUserAndDeviceActive()` and calls `enroll(clientState)` if the user is not yet enrolled, or `authenticate()` if they are [P1RECMOB-3678]
+
 #### Fixed
 - Fixed OATH and Push URI parsers to propagate typed `InvalidUriException` for structural URI parse errors [SDKS-5074]
 

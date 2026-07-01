@@ -89,6 +89,7 @@ dependencies {
 
     implementation(project(":davinci"))
     implementation(project(":journey"))
+    implementation(project(":recognize"))
     //Protect
     implementation(project(":protect"))
 
