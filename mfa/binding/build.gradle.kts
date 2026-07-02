@@ -47,7 +47,6 @@ dependencies {
     testImplementation(project(":mfa:binding-ui"))
     testImplementation(libs.bcpkix.jdk18on)
 
-    androidTestImplementation(libs.kotlin.test.junit)
     androidTestImplementation(libs.kotlinx.coroutines.test)
     androidTestImplementation(libs.kotlin.test.junit)
     androidTestImplementation(libs.androidx.junit)
