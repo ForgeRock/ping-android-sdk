@@ -42,7 +42,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        api-level: [29]
+        include:
+          - api-level: 29
+            target: default
+          - api-level: 37.0
+            target: google_apis_playstore_ps16k
 
     steps:
       # Clone the repo
