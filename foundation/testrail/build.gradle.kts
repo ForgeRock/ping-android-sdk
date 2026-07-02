@@ -7,7 +7,6 @@
 
 plugins {
     id("com.pingidentity.convention.android.library")
-    alias(libs.plugins.kotlinAndroid)
     alias(libs.plugins.kotlinSerialization)
 }
 

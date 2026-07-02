@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 - 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2024 - 2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -29,9 +29,11 @@ class MavenCentralPublishConventionPlugin : Plugin<Project> {
         with(target) {
             with(pluginManager) {
                 apply("maven-publish")
-                apply("kotlin-android")
                 apply("signing")
                 apply("org.jetbrains.dokka")
+
+                // Do NOT apply kotlin-android here.
+                // AGP 9 provides built-in Kotlin support for Android modules.
             }
 
             val javadocJar = tasks.register("javadocJar", Jar::class.java) {
@@ -40,91 +42,41 @@ class MavenCentralPublishConventionPlugin : Plugin<Project> {
                 from(project.layout.buildDirectory.dir("dokka/html"))
             }
 
-            //The source only includes the README.md, delete this if we want to include the whole source
+            // The source only includes the README.md.
+            // Delete this if we want to include the whole source.
             val sourcesJar = tasks.register<Jar>("sourcesJar") {
                 archiveClassifier.set("sources")
                 from("README.md")
             }
 
             extensions.configure<DokkaExtension> {
-                this.dokkaPublications.named("html") {
-                    this.suppressInheritedMembers.set(true)
-                    this.failOnWarning.set(true)
+                dokkaPublications.named("html") {
+                    suppressInheritedMembers.set(true)
+                    failOnWarning.set(true)
                 }
 
-                this.dokkaSourceSets.named("main") {
+                dokkaSourceSets.configureEach {
                     // Only document public and protected members
-                    this.documentedVisibilities(
+                    documentedVisibilities(
                         VisibilityModifier.Public,
                         VisibilityModifier.Protected
                     )
-                    this.sourceLink {
-                        this.localDirectory.set(project.file("src/main/kotlin"))
-                        this.remoteUrl("https://github.com/ForgeRock/ping-android-sdk/tree/master/${project.name}")
-                        this.remoteLineSuffix.set("#L")
+
+                    sourceLink {
+                        localDirectory.set(project.file("src/main/kotlin"))
+                        remoteUrl("https://github.com/ForgeRock/ping-android-sdk/tree/master/${project.name}")
+                        remoteLineSuffix.set("#L")
                     }
                 }
 
-                this.pluginsConfiguration.named("html", DokkaHtmlPluginParameters::class.java) {
-                    this.footerMessage.set("Ping Identity")
-                    this.homepageLink.set("https://github.com/ForgeRock/ping-android-sdk/")
+                pluginsConfiguration.named("html", DokkaHtmlPluginParameters::class.java) {
+                    footerMessage.set("Ping Identity")
+                    homepageLink.set("https://github.com/ForgeRock/ping-android-sdk/")
                 }
             }
 
-            extensions.configure<PublishingExtension> {
-
-                publications {
-                    create<MavenPublication>("release") {
-
-                        pom {
-                            groupId = rootProject.group.toString()
-                            artifactId = project.name
-                            name.set(project.name)
-                            version = rootProject.version.toString()
-
-                            val pom = this
-                            project.afterEvaluate {
-                                tasks.named("generateMetadataFileForReleasePublication") {
-                                    dependsOn(tasks.named("sourcesJar"))
-                                }
-
-                                artifact(javadocJar)
-
-                                //This to overwrite the default source artifact
-                                artifacts {
-                                    add("archives", sourcesJar)
-                                }
-
-                                pom.description.set(project.description)
-                                from(components.getByName("release"))
-                            }
-                            url.set("https://github.com/ForgeRock/ping-android-sdk")
-                            licenses {
-                                license {
-                                    name.set("MIT")
-                                    url.set("https://opensource.org/licenses/MIT")
-                                }
-                                developers {
-                                    developer {
-                                        id.set("andy.witrisna")
-                                        name.set("Andy Witrisna")
-                                        email.set("andy.witrisna@pingidentity.com")
-                                    }
-                                    developer {
-                                        id.set("stoyan.petrov")
-                                        name.set("Stoyan Petrov")
-                                        email.set("stoyan.petrov@pingidentity.com")
-                                    }
-                                }
-                                scm {
-                                    connection.set("https://github.com/ForgeRock/ping-android-sdk.git")
-                                    developerConnection.set("https://github.com/ForgeRock/ping-android-sdk.git")
-                                    url.set("https://github.com/ForgeRock/ping-android-sdk.git")
-                                }
-                            }
-                        }
-                    }
-                }
+            pluginManager.withPlugin("com.android.library") {
+                configureMavenPublishing(javadocJar, sourcesJar)
             }
 
             extensions.configure<SigningExtension> {
@@ -133,15 +85,73 @@ class MavenCentralPublishConventionPlugin : Plugin<Project> {
                     System.getenv("OSS_SIGNING_KEY"),
                     System.getenv("OSS_SIGNING_PASSWORD")
                 )
+
                 val publishing = extensions.getByType<PublishingExtension>()
                 sign(publishing.publications)
             }
-
 
             // https://github.com/gradle/gradle/issues/26091
             tasks.withType<AbstractPublishToMaven>().configureEach {
                 val signingTasks = tasks.withType<Sign>()
                 mustRunAfter(signingTasks)
+            }
+        }
+    }
+
+    private fun Project.configureMavenPublishing(
+        javadocJar: org.gradle.api.tasks.TaskProvider<Jar>,
+        sourcesJar: org.gradle.api.tasks.TaskProvider<Jar>
+    ) {
+        extensions.configure<PublishingExtension> {
+            publications {
+                create<MavenPublication>("release") {
+                    groupId = rootProject.group.toString()
+                    artifactId = project.name
+                    version = rootProject.version.toString()
+
+                    artifact(javadocJar)
+                    artifact(sourcesJar)
+
+                    pom {
+                        name.set(project.name)
+                        description.set(project.description)
+                        url.set("https://github.com/ForgeRock/ping-android-sdk")
+
+                        licenses {
+                            license {
+                                name.set("MIT")
+                                url.set("https://opensource.org/licenses/MIT")
+                            }
+                        }
+
+                        developers {
+                            developer {
+                                id.set("andy.witrisna")
+                                name.set("Andy Witrisna")
+                                email.set("andy.witrisna@pingidentity.com")
+                            }
+                            developer {
+                                id.set("stoyan.petrov")
+                                name.set("Stoyan Petrov")
+                                email.set("stoyan.petrov@pingidentity.com")
+                            }
+                        }
+
+                        scm {
+                            connection.set("https://github.com/ForgeRock/ping-android-sdk.git")
+                            developerConnection.set("https://github.com/ForgeRock/ping-android-sdk.git")
+                            url.set("https://github.com/ForgeRock/ping-android-sdk.git")
+                        }
+                    }
+
+                    afterEvaluate {
+                        from(components.getByName("release"))
+
+                        tasks.named("generateMetadataFileForReleasePublication") {
+                            dependsOn(tasks.named("sourcesJar"))
+                        }
+                    }
+                }
             }
         }
     }

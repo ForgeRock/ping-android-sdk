@@ -12,18 +12,10 @@ plugins {
     id("com.pingidentity.convention.centralPublish")
     id("com.pingidentity.convention.jacoco")
     alias(libs.plugins.androidLibrary)
-    alias(libs.plugins.kotlinAndroid)
 }
 
 android {
     namespace = "com.pingidentity.browser"
-
-    unitTestVariants.all {
-        this.mergedFlavor.manifestPlaceholders["appRedirectUriScheme"] = "com.pingidentity.demo"
-    }
-    testVariants.all {
-        this.mergedFlavor.manifestPlaceholders["appRedirectUriScheme"] = "com.pingidentity.demo"
-    }
 }
 
 dependencies {
