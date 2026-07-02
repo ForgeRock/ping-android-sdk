@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2025-2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -75,7 +75,8 @@ data class PinPrompt(val title: String = "", val subtitle: String = "", var desc
  *
  * @see PinPrompt
  * @see PinCollectorDialog
- * @see com.pingidentity.device.binding.authenticator.AppPinAuthenticator
+ * @see PinPrompt
+ * @see PinCollectorDialog
  */
 suspend fun collectPin(activity: Activity, title: String, subtitle: String, description: String): CharArray {
     val prompt = PinPrompt(title, subtitle, description)

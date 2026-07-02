@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2025-2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -30,8 +30,8 @@ package com.pingidentity.device.binding
  * ```
  *
  * @see androidx.biometric.BiometricPrompt.PromptInfo
- * @see DeviceBindingCallback
- * @see DeviceSigningVerifierCallback
+ * @see com.pingidentity.device.binding.journey.DeviceBindingCallback
+ * @see com.pingidentity.device.binding.journey.DeviceSigningVerifierCallback
  *
  * @param title The primary title displayed prominently in authentication dialogs.
  *              Should be concise and clearly indicate the purpose of the authentication.

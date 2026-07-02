@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 - 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2024-2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -14,9 +14,8 @@ package com.pingidentity.orchestrate
 class SharedContext(val map: MutableMap<String, Any>) : MutableMap<String, Any> by map {
 
     /**
-     * Sets a value in the shared context.
-     * @param key The key for which the value is to be set.
-     * @param value The value to be set for the key.
+     * Sets a value in the shared context. The receiver String is the key,
+     * and [value] is the value to be set for that key.
      */
     infix fun String.to(value: Any) {
         this@SharedContext[this] = value

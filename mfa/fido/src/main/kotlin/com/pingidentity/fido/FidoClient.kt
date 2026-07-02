@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2025-2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -281,7 +281,7 @@ class FidoClient(private val config: FidoClientConfig) {
      * @param input The WebAuthn-compatible authentication options containing challenge,
      *             timeout, rpId, and optionally allowCredentials
      * @param block A customization function that allows modification of the request
-     *             options before authentication. The block receives a [Fido2AuthenticateCustomizer]
+     *             options before authentication. The block receives a [FidoAuthenticateCustomizer]
      *             with methods to customize both API types.
      * @return A [Result] containing the assertion response on success, or exception on failure.
      *         The response format is consistent regardless of underlying API used.

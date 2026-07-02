@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 - 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2024-2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -73,7 +73,7 @@ class DataStorePreferencesStorage<T : @Serializable Any>(
  *
  * @param T The type of the object to be stored. Must be serializable.
  * @param dataStore The DataStore instance to use for storing the preferences.
- * @param cacheable Whether the storage should cache the object in memory.
+ * @param cacheStrategy The caching strategy for the storage. Defaults to [CacheStrategy.NO_CACHE].
  *
  * @return A new Storage instance.
  */
