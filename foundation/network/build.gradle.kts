@@ -29,7 +29,7 @@ dependencies {
 
     implementation(libs.kotlinx.coroutines.core)
 
-    testImplementation(libs.kotlin.test)
+    testImplementation(libs.kotlin.test.junit)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.mockk)
     testImplementation(libs.ktor.client.mock)

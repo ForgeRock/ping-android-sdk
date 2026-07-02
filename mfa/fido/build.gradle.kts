@@ -33,7 +33,7 @@ dependencies {
     implementation(libs.androidx.startup.runtime)
 
     testImplementation(libs.play.services.fido)
-    testImplementation(libs.kotlin.test)
+    testImplementation(libs.kotlin.test.junit)
     testImplementation(libs.mockk)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.ktor.client.mock)

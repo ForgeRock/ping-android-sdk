@@ -3,7 +3,7 @@ coilSvg = "2.7.0"
 compileSdk = "37"
 targetSdk = "37"
 minSdk = "29"
-jvmTarget = "17"
+jvmTarget = "21"
 
 forgerockAuth = "4.8.4"
 activityCompose = "1.10.1"
@@ -33,7 +33,7 @@ androidx-test-runner = "1.7.0"
 androidx-credentials = "1.5.0"
 play-services-fido = "21.2.0"
 play-services-auth = "1.5.0"
-robolectric = "4.16"
+robolectric = "4.16.1"
 composeBom = "2025.08.01"
 activity = "1.10.1"
 mockk = "1.14.5"
@@ -97,6 +97,7 @@ coil-svg = { module = "io.coil-kt:coil-svg", version.ref = "coilSvg" }
 forgerock-auth = { module = "org.forgerock:forgerock-auth", version.ref = "forgerockAuth" }
 forgerock-authenticator = { module = "org.forgerock:forgerock-authenticator", version.ref = "forgerockAuth" }
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
+kotlin-test-junit = { module = "org.jetbrains.kotlin:kotlin-test-junit", version.ref = "kotlin" }
 compose-ui = { module = "androidx.compose.ui:ui", version.ref = "compose" }
 compose-foundation = { module = "androidx.compose.foundation:foundation", version.ref = "compose" }
 compose-material3 = { module = "androidx.compose.material3:material3", version.ref = "compose-material3" }

@@ -16,6 +16,9 @@ plugins {
 
 android {
     namespace = "com.pingidentity.android"
+    defaultConfig {
+        manifestPlaceholders["appRedirectUriScheme"] = "com.pingidentity.test"
+    }
 }
 
 tasks.withType<com.android.build.gradle.tasks.factory.AndroidUnitTest>().configureEach {

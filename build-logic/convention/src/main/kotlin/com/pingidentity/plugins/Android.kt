@@ -32,6 +32,8 @@ fun Project.configureKotlinAndroid(extension: CommonExtension) {
         }
 
         testOptions.apply {
+            // Robolectric 4.16.1 + Java 17: SDK 36 requires Java 21, so cap at 35.
+            targetSdk = 35
             unitTests.apply {
                 isIncludeAndroidResources = true
                 isReturnDefaultValues = true

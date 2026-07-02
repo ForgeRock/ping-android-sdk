@@ -17,6 +17,9 @@ plugins {
 
 android {
     namespace = "com.pingidentity.journey"
+    defaultConfig {
+        manifestPlaceholders["appRedirectUriScheme"] = "com.pingidentity.test"
+    }
 
     buildTypes {
         debug {
@@ -42,11 +45,12 @@ dependencies {
     implementation(project(":foundation:android"))
 
     testImplementation(project(":foundation:testrail"))
+    testImplementation(libs.androidx.core.ktx)
     implementation(libs.androidx.datastore)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.androidx.startup.runtime)
 
-    testImplementation(libs.kotlin.test)
+    testImplementation(libs.kotlin.test.junit)
     testImplementation(libs.mockk)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.robolectric)
@@ -69,5 +73,5 @@ dependencies {
     androidTestImplementation(libs.nimbus.jose.jwt)
     androidTestImplementation(libs.mockk)
     androidTestImplementation(libs.mockk.android)
-    androidTestImplementation(libs.kotlin.test)
+    androidTestImplementation(libs.kotlin.test.junit)
 }

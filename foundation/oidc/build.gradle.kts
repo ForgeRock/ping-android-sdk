@@ -17,6 +17,10 @@ plugins {
 
 android {
     namespace = "com.pingidentity.oidc"
+
+    defaultConfig {
+        manifestPlaceholders["appRedirectUriScheme"] = "com.pingidentity.test"
+    }
 }
 
 dependencies {
@@ -39,7 +43,7 @@ dependencies {
     implementation(libs.androidx.activity)
 
     testImplementation(libs.androidx.junit.ktx)
-    testImplementation(libs.kotlin.test)
+    testImplementation(libs.kotlin.test.junit)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.mockk)
     testImplementation(libs.ktor.client.mock)

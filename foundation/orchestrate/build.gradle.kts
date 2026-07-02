@@ -32,7 +32,7 @@ dependencies {
     implementation(libs.ktor.client.core)
 
     testImplementation(project(":foundation:testrail"))
-    testImplementation(libs.kotlin.test)
+    testImplementation(libs.kotlin.test.junit)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.ktor.client.mock)
     testImplementation(libs.mockk)

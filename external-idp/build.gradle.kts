@@ -16,6 +16,9 @@ plugins {
 
 android {
     namespace = "com.pingidentity.idp"
+    defaultConfig {
+        manifestPlaceholders["appRedirectUriScheme"] = "com.pingidentity.test"
+    }
 }
 
 dependencies {
@@ -35,7 +38,7 @@ dependencies {
     compileOnly(libs.googleid)
     compileOnly(libs.facebook.login)
 
-    testImplementation(libs.kotlin.test)
+    testImplementation(libs.kotlin.test.junit)
     testImplementation(libs.mockk)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.ktor.client.mock)

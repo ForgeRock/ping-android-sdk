@@ -17,6 +17,9 @@ description = "DaVinci library"
 
 android {
     namespace = "com.pingidentity.davinci"
+    defaultConfig {
+        manifestPlaceholders["appRedirectUriScheme"] = "com.pingidentity.test"
+    }
 
     buildTypes {
         debug {
@@ -45,13 +48,13 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
 
     testImplementation(project(":foundation:testrail"))
-    testImplementation(libs.kotlin.test)
+    testImplementation(libs.kotlin.test.junit)
     testImplementation(libs.mockk)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.ktor.client.mock)
     testImplementation(libs.robolectric)
 
-    androidTestImplementation(libs.kotlin.test)
+    androidTestImplementation(libs.kotlin.test.junit)
     androidTestImplementation(libs.kotlinx.coroutines.test)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.test.runner)

@@ -36,7 +36,7 @@ dependencies {
     compileOnly(libs.play.services.location)
     compileOnly(libs.kotlinx.coroutines.play.services)
 
-    testImplementation(libs.kotlin.test)
+    testImplementation(libs.kotlin.test.junit)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.core.ktx)
     testImplementation(libs.mockk)

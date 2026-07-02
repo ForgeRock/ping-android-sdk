@@ -43,14 +43,14 @@ dependencies {
     implementation(libs.androidx.startup.runtime)
 
     testImplementation(libs.kotlinx.coroutines.test)
-    testImplementation(libs.kotlin.test)
+    testImplementation(libs.kotlin.test.junit)
     testImplementation(libs.mockk)
     testImplementation(libs.robolectric)
     testImplementation(project(":foundation:android"))
 
     androidTestImplementation(libs.mockwebserver)
     androidTestImplementation(libs.kotlinx.coroutines.test)
-    androidTestImplementation(libs.kotlin.test)
+    androidTestImplementation(libs.kotlin.test.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.test.runner)
 }

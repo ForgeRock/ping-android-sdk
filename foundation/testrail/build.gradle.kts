@@ -15,7 +15,7 @@ android {
 }
 
 dependencies {
-    implementation(libs.kotlin.test)
+    implementation(libs.kotlin.test.junit)
     implementation(libs.junit)
 
     implementation(libs.ktor.client.auth)
@@ -25,5 +25,5 @@ dependencies {
     implementation(libs.ktor.serialization.kotlinx.json)
     implementation(libs.kotlinx.serialization.json)
 
-    testImplementation(libs.kotlin.test)
+    testImplementation(libs.kotlin.test.junit)
 }
