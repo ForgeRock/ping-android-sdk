@@ -194,7 +194,7 @@ class PARJourneyE2ETest : BaseJourneyTest() {
      * Builds a [Journey] pointed at the AIC test server with an onRequest interceptor that
      * records every outgoing HTTP request into [recordedRequests].
      *
-     * [httpClient] is set at the workflow level so it is shared across all modules — including
+     * [HttpClient] is set at the workflow level so it is shared across all modules — including
      * the Oidc module's start hook that performs the PAR POST — ensuring all requests are captured.
      */
     private fun buildJourney(par: Boolean): Journey {

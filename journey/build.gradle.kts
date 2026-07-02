@@ -59,6 +59,7 @@ dependencies {
     testImplementation(project(":mfa:fido"))
 
     androidTestImplementation(libs.kotlinx.coroutines.test)
+    androidTestImplementation(libs.androidx.core.ktx)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.test.runner)
     androidTestImplementation(project(":foundation:testrail"))
