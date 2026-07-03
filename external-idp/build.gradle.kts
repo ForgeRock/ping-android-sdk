@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 - 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2024 - 2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -12,17 +12,12 @@ plugins {
     id("com.pingidentity.convention.centralPublish")
     id("com.pingidentity.convention.jacoco")
     alias(libs.plugins.androidLibrary)
-    alias(libs.plugins.kotlinAndroid)
 }
 
 android {
     namespace = "com.pingidentity.idp"
-
-    unitTestVariants.all {
-        this.mergedFlavor.manifestPlaceholders["appRedirectUriScheme"] = "com.pingidentity.demo"
-    }
-    testVariants.all {
-        this.mergedFlavor.manifestPlaceholders["appRedirectUriScheme"] = "com.pingidentity.demo"
+    defaultConfig {
+        manifestPlaceholders["appRedirectUriScheme"] = "com.pingidentity.test"
     }
 }
 
@@ -35,13 +30,15 @@ dependencies {
     implementation(project(":foundation:davinci-plugin"))
     implementation(project(":foundation:journey-plugin"))
     implementation(libs.androidx.startup.runtime)
+    implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.activity.ktx)
+    implementation(libs.kotlinx.coroutines.core)
 
     //Make it optional for developer
     compileOnly(libs.googleid)
     compileOnly(libs.facebook.login)
 
-    testImplementation(libs.kotlin.test)
-    testImplementation(libs.androidx.core.ktx)
+    testImplementation(libs.kotlin.test.junit)
     testImplementation(libs.mockk)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.ktor.client.mock)
