@@ -69,11 +69,10 @@ allprojects {
             force("org.bouncycastle:bcpkix-jdk18on:1.84")
             force("org.bouncycastle:bcutil-jdk18on:1.84")
 
-            // Due to vulnerability [WS-2022-0468] from dokka project.
-            // Targets build-toolchain classpath (Dokka/AGP); jackson is not a subproject dep.
-            force("com.fasterxml.jackson.module:jackson-module-kotlin:2.15.0")
-            force("com.fasterxml.jackson.dataformat:jackson-dataformat-xml:2.15.0")
-            force("com.fasterxml.jackson.core:jackson-databind:2.15.0")
+            // Updated to 2.18.8 per Mend SCA (CVE-2026-54512, CVE-2026-54513, CVE-2026-54514)
+            force("com.fasterxml.jackson.module:jackson-module-kotlin:2.18.8")
+            force("com.fasterxml.jackson.dataformat:jackson-dataformat-xml:2.18.8")
+            force("com.fasterxml.jackson.core:jackson-databind:2.18.8")
 
             // Force secure version of netty-codec to address security vulnerabilities
             // Used transitively by com.android.tools.emulator:proto (build toolchain only)
