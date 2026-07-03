@@ -45,16 +45,15 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # Re-enable this once API 37 is green, if needed.
-          # - api-level: 29
-          #   target: default
-          #   arch: x86_64
-          #   channel: stable
+           - api-level: 29
+             target: default
+             arch: x86_64
+             channel: stable
 
-          - api-level: CinnamonBun
-            target: google_apis_playstore_ps16k
-            arch: x86_64
-            channel: canary
+           - api-level: CinnamonBun
+             target: google_apis_playstore_ps16k
+             arch: x86_64
+             channel: canary
 
     steps:
       - name: Clone the repository
