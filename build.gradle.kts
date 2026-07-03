@@ -84,6 +84,12 @@ allprojects {
             // Force secure version of nimbus-jose-jwt to address security vulnerabilities
             // Used transitively by mfa:binding subproject; fixes CVE-2025-53864
             force("com.nimbusds:nimbus-jose-jwt:10.5")
+
+            // Force secure version of bouncy castle to address security vulnerabilities
+            // Fixes CVE-2025-14813 and CVE-2026-5598; targets build-toolchain classpath (lint-gradle)
+            force("org.bouncycastle:bcprov-jdk18on:1.84")
+            force("org.bouncycastle:bcpkix-jdk18on:1.84")
+            force("org.bouncycastle:bcutil-jdk18on:1.84")
         }
     }
 }
