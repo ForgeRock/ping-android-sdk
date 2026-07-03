@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2024 - 2025 Ping Identity Corporation. All rights reserved.
+# Copyright (c) 2024-2026 Ping Identity Corporation. All rights reserved.
 #
 # This software may be modified and distributed under the terms
 # of the MIT license. See the LICENSE file for details.
@@ -43,10 +43,12 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - api-level: 29
-            target: default
-          - api-level: 37.0
+#          - api-level: 29
+#            target: default
+          - api-level: CinnamonBun
             target: google_apis_playstore_ps16k
+            arch: x86_64
+            channel: canary
 
     steps:
       # Clone the repo
@@ -84,7 +86,8 @@ jobs:
           path: |
             ~/.android/avd/*
             ~/.android/adb*
-          key: avd-${{ matrix.api-level }}
+#          key: avd-${{ matrix.api-level }}
+          key: avd-${{ matrix.api-level }}-${{ matrix.target }}-${{ matrix.arch }}
 
       - name: create AVD and generate snapshot for caching
         if: steps.avd-cache.outputs.cache-hit != 'true'
