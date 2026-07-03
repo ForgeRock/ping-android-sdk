@@ -46,28 +46,6 @@ buildscript {
             force("org.bouncycastle:bcprov-jdk18on:1.84")
             force("org.bouncycastle:bcpkix-jdk18on:1.84")
             force("org.bouncycastle:bcutil-jdk18on:1.84")
-
-            // Due to vulnerability [WS-2022-0468] from dokka project.
-            // Targets build-toolchain classpath (Dokka/AGP); jackson is not a subproject dep.
-            force("com.fasterxml.jackson.module:jackson-module-kotlin:2.15.0")
-            force("com.fasterxml.jackson.dataformat:jackson-dataformat-xml:2.15.0")
-            force("com.fasterxml.jackson.core:jackson-databind:2.15.0")
-
-            // Force secure version of netty-codec to address security vulnerabilities
-            // Used transitively by com.android.tools.emulator:proto (build toolchain only)
-            // Updated to 4.1.125.Final per Mend SCA recommendation (Nov 2025)
-            force("io.netty:netty-codec:4.1.125.Final")
-            force("io.netty:netty-codec-http:4.1.125.Final")
-            force("io.netty:netty-codec-http2:4.1.125.Final")
-            force("io.netty:netty-all:4.1.125.Final")
-
-            // Force secure version of protobuf to address security vulnerabilities
-            // Used transitively by AGP/build toolchain
-            // Updated to 4.29.2 (latest stable) which fixes CVE-2024-7254 and all known CVEs
-            force("com.google.protobuf:protobuf-java:4.29.2")
-            force("com.google.protobuf:protobuf-kotlin:4.29.2")
-            force("com.google.protobuf:protobuf-javalite:4.29.2")
-            force("com.google.protobuf:protobuf-kotlin-lite:4.29.2")
         }
     }
 }
@@ -90,6 +68,28 @@ allprojects {
             force("org.bouncycastle:bcprov-jdk18on:1.84")
             force("org.bouncycastle:bcpkix-jdk18on:1.84")
             force("org.bouncycastle:bcutil-jdk18on:1.84")
+
+            // Due to vulnerability [WS-2022-0468] from dokka project.
+            // Targets build-toolchain classpath (Dokka/AGP); jackson is not a subproject dep.
+            force("com.fasterxml.jackson.module:jackson-module-kotlin:2.15.0")
+            force("com.fasterxml.jackson.dataformat:jackson-dataformat-xml:2.15.0")
+            force("com.fasterxml.jackson.core:jackson-databind:2.15.0")
+
+            // Force secure version of netty-codec to address security vulnerabilities
+            // Used transitively by com.android.tools.emulator:proto (build toolchain only)
+            // Updated to 4.1.125.Final per Mend SCA recommendation (Nov 2025)
+            force("io.netty:netty-codec:4.1.125.Final")
+            force("io.netty:netty-codec-http:4.1.125.Final")
+            force("io.netty:netty-codec-http2:4.1.125.Final")
+            force("io.netty:netty-all:4.1.125.Final")
+
+            // Force secure version of protobuf to address security vulnerabilities
+            // Used transitively by AGP/build toolchain
+            // Updated to 4.29.2 (latest stable) which fixes CVE-2024-7254 and all known CVEs
+            force("com.google.protobuf:protobuf-java:4.29.2")
+            force("com.google.protobuf:protobuf-kotlin:4.29.2")
+            force("com.google.protobuf:protobuf-javalite:4.29.2")
+            force("com.google.protobuf:protobuf-kotlin-lite:4.29.2")
         }
     }
 }
