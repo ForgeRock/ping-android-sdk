@@ -42,13 +42,6 @@ class MavenCentralPublishConventionPlugin : Plugin<Project> {
                 from(project.layout.buildDirectory.dir("dokka/html"))
             }
 
-            // The source only includes the README.md.
-            // Delete this if we want to include the whole source.
-            val sourcesJar = tasks.register<Jar>("sourcesJar") {
-                archiveClassifier.set("sources")
-                from("README.md")
-            }
-
             extensions.configure<DokkaExtension> {
                 dokkaPublications.named("html") {
                     suppressInheritedMembers.set(true)
@@ -76,7 +69,7 @@ class MavenCentralPublishConventionPlugin : Plugin<Project> {
             }
 
             pluginManager.withPlugin("com.android.library") {
-                configureMavenPublishing(javadocJar, sourcesJar)
+                configureMavenPublishing(javadocJar)
             }
 
             extensions.configure<SigningExtension> {
@@ -99,22 +92,20 @@ class MavenCentralPublishConventionPlugin : Plugin<Project> {
     }
 
     private fun Project.configureMavenPublishing(
-        javadocJar: org.gradle.api.tasks.TaskProvider<Jar>,
-        sourcesJar: org.gradle.api.tasks.TaskProvider<Jar>
+        javadocJar: org.gradle.api.tasks.TaskProvider<Jar>
     ) {
         extensions.configure<PublishingExtension> {
             publications {
                 create<MavenPublication>("release") {
+                    val publication = this
                     groupId = rootProject.group.toString()
                     artifactId = project.name
                     version = rootProject.version.toString()
 
                     artifact(javadocJar)
-                    artifact(sourcesJar)
 
                     pom {
                         name.set(project.name)
-                        description.set(project.description)
                         url.set("https://github.com/ForgeRock/ping-android-sdk")
 
                         licenses {
@@ -145,11 +136,8 @@ class MavenCentralPublishConventionPlugin : Plugin<Project> {
                     }
 
                     afterEvaluate {
-                        from(components.getByName("release"))
-
-                        tasks.named("generateMetadataFileForReleasePublication") {
-                            dependsOn(tasks.named("sourcesJar"))
-                        }
+                        publication.from(components.getByName("release"))
+                        publication.pom.description.set(project.description)
                     }
                 }
             }
