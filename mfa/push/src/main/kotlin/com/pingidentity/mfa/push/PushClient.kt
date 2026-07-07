@@ -15,7 +15,6 @@ import com.pingidentity.mfa.commons.policy.MfaPolicyEvaluator
 import com.pingidentity.mfa.push.storage.PushStorage
 import com.pingidentity.mfa.push.storage.SQLPushStorage
 import com.pingidentity.storage.sqlite.passphrase.KeyStorePassphraseProvider
-import com.pingidentity.storage.sqlite.passphrase.NonePassphraseProvider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
@@ -26,7 +25,6 @@ import kotlinx.coroutines.withContext
  * This client handles Push credential management and notification handling.
  *
  * @param configuration The Push configuration.
- * @param storage The PushStorage implementation to use. If null, a default SQLPushStorage will be created.
  */
 class PushClient internal constructor(
     private val configuration: PushConfiguration,
@@ -400,9 +398,16 @@ class PushClient internal constructor(
      * This method approves the authentication request for the given challenge notification
      * with the provided challenge response.
      *
+     * If the user selected the wrong number in a Push Number Challenge, AM returns HTTP 400 and
+     * this method returns [Result.failure] wrapping a [com.pingidentity.mfa.push.exception.PushNumberChallengeException].
+     * This is distinct from a generic network or server failure ([com.pingidentity.exception.ApiException]),
+     * allowing callers to surface a user-friendly "wrong number" message or offer a retry.
+     *
      * @param notificationId The ID of the notification to approve.
      * @param challengeResponse The challenge response provided by the user.
-     * @return A Result containing a Boolean indicating success or an Exception in case of failure.
+     * @return A Result containing a Boolean indicating success, or a [Result.failure] with
+     *   [com.pingidentity.mfa.push.exception.PushNumberChallengeException] for a wrong number selection,
+     *   or another exception for generic failures.
      */
     suspend fun approveChallengeNotification(notificationId: String, challengeResponse: String): Result<Boolean> {
         return try {

@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -30,6 +31,8 @@ import androidx.compose.material.icons.filled.RadioButtonUnchecked
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -84,6 +87,11 @@ private sealed class SheetContent {
         val config: OidcConfigState = OidcConfigState(),
         val customIndex: Int? = null,
     ) : SheetContent()
+
+    data class DeviceAuthSheet(
+        val config: DeviceAuthConfigState = DeviceAuthConfigState(),
+        val customIndex: Int? = null,
+    ) : SheetContent()
 }
 
 // ---------------------------------------------------------------------------
@@ -135,6 +143,7 @@ fun Env(
                     onSelect = { envViewModel.selectJourneyConfig(it) },
                     onEdit = { cfg, idx -> sheetContent = SheetContent.JourneySheet(cfg, idx) },
                     onDelete = { envViewModel.deleteCustomJourneyConfig(it) },
+                    onDuplicate = { envViewModel.duplicateJourneyConfig(it) },
                     onAdd = { sheetContent = SheetContent.JourneySheet() },
                 )
 
@@ -147,6 +156,7 @@ fun Env(
                     onSelect = { envViewModel.selectDaVinciConfig(it) },
                     onEdit = { cfg, idx -> sheetContent = SheetContent.DaVinciSheet(cfg, idx) },
                     onDelete = { envViewModel.deleteCustomDaVinciConfig(it) },
+                    onDuplicate = { envViewModel.duplicateDaVinciConfig(it) },
                     onAdd = { sheetContent = SheetContent.DaVinciSheet() },
                 )
 
@@ -159,7 +169,20 @@ fun Env(
                     onSelect = { envViewModel.selectWebConfig(it) },
                     onEdit = { cfg, idx -> sheetContent = SheetContent.WebSheet(cfg, idx) },
                     onDelete = { envViewModel.deleteCustomWebConfig(it) },
+                    onDuplicate = { envViewModel.duplicateWebConfig(it) },
                     onAdd = { sheetContent = SheetContent.WebSheet() },
+                )
+
+                // Device Authorization card
+                DeviceAuthCard(
+                    presets = envViewModel.deviceAuthPresets,
+                    customConfigs = envViewModel.customDeviceAuthConfigs,
+                    appliedConfig = envViewModel.appliedDeviceAuthConfig,
+                    onSelect = { envViewModel.selectDeviceAuthConfig(it) },
+                    onEdit = { cfg, idx -> sheetContent = SheetContent.DeviceAuthSheet(cfg, idx) },
+                    onDelete = { envViewModel.deleteCustomDeviceAuthConfig(it) },
+                    onAdd = { sheetContent = SheetContent.DeviceAuthSheet() },
+                    onDuplicate = { envViewModel.duplicateDeviceAuthConfig(it) },
                 )
 
                 Spacer(Modifier.height(8.dp))
@@ -203,6 +226,15 @@ fun Env(
                         },
                         onDismiss = ::dismiss,
                     )
+                    is SheetContent.DeviceAuthSheet -> DeviceAuthSheetContent(
+                        initial = content.config,
+                        isEdit = content.customIndex != null,
+                        onSave = { cfg ->
+                            envViewModel.saveCustomDeviceAuthConfig(cfg, content.customIndex)
+                            dismiss()
+                        },
+                        onDismiss = ::dismiss,
+                    )
                     null -> Unit
                 }
             }
@@ -220,8 +252,9 @@ private fun JourneyCard(
     customConfigs: List<JourneyConfigState>,
     appliedConfig: JourneyConfigState?,
     onSelect: (JourneyConfigState) -> Unit,
-    onEdit: (JourneyConfigState, Int) -> Unit,
+    onEdit: (JourneyConfigState, Int?) -> Unit,
     onDelete: (Int) -> Unit,
+    onDuplicate: (JourneyConfigState) -> Unit,
     onAdd: () -> Unit,
 ) {
     ConfigCard(title = "Journey", appliedDisplay = appliedConfig?.display, onAdd = onAdd) {
@@ -233,9 +266,11 @@ private fun JourneyCard(
                     subtitle = "${extractHost(config.discoveryEndpoint)} · ${config.clientId}",
                     isApplied = appliedConfig == config,
                     isPreset = true,
+                    onTap = { onEdit(config, null) },
                     onSelect = { onSelect(config) },
                     onEdit = null,
                     onDelete = null,
+                    onDuplicate = { onDuplicate(config) },
                 )
             }
         }
@@ -248,9 +283,11 @@ private fun JourneyCard(
                     subtitle = "${extractHost(config.discoveryEndpoint)} · ${config.clientId}",
                     isApplied = appliedConfig == config,
                     isPreset = false,
+                    onTap = { onEdit(config, index) },
                     onSelect = { onSelect(config) },
                     onEdit = { onEdit(config, index) },
                     onDelete = { onDelete(index) },
+                    onDuplicate = { onDuplicate(config) },
                 )
             }
         }
@@ -268,8 +305,9 @@ private fun OidcCard(
     customConfigs: List<OidcConfigState>,
     appliedConfig: OidcConfigState?,
     onSelect: (OidcConfigState) -> Unit,
-    onEdit: (OidcConfigState, Int) -> Unit,
+    onEdit: (OidcConfigState, Int?) -> Unit,
     onDelete: (Int) -> Unit,
+    onDuplicate: (OidcConfigState) -> Unit,
     onAdd: () -> Unit,
 ) {
     ConfigCard(title = title, appliedDisplay = appliedConfig?.display, onAdd = onAdd) {
@@ -281,9 +319,63 @@ private fun OidcCard(
                     subtitle = "${extractHost(config.discoveryEndpoint)} · ${config.clientId}",
                     isApplied = appliedConfig == config,
                     isPreset = true,
+                    onTap = { onEdit(config, null) },
                     onSelect = { onSelect(config) },
                     onEdit = null,
                     onDelete = null,
+                    onDuplicate = { onDuplicate(config) },
+                )
+            }
+        }
+        if (customConfigs.isNotEmpty()) {
+            if (presets.isNotEmpty()) HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+            SectionLabel("Custom")
+            customConfigs.forEachIndexed { index, config ->
+                ConfigRow(
+                    display = config.display,
+                    subtitle = "${extractHost(config.discoveryEndpoint)} · ${config.clientId}",
+                    isApplied = appliedConfig == config,
+                    isPreset = false,
+                    onTap = { onEdit(config, index) },
+                    onSelect = { onSelect(config) },
+                    onEdit = { onEdit(config, index) },
+                    onDelete = { onDelete(index) },
+                    onDuplicate = { onDuplicate(config) },
+                )
+            }
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Device Authorization card
+// ---------------------------------------------------------------------------
+
+@Composable
+private fun DeviceAuthCard(
+    presets: List<DeviceAuthConfigState>,
+    customConfigs: List<DeviceAuthConfigState>,
+    appliedConfig: DeviceAuthConfigState?,
+    onSelect: (DeviceAuthConfigState) -> Unit,
+    onEdit: (DeviceAuthConfigState, Int?) -> Unit,
+    onDelete: (Int) -> Unit,
+    onAdd: () -> Unit,
+    onDuplicate: (DeviceAuthConfigState) -> Unit,
+) {
+    ConfigCard(title = "Auth Grant", appliedDisplay = appliedConfig?.display, onAdd = onAdd) {
+        if (presets.isNotEmpty()) {
+            SectionLabel("Presets")
+            presets.forEach { config ->
+                ConfigRow(
+                    display = config.display,
+                    subtitle = "${extractHost(config.discoveryEndpoint)} · ${config.clientId}",
+                    isApplied = appliedConfig == config,
+                    isPreset = true,
+                    onSelect = { onSelect(config) },
+                    onEdit = null,
+                    onDelete = null,
+                    onDuplicate = { onDuplicate(config) },
+                    onTap = { onEdit(config, null) }
                 )
             }
         }
@@ -299,6 +391,8 @@ private fun OidcCard(
                     onSelect = { onSelect(config) },
                     onEdit = { onEdit(config, index) },
                     onDelete = { onDelete(index) },
+                    onTap = { onEdit(config, index) },
+                    onDuplicate = { onDuplicate(config) },
                 )
             }
         }
@@ -367,19 +461,29 @@ private fun ConfigCard(
 // Single config row
 // ---------------------------------------------------------------------------
 
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 private fun ConfigRow(
     display: String,
     subtitle: String,
     isApplied: Boolean,
     isPreset: Boolean,
+    onTap: () -> Unit,
     onSelect: () -> Unit,
     onEdit: (() -> Unit)?,
     onDelete: (() -> Unit)?,
+    onDuplicate: () -> Unit,
 ) {
+    var menuExpanded by remember { mutableStateOf(false) }
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .combinedClickable(
+                onClick = onTap,
+                onLongClickLabel = "Show actions",
+                onLongClick = { menuExpanded = true },
+            )
             .padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -427,6 +531,19 @@ private fun ConfigRow(
                 imageVector = if (isApplied) Icons.Filled.CheckCircle else Icons.Filled.RadioButtonUnchecked,
                 contentDescription = if (isApplied) "Applied" else "Select",
                 tint = if (isApplied) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+
+        DropdownMenu(
+            expanded = menuExpanded,
+            onDismissRequest = { menuExpanded = false },
+        ) {
+            DropdownMenuItem(
+                text = { Text("Duplicate") },
+                onClick = {
+                    menuExpanded = false
+                    onDuplicate()
+                },
             )
         }
     }
@@ -532,6 +649,53 @@ private fun OidcSheetContent(
         if (showArcValue) {
             ConfigField("ACR Value", cfg.arcValue) { cfg = cfg.copy(arcValue = it) }
         }
+        SheetActions(onDismiss = onDismiss, onSave = { onSave(cfg) }, canSave = canSave)
+        Spacer(Modifier.height(8.dp))
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Bottom sheet: Device Authorization
+// ---------------------------------------------------------------------------
+
+@Composable
+private fun DeviceAuthSheetContent(
+    initial: DeviceAuthConfigState,
+    isEdit: Boolean,
+    onSave: (DeviceAuthConfigState) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var cfg by remember { mutableStateOf(initial) }
+    val canSave =
+        cfg.clientId.isNotBlank() &&
+        cfg.discoveryEndpoint.isNotBlank() &&
+        cfg.display.isNotBlank()
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .navigationBarsPadding()
+            .imePadding()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 24.dp, vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Text(
+            text = if (isEdit) "Edit Device Authorization Config" else "Add Device Authorization Config",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+        )
+        ConfigField("Client ID", cfg.clientId) { cfg = cfg.copy(clientId = it) }
+        ConfigField("Discovery Endpoint", cfg.discoveryEndpoint) { cfg = cfg.copy(discoveryEndpoint = it) }
+        ConfigField("Scopes (comma-separated)", cfg.scopes) { cfg = cfg.copy(scopes = it) }
+        ConfigField("Display Name", cfg.display) { cfg = cfg.copy(display = it) }
+        ConfigField("ACR Values", cfg.acrValues) { cfg = cfg.copy(acrValues = it) }
+        ConfigField("Authorization Endpoint", cfg.authorizationEndpoint) { cfg = cfg.copy(authorizationEndpoint = it) }
+        ConfigField("Token Endpoint", cfg.tokenEndpoint) { cfg = cfg.copy(tokenEndpoint = it) }
+        ConfigField("Userinfo Endpoint", cfg.userInfoEndpoint) { cfg = cfg.copy(userInfoEndpoint = it) }
+        ConfigField("End Session Endpoint", cfg.endSessionEndpoint) { cfg = cfg.copy(endSessionEndpoint = it) }
+        ConfigField("Revocation Endpoint", cfg.revocationEndpoint) { cfg = cfg.copy(revocationEndpoint = it) }
+        ConfigField("Device Authorization Endpoint", cfg.deviceAuthorizationEndpoint) { cfg = cfg.copy(deviceAuthorizationEndpoint = it) }
         SheetActions(onDismiss = onDismiss, onSave = { onSave(cfg) }, canSave = canSave)
         Spacer(Modifier.height(8.dp))
     }

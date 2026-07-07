@@ -17,19 +17,21 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.pingidentity.davinci.collector.LabelCollector
+import com.pingidentity.samples.pingsampleapp.davinci.RichText.buildRichTextLabel
+
 
 @Composable
-fun Label(
-    field: LabelCollector
-) {
+fun Label(field: LabelCollector) {
     Row(
-        modifier =
-        Modifier
+        modifier = Modifier
             .padding(4.dp)
             .fillMaxWidth(),
     ) {
         androidx.compose.material3.Text(
-            text = field.content,
+            text = buildRichTextLabel(
+                richContent = field.richContent,
+                fallbackContent = field.content,
+            ),
             style = MaterialTheme.typography.labelLarge,
             modifier = Modifier
                 .wrapContentWidth(Alignment.CenterHorizontally)

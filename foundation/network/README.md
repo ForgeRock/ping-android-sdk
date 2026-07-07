@@ -6,7 +6,27 @@ The Network module provides a flexible and powerful HTTP client abstraction for 
 requests. It defines a clean, platform-agnostic interface (`HttpClient`, `HttpRequest`,
 `HttpResponse`) that can be implemented using different underlying HTTP client libraries.
 
-## Architecture
+## Getting Started
+
+### Prerequisites
+
+- Android API level 29 or higher
+
+### Installation
+
+To integrate this module into your Android project, include the following dependency in
+your `build.gradle.kts` (or `build.gradle`) file:
+
+```kotlin
+dependencies {
+  implementation("com.pingidentity.sdks:network:<version>")
+}
+```
+
+Replace `<version>` with the latest available version of the SDK from the Maven repository. Ensure your
+project's `repositories` block includes Maven Central or the Ping Identity Maven repository.
+
+## Overview
 
 The module uses **interface-based design** to decouple the HTTP client abstraction from its
 implementation:
@@ -479,4 +499,9 @@ This module relies on the following key dependencies:
 * [Kotlinx Coroutines](https://github.com/Kotlin/kotlinx.coroutines): For managing asynchronous
   operations.
 
-For a complete list of dependencies, please refer to the `build.gradle.kts` file.
+## License
+
+This software may be modified and distributed under the terms of the MIT license. See the LICENSE file for details.
+
+© Copyright 2025-2026 Ping Identity Corporation. All rights reserved.
+

@@ -24,6 +24,7 @@ import com.pingidentity.mfa.push.PushConstants.KEY_MECHANISM_UID
 import com.pingidentity.mfa.push.PushConstants.KEY_MESSAGE_ID
 import com.pingidentity.mfa.push.PushConstants.KEY_RESPONSE
 import com.pingidentity.mfa.push.PushConstants.KEY_USERNAME
+import com.pingidentity.mfa.push.exception.PushNumberChallengeException
 import com.pingidentity.network.ktor.KtorHttpClient
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
@@ -756,6 +757,135 @@ class PingAMPushResponderTest {
         val result = pushResponder.register(testCredential, params)
 
         // Verify result is false
+        Assert.assertFalse(result)
+
+        httpClient.close()
+    }
+
+    @Test
+    fun `test authenticate 400 on number challenge throws PushNumberChallengeException`() = runTest {
+        val mockEngine = MockEngine.Companion { _ ->
+            respondError(HttpStatusCode.BadRequest)
+        }
+        val httpClient = KtorHttpClient(HttpClient(mockEngine))
+        val pushResponder = PingAMPushResponder(httpClient, mockLogger)
+
+        val notificationWithNumberChallenge = testNotification.copy(numbersChallenge = "23 45 67")
+
+        try {
+            pushResponder.authenticate(testCredential, notificationWithNumberChallenge, true, "45")
+            Assert.fail("Expected PushNumberChallengeException to be thrown")
+        } catch (e: PushNumberChallengeException) {
+            Assert.assertEquals(400, e.status)
+        }
+
+        httpClient.close()
+    }
+
+    @Test
+    fun `test authenticate 400 on number challenge extracts message from response body`() = runTest {
+        val errorMessage = "Number challenge predicate not met."
+        val mockEngine = MockEngine.Companion { _ ->
+            respond(
+                content = """{"code":400,"reason":"Bad Request","message":"$errorMessage"}""",
+                status = HttpStatusCode.BadRequest,
+                headers = headersOf("Content-Type", "application/json")
+            )
+        }
+        val httpClient = KtorHttpClient(HttpClient(mockEngine))
+        val pushResponder = PingAMPushResponder(httpClient, mockLogger)
+
+        val notificationWithNumberChallenge = testNotification.copy(numbersChallenge = "23 45 67")
+
+        try {
+            pushResponder.authenticate(testCredential, notificationWithNumberChallenge, true, "45")
+            Assert.fail("Expected PushNumberChallengeException to be thrown")
+        } catch (e: PushNumberChallengeException) {
+            Assert.assertEquals(400, e.status)
+            Assert.assertEquals(errorMessage, e.message)
+        }
+
+        httpClient.close()
+    }
+
+    @Test
+    fun `test authenticate 400 on number challenge with empty body uses default message`() = runTest {
+        val mockEngine = MockEngine.Companion { _ ->
+            respond(
+                content = "",
+                status = HttpStatusCode.BadRequest,
+                headers = headersOf("Content-Type", "application/json")
+            )
+        }
+        val httpClient = KtorHttpClient(HttpClient(mockEngine))
+        val pushResponder = PingAMPushResponder(httpClient, mockLogger)
+
+        val notificationWithNumberChallenge = testNotification.copy(numbersChallenge = "23 45 67")
+
+        try {
+            pushResponder.authenticate(testCredential, notificationWithNumberChallenge, true, "45")
+            Assert.fail("Expected PushNumberChallengeException to be thrown")
+        } catch (e: PushNumberChallengeException) {
+            Assert.assertEquals(400, e.status)
+            Assert.assertEquals("Number challenge predicate not met", e.message)
+        }
+
+        httpClient.close()
+    }
+
+    @Test
+    fun `test authenticate 400 on number challenge with body missing message field uses default message`() = runTest {
+        val mockEngine = MockEngine.Companion { _ ->
+            respond(
+                content = """{"code":400,"reason":"Bad Request"}""",
+                status = HttpStatusCode.BadRequest,
+                headers = headersOf("Content-Type", "application/json")
+            )
+        }
+        val httpClient = KtorHttpClient(HttpClient(mockEngine))
+        val pushResponder = PingAMPushResponder(httpClient, mockLogger)
+
+        val notificationWithNumberChallenge = testNotification.copy(numbersChallenge = "23 45 67")
+
+        try {
+            pushResponder.authenticate(testCredential, notificationWithNumberChallenge, true, "45")
+            Assert.fail("Expected PushNumberChallengeException to be thrown")
+        } catch (e: PushNumberChallengeException) {
+            Assert.assertEquals(400, e.status)
+            Assert.assertEquals("Number challenge predicate not met", e.message)
+        }
+
+        httpClient.close()
+    }
+
+    @Test
+    fun `test authenticate 400 without number challenge returns false`() = runTest {
+        val mockEngine = MockEngine.Companion { _ ->
+            respondError(HttpStatusCode.BadRequest)
+        }
+        val httpClient = KtorHttpClient(HttpClient(mockEngine))
+        val pushResponder = PingAMPushResponder(httpClient, mockLogger)
+
+        // Standard notification (no numbersChallenge) — 400 should swallow to false
+        val result = pushResponder.authenticate(testCredential, testNotification, true, null)
+
+        Assert.assertFalse(result)
+
+        httpClient.close()
+    }
+
+    @Test
+    fun `test authenticate 500 server error returns false`() = runTest {
+        val mockEngine = MockEngine.Companion { _ ->
+            respondError(HttpStatusCode.InternalServerError)
+        }
+        val httpClient = KtorHttpClient(HttpClient(mockEngine))
+        val pushResponder = PingAMPushResponder(httpClient, mockLogger)
+
+        val notificationWithNumberChallenge = testNotification.copy(numbersChallenge = "23 45 67")
+
+        val result = pushResponder.authenticate(testCredential, notificationWithNumberChallenge, true, "45")
+
         Assert.assertFalse(result)
 
         httpClient.close()

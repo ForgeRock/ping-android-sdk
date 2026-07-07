@@ -6,15 +6,20 @@
 
 package com.pingidentity.samples.pingsampleapp.davinci
 
+import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.pingidentity.oidc.module.VERIFICATION_URI_COMPLETE
 import com.pingidentity.orchestrate.ContinueNode
 import com.pingidentity.samples.pingsampleapp.config.daVinci
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-class DaVinciViewModel: ViewModel() {
+class DaVinciViewModel(
+    private val verificationUri: String? = null,
+): ViewModel() {
     var state = MutableStateFlow(DaVinciState())
         private set
 
@@ -51,7 +56,11 @@ class DaVinciViewModel: ViewModel() {
             true
         }
         viewModelScope.launch {
-            val next = daVinci?.start()
+            val next = if (!verificationUri.isNullOrBlank()) {
+                daVinci?.start {
+                    VERIFICATION_URI_COMPLETE to verificationUri.toUri()
+                }
+            } else { daVinci?.start() }
 
             state.update {
                 it.copy(node = next, counter = it.counter + 1)
@@ -66,5 +75,14 @@ class DaVinciViewModel: ViewModel() {
         state.update {
             it.copy(node = it.node, counter = it.counter + 1)
         }
+    }
+
+    companion object {
+        fun factory(verificationUri: String): ViewModelProvider.Factory =
+            object : ViewModelProvider.Factory {
+                @Suppress("UNCHECKED_CAST")
+                override fun <T : ViewModel> create(modelClass: Class<T>): T =
+                    DaVinciViewModel(verificationUri) as T
+            }
     }
 }

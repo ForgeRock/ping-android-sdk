@@ -1,7 +1,37 @@
 
 [![Ping Identity](https://www.pingidentity.com/content/dam/picr/nav/Ping-Logo-2.svg)](https://github.com/ForgeRock/ping-android-sdk)
 
-# Orchestrate
+# Orchestrate Module
+
+This module allows you to register functions in different state of the workflow. For example, you can register a function
+that will be called when the workflow is initialized, when a node is received, when a node is sent, and when
+the workflow is started.
+
+<img src="images/functions.png" width="500">
+
+Information can be shared across state, there are 2 contexts
+
+| Context         |                Scope                |                             Access |
+|-----------------|:-----------------------------------:|-----------------------------------:|
+| WorkflowContext |          Workflow Instance          |   ```context["name"] = "value" ``` |
+| FlowContext     | Flow from Start to Finish (Success) | ```flowContext["name"]= "value"``` |
+
+## Getting Started
+
+### Prerequisites
+
+- Android API level 29 or higher
+
+### Installation
+
+To integrate this module into your Android project, include the following dependency in
+your `build.gradle.kts` (or `build.gradle`) file:
+
+```kotlin
+dependencies {
+    implementation("com.pingidentity.sdks:orchestrate:<version>")
+}
+```
 
 ## Overview
 
@@ -25,29 +55,6 @@ The Workflow engine contains the following states:
 | Next       |           Move to next state           |  Request | Request |                                                 Inject noSession parameter |
 | Success    |       Flow finished with Success       |  Success | Success |                                   Prepare Success with AuthCode or Session |
 | SignOff    |          SignOff the Workflow          |  Request | Request |                                               Revoke Token and end session |
-
-### Module
-
-Module allows you to register functions in different state of the workflow. For example, you can register a function
-that will be called when the workflow is initialized, when a node is received, when a node is sent, and when
-the workflow is started.
-
-<img src="images/functions.png" width="500">
-
-Information can be shared across state, there are 2 contexts
-
-| Context         |                Scope                |                             Access |
-|-----------------|:-----------------------------------:|-----------------------------------:|
-| WorkflowContext |          Workflow Instance          |   ```context["name"] = "value" ``` |
-| FlowContext     | Flow from Start to Finish (Success) | ```flowContext["name"]= "value"``` |
-
-## Add dependency to your project
-
-```kotlin
-dependencies {
-    implementation(project(":orchestrate"))
-}
-```
 
 ## Usage
 
@@ -147,4 +154,9 @@ module(CustomHeader, priority = 5, mode = OverrideMode.APPEND) {
 }
 ```
 
-© Copyright 2025-2026 Ping Identity Corporation. All Rights Reserved
+## License
+
+This software may be modified and distributed under the terms of the MIT license. See the LICENSE file for details.
+
+© Copyright 2025-2026 Ping Identity Corporation. All rights reserved.
+

@@ -42,11 +42,11 @@ class DavinciAndroidTest {
         logger = Logger.STANDARD
 
         module(Oidc) {
-            clientId = "021b83ce-a9b1-4ad4-8c1d-79e576eeab76"
-            discoveryEndpoint = "https://auth.pingone.ca/02fb4743-189a-4bc7-9d6c-a919edfe6447/as/.well-known/openid-configuration"
+            clientId = DaVinciTestConfig.davinciClientId
+            discoveryEndpoint = DaVinciTestConfig.davinciDiscoveryEndpoint
             scopes = mutableSetOf("openid", "email", "address", "phone", "profile")
-            redirectUri = "org.forgerock.demo://oauth2redirect"
-            acrValues = " 79220c5e3a217a3d9b6739585cb160aa"
+            redirectUri = DaVinciTestConfig.davinciRedirectUri
+            acrValues = DaVinciTestConfig.davinciAcrValues
             //storage = dataStore
         }
     }
@@ -68,10 +68,9 @@ class DavinciAndroidTest {
         userLname = "User"
         usernamePrefix = "e2e"
 
-        // This user must exist in PingOne...
-        username = "e2euser@example.com"
-        password = "Demo1234#1"
-        verificationCode = "1234" // This is hardcoded value in the DaVinci flow
+        username = DaVinciTestConfig.davinciUsername
+        password = DaVinciTestConfig.davinciPassword
+        verificationCode = DaVinciTestConfig.davinciVerificationCode
 
         //Start with a clean session
         daVinci.user()?.logout()

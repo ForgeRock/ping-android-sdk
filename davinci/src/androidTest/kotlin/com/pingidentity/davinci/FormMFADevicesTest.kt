@@ -49,11 +49,11 @@ class FormMFADevicesTest {
         logger = Logger.STANDARD
 
         module(Oidc) {
-            clientId = "021b83ce-a9b1-4ad4-8c1d-79e576eeab76"
-            discoveryEndpoint = "https://auth.pingone.ca/02fb4743-189a-4bc7-9d6c-a919edfe6447/as/.well-known/openid-configuration"
+            clientId = DaVinciTestConfig.davinciClientId
+            discoveryEndpoint = DaVinciTestConfig.davinciDiscoveryEndpoint
             scopes = mutableSetOf("openid", "email", "address", "phone", "profile")
-            redirectUri = "org.forgerock.demo://oauth2redirect"
-            acrValues = "1557008a3c8b6105d5f4e8e053ac7a29"
+            redirectUri = DaVinciTestConfig.davinciRedirectUri
+            acrValues = DaVinciTestConfig.davinciMfaAcrValues
         }
     }
 
@@ -69,6 +69,7 @@ class FormMFADevicesTest {
     private lateinit var email2: String
     private lateinit var phoneNumber1: String
     private lateinit var phoneNumber2: String
+    private lateinit var extension: String
 
     @JvmField
     @Rule
@@ -77,7 +78,7 @@ class FormMFADevicesTest {
     @BeforeTest
     fun setUp() = runTest {
         usernamePrefix = "MFA"
-        password = "Demo1234#1"
+        password = DaVinciTestConfig.davinciPassword
         username = usernamePrefix + System.currentTimeMillis() + "@example.com"
         userFname = "GAGA"
         userLname = "User"
@@ -85,6 +86,7 @@ class FormMFADevicesTest {
         email2 = usernamePrefix + System.currentTimeMillis() + "@example.net"
         phoneNumber1 = "888123456"
         phoneNumber2 = "888123457"
+        extension = "100"
 
         // Make sure to start with a clean session
         daVinci.user()?.logout()
@@ -404,7 +406,7 @@ class FormMFADevicesTest {
         assertEquals("Enter phone number", node.description)
 
         // Assert the collectors
-        assertTrue(node.collectors.size == 4)
+        assertEquals(4, node.collectors.size)
         assertTrue(node.collectors[0] is LabelCollector)
         assertTrue(node.collectors[1] is SingleSelectCollector)
         assertTrue(node.collectors[2] is PhoneNumberCollector)
@@ -437,10 +439,12 @@ class FormMFADevicesTest {
         assertTrue(phoneNumberCollector.required)
         assertFalse(phoneNumberCollector.validatePhoneNumber)
         assertEquals("IN", phoneNumberCollector.defaultCountryCode)
+        assertTrue(phoneNumberCollector.showExtension)
 
         // Select a country code and enter a valid phone number:...
         phoneNumberCollector.countryCode = "CA"  // Select Canada...
         phoneNumberCollector.phoneNumber = "7783177183" // Enter a valid phone number...
+        phoneNumberCollector.extension = "100" // Enter extension
 
         // Submit the form
         (node.collectors[3] as? SubmitCollector)?.value = "click"

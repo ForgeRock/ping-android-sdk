@@ -75,11 +75,7 @@ jobs:
             "devices": $DEVICES_JSON,
             "deviceLogs": ${{ vars.BS_DEVICE_LOGS }},
             "networkLogs": ${{ vars.BS_NETWORK_LOGS }},
-            "video": ${{ vars.BS_VIDEO }}, 
-            "shards": {
-              "numberOfShards": ${{ vars.BS_NUMBER_OF_SHARDS }}, 
-              "deviceSelection": "all"
-            },
+            "video": ${{ vars.BS_VIDEO }},
             "project": "push-tests"
           }
           EOF
@@ -95,8 +91,13 @@ jobs:
             -H "Content-Type: application/json" \
             -d @browserstack-run-config.json)
           echo "RUN_RESPONSE: $RUN_RESPONSE"
-          echo "BROWSERSTACK_PUSH_BUILD_ID=$(echo $RUN_RESPONSE | jq -r '.build_id')" >> $GITHUB_ENV
-          echo "browserstack_push_build_id=$(echo $RUN_RESPONSE | jq -r '.build_id')" >> $GITHUB_OUTPUT
+          BUILD_ID=$(echo $RUN_RESPONSE | jq -r '.build_id')
+          if [ -z "$BUILD_ID" ] || [ "$BUILD_ID" = "null" ]; then
+            echo "Failed to start BrowserStack push run. Response: $RUN_RESPONSE"
+            exit 1
+          fi
+          echo "BROWSERSTACK_PUSH_BUILD_ID=$BUILD_ID" >> $GITHUB_ENV
+          echo "browserstack_push_build_id=$BUILD_ID" >> $GITHUB_OUTPUT
       # Send slack notification ONLY if any of the steps above fail
       - name: Send slack notification
         uses: 8398a7/action-slack@v3

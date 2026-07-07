@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2025 - 2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -128,7 +128,7 @@ class AppPinConfig {
      *
      * This security measure prevents brute force attacks by limiting the number
      * of consecutive failed PIN attempts. After exceeding this limit, the
-     * authentication operation will fail with [InvalidCredentialException].
+     * authentication operation will fail with [com.pingidentity.device.binding.authenticator.exception.InvalidCredentialException].
      *
      * Recommended values:
      * - 3-5 for most applications (balances security and usability)

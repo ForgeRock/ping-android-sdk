@@ -38,17 +38,44 @@ nexusPublishing {
     }
 }
 
+buildscript {
+    configurations.all {
+        resolutionStrategy {
+            // Force secure version of bouncy castle to address security vulnerabilities
+            // Fixes CVE-2025-14813 and CVE-2026-5598; targets build-toolchain classpath (lint-gradle)
+            force("org.bouncycastle:bcprov-jdk18on:1.84")
+            force("org.bouncycastle:bcpkix-jdk18on:1.84")
+            force("org.bouncycastle:bcutil-jdk18on:1.84")
+        }
+    }
+}
+
 allprojects {
     configurations.all {
 
         resolutionStrategy {
-            // Due to vulnerability [WS-2022-0468] from dokka project.
-            force("com.fasterxml.jackson.module:jackson-module-kotlin:2.15.0")
-            force("com.fasterxml.jackson.dataformat:jackson-dataformat-xml:2.15.0")
-            force("com.fasterxml.jackson.core:jackson-databind:2.15.0")
+            // Force secure version of play-services-basement to address security vulnerabilities
+            // Used transitively by recaptcha client and fido subprojects
+            // Updated to 18.0.2 which fixes CVE-2022-2390
+            force("com.google.android.gms:play-services-basement:18.0.2")
+
+            // Force secure version of nimbus-jose-jwt to address security vulnerabilities
+            // Used transitively by mfa:binding subproject; fixes CVE-2025-53864
+            force("com.nimbusds:nimbus-jose-jwt:10.5")
+
+            // Force secure version of bouncy castle to address security vulnerabilities
+            // Fixes CVE-2025-14813 and CVE-2026-5598; targets build-toolchain classpath (lint-gradle)
+            force("org.bouncycastle:bcprov-jdk18on:1.84")
+            force("org.bouncycastle:bcpkix-jdk18on:1.84")
+            force("org.bouncycastle:bcutil-jdk18on:1.84")
+
+            // Updated to 2.18.8 per Mend SCA (CVE-2026-54512, CVE-2026-54513, CVE-2026-54514)
+            force("com.fasterxml.jackson.module:jackson-module-kotlin:2.18.8")
+            force("com.fasterxml.jackson.dataformat:jackson-dataformat-xml:2.18.8")
+            force("com.fasterxml.jackson.core:jackson-databind:2.18.8")
 
             // Force secure version of netty-codec to address security vulnerabilities
-            // Used transitively by com.android.tools.emulator:proto
+            // Used transitively by com.android.tools.emulator:proto (build toolchain only)
             // Updated to 4.1.125.Final per Mend SCA recommendation (Nov 2025)
             force("io.netty:netty-codec:4.1.125.Final")
             force("io.netty:netty-codec-http:4.1.125.Final")
@@ -56,20 +83,12 @@ allprojects {
             force("io.netty:netty-all:4.1.125.Final")
 
             // Force secure version of protobuf to address security vulnerabilities
-            // Used transitively by various Google dependencies
+            // Used transitively by AGP/build toolchain
             // Updated to 4.29.2 (latest stable) which fixes CVE-2024-7254 and all known CVEs
             force("com.google.protobuf:protobuf-java:4.29.2")
             force("com.google.protobuf:protobuf-kotlin:4.29.2")
             force("com.google.protobuf:protobuf-javalite:4.29.2")
             force("com.google.protobuf:protobuf-kotlin-lite:4.29.2")
-
-            // Force secure version of play-services-basement to address security vulnerabilities
-            // Used transitively by recaptcha client
-            // Updated to 18.0.2 which fixes CVE-2022-2390
-            force("com.google.android.gms:play-services-basement:18.0.2")
-            // Force secure version of nimbus-jose-jwt to address security vulnerabilities
-            // Force the existing to fix CVE-2025-53864
-            force("com.nimbusds:nimbus-jose-jwt:10.5")
         }
     }
 }

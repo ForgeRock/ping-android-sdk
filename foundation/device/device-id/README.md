@@ -6,26 +6,25 @@ The Device ID Module provides utilities for generating and retrieving unique dev
 It supports multiple strategies, such as Android ID and keystore-based identifiers, ensuring
 flexibility and security for various use cases.
 
-## Features
+## Getting Started
 
-- **Multiple Identifier Strategies**:
-    - `AndroidIDDeviceIdentifier`: Uses Android's system-provided device identifier
-    - `DefaultDeviceIdentifier`: Uses Android KeyStore for secure, persistent device identification
-    - `LegacyDeviceIdentifier`: Provides compatibility with older device identification schemes
-- **Secure Implementation**: Uses Android's security features like KeyStore for storing sensitive
-  identifiers
-- **Thread-Safe**: All implementations are thread-safe with lazy initialization patterns
-- **Custom Implementation**: Define your own identifier strategy by implementing the
-  `DeviceIdentifier` interface.
-- **Simple API**: A consistent and easy-to-use interface for retrieving device identifiers.
+### Prerequisites
 
-## Installation
+- Android API level 29 or higher
 
-Add the module to your project using Gradle:
+### Installation
 
-```gradle
-implementation("com.pingidentity.sdks:device-id:<latest_version>") 
+To integrate this module into your Android project, include the following dependency in
+your `build.gradle.kts` (or `build.gradle`) file:
+
+```kotlin
+dependencies {
+    implementation("com.pingidentity.sdks:device-id:<version>")
+}
 ```
+
+Replace `<version>` with the latest available version of the SDK from the Maven repository. Ensure your
+project's `repositories` block includes Maven Central or the Ping Identity Maven repository.
 
 ## Usage
 
@@ -122,4 +121,8 @@ val customId = CustomDeviceIdentifier.id
 - **Combine with other factors**: For authentication purposes, combine device identifiers with other
   factors like user credentials.
 
-© Copyright 2025-2026 Ping Identity Corporation. All Rights Reserved
+## License
+
+This software may be modified and distributed under the terms of the MIT license. See the LICENSE file for details.
+
+© Copyright 2025-2026 Ping Identity Corporation. All rights reserved.
