@@ -1,6 +1,6 @@
 [versions]
 coilSvg = "2.7.0"
-compileSdk = "37"
+compileSdk = "36"
 targetSdk = "37"
 minSdk = "29"
 jvmTarget = "21"
