@@ -6,17 +6,22 @@
 
 package com.pingidentity.samples.pingsampleapp.journey
 
+import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.pingidentity.journey.start
+import com.pingidentity.oidc.module.VERIFICATION_URI_COMPLETE
 import com.pingidentity.orchestrate.ContinueNode
 import com.pingidentity.samples.pingsampleapp.config.journey
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-class JourneyViewModel(private val journeyName: String): ViewModel() {
+class JourneyViewModel(
+    private val journeyName: String,
+    private val verificationUri: String? = null,
+) : ViewModel() {
     var state = MutableStateFlow(JourneyState())
         private set
 
@@ -28,18 +33,17 @@ class JourneyViewModel(private val journeyName: String): ViewModel() {
     }
 
     fun start() {
-
-        loading.update {
-            true
-        }
+        loading.update { true }
         viewModelScope.launch {
-            val next = journey.start(journeyName)
-            state.update {
-                it.copy(node = next)
+            val next = if (!verificationUri.isNullOrBlank()) {
+                journey?.start(journeyName) {
+                    VERIFICATION_URI_COMPLETE to verificationUri.toUri()
+                }
+            } else {
+                journey?.start(journeyName)
             }
-            loading.update {
-                false
-            }
+            state.update { it.copy(node = next) }
+            loading.update { false }
         }
     }
 
@@ -65,13 +69,18 @@ class JourneyViewModel(private val journeyName: String): ViewModel() {
     }
 
     companion object {
-        fun factory(
-            journeyName: String,
-        ): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
-            @Suppress("UNCHECKED_CAST")
-            override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                return JourneyViewModel(journeyName) as T
+        fun factory(journeyName: String): ViewModelProvider.Factory =
+            object : ViewModelProvider.Factory {
+                @Suppress("UNCHECKED_CAST")
+                override fun <T : ViewModel> create(modelClass: Class<T>): T =
+                    JourneyViewModel(journeyName) as T
             }
-        }
+
+        fun factory(journeyName: String, verificationUri: String): ViewModelProvider.Factory =
+            object : ViewModelProvider.Factory {
+                @Suppress("UNCHECKED_CAST")
+                override fun <T : ViewModel> create(modelClass: Class<T>): T =
+                    JourneyViewModel(journeyName, verificationUri) as T
+            }
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 - 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2024 - 2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -110,7 +110,19 @@ class OidcClientConfig {
     lateinit var clientId: String
 
     /**
-     * Set of scopes for OIDC.
+     * Enable PAR (Pushed Authorization Request) RFC 9126.
+     *
+     * When enabled:
+     * - Authorization parameters are pushed to the server before authorization
+     * - Improves security by preventing parameter tampering
+     * - Reduces authorization URL length
+     * - Requires PAR endpoint support from the OIDC provider
+     */
+    var par = false
+
+    /**
+     * Set of OAuth2 scopes to request during authorization.
+     * Common scopes include: "openid", "profile", "email", "offline_access"
      */
     var scopes = mutableSetOf<String>()
 
@@ -170,6 +182,20 @@ class OidcClientConfig {
     lateinit var httpClient: HttpClient
 
     /**
+     * Called once after OpenID discovery completes, allowing callers to patch any field
+     * on the discovered [OpenIdConfiguration] before it is used (e.g. override
+     * [OpenIdConfiguration.deviceAuthorizationEndpoint] for a non-standard server).
+     *
+     * Example:
+     * ```kotlin
+     * openIdOverride = {
+     *     deviceAuthorizationEndpoint = "https://custom.example.com/as/device_authorization"
+     * }
+     * ```
+     */
+    var openIdOverride: (OpenIdConfiguration.() -> Unit)? = null
+
+    /**
      * Adds a scope to the set of scopes.
      *
      * @param scope The scope to add.
@@ -192,7 +218,7 @@ class OidcClientConfig {
             tokenStorage = storage()
         }
         if (!::openId.isInitialized) {
-            openId = discover()
+            openId = discover().also { openIdOverride?.invoke(it) }
         }
         if (!::agent.isInitialized) {
             updateAgent(DefaultAgent)
@@ -236,7 +262,7 @@ class OidcClientConfig {
      * @param other The other configuration to merge.
      */
     operator fun plusAssign(other: OidcClientConfig) {
-        this.openId = other.openId
+        this.openId = other.openId.copy()
         this.refreshThreshold = other.refreshThreshold
         this.agent = other.agent
         this.logger = other.logger
@@ -257,5 +283,7 @@ class OidcClientConfig {
         this.acrValues = other.acrValues
         this.additionalParameters = other.additionalParameters
         this.httpClient = other.httpClient
+        this.par = other.par
+        this.openIdOverride = other.openIdOverride
     }
 }

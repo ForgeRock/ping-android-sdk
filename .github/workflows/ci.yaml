@@ -48,6 +48,7 @@ jobs:
     needs: create-testrail-run
     secrets:
       E2E_CONFIG: ${{ secrets.E2E_CONFIG }}
+      DAVINCI_E2E_CONFIG: ${{ secrets.DAVINCI_E2E_CONFIG }}
       SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
       TESTRAIL_USERNAME: ${{ secrets.TESTRAIL_USERNAME }}
@@ -64,13 +65,17 @@ jobs:
     needs: build-and-test
     secrets:
       E2E_CONFIG: ${{ secrets.E2E_CONFIG }}
+      DAVINCI_E2E_CONFIG: ${{ secrets.DAVINCI_E2E_CONFIG }}
       SIGNING_KEYSTORE: ${{ secrets.SIGNING_KEYSTORE }}
       SIGNING_ALIAS: ${{ secrets.SIGNING_ALIAS }}
       SIGNING_KEYSTORE_PASSWORD: ${{ secrets.SIGNING_KEYSTORE_PASSWORD }}
       SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
       SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
 
-  # Execute e2e test cases in BrowserStack. The workflow outputs the newly created run id.
+  # Execute e2e test cases in BrowserStack.
+  # Runs in two batches of 2 to stay within the 3-parallel-session limit:
+  #   Batch 1 (parallel): davinci + journey
+  #   Batch 2 (parallel): oath + push  — starts only after both batch 1 jobs finish
   browserstack-davinci-run:
     name: Run tests in BrowserStack
     uses: ./.github/workflows/browserstack-davinci-run.yaml
@@ -92,8 +97,9 @@ jobs:
   browserstack-oath-run:
     name: Run tests in BrowserStack
     uses: ./.github/workflows/browserstack-oath-run.yaml
-    needs: 
-      - browserstack-prepare-artifacts
+    needs:
+      - browserstack-davinci-results
+      - browserstack-journey-results
     secrets:
       BROWSERSTACK_USERNAME: ${{ secrets.BROWSERSTACK_USERNAME }}
       BROWSERSTACK_ACCESS_KEY: ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
@@ -102,8 +108,9 @@ jobs:
   browserstack-push-run:
     name: Run tests in BrowserStack
     uses: ./.github/workflows/browserstack-push-run.yaml
-    needs: 
-      - browserstack-prepare-artifacts
+    needs:
+      - browserstack-davinci-results
+      - browserstack-journey-results
     secrets:
       BROWSERSTACK_USERNAME: ${{ secrets.BROWSERSTACK_USERNAME }}
       BROWSERSTACK_ACCESS_KEY: ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
@@ -179,3 +186,8 @@ jobs:
   docs:
     name: Docs
     uses: ./.github/workflows/docs.yaml
+
+  # Calculate package sizes
+  package-sizes:
+    name: Package Sizes
+    uses: ./.github/workflows/package-sizes.yml

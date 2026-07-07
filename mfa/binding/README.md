@@ -6,49 +6,25 @@ The Device Binding module provides secure device registration and authentication
 It enables applications to bind cryptographic keys to devices and perform authentication using biometric, PIN, or other
 authentication methods.
 
----
+## Getting Started
 
-## Table of Contents
+### Prerequisites
 
-- [Integrating the SDK into your project](#integrating-the-sdk-into-your-project)
-- [Module Overview](#module-overview)
-- [Core Components](#core-components)
-- [Device Binding Operations](#device-binding-operations)
-  - [DeviceBindingCallback.bind()](#devicebindingcallbackbind)
-  - [Configuration Options](#configuration-options)
-- [Device Signing Verification](#device-signing-verification)
-  - [DeviceSigningVerifierCallback.sign()](#devicesigningverifiercallbacksign)
-  - [Signing Configuration](#signing-configuration)
-  - [Custom Claims](#custom-claims)
-- [Configuration Reference](#configuration-reference)
-  - [DeviceBindingConfig](#devicebindingconfig)
-  - [Storage Configuration](#storage-configuration)
-  - [Authenticator Configuration](#authenticator-configuration)
-  - [JWT Configuration](#jwt-configuration)
-- [Authentication Types](#authentication-types)
-  - [Biometric Authentication](#biometric-authentication)
-  - [Application PIN](#application-pin)
-  - [No Authentication](#no-authentication)
-- [Error Handling](#error-handling)
-  - [Common Error Types](#common-error-types)
-  - [Critical Error Scenarios](#critical-error-scenarios)
-  - [Error Handling Pattern](#error-handling-pattern)
-- [Examples](#examples)
-  - [Basic Device Binding](#basic-device-binding)
-  - [Advanced Configuration](#advanced-configuration)
-  - [Device Signing](#device-signing)
+- Ping Advanced Identity Cloud / PingAM [Supported Versions](https://support.pingidentity.com/s/article/Ping-Identity-EOL-Tracker)
+- Android API level 29 or higher
 
----
+### Installation
 
-## Integrating the SDK into your project
-
-To add the Device Binding module as a dependency to your project, include the following in your `build.gradle.kts` file:
+To integrate this module into your Android project, include the following dependency in your `build.gradle.kts` (or `build.gradle`) file:
 
 ```kotlin
 dependencies {
-    implementation(project(":mfa:binding"))
+    implementation("com.pingidentity.sdks:binding:<version>")
 }
 ```
+
+Replace `<version>` with the latest available version of the SDK from the Maven repository. Ensure your
+project's `repositories` block includes Maven Central or the Ping Identity Maven repository.
 
 ### Additional Dependencies
 
@@ -56,7 +32,7 @@ If you plan to use **Application PIN** authentication, you must also add the [Bo
 
 ```kotlin
 dependencies {
-    implementation(project(":mfa:binding"))
+    implementation("com.pingidentity.sdks:binding:<version>")
     implementation("org.bouncycastle:bcpkix-jdk18on:1.82") // Required for Application PIN
 }
 ```
@@ -67,8 +43,8 @@ For enhanced user experience with default UI components, add the binding-ui modu
 
 ```kotlin
 dependencies {
-    implementation(project(":mfa:binding"))
-    implementation(project(":mfa:binding-ui")) // Provides default UI components
+    implementation("com.pingidentity.sdks:binding:<version>")
+    implementation("com.pingidentity.sdks:binding-ui:<version>") // Provides default UI components
     implementation("org.bouncycastle:bcpkix-jdk18on:1.82") // Required for Application PIN
 }
 ```
@@ -703,4 +679,8 @@ private suspend fun performDeviceSigning() {
 }
 ```
 
----
+## License
+
+This software may be modified and distributed under the terms of the MIT license. See the LICENSE file for details.
+
+© Copyright 2025-2026 Ping Identity Corporation. All rights reserved.

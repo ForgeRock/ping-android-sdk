@@ -39,11 +39,11 @@ class DavinciProtectTest {
         logger = Logger.STANDARD
 
         module(Oidc) {
-            clientId = "021b83ce-a9b1-4ad4-8c1d-79e576eeab76"
-            discoveryEndpoint = "https://auth.pingone.ca/02fb4743-189a-4bc7-9d6c-a919edfe6447/as/.well-known/openid-configuration"
+            clientId = DaVinciTestConfig.davinciClientId
+            discoveryEndpoint = DaVinciTestConfig.davinciDiscoveryEndpoint
             scopes = mutableSetOf("openid", "email", "address", "phone", "profile")
-            redirectUri = "org.forgerock.demo://oauth2redirect"
-            acrValues = "f47c36d84a95e14dd93d05884792edd5"
+            redirectUri = DaVinciTestConfig.davinciRedirectUri
+            acrValues = DaVinciTestConfig.davinciProtectAcrValues
         }
     }
 
@@ -81,8 +81,8 @@ class DavinciProtectTest {
         assertTrue(result.isSuccess)
 
         // Fill the login form with username and password and click "Login"
-        (node.collectors[0] as? TextCollector)?.value = "jsmith"
-        (node.collectors[1] as? PasswordCollector)?.value = "whatever!"
+        (node.collectors[0] as? TextCollector)?.value = DaVinciTestConfig.davinciProtectUsername
+        (node.collectors[1] as? PasswordCollector)?.value = DaVinciTestConfig.davinciProtectPassword
         (node.collectors[2] as? SubmitCollector)?.value = "Login"
         node = node.next() as ContinueNode
 
@@ -114,7 +114,7 @@ class DavinciProtectTest {
         // Assertions for the 'event' object
         val eventObject = rawResponse.getJSONObject("event")
         val userObject = eventObject.getJSONObject("user")
-        assertEquals("jsmith", userObject.getString("name"))
+        assertEquals(DaVinciTestConfig.davinciProtectUsername, userObject.getString("name"))
 
         // Continue to the next node and finish the flow
         (node.collectors[4] as? SubmitCollector)?.value = "click"
@@ -155,8 +155,8 @@ class DavinciProtectTest {
         assertTrue(result.isSuccess)
 
         // Fill the login form with username and password and click "Login"
-        (node.collectors[1] as? TextCollector)?.value = "jsmith"
-        (node.collectors[2] as? PasswordCollector)?.value = "whatever!"
+        (node.collectors[1] as? TextCollector)?.value = DaVinciTestConfig.davinciProtectUsername
+        (node.collectors[2] as? PasswordCollector)?.value = DaVinciTestConfig.davinciProtectPassword
         (node.collectors[3] as? SubmitCollector)?.value = "Login"
         node = node.next() as ContinueNode
 
@@ -188,7 +188,7 @@ class DavinciProtectTest {
         // Assertions for the 'event' object
         val eventObject = rawResponse.getJSONObject("event")
         val userObject = eventObject.getJSONObject("user")
-        assertEquals("jsmith", userObject.getString("name"))
+        assertEquals(DaVinciTestConfig.davinciProtectUsername, userObject.getString("name"))
 
         // Continue to the next node and finish the flow
         (node.collectors[4] as? SubmitCollector)?.value = "click"

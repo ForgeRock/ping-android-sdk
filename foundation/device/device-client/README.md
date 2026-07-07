@@ -2,6 +2,46 @@
 
 # Device Client Module
 
+The Device Client module offers a unified API for managing MFA and user profile devices registered with Ping Identity services. This library streamlines retrieving, updating, and deleting authentication devices, allowing developers to build secure, user-friendly device management in Android apps.
+
+## Getting Started
+
+### Prerequisites
+
+- Ping Advanced Identity Cloud / PingAM [Supported Versions](https://support.pingidentity.com/s/article/Ping-Identity-EOL-Tracker)
+- Android API level 29 or higher
+
+### Installation
+
+To integrate this module into your Android project, include the following dependency in
+your `build.gradle.kts` (or `build.gradle`) file:
+
+```kotlin
+dependencies {
+    implementation("com.pingidentity.sdks:device-client:<version>")
+}
+```
+
+Replace `<version>` with the latest available version of the SDK from the Maven repository. Ensure your
+project's `repositories` block includes Maven Central or the Ping Identity Maven repository.
+
+### Required Gradle Configuration
+
+To use the Device Client module, you must add the Kotlin Serialization plugin to your `build.gradle.kts`:
+
+```kotlin
+plugins {
+    kotlin("plugin.serialization") version "1.9.0" // or your Kotlin version
+}
+
+dependencies {
+    implementation("com.pingidentity.sdks:device-client:<version>")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0")
+}
+```
+
+All device classes are marked with `@Serializable` and use `@JsonIgnoreUnknownKeys` to handle additional fields from the server gracefully.
+
 ## Overview
 
 The **Device Client** module provides a comprehensive and unified API for managing Multi-Factor Authentication (MFA) devices and user profile devices registered with Ping Identity services. This library simplifies the process of retrieving, updating, and deleting various types of authentication devices, enabling developers to build secure and user-friendly device management experiences within their Android applications.
@@ -32,22 +72,6 @@ sequenceDiagram
     PingServer-->>DeviceClient: List of Push devices
     DeviceClient-->>App: Result.success(List<PushDevice>)
 ```
-
-## Installation
-
-### Add Dependency to Your Project
-
-To integrate the Device Client module into your Android project, add the following dependency to your `build.gradle.kts` (or `build.gradle`) file:
-
-```kotlin
-dependencies {
-    implementation("com.pingidentity.sdks:device-client:<version>")
-}
-```
-
-Replace `<version>` with the latest available version from Maven Central.
-
-## Getting Started
 
 ### Basic Usage
 
@@ -624,36 +648,8 @@ The Device Client module depends on the following libraries:
 - **Kotlin Serialization**: For JSON parsing
 - **Kotlinx Coroutines**: For asynchronous operations
 
-### Required Gradle Configuration
-
-To use the Device Client module, you must add the Kotlin Serialization plugin to your `build.gradle.kts`:
-
-```kotlin
-plugins {
-    kotlin("plugin.serialization") version "1.9.0" // or your Kotlin version
-}
-
-dependencies {
-    implementation("com.pingidentity.sdks:device-client:<version>")
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0")
-}
-```
-
-All device classes are marked with `@Serializable` and use `@JsonIgnoreUnknownKeys` to handle additional fields from the server gracefully.
-
-## Related Modules
-
-- [Journey](https://github.com/ForgeRock/ping-android-sdk/tree/develop/journey): Authentication flow management
-- [DaVinci](https://github.com/ForgeRock/ping-android-sdk/tree/develop/davinci): DaVinci authentication
-- [MFA](https://github.com/ForgeRock/ping-android-sdk/tree/develop/mfa): Multi-factor authentication modules
-- [Device ID](https://github.com/ForgeRock/ping-android-sdk/tree/develop/foundation/device/device-id): Device identification
-- [Device Profile](https://github.com/ForgeRock/ping-android-sdk/tree/develop/foundation/device/device-profile): Device profiling
-
 ## License
 
 This software may be modified and distributed under the terms of the MIT license. See the LICENSE file for details.
 
-Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
-
-
-© Copyright 2025-2026 Ping Identity Corporation. All Rights Reserved
+© Copyright 2025-2026 Ping Identity Corporation. All rights reserved.

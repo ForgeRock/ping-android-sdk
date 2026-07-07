@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 - 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2024 - 2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -10,6 +10,7 @@ package com.pingidentity.journey
 import android.content.Context
 import android.net.Uri
 import android.os.LocaleList
+import androidx.core.net.toUri
 import com.pingidentity.journey.callback.NameCallback
 import com.pingidentity.journey.callback.PasswordCallback
 import com.pingidentity.journey.module.NodeTransform
@@ -22,7 +23,9 @@ import com.pingidentity.logger.CONSOLE
 import com.pingidentity.logger.Logger
 import com.pingidentity.logger.STANDARD
 import com.pingidentity.network.ktor.KtorHttpClient
+import com.pingidentity.oidc.JsonConfigKey
 import com.pingidentity.oidc.Token
+import com.pingidentity.oidc.module.VERIFICATION_URI_COMPLETE
 import com.pingidentity.orchestrate.ContinueNode
 import com.pingidentity.orchestrate.ErrorNode
 import com.pingidentity.orchestrate.FailureNode
@@ -45,9 +48,13 @@ import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.add
+import kotlinx.serialization.json.buildJsonArray
+import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.put
 import org.junit.Rule
 import org.junit.rules.TestWatcher
 import org.junit.runner.RunWith
@@ -103,6 +110,10 @@ class JourneyTest {
                         respond("", HttpStatusCode.OK, headers)
                     }
 
+                    "/par" -> {
+                        respond(parResponse(), HttpStatusCode.Created, headers)
+                    }
+
                     "/am/json/realms/root/authenticate" -> {
                         if (request.body is TextContent) {
                             val result = request.body as TextContent
@@ -125,6 +136,10 @@ class JourneyTest {
 
                     "/authorize" -> {
                         respond("", HttpStatusCode.Found, authorizeResponseHeaders)
+                    }
+
+                    "/tenantId/applications/test/deviceFlow" -> {
+                        respond("", HttpStatusCode.OK, headers)
                     }
 
                     else -> {
@@ -874,4 +889,417 @@ class JourneyTest {
 
         customMockEngine.close()
     }
+
+    @Test
+    fun `Journey with PAR enabled`() = runTest {
+        val tokenStorage = MemoryStorage<Token>()
+        val sessionStorage = MemoryStorage<SSOToken>()
+        val journey =
+            Journey {
+                serverUrl = "http://localhost/am"
+                logger = Logger.CONSOLE
+                httpClient = KtorHttpClient(HttpClient(mockEngine) {
+                    followRedirects = false
+                })
+                // Oidc as module with PAR enabled
+                module(Oidc) {
+                    clientId = "test"
+                    discoveryEndpoint =
+                        "http://localhost/.well-known/openid-configuration"
+                    scopes = mutableSetOf("openid", "email", "address")
+                    redirectUri = "http://localhost:8080"
+                    storage = { tokenStorage }
+                    par = true // Enable PAR
+                }
+                module(Session) {
+                    storage = { sessionStorage }
+                }
+            }
+
+        var node = journey.start("myLogin") // Return first Node
+        assertTrue(node is ContinueNode)
+        assertTrue { node.callbacks.size == 2 }
+
+        (node.callbacks[0] as? NameCallback)?.name = "My First Name"
+        (node.callbacks[1] as? PasswordCallback)?.password = "My Password"
+
+        node = node.next()
+        assertTrue(node is SuccessNode)
+
+        mockEngine.requestHistory[0] // well-known
+        val startRequest = mockEngine.requestHistory[1] // authenticate
+        assertContains(startRequest.url.encodedQuery, "authIndexValue=myLogin")
+        assertContains(startRequest.url.encodedQuery, "authIndexType=service")
+
+        val user = journey.user()
+        assertEquals("Dummy AccessToken", (user?.token() as Result.Success).value.accessToken)
+        assertEquals("Dummy Session Token", user.session().value)
+
+        // Verify PAR request was made
+        val parRequest = mockEngine.requestHistory[3] // PAR request
+        assertEquals("https://auth.test-one-pingone.com/par", parRequest.url.toString())
+        assertTrue(parRequest.body is FormDataContent)
+
+        // Verify client_id and other parameters are in the POST body, not URL
+        val parBody = parRequest.body as FormDataContent
+        assertEquals("test", parBody.formData["client_id"])
+        assertEquals("code", parBody.formData["response_type"])
+        assertEquals("openid email address", parBody.formData["scope"])
+        assertEquals("http://localhost:8080", parBody.formData["redirect_uri"])
+        assertNotNull(parBody.formData["code_challenge"])
+        assertEquals("S256", parBody.formData["code_challenge_method"])
+
+        // Verify authorize request uses request_uri parameter
+        val authorizeRequest = mockEngine.requestHistory[4] // authorize request
+        assertContains(authorizeRequest.url.encodedQuery, "request_uri=urn%3Aietf%3Aparams%3Aoauth%3Arequest_uri%3Atest-request-uri")
+        assertContains(authorizeRequest.url.encodedQuery, "client_id=test")
+    }
+
+    @Test
+    fun `Journey with device user code posts user code to verification URI on success`() = runTest {
+        val tokenStorage = MemoryStorage<Token>()
+        val sessionStorage = MemoryStorage<SSOToken>()
+        val verificationUriComplete =
+            "https://auth.test-one-pingone.com/tenantId/applications/test/deviceFlow?user_code=WDJB-MJHT"
+
+        val journey = Journey {
+            serverUrl = "http://localhost/am"
+            logger = Logger.CONSOLE
+            httpClient = KtorHttpClient(HttpClient(mockEngine) {
+                followRedirects = false
+            })
+            module(Oidc) {
+                clientId = "test"
+                discoveryEndpoint = "http://localhost/.well-known/openid-configuration"
+                scopes = mutableSetOf("openid", "email", "address")
+                redirectUri = "http://localhost:8080"
+                storage = { tokenStorage }
+            }
+            module(Session) {
+                storage = { sessionStorage }
+            }
+        }
+
+        var node = journey.start("myLogin") {
+            VERIFICATION_URI_COMPLETE to verificationUriComplete.toUri()
+        }
+        assertTrue(node is ContinueNode)
+        (node.callbacks[0] as? NameCallback)?.name = "My First Name"
+        (node.callbacks[1] as? PasswordCallback)?.password = "My Password"
+
+        node = node.next()
+        assertTrue(node is SuccessNode)
+        assertEquals("Dummy Session Token", node.session.value)
+
+        // Verify device flow POST request was made to the verification URI
+        val deviceFlowRequest = mockEngine.requestHistory.last()
+        assertEquals(
+            "https://auth.test-one-pingone.com/tenantId/applications/test/deviceFlow",
+            deviceFlowRequest.url.toString().substringBefore("?")
+        )
+        val deviceFlowBody = deviceFlowRequest.body as FormDataContent
+        assertEquals("WDJB-MJHT", deviceFlowBody.formData["user_code"])
+        assertEquals("allow", deviceFlowBody.formData["decision"])
+        assertEquals("Dummy Session Token", deviceFlowBody.formData["csrf"])
+
+        // Verify the session cookie is set in the request header
+        assertEquals("Dummy Session Token", deviceFlowRequest.headers["iPlanetDirectoryPro"])
+    }
+
+    @Test
+    fun `Journey with device user code skips OIDC authorize and token exchange`() = runTest {
+        val tokenStorage = MemoryStorage<Token>()
+        val sessionStorage = MemoryStorage<SSOToken>()
+        val verificationUriComplete =
+            "https://auth.test-one-pingone.com/tenantId/applications/test/deviceFlow?user_code=WDJB-MJHT"
+
+        val journey = Journey {
+            serverUrl = "http://localhost/am"
+            logger = Logger.CONSOLE
+            httpClient = KtorHttpClient(HttpClient(mockEngine) {
+                followRedirects = false
+            })
+            module(Oidc) {
+                clientId = "test"
+                discoveryEndpoint = "http://localhost/.well-known/openid-configuration"
+                scopes = mutableSetOf("openid", "email", "address")
+                redirectUri = "http://localhost:8080"
+                storage = { tokenStorage }
+            }
+            module(Session) {
+                storage = { sessionStorage }
+            }
+        }
+
+        var node = journey.start("myLogin") {
+            VERIFICATION_URI_COMPLETE to verificationUriComplete.toUri()
+        }
+        assertTrue(node is ContinueNode)
+        (node.callbacks[0] as? NameCallback)?.name = "My First Name"
+        (node.callbacks[1] as? PasswordCallback)?.password = "My Password"
+
+        node = node.next()
+        assertTrue(node is SuccessNode)
+
+        // well-known, authenticate (x2), deviceFlow — no /authorize or /access_token
+        val paths = mockEngine.requestHistory.map { it.url.encodedPath }
+        assertTrue(paths.contains("/.well-known/openid-configuration"))
+        assertTrue(paths.contains("/am/json/realms/root/authenticate"))
+        assertTrue(paths.none { it == "/authorize" })
+        assertTrue(paths.none { it == "/access_token" })
+    }
+
+    @Test
+    fun `Journey with device user code returns FailureNode when verification POST fails`() = runTest {
+        val verificationUriComplete =
+            "https://auth.test-one-pingone.com/tenantId/applications/test/deviceFlow?user_code=WDJB-MJHT"
+
+        val failingEngine = MockEngine { request ->
+            when (request.url.encodedPath) {
+                "/.well-known/openid-configuration" ->
+                    respond(openIdConfigurationResponse(), HttpStatusCode.OK, headers)
+                "/am/json/realms/root/authenticate" -> {
+                    if (request.body is TextContent) {
+                        val json = Json.parseToJsonElement((request.body as TextContent).text).jsonObject
+                        if ((json["callbacks"]?.jsonArray?.size ?: 0) == 2) {
+                            return@MockEngine respond(sessionResponse(), HttpStatusCode.OK, authenticateHeader)
+                        }
+                    }
+                    return@MockEngine respond(authenticate(), HttpStatusCode.OK, authenticateHeader)
+                }
+                "/tenantId/applications/test/deviceFlow" ->
+                    respond(
+                        ByteReadChannel("""{"error":"access_denied"}"""),
+                        HttpStatusCode.Forbidden,
+                        headers
+                    )
+                else -> respond(ByteReadChannel(""), HttpStatusCode.InternalServerError)
+            }
+        }
+
+        val journey = Journey {
+            serverUrl = "http://localhost/am"
+            logger = Logger.CONSOLE
+            httpClient = KtorHttpClient(HttpClient(failingEngine) {
+                followRedirects = false
+            })
+            module(Oidc) {
+                clientId = "test"
+                discoveryEndpoint = "http://localhost/.well-known/openid-configuration"
+                scopes = mutableSetOf("openid", "email", "address")
+                redirectUri = "http://localhost:8080"
+                storage = { MemoryStorage() }
+            }
+            module(Session) {
+                storage = { MemoryStorage() }
+            }
+        }
+
+        var node = journey.start("myLogin") {
+            VERIFICATION_URI_COMPLETE to verificationUriComplete.toUri()
+        }
+        assertTrue(node is ContinueNode)
+        (node.callbacks[0] as? NameCallback)?.name = "My First Name"
+        (node.callbacks[1] as? PasswordCallback)?.password = "My Password"
+
+        node = node.next()
+        assertTrue(node is FailureNode)
+        assertTrue(node.cause is com.pingidentity.exception.ApiException)
+        val exception = node.cause as com.pingidentity.exception.ApiException
+        assertEquals(403, exception.status)
+
+        failingEngine.close()
+    }
+
+    @Test
+    fun `Journey without device user code proceeds with normal OIDC flow`() = runTest {
+        val tokenStorage = MemoryStorage<Token>()
+        val sessionStorage = MemoryStorage<SSOToken>()
+
+        val journey = Journey {
+            serverUrl = "http://localhost/am"
+            logger = Logger.CONSOLE
+            httpClient = KtorHttpClient(HttpClient(mockEngine) {
+                followRedirects = false
+            })
+            module(Oidc) {
+                clientId = "test"
+                discoveryEndpoint = "http://localhost/.well-known/openid-configuration"
+                scopes = mutableSetOf("openid", "email", "address")
+                redirectUri = "http://localhost:8080"
+                storage = { tokenStorage }
+            }
+            module(Session) {
+                storage = { sessionStorage }
+            }
+        }
+
+        var node = journey.start("myLogin")
+        assertTrue(node is ContinueNode)
+        (node.callbacks[0] as? NameCallback)?.name = "My First Name"
+        (node.callbacks[1] as? PasswordCallback)?.password = "My Password"
+
+        node = node.next()
+        assertTrue(node is SuccessNode)
+
+        // Token exchange is lazy — trigger it by fetching the user token
+        val user = journey.user()
+        assertNotNull(user)
+        user.token()
+
+        // Normal flow includes /authorize and /access_token after token() is called
+        val paths = mockEngine.requestHistory.map { it.url.encodedPath }
+        assertTrue(paths.contains("/authorize"))
+        assertTrue(paths.contains("/access_token"))
+        // No device flow request
+        assertTrue(paths.none { it.contains("deviceFlow") })
+    }
+
+    // -------------------------------------------------------------------------
+    // createJourney JSON config
+    // -------------------------------------------------------------------------
+
+    @Test
+    fun `createJourney succeeds with valid JSON config`() {
+        val json = buildJsonObject {
+            put(JsonConfigKey.JOURNEY, buildJsonObject {
+                put(JsonConfigKey.SERVER_URL, "https://openam.example.com/am")
+                put(JsonConfigKey.REALM, "alpha")
+            })
+            put(JsonConfigKey.OIDC, buildJsonObject {
+                put(JsonConfigKey.CLIENT_ID, "my-client")
+                put(JsonConfigKey.DISCOVERY_ENDPOINT, "https://openam.example.com/am/oauth2/alpha/.well-known/openid-configuration")
+                put(JsonConfigKey.SCOPES, buildJsonArray { add("openid"); add("profile") })
+                put(JsonConfigKey.REDIRECT_URI, "myapp://oauth2redirect")
+            })
+        }
+        val result = Journey(json)
+        assertTrue(result.isSuccess)
+        val journey = result.getOrThrow()
+        assertEquals("https://openam.example.com/am", journey.options.serverUrl)
+        assertEquals("alpha", journey.options.realm)
+    }
+
+    @Test
+    fun `createJourney uses default realm when absent from JSON`() {
+        val json = buildJsonObject {
+            put(JsonConfigKey.JOURNEY, buildJsonObject {
+                put(JsonConfigKey.SERVER_URL, "https://openam.example.com/am")
+            })
+            put(JsonConfigKey.OIDC, buildJsonObject {
+                put(JsonConfigKey.CLIENT_ID, "my-client")
+                put(JsonConfigKey.DISCOVERY_ENDPOINT, "https://openam.example.com/.well-known/openid-configuration")
+                put(JsonConfigKey.SCOPES, buildJsonArray { add("openid") })
+                put(JsonConfigKey.REDIRECT_URI, "myapp://oauth2redirect")
+            })
+        }
+        val result = Journey(json)
+        assertTrue(result.isSuccess)
+        assertEquals(Constants.REALM, (result.getOrThrow().config as JourneyConfig).realm)
+    }
+
+    @Test
+    fun `createJourney fails when journey block is missing from JSON`() {
+        val json = buildJsonObject {
+            put(JsonConfigKey.OIDC, buildJsonObject {
+                put(JsonConfigKey.CLIENT_ID, "my-client")
+                put(JsonConfigKey.DISCOVERY_ENDPOINT, "https://openam.example.com/.well-known/openid-configuration")
+                put(JsonConfigKey.SCOPES, buildJsonArray { add("openid") })
+                put(JsonConfigKey.REDIRECT_URI, "myapp://oauth2redirect")
+            })
+        }
+        assertTrue(Journey(json).isFailure)
+    }
+
+    @Test
+    fun `createJourney fails when serverUrl is missing from journey block`() {
+        val json = buildJsonObject {
+            put(JsonConfigKey.JOURNEY, buildJsonObject {
+                put(JsonConfigKey.REALM, "alpha")
+            })
+            put(JsonConfigKey.OIDC, buildJsonObject {
+                put(JsonConfigKey.CLIENT_ID, "my-client")
+                put(JsonConfigKey.DISCOVERY_ENDPOINT, "https://openam.example.com/.well-known/openid-configuration")
+                put(JsonConfigKey.SCOPES, buildJsonArray { add("openid") })
+                put(JsonConfigKey.REDIRECT_URI, "myapp://oauth2redirect")
+            })
+        }
+        assertTrue(Journey(json).isFailure)
+    }
+
+    @Test
+    fun `createJourney fails when oidc block is missing from JSON`() {
+        assertTrue(Journey(buildJsonObject {
+            put(JsonConfigKey.JOURNEY, buildJsonObject { put(JsonConfigKey.SERVER_URL, "https://openam.example.com/am") })
+        }).isFailure)
+    }
+
+    @Test
+    fun `createJourney fails when clientId is missing from oidc JSON`() {
+        val json = buildJsonObject {
+            put(JsonConfigKey.JOURNEY, buildJsonObject {
+                put(JsonConfigKey.SERVER_URL, "https://openam.example.com/am")
+            })
+            put(JsonConfigKey.OIDC, buildJsonObject {
+                put(JsonConfigKey.DISCOVERY_ENDPOINT, "https://openam.example.com/.well-known/openid-configuration")
+                put(JsonConfigKey.SCOPES, buildJsonArray { add("openid") })
+                put(JsonConfigKey.REDIRECT_URI, "myapp://oauth2redirect")
+            })
+        }
+        assertTrue(Journey(json).isFailure)
+    }
+
+    @Test
+    fun `createJourney succeeds with scopes as comma-separated string`() {
+        val json = buildJsonObject {
+            put(JsonConfigKey.JOURNEY, buildJsonObject {
+                put(JsonConfigKey.SERVER_URL, "https://openam.example.com/am")
+            })
+            put(JsonConfigKey.OIDC, buildJsonObject {
+                put(JsonConfigKey.CLIENT_ID, "my-client")
+                put(JsonConfigKey.DISCOVERY_ENDPOINT, "https://openam.example.com/.well-known/openid-configuration")
+                put(JsonConfigKey.SCOPES, "openid,profile")
+                put(JsonConfigKey.REDIRECT_URI, "myapp://oauth2redirect")
+            })
+        }
+        assertTrue(Journey(json).isSuccess)
+    }
+
+    @Test
+    fun `createJourney succeeds with all optional OIDC fields`() {
+        val json = buildJsonObject {
+            put(JsonConfigKey.JOURNEY, buildJsonObject {
+                put(JsonConfigKey.SERVER_URL, "https://openam.example.com/am")
+                put(JsonConfigKey.REALM, "alpha")
+            })
+            put(JsonConfigKey.OIDC, buildJsonObject {
+                put(JsonConfigKey.CLIENT_ID, "my-client")
+                put(JsonConfigKey.DISCOVERY_ENDPOINT, "https://openam.example.com/.well-known/openid-configuration")
+                put(JsonConfigKey.SCOPES, buildJsonArray { add("openid") })
+                put(JsonConfigKey.REDIRECT_URI, "myapp://oauth2redirect")
+                put(JsonConfigKey.PAR, true)
+                put(JsonConfigKey.LOGIN_HINT, "user@example.com")
+                put(JsonConfigKey.STATE, "custom-state")
+                put(JsonConfigKey.NONCE, "custom-nonce")
+                put(JsonConfigKey.DISPLAY, "page")
+                put(JsonConfigKey.PROMPT, "login")
+                put(JsonConfigKey.UI_LOCALES, "en-US")
+                put(JsonConfigKey.ACR_VALUES, "Level3")
+                put(JsonConfigKey.SIGN_OUT_REDIRECT_URI, "myapp://logout")
+                put(JsonConfigKey.REFRESH_THRESHOLD, 60L)
+                put(JsonConfigKey.ADDITIONAL_PARAMETERS, buildJsonObject {
+                    put("custom_param", "custom_value")
+                })
+            })
+        }
+        assertTrue(Journey(json).isSuccess)
+    }
+
+    private fun parResponse(): String =
+        """
+        {
+            "request_uri": "urn:ietf:params:oauth:request_uri:test-request-uri",
+            "expires_in": 60
+        }
+        """.trimIndent()
 }

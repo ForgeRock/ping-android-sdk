@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2025 - 2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -8,6 +8,7 @@
 package com.pingidentity.mfa.commons
 
 import android.util.Base64
+import com.pingidentity.mfa.commons.exception.InvalidUriException
 
 /**
  * Base class for URI parsers with common functionality.
@@ -43,7 +44,7 @@ abstract class UriParser {
                 val labelIssuer = labelComponents[0]
                 if (issuerParam != null && labelIssuer.isNotEmpty() && 
                     !issuerParam.equals(labelIssuer, ignoreCase = true)) {
-                    throw IllegalArgumentException("Issuer parameter ($issuerParam) doesn't match label issuer ($labelIssuer)")
+                    throw InvalidUriException("Issuer parameter ($issuerParam) doesn't match label issuer ($labelIssuer)")
                 }
                 
                 // Use the label issuer if it exists, otherwise use the parameter

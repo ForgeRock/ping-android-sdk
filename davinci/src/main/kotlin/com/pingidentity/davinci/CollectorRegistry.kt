@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 - 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2024 - 2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -15,6 +15,10 @@ import com.pingidentity.davinci.collector.LabelCollector
 import com.pingidentity.davinci.collector.MultiSelectCollector
 import com.pingidentity.davinci.collector.PasswordCollector
 import com.pingidentity.davinci.collector.PhoneNumberCollector
+import com.pingidentity.davinci.collector.ReadOnlyTextCollector
+import com.pingidentity.davinci.collector.PollingCollector
+import com.pingidentity.davinci.collector.QRCodeCollector
+import com.pingidentity.davinci.collector.BooleanCollector
 import com.pingidentity.davinci.collector.SingleSelectCollector
 import com.pingidentity.davinci.collector.SubmitCollector
 import com.pingidentity.davinci.collector.TextCollector
@@ -50,9 +54,14 @@ internal class CollectorRegistry : ModuleInitializer() {
 
         CollectorFactory.register("SINGLE_SELECT", ::SingleSelectCollector)
         CollectorFactory.register("MULTI_SELECT", ::MultiSelectCollector)
+        CollectorFactory.register("BOOLEAN", ::BooleanCollector)
 
         CollectorFactory.register("DEVICE_REGISTRATION", ::DeviceRegistrationCollector)
         CollectorFactory.register("DEVICE_AUTHENTICATION", ::DeviceAuthenticationCollector)
         CollectorFactory.register("PHONE_NUMBER", ::PhoneNumberCollector)
+
+        CollectorFactory.register("READ_ONLY_TEXT", ::ReadOnlyTextCollector)
+        CollectorFactory.register("POLLING", ::PollingCollector)
+        CollectorFactory.register("QR_CODE", ::QRCodeCollector)
     }
 }

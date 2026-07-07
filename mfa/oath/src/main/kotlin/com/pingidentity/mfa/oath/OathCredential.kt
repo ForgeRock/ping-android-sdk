@@ -19,6 +19,7 @@ import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
 import com.pingidentity.mfa.commons.json
+import com.pingidentity.mfa.commons.exception.InvalidUriException
 import java.util.Date
 import java.util.UUID
 
@@ -113,7 +114,8 @@ data class OathCredential(
          *
          * @param uri The URI string.
          * @return An OathCredential.
-         * @throws IllegalArgumentException if the URI is invalid.
+         * @throws InvalidUriException if the URI is structurally invalid (scheme mismatch, missing required parameters).
+         * @throws IllegalArgumentException if a URI parameter value fails validation (e.g. digits not 6 or 8, period ≤ 0).
          */
         suspend fun fromUri(uri: String): OathCredential {
             return OathUriParser.parse(uri)

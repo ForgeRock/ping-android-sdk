@@ -13,6 +13,7 @@ import com.pingidentity.journey.user as journeyUser
 import com.pingidentity.davinci.user as davinciUser
 import com.pingidentity.samples.pingsampleapp.config.daVinci
 import com.pingidentity.samples.pingsampleapp.config.journey
+import com.pingidentity.samples.pingsampleapp.config.oidcDeviceClient
 import com.pingidentity.samples.pingsampleapp.config.web
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
@@ -21,6 +22,7 @@ data class LogoutState(
     val daVinci: Boolean = false,
     val journey: Boolean = false,
     val oidc: Boolean = false,
+    val oidcDeviceClient: Boolean = false,
 )
 class LogoutViewModel: ViewModel() {
     val state = MutableStateFlow(LogoutState())
@@ -29,15 +31,16 @@ class LogoutViewModel: ViewModel() {
         viewModelScope.launch {
             state.value = LogoutState(
                 daVinci = daVinci?.davinciUser() != null,
-                journey = journey.journeyUser() != null,
+                journey = journey?.journeyUser() != null,
                 oidc = web?.user() != null,
+                oidcDeviceClient = oidcDeviceClient?.user() != null,
             )
         }
     }
 
     fun logoutJourney(onCompleted: () -> Unit) {
         viewModelScope.launch {
-            journey.journeyUser()?.logout()
+            journey?.journeyUser()?.logout()
             onCompleted()
         }
     }
@@ -56,13 +59,24 @@ class LogoutViewModel: ViewModel() {
         }
     }
 
+    fun logoutOidcDeviceClient(onCompleted: () -> Unit) {
+        viewModelScope.launch {
+            oidcDeviceClient?.user()?.logout()
+            onCompleted()
+        }
+    }
+
     fun logoutAll(onCompleted: () -> Unit) {
         viewModelScope.launch {
             // Logout from all active sessions
-            journey.journeyUser()?.logout()
-            daVinci?.davinciUser()?.logout()
-            web?.user()?.logout()
-            onCompleted()
+            try {
+                runCatching { journey?.journeyUser()?.logout() }
+                runCatching { daVinci?.davinciUser()?.logout() }
+                runCatching { web?.user()?.logout() }
+                runCatching { oidcDeviceClient?.user()?.logout() }
+            } finally {
+                onCompleted()
+            }
         }
     }
 

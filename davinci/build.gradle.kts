@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 - 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2024 - 2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -10,7 +10,6 @@ plugins {
     id("com.pingidentity.convention.centralPublish")
     id("com.pingidentity.convention.jacoco")
     alias(libs.plugins.androidLibrary)
-    alias(libs.plugins.kotlinAndroid)
     alias(libs.plugins.kotlinSerialization)
 }
 
@@ -18,19 +17,20 @@ description = "DaVinci library"
 
 android {
     namespace = "com.pingidentity.davinci"
-
-    unitTestVariants.all {
-        this.mergedFlavor.manifestPlaceholders["appRedirectUriScheme"] = "com.pingidentity.demo"
-    }
-
-    testVariants.all {
-        this.mergedFlavor.manifestPlaceholders["appRedirectUriScheme"] = "com.pingidentity.demo"
+    defaultConfig {
+        manifestPlaceholders["appRedirectUriScheme"] = "com.pingidentity.test"
     }
 
     buildTypes {
         debug {
             enableAndroidTestCoverage = true
             enableUnitTestCoverage = true
+        }
+    }
+
+    packaging {
+        resources {
+            excludes += mutableSetOf("META-INF/LICENSE.md", "META-INF/LICENSE-notice.md")
         }
     }
 }
@@ -48,16 +48,21 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
 
     testImplementation(project(":foundation:testrail"))
-    testImplementation(libs.kotlin.test)
+    testImplementation(libs.kotlin.test.junit)
     testImplementation(libs.mockk)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.ktor.client.mock)
     testImplementation(libs.robolectric)
 
-    androidTestImplementation(libs.kotlin.test)
+    androidTestImplementation(libs.kotlin.test.junit)
     androidTestImplementation(libs.kotlinx.coroutines.test)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.test.runner)
     androidTestImplementation(project(":foundation:testrail"))
     androidTestImplementation(project(":protect"))
+    androidTestImplementation(project(":foundation:browser"))
+    androidTestImplementation(libs.zxing.core)
+    androidTestImplementation(libs.ktor.client.core)
+    androidTestImplementation(libs.mockk)
+    androidTestImplementation(libs.mockk.android)
 }

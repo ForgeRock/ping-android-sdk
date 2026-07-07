@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2025 - 2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -205,9 +205,8 @@ class DeviceBindingConfig {
      * Function that calculates the JWT expiration time based on timeout seconds.
      * Takes the timeout in seconds and returns an Instant representing when the JWT expires.
      * Defaults to current time plus the timeout in seconds.
-     *
-     * @param timeout The timeout value in seconds
-     * @return Instant representing when the JWT should expire
+     * The function argument is the timeout value in seconds.
+     * Returns an Instant representing when the JWT should expire.
      */
     var expirationTime: (Int) -> Instant = { Instant.now().plusSeconds(it.toLong()) }
 
@@ -245,9 +244,8 @@ class DeviceBindingConfig {
      * This function is called when the system finds multiple user keys for the current
      * user and authentication type. The default implementation checks if a UI collector
      * is available and prompts the user to select a key, otherwise it returns the first key.
-     *
-     * @param keys List of available UserKey objects to choose from
-     * @return The selected UserKey to use for the operation
+     * The function argument is the list of available UserKey objects to choose from.
+     * Returns the selected UserKey to use for the operation.
      */
     internal var userKeySelector: suspend (List<UserKey>) -> UserKey = { keys ->
         if (isUserKeyCollectorAvailable()) {
@@ -285,9 +283,8 @@ class DeviceBindingConfig {
      *
      * This property can be set to provide custom authenticator implementations.
      * If not set, the default authenticators will be used based on the authentication type.
-     *
-     * @param type The authentication type to create an authenticator for
-     * @return A DeviceAuthenticator instance for the specified type
+     * The function argument is the [DeviceBindingAuthenticationType] to create an authenticator for.
+     * Returns a DeviceAuthenticator instance for the specified type.
      */
     lateinit var deviceAuthenticator: (DeviceBindingAuthenticationType) -> DeviceAuthenticator
 

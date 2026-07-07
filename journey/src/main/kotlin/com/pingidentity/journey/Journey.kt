@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 - 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2024 - 2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -22,8 +22,12 @@ import com.pingidentity.journey.Constants.SERVICE
 import com.pingidentity.journey.Constants.START_REQUEST
 import com.pingidentity.journey.Constants.SUSPENDED_ID
 import com.pingidentity.journey.module.NodeTransform
+import com.pingidentity.journey.module.Oidc
 import com.pingidentity.journey.module.RequestUrl
 import com.pingidentity.journey.module.Session
+import com.pingidentity.oidc.JsonConfigKey
+import com.pingidentity.oidc.JsonConfigParser
+import com.pingidentity.oidc.update
 import com.pingidentity.orchestrate.Node
 import com.pingidentity.orchestrate.Setup
 import com.pingidentity.orchestrate.SharedContext
@@ -31,6 +35,7 @@ import com.pingidentity.orchestrate.Workflow
 import com.pingidentity.orchestrate.WorkflowConfig
 import com.pingidentity.orchestrate.module.CustomHeader
 import com.pingidentity.utils.toAcceptLanguage
+import kotlinx.serialization.json.JsonObject
 import com.pingidentity.network.HttpRequest as Request
 
 typealias Journey = Workflow
@@ -100,6 +105,9 @@ private fun option(context: SharedContext, block: Option.() -> Unit = {}) {
     context.apply {
         FORCE_AUTH to option.forceAuth
         NO_SESSION to option.noSession
+        option.parameters.forEach { (key, value) ->
+            this[key] = value
+        }
     }
 }
 
@@ -138,9 +146,86 @@ fun Journey(block: JourneyConfig.() -> Unit = {}): Journey {
 }
 
 /**
+ * Creates a [Journey] instance from a JSON configuration.
+ *
+ * Journey-specific fields are nested under `journey`; OIDC fields under `oidc`. Example:
+ * ```json
+ * {
+ *   "timeout": 30000,
+ *   "log": "STANDARD",
+ *   "journey": {
+ *     "serverUrl": "https://openam.example.com/am",
+ *     "realm": "alpha",
+ *     "cookieName": "iPlanetDirectoryPro"
+ *   },
+ *   "oidc": {
+ *     "clientId": "my-client-id",
+ *     "discoveryEndpoint": "https://openam.example.com/am/oauth2/alpha/.well-known/openid-configuration",
+ *     "scopes": ["openid", "profile"],
+ *     "redirectUri": "myapp://oauth2redirect",
+ *     "signOutRedirectUri": "myapp://logout",
+ *     "refreshThreshold": 60,
+ *     "loginHint": "user@example.com",
+ *     "state": "custom-state",
+ *     "nonce": "custom-nonce",
+ *     "display": "page",
+ *     "prompt": "login",
+ *     "uiLocales": "en-US",
+ *     "acrValues": "Level3",
+ *     "par": true,
+ *     "additionalParameters": { "max_age": "3600" },
+ *     "openId": {
+ *       "authorizationEndpoint": "https://openam.example.com/authorize",
+ *       "tokenEndpoint": "https://openam.example.com/token",
+ *       "userinfoEndpoint": "https://openam.example.com/userinfo",
+ *       "endSessionEndpoint": "https://openam.example.com/logout",
+ *       "revocationEndpoint": "https://openam.example.com/revoke"
+ *     }
+ *   }
+ * }
+ * ```
+ *
+ * @param json The JSON configuration object.
+ * @return A [Result] containing the [Journey] instance or an exception if the configuration is invalid.
+ */
+fun Journey(json: JsonObject): Result<Journey> {
+    return runCatching {
+        val jsonConfigParser = JsonConfigParser(json)
+        val journeyJsonConfig = JsonConfigParser(jsonConfigParser.required<JsonObject>(JsonConfigKey.JOURNEY))
+        val oidcJsonConfig = JsonConfigParser(jsonConfigParser.required<JsonObject>(JsonConfigKey.OIDC))
+        Journey {
+            logger = jsonConfigParser.logLevel()
+            timeout = jsonConfigParser.timeoutMillis()
+
+            serverUrl = journeyJsonConfig.required<String>(JsonConfigKey.SERVER_URL)
+            realm = journeyJsonConfig.optional<String>(JsonConfigKey.REALM, REALM)
+            cookie = journeyJsonConfig.optional<String>(JsonConfigKey.COOKIE_NAME, COOKIE)
+
+            module(Oidc) {
+                clientId = oidcJsonConfig.required<String>(JsonConfigKey.CLIENT_ID)
+                discoveryEndpoint = oidcJsonConfig.required<String>(JsonConfigKey.DISCOVERY_ENDPOINT)
+                redirectUri = oidcJsonConfig.required<String>(JsonConfigKey.REDIRECT_URI)
+                scopes = oidcJsonConfig.scopeSet(JsonConfigKey.SCOPES)
+                update(oidcJsonConfig)
+            }
+        }
+    }
+}
+
+/**
  * Option class to configure additional options for the journey.
  *
  * @property forceAuth Whether to force authentication (default is false).
  * @property noSession Whether to return new session (default is false).
+ * @property parameters Additional key-value parameters to include in the authorization request.
  */
-data class Option(var forceAuth: Boolean = false, var noSession: Boolean = false)
+data class Option(
+    var forceAuth: Boolean = false,
+    var noSession: Boolean = false,
+    internal val parameters: MutableMap<String, Any> = mutableMapOf(),
+) : MutableMap<String, Any> by parameters {
+
+    infix fun String.to(value: Any) {
+        this@Option[this] = value
+    }
+}

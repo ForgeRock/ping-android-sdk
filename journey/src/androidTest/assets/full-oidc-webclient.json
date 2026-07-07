@@ -1,0 +1,31 @@
+{
+  "timeout": 30000,
+  "log": "WARN",
+  "oidc": {
+    "clientId": "AndroidTest",
+    "discoveryEndpoint": "https://openam-sdks.forgeblocks.com/am/oauth2/alpha/.well-known/openid-configuration",
+    "scopes": ["openid", "profile", "email"],
+    "redirectUri": "frauth://oauth2redirect",
+    "signOutRedirectUri": "frauth://signout",
+    "refreshThreshold": 60,
+    "loginHint": "user@example.com",
+    "state": "test-state",
+    "nonce": "test-nonce",
+    "display": "page",
+    "prompt": "login",
+    "uiLocales": "en-US",
+    "acrValues": "Level2",
+    "par": true,
+    "additionalParameters": {
+      "max_age": "3600",
+      "custom_param": "custom_value"
+    },
+    "openId": {
+      "authorizationEndpoint": "https://openam-sdks.forgeblocks.com/am/oauth2/alpha/authorize",
+      "tokenEndpoint": "https://openam-sdks.forgeblocks.com/am/oauth2/alpha/access_token",
+      "userInfoEndpoint": "https://openam-sdks.forgeblocks.com/am/oauth2/alpha/userinfo",
+      "endSessionEndpoint": "https://openam-sdks.forgeblocks.com/am/oauth2/alpha/connect/endSession",
+      "revocationEndpoint": "https://openam-sdks.forgeblocks.com/am/oauth2/alpha/token/revoke"
+    }
+  }
+}

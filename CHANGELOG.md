@@ -1,3 +1,23 @@
+## [2.1.0]
+
+#### Added
+- Added OAuth 2.0 Device Authorization Grant (RFC 8628) support [SDKS-4784]
+- Added Pushed Authorization Request (PAR) support for OIDC [SDKS-4231]
+- Added standardized JSON configuration support [SDKS-5065] 
+- Added `PollingCollector` for DaVinci flows [SDKS-4681]
+- Added `QrCodeCollector` for DaVinci flows [SDKS-4679]
+- Added `BooleanCollector` to support Checkbox and Switch input types in DaVinci forms [SDKS-4919]
+- Added `ReadOnlyTextCollector` for DaVinci forms to support Terms of Service and agreement displays [SDKS-4927]
+- Added support for links in Translatable Rich Text (Forms) [SDKS-4246]
+- Added support for phone number extensions in `PhoneNumberCollector` [SDKS-4669]
+- Support for Android 17 (the SDK has been verified to build and run correctly on Android 17) [SDKS-5191]
+
+#### Fixed
+- Fixed OATH and Push URI parsers to propagate typed `InvalidUriException` for structural URI parse errors [SDKS-5074]
+- Fixed Ktor CIO engine dropping repeated `Set-Cookie` headers with mixed casing (KTOR-8614 workaround) [SDKS-4742]
+- Fixed Push Number Challenge not surfacing a distinct failure for wrong-number responses [SDKS-5116]
+- Fixed `PasswordCollector` not handling nested Password policies [SDKS-4694]
+
 ## [2.0.1]
 
 #### Fixed

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 - 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2024 - 2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -8,8 +8,10 @@
 package com.pingidentity.oidc
 
 import com.pingidentity.network.ktor.KtorHttpClient
+import com.pingidentity.network.ktor.KtorHttpRequest
 import com.pingidentity.oidc.agent.BrowserConfig
 import com.pingidentity.oidc.agent.browser
+import com.pingidentity.oidc.module.populateRequest
 import com.pingidentity.storage.MemoryStorage
 import com.pingidentity.testrail.TestRailCase
 import com.pingidentity.testrail.TestRailWatcher
@@ -27,9 +29,15 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.add
+import kotlinx.serialization.json.buildJsonArray
+import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.put
 import org.junit.Rule
 import org.junit.rules.TestWatcher
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -47,6 +55,20 @@ class TestAgent(agent: Agent<BrowserConfig>) : Agent<BrowserConfig> by agent {
     }
 }
 
+/**
+ * A test agent that exercises the PAR (Pushed Authorization Request) flow by calling
+ * [populateRequest] on the OIDC config before returning an [AuthCode].
+ */
+class PARTestAgent(agent: Agent<BrowserConfig>) : Agent<BrowserConfig> by agent {
+    override suspend fun authorize(oidcConfig: OidcConfig<BrowserConfig>): AuthCode {
+        val pkce = Pkce.generate()
+        val request = KtorHttpRequest()
+        oidcConfig.oidcClientConfig.populateRequest(request, emptyMap(), pkce)
+        return AuthCode("test-code", pkce.codeVerifier)
+    }
+}
+
+@RunWith(RobolectricTestRunner::class)
 class OidcClientTest {
     private lateinit var mockEngine: MockEngine
     private lateinit var testAgent: Agent<BrowserConfig>
@@ -614,6 +636,221 @@ class OidcClientTest {
                 HttpStatusCode.Unauthorized.value,
                 (result.value as OidcError.ApiError).code,
             )
+        }
+
+    @Test
+    fun `token with PAR enabled pushes auth params to PAR endpoint`() =
+        runTest {
+            mockEngine =
+                MockEngine { request ->
+                    when (request.url.encodedPath) {
+                        "/openid-configuration" -> {
+                            respond(openIdConfigurationWithParResponse(), HttpStatusCode.OK, headers)
+                        }
+
+                        "/par" -> {
+                            respond(parResponse(), HttpStatusCode.OK, headers)
+                        }
+
+                        "/token" -> {
+                            respond(tokeResponse(), HttpStatusCode.OK, headers)
+                        }
+
+                        else -> {
+                            return@MockEngine respond(
+                                content = ByteReadChannel(""),
+                                status = HttpStatusCode.InternalServerError,
+                            )
+                        }
+                    }
+                }
+
+            val oidcClient =
+                OidcClient {
+                    httpClient = KtorHttpClient(HttpClient(mockEngine))
+                    discoveryEndpoint = "http://localhost/openid-configuration"
+                    redirectUri = "http://localhost/redirect"
+                    clientId = "test-client-id"
+                    scopes = mutableSetOf("openid", "profile")
+                    storage = { MemoryStorage() }
+                    par = true
+                    updateAgent(PARTestAgent(browser))
+                }
+
+            val result = oidcClient.token()
+            assertTrue(result is Success<Token>)
+
+            // Verify PAR request was made (index 0=discovery, 1=PAR, 2=token)
+            val parRequest = mockEngine.requestHistory[1]
+            assertEquals("/par", parRequest.url.encodedPath)
+            assertTrue(parRequest.body is FormDataContent)
+            val parBody = parRequest.body as FormDataContent
+            assertEquals("test-client-id", parBody.formData["client_id"])
+            assertEquals("code", parBody.formData["response_type"])
+            assertEquals("openid profile", parBody.formData["scope"])
+            assertEquals("http://localhost/redirect", parBody.formData["redirect_uri"])
+            assertNotNull(parBody.formData["code_challenge"])
+            assertEquals("S256", parBody.formData["code_challenge_method"])
+
+            // Verify token was obtained successfully
+            assertEquals("Dummy AccessToken", result.value.accessToken)
+        }
+
+    // -------------------------------------------------------------------------
+    // createOidcClient JSON config
+    // -------------------------------------------------------------------------
+
+    @Test
+    fun `createOidcClient succeeds with valid JSON config`() {
+        val json = buildJsonObject {
+            put(JsonConfigKey.OIDC, buildJsonObject {
+                put(JsonConfigKey.CLIENT_ID, "my-client")
+                put(JsonConfigKey.DISCOVERY_ENDPOINT, "https://auth.pingone.ca/env-id/as/.well-known/openid-configuration")
+                put(JsonConfigKey.SCOPES, "openid,profile")
+                put(JsonConfigKey.REDIRECT_URI, "myapp://oauth2redirect")
+            })
+        }
+        assertTrue(OidcClient(json).isSuccess)
+    }
+
+    @Test
+    fun `createOidcClient fails when oidc block is missing from JSON`() {
+        val json = buildJsonObject {
+            put(JsonConfigKey.CLIENT_ID, "my-client")
+            put(JsonConfigKey.DISCOVERY_ENDPOINT, "https://auth.pingone.ca/env-id/as/.well-known/openid-configuration")
+            put(JsonConfigKey.SCOPES, "openid")
+            put(JsonConfigKey.REDIRECT_URI, "myapp://oauth2redirect")
+        }
+        assertTrue(OidcClient(json).isFailure)
+    }
+
+    @Test
+    fun `createOidcClient fails when clientId is missing from JSON`() {
+        val json = buildJsonObject {
+            put(JsonConfigKey.OIDC, buildJsonObject {
+                put(JsonConfigKey.DISCOVERY_ENDPOINT, "https://auth.pingone.ca/env-id/as/.well-known/openid-configuration")
+                put(JsonConfigKey.SCOPES, "openid")
+                put(JsonConfigKey.REDIRECT_URI, "myapp://oauth2redirect")
+            })
+        }
+        assertTrue(OidcClient(json).isFailure)
+    }
+
+    @Test
+    fun `createOidcClient fails when discoveryEndpoint is missing from JSON`() {
+        val json = buildJsonObject {
+            put(JsonConfigKey.OIDC, buildJsonObject {
+                put(JsonConfigKey.CLIENT_ID, "my-client")
+                put(JsonConfigKey.SCOPES, "openid")
+                put(JsonConfigKey.REDIRECT_URI, "myapp://oauth2redirect")
+            })
+        }
+        assertTrue(OidcClient(json).isFailure)
+    }
+
+    @Test
+    fun `createOidcClient fails when redirectUri is missing from JSON`() {
+        val json = buildJsonObject {
+            put(JsonConfigKey.OIDC, buildJsonObject {
+                put(JsonConfigKey.CLIENT_ID, "my-client")
+                put(JsonConfigKey.DISCOVERY_ENDPOINT, "https://auth.pingone.ca/env-id/as/.well-known/openid-configuration")
+                put(JsonConfigKey.SCOPES, "openid")
+            })
+        }
+        assertTrue(OidcClient(json).isFailure)
+    }
+
+    @Test
+    fun `createOidcClient fails when scopes is missing from JSON`() {
+        val json = buildJsonObject {
+            put(JsonConfigKey.OIDC, buildJsonObject {
+                put(JsonConfigKey.CLIENT_ID, "my-client")
+                put(JsonConfigKey.DISCOVERY_ENDPOINT, "https://auth.pingone.ca/env-id/as/.well-known/openid-configuration")
+                put(JsonConfigKey.REDIRECT_URI, "myapp://oauth2redirect")
+            })
+        }
+        assertTrue(OidcClient(json).isFailure)
+    }
+
+    @Test
+    fun `createOidcClient succeeds with scopes as JsonArray`() {
+        val json = buildJsonObject {
+            put(JsonConfigKey.OIDC, buildJsonObject {
+                put(JsonConfigKey.CLIENT_ID, "my-client")
+                put(JsonConfigKey.DISCOVERY_ENDPOINT, "https://auth.pingone.ca/env-id/as/.well-known/openid-configuration")
+                put(JsonConfigKey.SCOPES, buildJsonArray {
+                    add("openid")
+                    add("profile")
+                })
+                put(JsonConfigKey.REDIRECT_URI, "myapp://oauth2redirect")
+            })
+        }
+        assertTrue(OidcClient(json).isSuccess)
+    }
+
+    @Test
+    fun `createOidcClient succeeds with all optional OIDC fields`() {
+        val json = buildJsonObject {
+            put(JsonConfigKey.OIDC, buildJsonObject {
+                put(JsonConfigKey.CLIENT_ID, "my-client")
+                put(JsonConfigKey.DISCOVERY_ENDPOINT, "https://auth.pingone.ca/env-id/as/.well-known/openid-configuration")
+                put(JsonConfigKey.SCOPES, "openid")
+                put(JsonConfigKey.REDIRECT_URI, "myapp://oauth2redirect")
+                put(JsonConfigKey.PAR, true)
+                put(JsonConfigKey.LOGIN_HINT, "user@example.com")
+                put(JsonConfigKey.STATE, "custom-state")
+                put(JsonConfigKey.NONCE, "custom-nonce")
+                put(JsonConfigKey.DISPLAY, "page")
+                put(JsonConfigKey.PROMPT, "login")
+                put(JsonConfigKey.UI_LOCALES, "en-US")
+                put(JsonConfigKey.ACR_VALUES, "Level3")
+                put(JsonConfigKey.SIGN_OUT_REDIRECT_URI, "myapp://logout")
+                put(JsonConfigKey.REFRESH_THRESHOLD, 60L)
+                put(JsonConfigKey.ADDITIONAL_PARAMETERS, buildJsonObject {
+                    put("custom_param", "custom_value")
+                })
+            })
+        }
+        assertTrue(OidcClient(json).isSuccess)
+    }
+
+    @Test
+    fun `token with PAR enabled fails when PAR endpoint returns an error`() =
+        runTest {
+            mockEngine =
+                MockEngine { request ->
+                    when (request.url.encodedPath) {
+                        "/openid-configuration" -> {
+                            respond(openIdConfigurationWithParResponse(), HttpStatusCode.OK, headers)
+                        }
+
+                        "/par" -> {
+                            respond("", HttpStatusCode.BadRequest, headers)
+                        }
+
+                        else -> {
+                            return@MockEngine respond(
+                                content = ByteReadChannel(""),
+                                status = HttpStatusCode.InternalServerError,
+                            )
+                        }
+                    }
+                }
+
+            val oidcClient =
+                OidcClient {
+                    httpClient = KtorHttpClient(HttpClient(mockEngine))
+                    discoveryEndpoint = "http://localhost/openid-configuration"
+                    redirectUri = "http://localhost/redirect"
+                    clientId = "test-client-id"
+                    scopes = mutableSetOf("openid", "profile")
+                    storage = { MemoryStorage() }
+                    par = true
+                    updateAgent(PARTestAgent(browser))
+                }
+
+            val result = oidcClient.token()
+            assertTrue(result is Failure<OidcError>)
         }
 
     @TestRailCase(22094)

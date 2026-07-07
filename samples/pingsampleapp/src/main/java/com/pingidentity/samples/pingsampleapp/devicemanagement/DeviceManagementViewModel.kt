@@ -84,7 +84,11 @@ class DeviceManagementViewModel(
             s.copy(selectedDeviceType = deviceType, isLoading = true)
         }
         viewModelScope.launch {
-            val deviceClient = buildDeviceClient() ?: return@launch
+            val deviceClient = buildDeviceClient()
+            if (deviceClient == null) {
+                state.update { s -> s.copy(deviceList = emptyList(), isLoading = false) }
+                return@launch
+            }
             try {
                 when (deviceType) {
                     DeviceType.OATH -> {
@@ -322,7 +326,7 @@ class DeviceManagementViewModel(
     }
 
     private suspend fun buildDeviceClient(): DeviceClient? {
-        val user = journey.user() ?: return null
+        val user = journey?.user() ?: return null
         return DeviceClient {
             ssoTokenString = user.session().value
             serverUrl = URL("https://openam-sdks.forgeblocks.com/am")

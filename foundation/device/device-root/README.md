@@ -1,30 +1,28 @@
 [![Ping Identity](https://www.pingidentity.com/content/dam/picr/nav/Ping-Logo-2.svg)](https://github.com/ForgeRock/ping-android-sdk)
 
-# Device Root Detection Module
+# Device Root Module
 
 The Device Root Detection Module provides comprehensive utilities for analyzing Android device tampering, including root detection, system integrity verification, and security compromise identification. It employs multiple detection strategies to provide reliable assessment of device security status.
 
-## Features
+## Getting Started
 
-- **Comprehensive Tamper Detection**: Multi-layered approach using various detection mechanisms
-- **Scoring System**: Returns confidence scores (0.0 to 1.0) instead of binary results
-- **Multiple Detection Categories**:
-  - **Build & System Property Analysis**
-  - **File System Analysis** 
-  - **Application Analysis**
-  - **System Security Analysis**
-- **Asynchronous API**: Coroutine-based analysis for non-blocking operations
-- **Extensible Architecture**: Easy to add custom detectors
-- **DSL Configuration**: Fluent API for configuring detection strategies
-- **Production Ready**: Thread-safe with comprehensive error handling
+### Prerequisites
 
-## Installation
+- Android API level 29 or higher
 
-Add the module to your project using Gradle:
+### Installation
 
-```gradle
-implementation("com.pingidentity.sdks:device-root:<latest_version>")
+To integrate this module into your Android project, include the following dependency in
+your `build.gradle.kts` (or `build.gradle`) file:
+
+```kotlin
+dependencies {
+  implementation("com.pingidentity.sdks:device-root:<version>")
+}
 ```
+
+Replace `<version>` with the latest available version of the SDK from the Maven repository. Ensure your
+project's `repositories` block includes Maven Central or the Ping Identity Maven repository.
 
 ## Quick Start
 
@@ -248,5 +246,8 @@ suspend fun reportDeviceStatus() {
 }
 ```
 
+## License
 
-© Copyright 2025-2026 Ping Identity Corporation. All Rights Reserved
+This software may be modified and distributed under the terms of the MIT license. See the LICENSE file for details.
+
+© Copyright 2025-2026 Ping Identity Corporation. All rights reserved.

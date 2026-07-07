@@ -1,39 +1,34 @@
 [![Ping Identity](https://www.pingidentity.com/content/dam/picr/nav/Ping-Logo-2.svg)](https://github.com/ForgeRock/ping-android-sdk)
 
-# Ping SDK - MFA Push Module
+# Push Module
 
-The Push module provides support for push notification-based multi-factor authentication. It supports both PingAM and PingOne push notification formats and enables applications to:
-
-## Features
-
-- Support for PingAM push notification formats and PingOne push notification formats (via custom PushHandler)
-- Register devices for push notifications
-- Device registration via QR code
-- Secure storage of push credentials
-- Process incoming push notifications
-- Support for simple approval, challenge-response, and biometric authentication flows
-- Kotlin Result-based API for improved error handling
+The Push module facilitates multi-factor authentication using push notifications, supporting both PingAM and Ping AIC formats. This module is responsible for securely storing push credentials, allowing applications to register devices for push notifications, and processing incoming notifications.
 
 ## Getting Started
 
 ### Prerequisites
 
+- Ping Advanced Identity Cloud / PingAM [Supported Versions](https://support.pingidentity.com/s/article/Ping-Identity-EOL-Tracker)
 - Android API level 29 or higher
 - Firebase Cloud Messaging (FCM) configured for your application
-- Push notification service from Ping Identity (PingAM or PingAIC)
+- Push Notification Service from Ping Identity (PingAM or Ping AIC)
 
 ### Installation
 
-Add the following dependency to your app module's `build.gradle` file:
+To integrate this module into your Android project, include the following dependency in
+your `build.gradle.kts` (or `build.gradle`) file:
 
-```gradle
+```kotlin
 dependencies {
-    implementation 'com.pingidentity.sdk:mfa:push:<version>'
-    
+    implementation("com.pingidentity.sdks:push:<version>")
+
     // Firebase dependencies for push notifications
-    implementation 'com.google.firebase:firebase-messaging:<version>'
+    implementation("com.google.firebase:firebase-messaging:<version>")
 }
 ```
+
+Replace `<version>` with the latest available version of the SDK from the Maven repository. Ensure your
+project's `repositories` block includes Maven Central or the Ping Identity Maven repository.
 
 ## Usage
 
@@ -87,29 +82,6 @@ try {
     // Use credential
 } catch (e: Exception) {
     // Handle exception
-}
-```
-
-#### Manual Registration (for PingOne or custom implementation)
-
-```kotlin
-// Create a new push credential manually
-val credential = PushCredential(
-    issuer = "MyApp",
-    accountName = "user@example.com",
-    serverUrl = "https://your-server.com/push",
-    sharedSecret = "some-secret"
-    // Other parameters as needed
-)
-
-// Save the credential
-pushClient.saveCredential(credential).onSuccess { savedCredential ->
-    // Register device token for this credential
-    firebaseMessaging.getToken().addOnSuccessListener { token ->
-        pushClient.setDeviceToken(token, savedCredential.id)
-    }
-}.onFailure { error ->
-    // Handle error
 }
 ```
 
@@ -950,5 +922,6 @@ class AuthenticationActivity : AppCompatActivity() {
 
 ## License
 
-Copyright (c) 2026 Ping Identity Corporation. All rights reserved.
 This software may be modified and distributed under the terms of the MIT license. See the LICENSE file for details.
+
+© Copyright 2025-2026 Ping Identity Corporation. All rights reserved.

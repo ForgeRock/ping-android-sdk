@@ -465,7 +465,7 @@ fun NotificationResponseScreen(
                         Spacer(modifier = Modifier.height(24.dp))
                         
                         OutlinedButton(
-                            onClick = onDismiss,
+                            onClick = { onDeny?.invoke() },
                             modifier = Modifier.fillMaxWidth(0.7f),
                             colors = ButtonDefaults.outlinedButtonColors(
                                 contentColor = MaterialTheme.colorScheme.error

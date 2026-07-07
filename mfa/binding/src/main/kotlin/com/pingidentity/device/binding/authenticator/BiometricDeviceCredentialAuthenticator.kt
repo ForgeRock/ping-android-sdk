@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2025 - 2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -155,7 +155,7 @@ open class BiometricDeviceCredentialAuthenticator(private val config: BiometricA
      *                   or system security policy violations
      *
      * @see Attestation
-     * @see KeyGenParameterSpec
+     * @see android.security.keystore.KeyGenParameterSpec
      */
     override suspend fun register(context: Context, attestation: Attestation): Result<KeyPair> = runCatching {
         config.logger.d("BiometricAndDeviceCredential: Generating keys...")
