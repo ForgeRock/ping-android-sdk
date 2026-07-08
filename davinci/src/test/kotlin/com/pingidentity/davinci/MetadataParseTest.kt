@@ -273,11 +273,11 @@ class MetadataParseTest {
     }
 
     @Test
-    fun `UnsupportedType exposes rawType and formats message`() {
+    fun `UnsupportedType exposes rawType and message does not echo it`() {
         val raw = "UNKNOWN_FUTURE_TYPE"
         val ex = MetadataException.UnsupportedType(raw)
         assertEquals(raw, ex.rawType)
-        assertTrue(ex.message!!.contains(raw))
+        assertFalse("message must not contain the server-supplied rawType value", ex.message!!.contains(raw))
     }
 
     @Test

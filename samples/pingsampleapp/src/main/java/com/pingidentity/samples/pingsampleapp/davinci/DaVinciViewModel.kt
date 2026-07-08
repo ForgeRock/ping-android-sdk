@@ -78,12 +78,15 @@ class DaVinciViewModel(
             true
         }
         viewModelScope.launch {
-            val next = node.resume(output = output)
-            state.update {
-                it.copy(node = next, counter = it.counter + 1)
-            }
-            loading.update {
-                false
+            try {
+                val next = node.resume(output = output)
+                state.update {
+                    it.copy(node = next, counter = it.counter + 1)
+                }
+            } finally {
+                loading.update {
+                    false
+                }
             }
         }
     }

@@ -236,7 +236,7 @@ class MetadataNodeTest {
     // -------------------------------------------------------------------------
 
     @Test
-    fun `resume returns FailureNode with MissingResumeLink when _links_next_href is absent`() =
+    fun `start returns non-MetadataNode when _links_next_href is absent`() =
         runTest {
             mockEngine = MockEngine { request ->
                 when (request.url.encodedPath) {

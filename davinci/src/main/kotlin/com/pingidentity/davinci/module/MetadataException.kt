@@ -37,10 +37,10 @@ sealed class MetadataException(
 
     /**
      * Thrown (in strict-mode, future use) when the server sends a `TYPE` value the SDK does not
-     * recognise. Reserved for V1; the SDK does **not** validate TYPE against a whitelist by default
+     * recognize. Reserved for V1; the SDK does **not** validate TYPE against a whitelist by default
      * (see D5 in decisions.md).
      *
-     * @property rawType The unrecognised TYPE string as received from the server.
+     * @property rawType The unrecognized TYPE string as received from the server.
      */
-    class UnsupportedType(val rawType: String) : MetadataException("Unknown metadata TYPE=$rawType")
+    class UnsupportedType(val rawType: String) : MetadataException("Unknown or unsupported metadata TYPE")
 }
