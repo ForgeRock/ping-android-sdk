@@ -52,12 +52,15 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.pingidentity.davinci.module.MetadataNode
 import com.pingidentity.orchestrate.ContinueNode
 import com.pingidentity.orchestrate.ErrorNode
 import com.pingidentity.orchestrate.FailureNode
 import com.pingidentity.orchestrate.SuccessNode
 import com.pingidentity.samples.pingsampleapp.R
 import com.pingidentity.samples.pingsampleapp.davinci.collector.DaVinciContinueNode
+import com.pingidentity.samples.pingsampleapp.davinci.collector.MetadataNodeScreen
+import kotlinx.serialization.json.JsonElement
 
 @Composable
 fun DaVinci(
@@ -91,6 +94,9 @@ fun DaVinci(
         onStart = {
             daVinciViewModel.start()
         },
+        onResume = { node, output ->
+            daVinciViewModel.resume(node, output)
+        },
         currentOnSuccess,
         onLogoClick,
         onBack,
@@ -105,6 +111,7 @@ fun DaVinci(
     onNodeUpdated: () -> Unit,
     onNext: (ContinueNode) -> Unit,
     onStart: () -> Unit,
+    onResume: (MetadataNode, JsonElement) -> Unit,
     onSuccess: (() -> Unit)?,
     onLogoClick: (() -> Unit)? = null,
     onBack: (() -> Unit)? = null,
@@ -149,6 +156,13 @@ fun DaVinci(
                 Logo(modifier = Modifier, onLogoClick)
 
                 when (val node = state.node) {
+                    // NOTE: A DaVinci policy with an SDK Integrator connector is required to reach this branch.
+                    is MetadataNode -> {
+                        key(node) {
+                            MetadataNodeScreen(node = node, onResume = onResume)
+                        }
+                    }
+
                     is ContinueNode -> {
                         key(node) {
                             Render(node = node, onNodeUpdated, onStart) {

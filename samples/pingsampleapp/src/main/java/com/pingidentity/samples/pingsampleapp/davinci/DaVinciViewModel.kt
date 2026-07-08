@@ -10,12 +10,14 @@ import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.pingidentity.davinci.module.MetadataNode
 import com.pingidentity.oidc.module.VERIFICATION_URI_COMPLETE
 import com.pingidentity.orchestrate.ContinueNode
 import com.pingidentity.samples.pingsampleapp.config.daVinci
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.JsonElement
 
 class DaVinciViewModel(
     private val verificationUri: String? = null,
@@ -62,6 +64,21 @@ class DaVinciViewModel(
                 }
             } else { daVinci?.start() }
 
+            state.update {
+                it.copy(node = next, counter = it.counter + 1)
+            }
+            loading.update {
+                false
+            }
+        }
+    }
+
+    fun resume(node: MetadataNode, output: JsonElement) {
+        loading.update {
+            true
+        }
+        viewModelScope.launch {
+            val next = node.resume(output = output)
             state.update {
                 it.copy(node = next, counter = it.counter + 1)
             }

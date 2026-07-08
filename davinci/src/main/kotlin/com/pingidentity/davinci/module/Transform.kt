@@ -26,6 +26,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.intOrNull
+import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import java.net.HttpURLConnection
@@ -134,11 +135,71 @@ private fun transform(
         }
     }
 
+    tryMetadataNode(context, daVinci, json)?.let { return it }
+
     val collectors = mutableListOf<Collector<*>>()
     if ("form" in json) collectors.addAll(Form.parse(daVinci, json))
 
     return Connector(context, daVinci, json, collectors.toList()).apply {
-        CollectorFactory.inject( this)
+        CollectorFactory.inject(this)
     }
 
+}
+
+/**
+ * Attempts to detect and construct a [MetadataNode] from a DaVinci 200-OK response.
+ *
+ * Detection strategy (layered probe):
+ * 1. **Primary** — look for a field in `json.form.components.fields[]` whose `"type"` or
+ *    `"inputType"` equals `"METADATA"` and whose sibling keys contain the required triple
+ *    (`TYPE`, `OPERATION`, `configs`). This matches the documented DV-10961 wire shape.
+ * 2. **Secondary (defensive)** — fall back to treating `json` itself as the metadata block
+ *    when it directly contains `TYPE` and `configs` at the top level.
+ *
+ * Returns `null` when no metadata block is found, allowing [transform] to fall through to
+ * the standard [Connector] path.
+ *
+ * Throws [MetadataException.Malformed] (via `Metadata.parseOrThrow`) when a structural cue
+ * for metadata is unambiguously present but the required keys are malformed — the surrounding
+ * `Workflow.start` / `Workflow.next` `catch { }` converts this to a [FailureNode].
+ */
+private fun tryMetadataNode(
+    context: FlowContext,
+    daVinci: DaVinci,
+    json: JsonObject,
+): MetadataNode? {
+    // --- Primary probe: form.components.fields[].{type|inputType == "METADATA"} ---
+    val fields = json["form"]
+        ?.jsonObject?.get("components")
+        ?.jsonObject?.get("fields")
+        ?.jsonArray
+
+    if (fields != null) {
+        for (field in fields) {
+            val fieldObj = field as? JsonObject ?: continue
+            val fieldType = fieldObj["type"]?.jsonPrimitive?.contentOrNull
+            val inputType = fieldObj["inputType"]?.jsonPrimitive?.contentOrNull
+            if (fieldType == "METADATA" || inputType == "METADATA") {
+                // This field is the metadata block — parse strictly
+                val metadata = Metadata.parseOrThrow(fieldObj)
+                // Only construct a MetadataNode when the resume link is present;
+                // MetadataNode.asRequest() will read the href from input directly at resume time.
+                json["_links"]?.jsonObject?.get("next")?.jsonObject
+                    ?.get("href")?.jsonPrimitive?.contentOrNull
+                    ?: return null
+                return MetadataNode(context, daVinci, json, metadata)
+            }
+        }
+    }
+
+    // --- Secondary probe: top-level json contains both TYPE and configs ---
+    if (json["TYPE"] != null && json["configs"] != null) {
+        val metadata = Metadata.parseOrNull(json) ?: return null
+        json["_links"]?.jsonObject?.get("next")?.jsonObject
+            ?.get("href")?.jsonPrimitive?.contentOrNull
+            ?: return null
+        return MetadataNode(context, daVinci, json, metadata)
+    }
+
+    return null
 }
