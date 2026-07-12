@@ -55,6 +55,7 @@ data class JourneyConfigState(
     val scopes: String = "",
     val redirectUri: String = "",
     val display: String = "",
+    val par: Boolean = false,
 )
 
 data class OidcConfigState(
@@ -63,7 +64,8 @@ data class OidcConfigState(
     val scopes: String = "",
     val redirectUri: String = "",
     val display: String = "",
-    val arcValue: String = ""
+    val arcValue: String = "",
+    val par: Boolean = false,
 )
 
 data class DeviceAuthConfigState(
@@ -156,6 +158,7 @@ internal fun loadAssetConfigs(): AssetConfigs {
                 scopes = scopes,
                 redirectUri = redirectUri,
                 display = displayName,
+                par = oidc["par"]?.jsonPrimitive?.content?.toBooleanStrictOrNull() ?: false,
             ))
             if (openIdObj != null || isDaVinci) deviceAuth.add(DeviceAuthConfigState(
                 clientId = clientId,
@@ -185,6 +188,8 @@ internal fun loadAssetConfigs(): AssetConfigs {
                 scopes = scopes,
                 redirectUri = redirectUri,
                 display = displayName,
+                arcValue = oidc.str("acrValues"),
+                par = oidc["par"]?.jsonPrimitive?.content?.toBooleanStrictOrNull() ?: false,
             ))
         }
     }
@@ -224,6 +229,7 @@ internal fun buildJourney(config: JourneyConfigState) {
                 put(JsonConfigKey.SCOPES, config.scopes.toScopesJsonArray())
                 put(JsonConfigKey.REDIRECT_URI, config.redirectUri)
                 put(JsonConfigKey.DISPLAY, config.display)
+                put(JsonConfigKey.PAR, config.par)
             })
         }
     ).onSuccess { journey = it }
@@ -278,6 +284,8 @@ internal fun buildWeb(config: OidcConfigState) {
                 put(JsonConfigKey.SCOPES, config.scopes.toScopesJsonArray())
                 put(JsonConfigKey.REDIRECT_URI, config.redirectUri)
                 put(JsonConfigKey.DISPLAY, config.display)
+                if (config.arcValue.isNotBlank()) put(JsonConfigKey.ACR_VALUES, config.arcValue)
+                put(JsonConfigKey.PAR, config.par)
             })
         }
     ).onSuccess { web = it }
@@ -354,6 +362,7 @@ suspend fun initConfigs() {
             scopes = prefs[stringPreferencesKey("j_scopes")] ?: "",
             redirectUri = prefs[stringPreferencesKey("j_redirectUri")] ?: "",
             display = prefs[stringPreferencesKey("j_display")] ?: "",
+            par = prefs[stringPreferencesKey("j_par")]?.toBooleanStrictOrNull() ?: false,
         )
     }
 
@@ -375,6 +384,8 @@ suspend fun initConfigs() {
             scopes = prefs[stringPreferencesKey("w_scopes")] ?: "",
             redirectUri = prefs[stringPreferencesKey("w_redirectUri")] ?: "",
             display = prefs[stringPreferencesKey("w_display")] ?: "",
+            arcValue = prefs[stringPreferencesKey("w_arcValue")] ?: "",
+            par = prefs[stringPreferencesKey("w_par")]?.toBooleanStrictOrNull() ?: false,
         )
     }
 
@@ -635,6 +646,7 @@ class EnvViewModel : ViewModel() {
             scopes = prefs[stringPreferencesKey("j_scopes")] ?: "",
             redirectUri = prefs[stringPreferencesKey("j_redirectUri")] ?: "",
             display = prefs[stringPreferencesKey("j_display")] ?: "",
+            par = prefs[stringPreferencesKey("j_par")]?.toBooleanStrictOrNull() ?: false,
         )
     }
 
@@ -660,6 +672,8 @@ class EnvViewModel : ViewModel() {
             scopes = prefs[stringPreferencesKey("w_scopes")] ?: "",
             redirectUri = prefs[stringPreferencesKey("w_redirectUri")] ?: "",
             display = prefs[stringPreferencesKey("w_display")] ?: "",
+            arcValue = prefs[stringPreferencesKey("w_arcValue")] ?: "",
+            par = prefs[stringPreferencesKey("w_par")]?.toBooleanStrictOrNull() ?: false,
         )
     }
 
@@ -719,6 +733,7 @@ class EnvViewModel : ViewModel() {
             prefs[stringPreferencesKey("j_scopes")] = config.scopes
             prefs[stringPreferencesKey("j_redirectUri")] = config.redirectUri
             prefs[stringPreferencesKey("j_display")] = config.display
+            prefs[stringPreferencesKey("j_par")] = config.par.toString()
         }
     }
 
@@ -740,6 +755,8 @@ class EnvViewModel : ViewModel() {
             prefs[stringPreferencesKey("w_scopes")] = config.scopes
             prefs[stringPreferencesKey("w_redirectUri")] = config.redirectUri
             prefs[stringPreferencesKey("w_display")] = config.display
+            prefs[stringPreferencesKey("w_arcValue")] = config.arcValue
+            prefs[stringPreferencesKey("w_par")] = config.par.toString()
         }
     }
 
@@ -794,6 +811,7 @@ class EnvViewModel : ViewModel() {
                     put("serverUrl", c.serverUrl); put("realm", c.realm); put("cookie", c.cookie)
                     put("clientId", c.clientId); put("discoveryEndpoint", c.discoveryEndpoint)
                     put("scopes", c.scopes); put("redirectUri", c.redirectUri); put("display", c.display)
+                    put("par", c.par)
                 })
             }
         }.toString()
@@ -806,6 +824,7 @@ class EnvViewModel : ViewModel() {
                 serverUrl = str("serverUrl"), realm = str("realm"), cookie = str("cookie"),
                 clientId = str("clientId"), discoveryEndpoint = str("discoveryEndpoint"),
                 scopes = str("scopes"), redirectUri = str("redirectUri"), display = str("display"),
+                par = o["par"]?.jsonPrimitive?.content?.toBooleanStrictOrNull() ?: false,
             )
         }
     }.getOrDefault(emptyList())
@@ -817,6 +836,7 @@ class EnvViewModel : ViewModel() {
                     put("clientId", c.clientId); put("discoveryEndpoint", c.discoveryEndpoint)
                     put("scopes", c.scopes); put("redirectUri", c.redirectUri)
                     put("display", c.display); put("arcValue", c.arcValue)
+                    put("par", c.par)
                 })
             }
         }.toString()
@@ -829,6 +849,7 @@ class EnvViewModel : ViewModel() {
                 clientId = str("clientId"), discoveryEndpoint = str("discoveryEndpoint"),
                 scopes = str("scopes"), redirectUri = str("redirectUri"),
                 display = str("display"), arcValue = str("arcValue"),
+                par = o["par"]?.jsonPrimitive?.content?.toBooleanStrictOrNull() ?: false,
             )
         }
     }.getOrDefault(emptyList())
