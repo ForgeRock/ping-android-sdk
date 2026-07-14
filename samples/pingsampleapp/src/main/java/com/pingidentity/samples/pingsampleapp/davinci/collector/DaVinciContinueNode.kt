@@ -34,6 +34,7 @@ import com.pingidentity.davinci.collector.PollingCollector
 import com.pingidentity.davinci.collector.QRCodeCollector
 import com.pingidentity.davinci.collector.BooleanCollector
 import com.pingidentity.davinci.collector.ImageCollector
+import com.pingidentity.davinci.collector.MetadataCollector
 import com.pingidentity.davinci.collector.SingleSelectCollector
 import com.pingidentity.davinci.collector.SubmitCollector
 import com.pingidentity.davinci.collector.TextCollector
@@ -130,6 +131,7 @@ fun DaVinciContinueNode(
 
                 is BooleanCollector -> SingleCheckbox(it, onNodeUpdated)
                 is ImageCollector -> Image(it)
+                is MetadataCollector -> Metadata(it, onNext)
             }
             if (it is Submittable) {
                 hasAction = true
