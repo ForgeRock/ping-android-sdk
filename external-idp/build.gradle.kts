@@ -19,6 +19,9 @@ android {
     defaultConfig {
         manifestPlaceholders["appRedirectUriScheme"] = "com.pingidentity.test"
     }
+    lint {
+        baseline = file("lint-baseline.xml")
+    }
 }
 
 dependencies {

@@ -27,6 +27,9 @@ androidComponents {
 
 android {
     namespace = "com.pingidentity.auth.migration"
+    lint {
+        baseline = file("lint-baseline.xml")
+    }
 }
 
 dependencies {
