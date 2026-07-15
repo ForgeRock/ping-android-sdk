@@ -9,6 +9,7 @@ package com.pingidentity.davinci
 import com.pingidentity.davinci.collector.MetadataCollector
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import kotlin.test.Test
@@ -51,9 +52,36 @@ class MetadataCollectorTest {
     }
 
     @Test
-    fun payloadReturnsNull() {
+    fun payloadReturnsNullWhenNeitherOutputNorErrorIsSet() {
         val collector = MetadataCollector().apply { init(buildFullMetadataJson()) }
         assertNull(collector.payload())
+    }
+
+    @Test
+    fun payloadReturnsOutputWhenOnlyOutputIsSet() {
+        val collector = MetadataCollector().apply { init(buildFullMetadataJson()) }
+        val expected = buildJsonObject { put("status", "success") }
+        collector.output = expected
+        assertEquals(expected, collector.payload())
+    }
+
+    @Test
+    fun payloadWrapsErrorPayloadWhenOnlyErrorIsSet() {
+        val collector = MetadataCollector().apply { init(buildFullMetadataJson()) }
+        val err = buildJsonObject { put("code", "ERR") }
+        collector.errorPayload = err
+        val result = collector.payload()!!
+        assertEquals(err, result["error"]?.jsonObject)
+    }
+
+    @Test
+    fun payloadPrefersErrorPayloadOverOutput() {
+        val collector = MetadataCollector().apply { init(buildFullMetadataJson()) }
+        collector.output = buildJsonObject { put("status", "success") }
+        val err = buildJsonObject { put("code", "ERR") }
+        collector.errorPayload = err
+        val result = collector.payload()!!
+        assertEquals(err, result["error"]?.jsonObject)
     }
 
     @Test
@@ -63,9 +91,9 @@ class MetadataCollectorTest {
     }
 
     @Test
-    fun errorIsNullByDefault() {
+    fun errorPayloadIsNullByDefault() {
         val collector = MetadataCollector().apply { init(buildFullMetadataJson()) }
-        assertNull(collector.error)
+        assertNull(collector.errorPayload)
     }
 
     @Test
@@ -108,33 +136,33 @@ class MetadataCollectorTest {
         }
         collector.output = output
         assertEquals(output, collector.output)
-        assertNull(collector.error)
+        assertNull(collector.errorPayload)
     }
 
     @Test
-    fun errorCanBeSet() {
+    fun errorPayloadCanBeSet() {
         val collector = MetadataCollector().apply { init(buildFullMetadataJson()) }
-        val error = buildJsonObject {
+        val err = buildJsonObject {
             put("code", "SOME_ERROR_CODE")
             put("message", "User cancelled the operation")
         }
-        collector.error = error
-        assertEquals(error, collector.error)
+        collector.errorPayload = err
+        assertEquals(err, collector.errorPayload)
     }
 
     @Test
-    fun outputAndErrorCanBeSetIndependently() {
+    fun outputAndErrorPayloadCanBeSetIndependently() {
         val collector = MetadataCollector().apply { init(buildFullMetadataJson()) }
         val output = buildJsonObject { put("status", "success") }
-        val error = buildJsonObject {
+        val err = buildJsonObject {
             put("code", "SOME_ERROR_CODE")
             put("message", "User cancelled the operation")
         }
 
         collector.output = output
-        collector.error = error
+        collector.errorPayload = err
 
         assertEquals(output, collector.output)
-        assertEquals(error, collector.error)
+        assertEquals(err, collector.errorPayload)
     }
 }
