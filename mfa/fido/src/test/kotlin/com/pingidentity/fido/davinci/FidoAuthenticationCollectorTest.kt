@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2025 - 2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -171,6 +171,19 @@ class FidoAuthenticationCollectorTest {
         val payload2 = collector.payload()
         assertNotNull(payload2)
         assertEquals(assertion2, payload2?.get(Constants.FIELD_ASSERTION_VALUE)?.jsonObject)
+    }
+
+    @Test
+    fun `authenticate should call handleError and set error on failure`() = runTest {
+        collector.init(getInput())
+        val exception = mockk<androidx.credentials.exceptions.GetCredentialCancellationException>(relaxed = true)
+        every { exception.message } returns "User cancelled"
+        coEvery { mockFidoClient.authenticate(any(), any()) } returns Result.failure(exception)
+
+        val result = collector.authenticate()
+
+        assertTrue(result.isFailure)
+        assertEquals("NotAllowedError", collector.error)
     }
 }
 
