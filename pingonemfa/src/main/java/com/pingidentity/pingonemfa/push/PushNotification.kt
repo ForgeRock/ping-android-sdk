@@ -8,12 +8,12 @@
 package com.pingidentity.pingonemfa.push
 
 import android.content.Context
+import android.os.Parcel
 import android.os.Parcelable
 import com.pingidentity.pingidsdkv2.NotificationObject
 import com.pingidentity.pingidsdkv2.types.DenyReason
 import com.pingidentity.pingonemfa.commons.PingOneMFAException
 import kotlinx.coroutines.suspendCancellableCoroutine
-import kotlinx.parcelize.Parcelize
 import java.util.UUID
 import kotlin.coroutines.resume
 
@@ -28,13 +28,47 @@ import kotlin.coroutines.resume
  * @property title Notification title extracted from the FCM data payload, or null if absent.
  * @property message Notification body extracted from the FCM data payload, or null if absent.
  */
-@Parcelize
 data class PushNotification(
     val id: String = UUID.randomUUID().toString(),
     val notificationObject: NotificationObject,
     val title: String?,
     val message: String?
-): Parcelable {
+) : Parcelable {
+
+    /**
+     * Restores a [PushNotification] from a [Parcel].
+     * Used internally by [CREATOR]; not intended for direct use.
+     */
+    constructor(parcel: Parcel) : this(
+        id = parcel.readString() ?: UUID.randomUUID().toString(),
+        notificationObject = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            parcel.readParcelable(NotificationObject::class.java.classLoader, NotificationObject::class.java)!!
+        } else {
+            @Suppress("DEPRECATION")
+            parcel.readParcelable(NotificationObject::class.java.classLoader)!!
+        },
+        title = parcel.readString(),
+        message = parcel.readString()
+    )
+
+    /**
+     * Flattens this object into a [Parcel].
+     * Fields are written in the same order they are read in the [Parcel] constructor.
+     */
+    override fun writeToParcel(parcel: Parcel, flags: Int) {
+        parcel.writeString(id)
+        parcel.writeParcelable(notificationObject, flags)
+        parcel.writeString(title)
+        parcel.writeString(message)
+    }
+
+    /** No file descriptors are contained in this parcel. */
+    override fun describeContents(): Int = 0
+
+    companion object CREATOR : Parcelable.Creator<PushNotification> {
+        override fun createFromParcel(parcel: Parcel): PushNotification = PushNotification(parcel)
+        override fun newArray(size: Int): Array<PushNotification?> = arrayOfNulls(size)
+    }
 
     /**
      * Approves this push authentication request.

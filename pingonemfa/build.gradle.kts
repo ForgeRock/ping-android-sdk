@@ -9,9 +9,7 @@ description = "Ping Identity PingOneMFA SDK for Android"
 plugins {
     id("com.pingidentity.convention.android.library")
     id("com.pingidentity.convention.centralPublish")
-    id("kotlin-parcelize")
     alias(libs.plugins.androidLibrary)
-    alias(libs.plugins.kotlinAndroid)
     alias(libs.plugins.kotlinSerialization)
 }
 android {
@@ -22,6 +20,7 @@ dependencies {
     implementation(project(":foundation:logger"))
     implementation(libs.com.pingidentity.pingonemfa)
 
+    implementation(libs.androidx.core.ktx)
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.google.gson.lib)
     implementation(libs.kotlinx.serialization.json)
