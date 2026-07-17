@@ -6,24 +6,26 @@
 
 package com.pingidentity.davinci.collector
 
+import com.pingidentity.davinci.plugin.Submittable
+import com.pingidentity.orchestrate.Closeable
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.put
 
 /**
  * Collector for a DaVinci form field of type METADATA.
  *
  * When a DaVinci flow reaches an SDK Integrator connector node, the server pauses
  * and returns a form field of type METADATA carrying an arbitrary JSON payload.
- * The integrating app reads [metadata], performs on-device work, then sets either
- * [output] (success path) or [errorPayload] (failure path) before calling [com.pingidentity.orchestrate.ContinueNode.next].
+ * The integrating app reads [metadata], performs on-device work, then calls either
+ * [setResult] (success path) or [setError] (failure path) before calling
+ * [com.pingidentity.orchestrate.ContinueNode.next].
  *
- * **Precedence**: [errorPayload] takes priority over [output]. When [errorPayload] is non-null it is
- * wrapped as `{ "error": { ... } }` in the resume body regardless of whether [output]
- * is also set. If neither is set, [payload] returns `null` and the field is omitted from
- * the form data.
+ * The collector is considered ready to submit once either [setResult] or [setError]
+ * has been called — [validate] returns a [Required] error until then.
  */
-class MetadataCollector : FieldCollector<JsonObject>() {
+class MetadataCollector : FieldCollector<JsonObject>(), Submittable, Closeable {
 
     /**
      * The metadata payload sent by the server — arbitrary JSON the SDK must process.
@@ -31,24 +33,7 @@ class MetadataCollector : FieldCollector<JsonObject>() {
     var metadata: JsonObject = JsonObject(emptyMap())
         private set
 
-    /**
-     * The result to send back to the server on the success path.
-     *
-     * Set this to the JSON object the DaVinci flow expects, then call [com.pingidentity.orchestrate.ContinueNode.next].
-     * Not populated by the SDK — the integrating app is responsible for setting it.
-     * Ignored when [errorPayload] is also set ([errorPayload] takes precedence).
-     */
-    var output: JsonObject? = null
-
-    /**
-     * The error to send back to the server on the failure path.
-     *
-     * When set, [output] is ignored and the resume body wraps this value as
-     * `{ "error": { ... } }` under `formData.<key>`. Set this before calling
-     * [com.pingidentity.orchestrate.ContinueNode.next]. Not populated by the SDK — the integrating app is
-     * responsible for setting it.
-     */
-    var errorPayload: JsonObject? = null
+    private var result: JsonObject? = null
 
     override fun init(input: JsonObject): MetadataCollector {
         super.init(input)
@@ -57,12 +42,44 @@ class MetadataCollector : FieldCollector<JsonObject>() {
     }
 
     /**
-     * Returns the resume payload for the SDK Integrator connector.
+     * Sets the result to POST back to DaVinci on the success path.
      *
-     * [errorPayload] takes priority: when set, returns `{ "error": { ... } }`.
-     * Falls back to [output] when [errorPayload] is null.
-     * Returns `null` when neither is set.
+     * @param result The JSON object representing the SDK's outcome.
      */
-    override fun payload(): JsonObject? =
-        errorPayload?.let { buildJsonObject { put("error", it) } } ?: output
+    fun setResult(result: JsonObject) {
+        this.result = result
+    }
+
+    /**
+     * Signals the connector's client-error branch.
+     *
+     * The resume body will contain `{ "error": { "code": ..., "message": ..., ["isClientError": ...] } }`.
+     *
+     * @param errorCode A short error code string (e.g. `"USER_CANCELLED"`).
+     * @param message A human-readable description of the error.
+     * @param isClientError When provided, included in the error envelope.
+     */
+    fun setError(errorCode: String, message: String, isClientError: Boolean? = null) {
+        result = buildJsonObject {
+            put("error", buildJsonObject {
+                put("code", errorCode)
+                put("message", message)
+                isClientError?.let { put("isClientError", it) }
+            })
+        }
+    }
+
+    /** Returns the resume payload, or `null` if neither [setResult] nor [setError] has been called. */
+    override fun payload(): JsonObject? = result
+
+    /** Always `"action"` — required by the SDK Integrator connector resume contract. */
+    override fun eventType(): String = "action"
+
+    /** Returns [Required] until [setResult] or [setError] has been called, regardless of the field's `required` flag. */
+    override fun validate(): List<ValidationError> = if (result == null) listOf(Required) else emptyList()
+
+    /** Clears the result, returning the collector to its initial unset state. */
+    override fun close() {
+        result = null
+    }
 }

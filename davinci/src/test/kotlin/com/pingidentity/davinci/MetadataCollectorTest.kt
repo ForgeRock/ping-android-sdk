@@ -7,13 +7,18 @@
 package com.pingidentity.davinci
 
 import com.pingidentity.davinci.collector.MetadataCollector
+import com.pingidentity.davinci.collector.asJson
+import com.pingidentity.davinci.collector.eventType
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.boolean
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -23,98 +28,34 @@ class MetadataCollectorTest {
         put("type", "METADATA")
         put("key", "sdkMetadata")
         put("payload", buildJsonObject {
-            put("testkey", "testValue")
+            put("sdk", "PROTECT")
+            put("action", "INITIALIZE")
         })
     }
 
+    // --- init ---
+
     @Test
-    fun initializesKeyFromJson() {
+    fun initializesKeyTypeAndMetadata() {
         val collector = MetadataCollector().apply { init(buildFullMetadataJson()) }
         assertEquals("sdkMetadata", collector.key)
-    }
-
-    @Test
-    fun initializesTypeFromJson() {
-        val collector = MetadataCollector().apply { init(buildFullMetadataJson()) }
         assertEquals("METADATA", collector.type)
+        assertEquals("PROTECT", collector.metadata["sdk"]?.jsonPrimitive?.content)
+        assertEquals("INITIALIZE", collector.metadata["action"]?.jsonPrimitive?.content)
     }
 
     @Test
-    fun initializesMetadataFromPayloadField() {
+    fun idEqualsKey() {
         val collector = MetadataCollector().apply { init(buildFullMetadataJson()) }
-        assertEquals("testValue", collector.metadata["testkey"]?.jsonPrimitive?.content)
+        assertEquals(collector.key, collector.id())
     }
 
     @Test
-    fun idReturnsKey() {
-        val collector = MetadataCollector().apply { init(buildFullMetadataJson()) }
-        assertEquals("sdkMetadata", collector.id())
-    }
-
-    @Test
-    fun payloadReturnsNullWhenNeitherOutputNorErrorIsSet() {
-        val collector = MetadataCollector().apply { init(buildFullMetadataJson()) }
-        assertNull(collector.payload())
-    }
-
-    @Test
-    fun payloadReturnsOutputWhenOnlyOutputIsSet() {
-        val collector = MetadataCollector().apply { init(buildFullMetadataJson()) }
-        val expected = buildJsonObject { put("status", "success") }
-        collector.output = expected
-        assertEquals(expected, collector.payload())
-    }
-
-    @Test
-    fun payloadWrapsErrorPayloadWhenOnlyErrorIsSet() {
-        val collector = MetadataCollector().apply { init(buildFullMetadataJson()) }
-        val err = buildJsonObject { put("code", "ERR") }
-        collector.errorPayload = err
-        val result = collector.payload()!!
-        assertEquals(err, result["error"]?.jsonObject)
-    }
-
-    @Test
-    fun payloadPrefersErrorPayloadOverOutput() {
-        val collector = MetadataCollector().apply { init(buildFullMetadataJson()) }
-        collector.output = buildJsonObject { put("status", "success") }
-        val err = buildJsonObject { put("code", "ERR") }
-        collector.errorPayload = err
-        val result = collector.payload()!!
-        assertEquals(err, result["error"]?.jsonObject)
-    }
-
-    @Test
-    fun outputIsNullByDefault() {
-        val collector = MetadataCollector().apply { init(buildFullMetadataJson()) }
-        assertNull(collector.output)
-    }
-
-    @Test
-    fun errorPayloadIsNullByDefault() {
-        val collector = MetadataCollector().apply { init(buildFullMetadataJson()) }
-        assertNull(collector.errorPayload)
-    }
-
-    @Test
-    fun initReturnsCollectorInstanceForMethodChaining() {
-        val collector = MetadataCollector()
-        val result = collector.init(buildFullMetadataJson())
-        assertEquals(collector, result)
-    }
-
-    @Test
-    fun initializesWithDefaultsWhenJsonIsEmpty() {
+    fun defaultsWhenJsonEmpty() {
         val collector = MetadataCollector().apply { init(JsonObject(emptyMap())) }
         assertEquals("", collector.key)
         assertEquals("", collector.type)
         assertTrue(collector.metadata.isEmpty())
-    }
-
-    @Test
-    fun idReturnsEmptyStringWhenKeyAbsent() {
-        val collector = MetadataCollector().apply { init(JsonObject(emptyMap())) }
-        assertEquals("", collector.id())
     }
 
     @Test
@@ -128,41 +69,133 @@ class MetadataCollectorTest {
     }
 
     @Test
-    fun outputCanBeSet() {
+    fun initReturnsInstanceForChaining() {
+        val collector = MetadataCollector()
+        assertEquals(collector, collector.init(buildFullMetadataJson()))
+    }
+
+    // --- payload / setResult ---
+
+    @Test
+    fun payloadIsNullBeforeSetResultOrSetError() {
         val collector = MetadataCollector().apply { init(buildFullMetadataJson()) }
-        val output = buildJsonObject {
-            put("verification", "successful")
-            put("status", true)
-        }
-        collector.output = output
-        assertEquals(output, collector.output)
-        assertNull(collector.errorPayload)
+        assertNull(collector.payload())
     }
 
     @Test
-    fun errorPayloadCanBeSet() {
+    fun setResultProducesPayload() {
         val collector = MetadataCollector().apply { init(buildFullMetadataJson()) }
-        val err = buildJsonObject {
-            put("code", "SOME_ERROR_CODE")
-            put("message", "User cancelled the operation")
-        }
-        collector.errorPayload = err
-        assertEquals(err, collector.errorPayload)
+        val result = buildJsonObject { put("verified", true) }
+        collector.setResult(result)
+        assertEquals(result, collector.payload())
+    }
+
+    // --- setError ---
+
+    @Test
+    fun setErrorProducesErrorEnvelope() {
+        val collector = MetadataCollector().apply { init(buildFullMetadataJson()) }
+        collector.setError(errorCode = "USER_CANCELLED", message = "User cancelled the operation")
+
+        val error = collector.payload()!!["error"]?.jsonObject
+        assertNotNull(error)
+        assertEquals("USER_CANCELLED", error["code"]?.jsonPrimitive?.content)
+        assertEquals("User cancelled the operation", error["message"]?.jsonPrimitive?.content)
+        assertNull(error["isClientError"])
     }
 
     @Test
-    fun outputAndErrorPayloadCanBeSetIndependently() {
+    fun setErrorWithIsClientErrorIncludesFlag() {
         val collector = MetadataCollector().apply { init(buildFullMetadataJson()) }
-        val output = buildJsonObject { put("status", "success") }
-        val err = buildJsonObject {
-            put("code", "SOME_ERROR_CODE")
-            put("message", "User cancelled the operation")
+        collector.setError(errorCode = "E1", message = "m", isClientError = true)
+
+        val error = collector.payload()!!["error"]?.jsonObject
+        assertEquals(true, error?.get("isClientError")?.jsonPrimitive?.content?.toBoolean())
+    }
+
+    @Test
+    fun setErrorWithIsClientErrorFalseIncludesFlag() {
+        val collector = MetadataCollector().apply { init(buildFullMetadataJson()) }
+        collector.setError(errorCode = "E1", message = "m", isClientError = false)
+
+        val error = collector.payload()!!["error"]?.jsonObject
+        assertFalse(error?.get("isClientError")?.jsonPrimitive?.boolean ?: true)
+    }
+
+    // --- eventType ---
+
+    @Test
+    fun eventTypeIsAction() {
+        assertEquals("action", MetadataCollector().eventType())
+    }
+
+    // --- validate ---
+
+    @Test
+    fun validateRequiresResultBeforeSet() {
+        val collector = MetadataCollector().apply { init(buildFullMetadataJson()) }
+        assertTrue(collector.validate().isNotEmpty())
+    }
+
+    @Test
+    fun validatePassesAfterSetResult() {
+        val collector = MetadataCollector().apply { init(buildFullMetadataJson()) }
+        collector.setResult(buildJsonObject { put("ok", true) })
+        assertTrue(collector.validate().isEmpty())
+    }
+
+    @Test
+    fun validatePassesAfterSetError() {
+        val collector = MetadataCollector().apply { init(buildFullMetadataJson()) }
+        collector.setError(errorCode = "E", message = "m")
+        assertTrue(collector.validate().isEmpty())
+    }
+
+    // --- close ---
+
+    @Test
+    fun closeClearsResult() {
+        val collector = MetadataCollector().apply { init(buildFullMetadataJson()) }
+        collector.setResult(buildJsonObject { put("ok", true) })
+        collector.close()
+        assertNull(collector.payload())
+    }
+
+    // --- Collectors pipeline integration ---
+
+    @Test
+    fun collectorsAsJsonSetsActionKeyAndFormDataWhenResultPresent() {
+        val collector = MetadataCollector().apply {
+            init(buildFullMetadataJson())
+            setResult(buildJsonObject { put("verified", true) })
         }
+        val json = listOf(collector).asJson()
+        assertEquals("sdkMetadata", json["actionKey"]?.jsonPrimitive?.content)
+        val sdkMetadata = json["formData"]?.jsonObject?.get("sdkMetadata")?.jsonObject
+        assertNotNull(sdkMetadata)
+        assertEquals(true, sdkMetadata["verified"]?.jsonPrimitive?.boolean)
+    }
 
-        collector.output = output
-        collector.errorPayload = err
+    @Test
+    fun collectorsEventTypeIsActionWhenResultPresent() {
+        val collector = MetadataCollector().apply {
+            init(buildFullMetadataJson())
+            setResult(buildJsonObject { put("ok", true) })
+        }
+        assertEquals("action", listOf(collector).eventType())
+    }
 
-        assertEquals(output, collector.output)
-        assertEquals(err, collector.errorPayload)
+    @Test
+    fun collectorsAsJsonOmitsActionKeyWhenNoResult() {
+        val collector = MetadataCollector().apply { init(buildFullMetadataJson()) }
+        val json = listOf(collector).asJson()
+        assertNull(json["actionKey"])
+        assertTrue(json["formData"]?.jsonObject?.isEmpty() ?: true)
+    }
+
+    @Test
+    fun collectorsEventTypeIsNullWhenNoResult() {
+        val collector = MetadataCollector().apply { init(buildFullMetadataJson()) }
+        assertNull(listOf(collector).eventType())
     }
 }

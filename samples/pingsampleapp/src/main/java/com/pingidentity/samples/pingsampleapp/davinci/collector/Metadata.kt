@@ -60,8 +60,7 @@ fun Metadata(
                         .weight(1f)
                         .padding(end = 4.dp),
                     onClick = {
-                        metadataCollector.output = buildJsonObject { put("status", "success") }
-                        metadataCollector.errorPayload = null
+                        metadataCollector.setResult(buildJsonObject { put("status", "success") })
                         onNext()
                     },
                 ) {
@@ -75,11 +74,11 @@ fun Metadata(
                         containerColor = MaterialTheme.colorScheme.error,
                     ),
                     onClick = {
-                        metadataCollector.errorPayload = buildJsonObject {
-                            put("code", "USER_ERROR")
-                            put("message", "User reported an error")
-                        }
-                        metadataCollector.output = null
+                        metadataCollector.setError(
+                            errorCode = "100",
+                            message = "An error occurred",
+                            isClientError = true,
+                        )
                         onNext()
                     },
                 ) {
