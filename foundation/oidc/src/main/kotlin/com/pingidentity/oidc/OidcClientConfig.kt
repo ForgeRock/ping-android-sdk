@@ -136,7 +136,7 @@ class OidcClientConfig {
      */
     @Deprecated(
         message = "signOutRedirectUri is no longer used by the SDK and will be removed in a future release. " +
-            "Remove this property from your OidcClientConfig — no replacement is needed."
+            "Terminate User Session by ID Token is enabled for your client"
     )
     var signOutRedirectUri: String? = null
 

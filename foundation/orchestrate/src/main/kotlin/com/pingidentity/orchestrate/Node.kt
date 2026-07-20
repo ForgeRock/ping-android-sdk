@@ -23,7 +23,7 @@ sealed interface Node
  * @property message The failure message.
  * @property status The optional HTTP status code associated with the failure.
  */
-data class ErrorNode @JvmOverloads constructor(
+data class ErrorNode(
     val context: FlowContext,
     val input: JsonObject = buildJsonObject { },
     val message: String,
