@@ -19,6 +19,7 @@ import org.junit.Rule
 import org.junit.rules.TestWatcher
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import com.pingidentity.network.HttpRequest as Request
 
@@ -78,5 +79,17 @@ class NodeTest {
 
         connector.close()
         verify { (closeableAction as Closeable).close() }
+    }
+
+    @Test
+    fun `ErrorNode status defaults to null when constructed without status`() {
+        val node = ErrorNode(mockk(), buildJsonObject {}, "error message")
+        assertNull(node.status)
+    }
+
+    @Test
+    fun `ErrorNode status is preserved when provided`() {
+        val node = ErrorNode(mockk(), buildJsonObject {}, "error message", status = 400)
+        assertEquals(400, node.status)
     }
 }

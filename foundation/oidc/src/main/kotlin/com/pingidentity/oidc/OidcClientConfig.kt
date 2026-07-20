@@ -134,6 +134,10 @@ class OidcClientConfig {
     /**
      * Sign-out redirect URI for OIDC.
      */
+    @Deprecated(
+        message = "signOutRedirectUri is no longer used by the SDK and will be removed in a future release. " +
+            "Remove this property from your OidcClientConfig — no replacement is needed."
+    )
     var signOutRedirectUri: String? = null
 
     /**
