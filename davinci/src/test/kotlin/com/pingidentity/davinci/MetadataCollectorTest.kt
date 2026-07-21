@@ -17,7 +17,6 @@ import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -101,25 +100,6 @@ class MetadataCollectorTest {
         assertNotNull(error)
         assertEquals("USER_CANCELLED", error["code"]?.jsonPrimitive?.content)
         assertEquals("User cancelled the operation", error["message"]?.jsonPrimitive?.content)
-        assertNull(error["isClientError"])
-    }
-
-    @Test
-    fun setErrorWithIsClientErrorIncludesFlag() {
-        val collector = MetadataCollector().apply { init(buildFullMetadataJson()) }
-        collector.setError(errorCode = "E1", message = "m", isClientError = true)
-
-        val error = collector.payload()!!["error"]?.jsonObject
-        assertEquals(true, error?.get("isClientError")?.jsonPrimitive?.content?.toBoolean())
-    }
-
-    @Test
-    fun setErrorWithIsClientErrorFalseIncludesFlag() {
-        val collector = MetadataCollector().apply { init(buildFullMetadataJson()) }
-        collector.setError(errorCode = "E1", message = "m", isClientError = false)
-
-        val error = collector.payload()!!["error"]?.jsonObject
-        assertFalse(error?.get("isClientError")?.jsonPrimitive?.boolean ?: true)
     }
 
     // --- eventType ---

@@ -77,7 +77,6 @@ fun Metadata(
                         metadataCollector.setError(
                             errorCode = "100",
                             message = "An error occurred",
-                            isClientError = true,
                         )
                         onNext()
                     },

@@ -53,18 +53,16 @@ class MetadataCollector : FieldCollector<JsonObject>(), Submittable, Closeable {
     /**
      * Signals the connector's client-error branch.
      *
-     * The resume body will contain `{ "error": { "code": ..., "message": ..., ["isClientError": ...] } }`.
+     * The resume body will contain `{ "error": { "code": ..., "message": ... } }`.
      *
      * @param errorCode A short error code string (e.g. `"USER_CANCELLED"`).
      * @param message A human-readable description of the error.
-     * @param isClientError When provided, included in the error envelope.
      */
-    fun setError(errorCode: String, message: String, isClientError: Boolean? = null) {
+    fun setError(errorCode: String, message: String) {
         result = buildJsonObject {
             put("error", buildJsonObject {
                 put("code", errorCode)
                 put("message", message)
-                isClientError?.let { put("isClientError", it) }
             })
         }
     }
