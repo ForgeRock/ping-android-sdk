@@ -7,8 +7,8 @@
 
 package com.pingidentity.davinci.collector
 
+import com.pingidentity.davinci.plugin.ActionKeyProvider
 import com.pingidentity.davinci.plugin.Collectors
-import com.pingidentity.davinci.plugin.Failable
 import com.pingidentity.davinci.plugin.Submittable
 import com.pingidentity.orchestrate.FlowContext
 import com.pingidentity.orchestrate.RequestInterceptor
@@ -24,7 +24,7 @@ internal fun Collectors.eventType(): String? {
         when (it) {
             is Submittable -> {
                 val eventType = it.eventType()
-                if (it.payload() != null || (it is Failable && it.error() != null)) {
+                if (it.payload() != null) {
                     return eventType
                 }
             }
@@ -73,11 +73,12 @@ internal fun Collectors.asJson(): JsonObject {
                     }
                 }
             } else {
-                if (it is Failable && it.error() != null) {
-                    put("actionKey", it.error())
-                }
-                it.payload()?.let { payload ->
-                    map[it.id()] = payload
+                if (it is ActionKeyProvider && it.actionKey != null) {
+                    put("actionKey", it.actionKey)
+                } else {
+                    it.payload()?.let { payload ->
+                        map[it.id()] = payload
+                    }
                 }
             }
         }

@@ -50,7 +50,9 @@ class FidoRegistrationCollector : AbstractFidoCollector(), Closeable {
     }
 
     override fun payload(): JsonObject? {
-        // Return a wrapped attestation value if available, otherwise null.
+        if (errorCode != null) {
+            return buildJsonObject { }
+        }
         return attestationValue?.let {
             logger.d("Returning attestation payload for FIDO2 registration")
             buildJsonObject {
@@ -69,15 +71,15 @@ class FidoRegistrationCollector : AbstractFidoCollector(), Closeable {
         block: FidoRegistrationCustomizer.() -> Unit = {}
     ): Result<JsonObject> {
         logger.d("Starting FIDO2 registration")
-        error = null
+        errorCode = null
         return FidoClient {
             logger = this@FidoRegistrationCollector.logger
         }.register(publicKeyCredentialCreationOptions, block).onSuccess {
             logger.d("FIDO2 registration successful")
             attestationValue = it
         }.onFailure { exception ->
-            handleError(exception)
             logger.e("FIDO2 registration failed", exception)
+            handleError(exception)
         }
     }
 
@@ -147,6 +149,6 @@ class FidoRegistrationCollector : AbstractFidoCollector(), Closeable {
 
     override fun close() {
         attestationValue = null
-        error = null
+        errorCode = null
     }
 }

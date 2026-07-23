@@ -19,6 +19,7 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import kotlin.test.BeforeTest
@@ -91,56 +92,68 @@ class AbstractFidoCollectorTest {
 
     @Test
     fun `logger should be accessible`() {
-        // Access the logger property to ensure it's properly initialized
         val logger = collector.logger
         assertEquals(Logger.CONSOLE, logger)
     }
 
     @Test
-    fun `error should return null by default`() {
-        assertEquals(null, collector.error())
+    fun `errorCode should be null by default`() {
+        assertNull(collector.errorCode)
     }
 
     @Test
-    fun `error should return error message when set`() {
-        collector.error = "Test error message"
-        assertEquals("Test error message", collector.error())
+    fun `actionKey should be null by default`() {
+        assertNull(collector.actionKey)
     }
 
     @Test
-    fun `error should be mutable`() {
-        // Initially null
-        assertEquals(null, collector.error())
+    fun `errorCode should be mutable`() {
+        assertNull(collector.errorCode)
 
-        // Set error
-        collector.error = "First error"
-        assertEquals("First error", collector.error())
+        collector.errorCode = "NotAllowedError"
+        assertEquals("NotAllowedError", collector.errorCode)
 
-        // Update error
-        collector.error = "Second error"
-        assertEquals("Second error", collector.error())
+        collector.errorCode = "UnknownError"
+        assertEquals("UnknownError", collector.errorCode)
 
-        // Clear error
-        collector.error = null
-        assertEquals(null, collector.error())
+        collector.errorCode = null
+        assertNull(collector.errorCode)
     }
 
     @Test
-    fun `eventType should return submit when error is null`() {
-        collector.error = null
+    fun `actionKey should mirror errorCode`() {
+        assertNull(collector.actionKey)
+
+        collector.errorCode = "NotAllowedError"
+        assertEquals("NotAllowedError", collector.actionKey)
+
+        collector.errorCode = null
+        assertNull(collector.actionKey)
+    }
+
+    @Test
+    fun `eventType should return submit when errorCode is null`() {
+        collector.errorCode = null
         assertEquals(Constants.EVENT_TYPE_SUBMIT, collector.eventType())
     }
 
     @Test
-    fun `eventType should return action when error is set`() {
-        collector.error = "Some error occurred"
-        assertEquals("action", collector.eventType())
+    fun `eventType should return action when errorCode is set`() {
+        collector.errorCode = "NotAllowedError"
+        assertEquals(Constants.EVENT_TYPE_ACTION, collector.eventType())
     }
 
     @Test
-    fun `eventType should return action when error is empty string`() {
-        collector.error = ""
-        assertEquals("action", collector.eventType())
+    fun `payload should return null when errorCode is null`() {
+        assertNull(collector.payload())
+    }
+
+    @Test
+    fun `payload should return empty JsonObject when errorCode is set`() {
+        collector.errorCode = "NotAllowedError"
+        val payload = collector.payload()
+        assertNotNull(payload)
+        assertTrue(payload!!.isEmpty())
     }
 
     @Test
@@ -150,7 +163,7 @@ class AbstractFidoCollectorTest {
 
         collector.handleError(exception)
 
-        assertEquals("NotSupportedError", collector.error)
+        assertEquals("NotSupportedError", collector.errorCode)
     }
 
     @Test
@@ -160,7 +173,7 @@ class AbstractFidoCollectorTest {
 
         collector.handleError(exception)
 
-        assertEquals("NotSupportedError", collector.error)
+        assertEquals("NotSupportedError", collector.errorCode)
     }
 
     @Test
@@ -170,7 +183,7 @@ class AbstractFidoCollectorTest {
 
         collector.handleError(exception)
 
-        assertEquals("NotAllowedError", collector.error)
+        assertEquals("NotAllowedError", collector.errorCode)
     }
 
     @Test
@@ -180,7 +193,7 @@ class AbstractFidoCollectorTest {
 
         collector.handleError(exception)
 
-        assertEquals("NotAllowedError", collector.error)
+        assertEquals("NotAllowedError", collector.errorCode)
     }
 
     @Test
@@ -192,7 +205,7 @@ class AbstractFidoCollectorTest {
 
         collector.handleError(exception)
 
-        assertEquals("NotAllowedError", collector.error)
+        assertEquals("NotAllowedError", collector.errorCode)
     }
 
     @Test
@@ -204,7 +217,7 @@ class AbstractFidoCollectorTest {
 
         collector.handleError(exception)
 
-        assertEquals("NotSupportedError", collector.error)
+        assertEquals("NotSupportedError", collector.errorCode)
     }
 
     @Test
@@ -213,7 +226,7 @@ class AbstractFidoCollectorTest {
 
         collector.handleError(exception)
 
-        assertEquals("UnknownError", collector.error)
+        assertEquals("UnknownError", collector.errorCode)
     }
 
     @Test
@@ -222,7 +235,7 @@ class AbstractFidoCollectorTest {
 
         collector.handleError(exception)
 
-        assertEquals("UnknownError", collector.error)
+        assertEquals("UnknownError", collector.errorCode)
     }
 
     @Test
@@ -231,22 +244,19 @@ class AbstractFidoCollectorTest {
 
         collector.handleError(exception)
 
-        assertEquals("UnknownError", collector.error)
+        assertEquals("UnknownError", collector.errorCode)
     }
 
     @Test
-    fun `handleError should override previous error`() {
-        // Set an initial error
-        collector.error = "PreviousError"
-        assertEquals("PreviousError", collector.error)
+    fun `handleError should override previous errorCode`() {
+        collector.errorCode = "PreviousError"
+        assertEquals("PreviousError", collector.errorCode)
 
-        // Handle a new error
         val exception = mockk<androidx.credentials.exceptions.CreateCredentialCancellationException>(relaxed = true)
         every { exception.message } returns "User cancelled"
         collector.handleError(exception)
 
-        // Verify the error was updated
-        assertEquals("NotAllowedError", collector.error)
+        assertEquals("NotAllowedError", collector.errorCode)
     }
 
     @Test
@@ -258,25 +268,23 @@ class AbstractFidoCollectorTest {
         } catch (e: CancellationException) {
             assertEquals(cancellation, e)
         }
-        // error latch must not have been set
-        assertNull(collector.error)
+        assertNull(collector.errorCode)
     }
 
     @Test
-    fun `init should reset error latch`() {
-        collector.error = "NotAllowedError"
-        assertEquals("action", collector.eventType())
+    fun `init should reset errorCode latch`() {
+        collector.errorCode = "NotAllowedError"
+        assertEquals(Constants.EVENT_TYPE_ACTION, collector.eventType())
 
         val input = buildJsonObject {
             put(Constants.FIELD_KEY, "test_key")
         }
         collector.init(input)
 
-        assertNull(collector.error)
+        assertNull(collector.errorCode)
         assertEquals(Constants.EVENT_TYPE_SUBMIT, collector.eventType())
     }
 
-    // Test implementation of AbstractFido2Collector for testing purposes
+    // Test implementation of AbstractFidoCollector for testing purposes
     private class TestFidoCollector : AbstractFidoCollector()
 }
-

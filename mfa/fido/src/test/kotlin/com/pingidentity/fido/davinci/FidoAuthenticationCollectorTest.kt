@@ -177,7 +177,7 @@ class FidoAuthenticationCollectorTest {
     }
 
     @Test
-    fun `authenticate should call handleError and set error on failure`() = runTest {
+    fun `authenticate should call handleError and set errorCode on failure`() = runTest {
         collector.init(getInput())
         val exception = mockk<androidx.credentials.exceptions.GetCredentialCancellationException>(relaxed = true)
         every { exception.message } returns "User cancelled"
@@ -186,39 +186,65 @@ class FidoAuthenticationCollectorTest {
         val result = collector.authenticate()
 
         assertTrue(result.isFailure)
-        assertEquals("NotAllowedError", collector.error)
+        assertEquals("NotAllowedError", collector.errorCode)
     }
 
     @Test
-    fun `close should reset error latch`() = runTest {
+    fun `payload should be non-null empty object on failure so actionKey fires`() = runTest {
         collector.init(getInput())
         val exception = mockk<androidx.credentials.exceptions.GetCredentialCancellationException>(relaxed = true)
         every { exception.message } returns "User cancelled"
         coEvery { mockFidoClient.authenticate(any(), any()) } returns Result.failure(exception)
 
         collector.authenticate()
-        assertEquals("NotAllowedError", collector.error)
+
+        val payload = collector.payload()
+        assertNotNull(payload)
+        assertTrue(payload!!.isEmpty())
+    }
+
+    @Test
+    fun `actionKey should match errorCode after failure`() = runTest {
+        collector.init(getInput())
+        val exception = mockk<androidx.credentials.exceptions.GetCredentialCancellationException>(relaxed = true)
+        every { exception.message } returns "User cancelled"
+        coEvery { mockFidoClient.authenticate(any(), any()) } returns Result.failure(exception)
+
+        collector.authenticate()
+
+        assertEquals("NotAllowedError", collector.actionKey)
+    }
+
+    @Test
+    fun `close should reset errorCode latch`() = runTest {
+        collector.init(getInput())
+        val exception = mockk<androidx.credentials.exceptions.GetCredentialCancellationException>(relaxed = true)
+        every { exception.message } returns "User cancelled"
+        coEvery { mockFidoClient.authenticate(any(), any()) } returns Result.failure(exception)
+
+        collector.authenticate()
+        assertEquals("NotAllowedError", collector.errorCode)
         assertEquals("action", collector.eventType())
 
         collector.close()
 
-        assertNull(collector.error)
+        assertNull(collector.errorCode)
         assertEquals("submit", collector.eventType())
     }
 
     @Test
-    fun `init should reset error latch after failure`() = runTest {
+    fun `init should reset errorCode latch after failure`() = runTest {
         collector.init(getInput())
         val exception = mockk<androidx.credentials.exceptions.GetCredentialCancellationException>(relaxed = true)
         every { exception.message } returns "User cancelled"
         coEvery { mockFidoClient.authenticate(any(), any()) } returns Result.failure(exception)
 
         collector.authenticate()
-        assertEquals("NotAllowedError", collector.error)
+        assertEquals("NotAllowedError", collector.errorCode)
 
         collector.init(getInput())
 
-        assertNull(collector.error)
+        assertNull(collector.errorCode)
         assertEquals("submit", collector.eventType())
     }
 }

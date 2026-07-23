@@ -72,7 +72,9 @@ class FidoAuthenticationCollector : AbstractFidoCollector(), Closeable {
      *         or null if authentication hasn't been performed yet
      */
     override fun payload(): JsonObject? {
-        // Return a wrapped attestation value if available, otherwise null.
+        if (errorCode != null) {
+            return buildJsonObject { }
+        }
         return assertionValue?.let {
             logger.d("Returning assertion payload for FIDO2 authentication")
             buildJsonObject {
@@ -95,7 +97,7 @@ class FidoAuthenticationCollector : AbstractFidoCollector(), Closeable {
     suspend fun authenticate(
         block: FidoAuthenticateCustomizer.() -> Unit = {}
     ): Result<JsonObject> {
-        error = null
+        errorCode = null
         logger.d("Starting FIDO2 authentication")
         return FidoClient { logger = this@FidoAuthenticationCollector.logger }.authenticate(
             publicKeyCredentialRequestOptions, block
@@ -154,7 +156,7 @@ class FidoAuthenticationCollector : AbstractFidoCollector(), Closeable {
 
     override fun close() {
         assertionValue = null
-        error = null
+        errorCode = null
     }
 
 }

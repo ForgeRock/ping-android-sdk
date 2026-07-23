@@ -6,9 +6,9 @@
 
 package com.pingidentity.davinci.collector
 
+import com.pingidentity.davinci.plugin.ActionKeyProvider
 import com.pingidentity.davinci.plugin.Collector
 import com.pingidentity.davinci.plugin.Collectors
-import com.pingidentity.davinci.plugin.Failable
 import com.pingidentity.davinci.plugin.Submittable
 import com.pingidentity.orchestrate.FlowContext
 import com.pingidentity.orchestrate.RequestInterceptor
@@ -39,17 +39,16 @@ class CollectorsTest {
         override fun init(input: JsonObject): Collector<JsonObject> = this
     }
 
-    // Test implementation of Submittable and Failable collector
-    private class TestFailableCollector(
+    // Test implementation of Submittable and ActionKeyProvider collector
+    private class TestActionKeyCollector(
         private val collectorId: String,
         private val collectorPayload: JsonObject?,
-        private val collectorError: String?,
+        override val actionKey: String?,
         private val collectorEventType: String = "action"
-    ) : Collector<JsonObject>, Submittable, Failable {
+    ) : Collector<JsonObject>, Submittable, ActionKeyProvider {
         override fun id(): String = collectorId
         override fun eventType(): String = collectorEventType
         override fun payload(): JsonObject? = collectorPayload
-        override fun error(): String? = collectorError
         override fun init(input: JsonObject): Collector<JsonObject> = this
     }
 
@@ -89,7 +88,7 @@ class CollectorsTest {
     }
 
     @Test
-    fun `eventType should return null when submittable has no payload and no error`() {
+    fun `eventType should return null when submittable has no payload`() {
         val collectors: Collectors = listOf(
             TestSubmittableCollector("submit1", null, "submit")
         )
@@ -106,18 +105,27 @@ class CollectorsTest {
     }
 
     @Test
-    fun `eventType should return action when failable has error`() {
+    fun `eventType should return action when ActionKeyProvider has non-null payload (error sentinel)`() {
+        // Empty payload is the sentinel that signals an error occurred
         val collectors: Collectors = listOf(
-            TestFailableCollector("failable1", null, "NotAllowedError", "action")
+            TestActionKeyCollector("provider1", buildJsonObject { }, "NotAllowedError", "action")
         )
         assertEquals("action", collectors.eventType())
     }
 
     @Test
-    fun `eventType should return submit when failable has payload but no error`() {
+    fun `eventType should return null when ActionKeyProvider has no payload`() {
+        val collectors: Collectors = listOf(
+            TestActionKeyCollector("provider1", null, "NotAllowedError", "action")
+        )
+        assertNull(collectors.eventType())
+    }
+
+    @Test
+    fun `eventType should return submit when ActionKeyProvider has payload but no actionKey`() {
         val payload = buildJsonObject { put("key", JsonPrimitive("value")) }
         val collectors: Collectors = listOf(
-            TestFailableCollector("failable1", payload, null, "submit")
+            TestActionKeyCollector("provider1", payload, null, "submit")
         )
         assertEquals("submit", collectors.eventType())
     }
@@ -228,14 +236,17 @@ class CollectorsTest {
     }
 
     @Test
-    fun `asJson should set actionKey to error for Failable with error`() {
+    fun `asJson should set actionKey for ActionKeyProvider with non-null actionKey and empty payload sentinel`() {
+        // empty payload is the error sentinel; actionKey takes priority over formData
         val collectors: Collectors = listOf(
-            TestFailableCollector("failable1", null, "NotAllowedError", "action")
+            TestActionKeyCollector("provider1", buildJsonObject { }, "NotAllowedError", "action")
         )
 
         val result = collectors.asJson()
 
         assertEquals("NotAllowedError", result["actionKey"]?.jsonPrimitive?.content)
+        // error payload must not spill into formData
+        assertEquals(0, result["formData"]?.jsonObject?.size)
     }
 
     @Test
@@ -253,17 +264,17 @@ class CollectorsTest {
     }
 
     @Test
-    fun `asJson should add failable collector payload to formData when no error`() {
+    fun `asJson should add ActionKeyProvider payload to formData when actionKey is null`() {
         val payload = buildJsonObject { put("data", JsonPrimitive("test")) }
         val collectors: Collectors = listOf(
-            TestFailableCollector("failable1", payload, null, "submit")
+            TestActionKeyCollector("provider1", payload, null, "submit")
         )
 
         val result = collectors.asJson()
 
         val formData = result["formData"]?.jsonObject
-        val failableField = formData?.get("failable1")?.jsonObject
-        assertEquals("test", failableField?.get("data")?.jsonPrimitive?.content)
+        val providerField = formData?.get("provider1")?.jsonObject
+        assertEquals("test", providerField?.get("data")?.jsonPrimitive?.content)
     }
 
     @Test
