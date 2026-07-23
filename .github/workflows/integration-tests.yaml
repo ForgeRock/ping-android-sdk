@@ -50,7 +50,7 @@ jobs:
              arch: x86_64
              channel: stable
 
-           - api-level: CinnamonBun
+           - api-level: "37.1"
              target: google_apis_playstore_ps16k
              arch: x86_64
              channel: canary
@@ -82,7 +82,12 @@ jobs:
 
       - name: Debug available Android SDK packages
         run: |
-          sdkmanager --list --channel=3 | grep -E "CinnamonBun|android-37|ps16k|google_apis" || true
+          echo "Check for: system-images;android-37.1;google_apis_playstore_ps16k;x86_64"
+          $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --list --channel=3 | grep -E "system-images;android-37.1;google_apis_playstore_ps16k;x86_64" || true
+
+      - name: Accept Android SDK Licenses
+        run: |
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses
 
       - name: AVD cache
         uses: actions/cache@v4
@@ -92,6 +97,11 @@ jobs:
             ~/.android/avd/*
             ~/.android/adb*
           key: avd-${{ matrix.api-level }}-${{ matrix.target }}-${{ matrix.arch }}-${{ matrix.channel }}
+
+      - name: Start ADB server for API Level 37.1
+        if: matrix.api-level == '37.1'
+        run: |
+          $ANDROID_HOME/platform-tools/adb start-server
 
       - name: Create AVD and generate snapshot for caching
         if: steps.avd-cache.outputs.cache-hit != 'true'
