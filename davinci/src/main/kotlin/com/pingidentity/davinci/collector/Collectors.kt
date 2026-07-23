@@ -56,7 +56,6 @@ internal fun Collectors.request(context: FlowContext, request: Request): Request
  * @return A JSON object representing the list of collectors.
  */
 internal fun Collectors.asJson(): JsonObject {
-
     return buildJsonObject {
         val map = mutableMapOf<String, Any>()
         forEach {
@@ -67,17 +66,19 @@ internal fun Collectors.asJson(): JsonObject {
                         map[it.id()] = payload
                     }
                 }
+
                 it is SubmitCollector || it is FlowCollector -> {
                     it.payload()?.let { _ ->
                         put("actionKey", it.id())
                     }
                 }
-            } else {
-                if (it is ActionKeyProvider && it.actionKey != null) {
-                    put("actionKey", it.actionKey)
-                } else {
-                    it.payload()?.let { payload ->
-                        map[it.id()] = payload
+                else -> {
+                    if (it is ActionKeyProvider && it.actionKey != null) {
+                        put("actionKey", it.actionKey)
+                    } else {
+                        it.payload()?.let { payload ->
+                            map[it.id()] = payload
+                        }
                     }
                 }
             }
