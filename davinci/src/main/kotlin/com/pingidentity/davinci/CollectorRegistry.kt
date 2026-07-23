@@ -20,6 +20,7 @@ import com.pingidentity.davinci.collector.PollingCollector
 import com.pingidentity.davinci.collector.QRCodeCollector
 import com.pingidentity.davinci.collector.BooleanCollector
 import com.pingidentity.davinci.collector.ImageCollector
+import com.pingidentity.davinci.collector.MetadataCollector
 import com.pingidentity.davinci.collector.SingleSelectCollector
 import com.pingidentity.davinci.collector.SubmitCollector
 import com.pingidentity.davinci.collector.TextCollector
@@ -65,5 +66,6 @@ internal class CollectorRegistry : ModuleInitializer() {
         CollectorFactory.register("POLLING", ::PollingCollector)
         CollectorFactory.register("QR_CODE", ::QRCodeCollector)
         CollectorFactory.register("IMAGE", ::ImageCollector)
+        CollectorFactory.register("METADATA", ::MetadataCollector)
     }
 }
