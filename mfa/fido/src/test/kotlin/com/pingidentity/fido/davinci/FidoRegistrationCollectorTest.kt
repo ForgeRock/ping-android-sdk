@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2025 - 2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -435,4 +435,51 @@ class FidoRegistrationCollectorTest {
         assertEquals("usb", transports[0].jsonPrimitive.content)
         assertEquals("nfc", transports[1].jsonPrimitive.content)
     }
+
+    @Test
+    fun `register should call handleError and set error on failure`() = runTest {
+        collector.init(getRegistrationInput())
+        val exception = mockk<androidx.credentials.exceptions.CreateCredentialCancellationException>(relaxed = true)
+        every { exception.message } returns "User cancelled"
+        coEvery { mockFidoClient.register(any(), any()) } returns Result.failure(exception)
+
+        val result = collector.register()
+
+        assertTrue(result.isFailure)
+        assertEquals("NotAllowedError", collector.error)
+    }
+
+    @Test
+    fun `close should reset error latch`() = runTest {
+        collector.init(getRegistrationInput())
+        val exception = mockk<androidx.credentials.exceptions.CreateCredentialCancellationException>(relaxed = true)
+        every { exception.message } returns "User cancelled"
+        coEvery { mockFidoClient.register(any(), any()) } returns Result.failure(exception)
+
+        collector.register()
+        assertEquals("NotAllowedError", collector.error)
+        assertEquals("action", collector.eventType())
+
+        collector.close()
+
+        assertNull(collector.error)
+        assertEquals("submit", collector.eventType())
+    }
+
+    @Test
+    fun `init should reset error latch after failure`() = runTest {
+        collector.init(getRegistrationInput())
+        val exception = mockk<androidx.credentials.exceptions.CreateCredentialCancellationException>(relaxed = true)
+        every { exception.message } returns "User cancelled"
+        coEvery { mockFidoClient.register(any(), any()) } returns Result.failure(exception)
+
+        collector.register()
+        assertEquals("NotAllowedError", collector.error)
+
+        collector.init(getRegistrationInput())
+
+        assertNull(collector.error)
+        assertEquals("submit", collector.eventType())
+    }
+
 }

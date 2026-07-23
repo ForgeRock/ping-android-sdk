@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2025 - 2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -95,6 +95,7 @@ class FidoAuthenticationCollector : AbstractFidoCollector(), Closeable {
     suspend fun authenticate(
         block: FidoAuthenticateCustomizer.() -> Unit = {}
     ): Result<JsonObject> {
+        error = null
         logger.d("Starting FIDO2 authentication")
         return FidoClient { logger = this@FidoAuthenticationCollector.logger }.authenticate(
             publicKeyCredentialRequestOptions, block
@@ -102,6 +103,7 @@ class FidoAuthenticationCollector : AbstractFidoCollector(), Closeable {
             logger.d("FIDO2 authentication successful")
             assertionValue = it
         }.onFailure { exception ->
+            handleError(exception)
             logger.e("FIDO2 authentication failed", exception)
         }
     }
@@ -152,6 +154,7 @@ class FidoAuthenticationCollector : AbstractFidoCollector(), Closeable {
 
     override fun close() {
         assertionValue = null
+        error = null
     }
 
 }

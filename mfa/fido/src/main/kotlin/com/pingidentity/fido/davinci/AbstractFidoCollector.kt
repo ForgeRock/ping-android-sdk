@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2025 - 2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -7,9 +7,20 @@
 
 package com.pingidentity.fido.davinci
 
+import androidx.credentials.exceptions.CreateCredentialCancellationException
+import androidx.credentials.exceptions.CreateCredentialUnsupportedException
+import androidx.credentials.exceptions.GetCredentialCancellationException
+import androidx.credentials.exceptions.GetCredentialUnsupportedException
+import androidx.credentials.exceptions.domerrors.NotAllowedError
+import androidx.credentials.exceptions.domerrors.NotSupportedError
+import androidx.credentials.exceptions.domerrors.UnknownError
+import androidx.credentials.exceptions.publickeycredential.CreatePublicKeyCredentialDomException
+import androidx.credentials.exceptions.publickeycredential.GetPublicKeyCredentialDomException
+import kotlinx.coroutines.CancellationException
 import com.pingidentity.davinci.plugin.Collector
 import com.pingidentity.davinci.plugin.DaVinci
 import com.pingidentity.davinci.plugin.DaVinciAware
+import com.pingidentity.davinci.plugin.Failable
 import com.pingidentity.davinci.plugin.Submittable
 import com.pingidentity.fido.Constants
 import com.pingidentity.logger.Logger
@@ -29,7 +40,7 @@ import kotlinx.serialization.json.jsonPrimitive
  * @property trigger The trigger event that activates this collector
  * @property required Whether the collector is mandatory for the workflow
  */
-abstract class AbstractFidoCollector : Collector<JsonObject>, DaVinciAware, Submittable {
+abstract class AbstractFidoCollector : Collector<JsonObject>, DaVinciAware, Submittable, Failable {
     /**
      * The DaVinci workflow instance that this collector is associated with.
      * This is automatically injected by the DaVinci framework.
@@ -53,12 +64,17 @@ abstract class AbstractFidoCollector : Collector<JsonObject>, DaVinciAware, Subm
     var required = false
         private set
 
+
+    var error: String? = null
+
     /**
      * Returns the event type that this collector handles.
      *
      * @return The event type string, always "submit" for FIDO2 collectors
      */
-    override fun eventType(): String = Constants.EVENT_TYPE_SUBMIT
+    override fun eventType(): String {
+        return if (error == null) Constants.EVENT_TYPE_SUBMIT else Constants.EVENT_TYPE_ACTION
+    }
 
     /**
      * Returns the unique identifier for this collector instance.
@@ -68,6 +84,8 @@ abstract class AbstractFidoCollector : Collector<JsonObject>, DaVinciAware, Subm
     override fun id(): String {
         return key
     }
+
+    override fun error(): String? = error
 
     /**
      * Initializes the collector with the provided input data.
@@ -84,6 +102,60 @@ abstract class AbstractFidoCollector : Collector<JsonObject>, DaVinciAware, Subm
         label = input[Constants.FIELD_LABEL]?.jsonPrimitive?.content ?: ""
         trigger = input[Constants.FIELD_TRIGGER]?.jsonPrimitive?.content ?: ""
         required = input[Constants.FIELD_REQUIRED]?.jsonPrimitive?.boolean ?: false
+        error = null
         return this
+    }
+
+
+    /**
+     * Handles errors that occur during FIDO2 operations.
+     *
+     * This method converts various types of credential exceptions into appropriate
+     * error messages that the Journey server can understand and process.
+     *
+     * @param exception The throwable error to handle and convert
+     */
+    fun handleError(exception: Throwable) {
+        if (exception is CancellationException) throw exception
+        logger.e(
+            "Handling FIDO2 error: ${exception::class.simpleName} - ${exception.message}",
+            exception
+        )
+        when (exception) {
+            is CreateCredentialUnsupportedException -> {
+                logger.d("Credential creation unsupported")
+                error = NotSupportedError::class.simpleName
+            }
+
+            is GetCredentialUnsupportedException -> {
+                logger.d("Get Credential unsupported")
+                error = NotSupportedError::class.simpleName
+            }
+
+            is CreateCredentialCancellationException -> {
+                logger.d("Credential creation cancelled")
+                error = NotAllowedError::class.simpleName
+            }
+
+            is GetCredentialCancellationException -> {
+                logger.d("Get Credential cancelled")
+                error = NotAllowedError::class.simpleName
+            }
+
+            is CreatePublicKeyCredentialDomException -> {
+                logger.d("DOM exception occurred: ${exception.domError::class.simpleName}")
+                error = exception.domError::class.simpleName
+            }
+
+            is GetPublicKeyCredentialDomException -> {
+                logger.d("DOM exception occurred: ${exception.domError::class.simpleName}")
+                error = exception.domError::class.simpleName
+            }
+
+            else -> {
+                logger.d("Unknown error occurred")
+                error = UnknownError::class.simpleName
+            }
+        }
     }
 }
