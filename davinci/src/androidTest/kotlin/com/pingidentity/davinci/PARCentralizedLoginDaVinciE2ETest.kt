@@ -55,14 +55,6 @@ class PARCentralizedLoginDaVinciE2ETest {
 
     private val recordedRequests = mutableListOf<CentralizedRecordedRequest>()
 
-    companion object {
-        private const val CLIENT_ID = "a6859a12-5e6e-4f64-96bb-cc8577706bee"
-        private const val DISCOVERY_ENDPOINT =
-            "https://auth.pingone.ca/300c4f2a-39d4-4ba9-a18a-f6de246006f4/as/.well-known/openid-configuration"
-        private const val REDIRECT_URI = "org.forgerock.demo://oauth2redirect"
-        private const val ACR_VALUES = "4ada23c8f9ae6201ec8116ffbf004595"
-    }
-
     @Before
     fun setupMocks() {
         recordedRequests.clear()
@@ -153,7 +145,7 @@ class PARCentralizedLoginDaVinciE2ETest {
         )) {
             assertNotNull("PAR POST body missing required field '$field'", form[field])
         }
-        assertEquals("Expected correct client_id in PAR body", CLIENT_ID, form["client_id"])
+        assertEquals("Expected correct client_id in PAR body", DaVinciTestConfig.parClientId, form["client_id"])
         assertEquals("Expected response_type=code in PAR body", "code", form["response_type"])
     }
 
@@ -267,8 +259,8 @@ class PARCentralizedLoginDaVinciE2ETest {
      */
     private fun buildWebClient(
         par: Boolean,
-        clientId: String = CLIENT_ID,
-        redirectUri: String = REDIRECT_URI,
+        clientId: String = DaVinciTestConfig.parClientId,
+        redirectUri: String = DaVinciTestConfig.parRedirectUri,
     ): OidcWebClient {
         val sharedHttpClient = HttpClient {
             logger = Logger.STANDARD
@@ -297,8 +289,8 @@ class PARCentralizedLoginDaVinciE2ETest {
                 this.clientId = clientId
                 this.redirectUri = redirectUri
                 scopes = mutableSetOf("openid", "profile", "email")
-                discoveryEndpoint = DISCOVERY_ENDPOINT
-                acrValues = ACR_VALUES
+                discoveryEndpoint = DaVinciTestConfig.parDiscoveryEndpoint
+                acrValues = DaVinciTestConfig.parAcrValues
                 this.par = par
             }
         }
