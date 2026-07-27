@@ -50,10 +50,10 @@ jobs:
              arch: x86_64
              channel: stable
 
-           - api-level: "37.1"
-             target: google_apis_ps16k
+           - api-level: 36
+             target: google_apis_playstore_ps16k
              arch: x86_64
-             channel: canary
+             channel: stable
 
     steps:
       - name: Clone the repository
@@ -82,8 +82,8 @@ jobs:
 
       - name: Debug available Android SDK packages
         run: |
-          echo "Check for: system-images;android-37.1;google_apis_ps16k;x86_64"
-          $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --list --channel=3 | grep -E "system-images;android-37.1;google_apis_ps16k;x86_64" || true
+          echo "Check for: system-images;android-36;google_apis_playstore_ps16k;x86_64"
+          $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --list | grep -E "system-images;android-36;google_apis_playstore_ps16k;x86_64" || true
 
       - name: Accept Android SDK Licenses
         run: |
