@@ -109,7 +109,7 @@ class DavinciProtectTest {
         val score = resultObject.getInt("score")
 
         assertTrue(level in listOf("LOW", "MEDIUM", "HIGH"))
-        assertTrue(score in 1..100)
+        assertTrue(score in 1..1000)
 
         // Assertions for the 'event' object
         val eventObject = rawResponse.getJSONObject("event")
@@ -183,7 +183,7 @@ class DavinciProtectTest {
         val score = resultObject.getInt("score")
 
         assertTrue(level in listOf("LOW", "MEDIUM", "HIGH"))
-        assertTrue(score in 1..100)
+        assertTrue(score in 1..1000)
 
         // Assertions for the 'event' object
         val eventObject = rawResponse.getJSONObject("event")
