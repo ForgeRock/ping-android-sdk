@@ -105,8 +105,8 @@ class FidoAuthenticationCollector : AbstractFidoCollector(), Closeable {
             logger.d("FIDO2 authentication successful")
             assertionValue = it
         }.onFailure { exception ->
-            handleError(exception)
             logger.e("FIDO2 authentication failed", exception)
+            handleError(exception)
         }
     }
 
