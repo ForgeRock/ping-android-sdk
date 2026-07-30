@@ -13,7 +13,6 @@ import com.pingidentity.journey.plugin.ValueCallback
 import com.pingidentity.orchestrate.ContinueNode
 import com.pingidentity.recognize.Recognize
 import com.pingidentity.recognize.RecognizeException
-import com.pingidentity.recognize.RecognizeSuccess
 import io.keyless.sdk.errorshandling.AuthenticationSuccess
 import io.keyless.sdk.errorshandling.EnrollmentSuccess
 import io.keyless.sdk.configurations.SetupConfig
@@ -26,7 +25,6 @@ import io.mockk.mockk
 import io.mockk.mockkObject
 import io.mockk.slot
 import io.mockk.unmockkObject
-import io.mockk.verify
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
@@ -40,7 +38,6 @@ import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
-import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 /**
@@ -801,7 +798,7 @@ class RecognizeCallbackTest {
         val enrollSlot = slot<BiomEnrollConfig>()
         coEvery { Recognize.enroll(capture(enrollSlot)) } returns Result.success(enrollSuccess)
         val callback = RecognizeCallback().init(enrollCallbackJson()) as PingOneRecognizeEnrollCallback
-        assertTrue(callback.enroll(retrieveSelfie = true).isSuccess)
+        assertTrue(callback.enroll { retrieveSelfie = true }.isSuccess)
         assertTrue(enrollSlot.captured.shouldRetrieveEnrollmentFrame)
     }
 
@@ -824,7 +821,7 @@ class RecognizeCallbackTest {
             every { enrollmentFrame } returns bitmap
         })
         val callback = RecognizeCallback().init(enrollCallbackJson()) as PingOneRecognizeEnrollCallback
-        val result = callback.enroll(retrieveSelfie = true)
+        val result = callback.enroll { retrieveSelfie = true }
         assertTrue(result.isSuccess)
         assertEquals(bitmap, result.getOrThrow().selfie)
     }
@@ -1006,7 +1003,7 @@ class RecognizeCallbackTest {
         val authSlot = slot<BiomAuthConfig>()
         coEvery { Recognize.authenticate(capture(authSlot)) } returns Result.success(authSuccess)
         val callback = RecognizeCallback().init(authCallbackJson()) as PingOneRecognizeAuthenticateCallback
-        assertTrue(callback.authenticate(retrieveSelfie = true).isSuccess)
+        assertTrue(callback.authenticate { retrieveSelfie = true }.isSuccess)
         assertTrue(authSlot.captured.shouldRetrieveAuthenticationFrame)
     }
 
@@ -1028,7 +1025,7 @@ class RecognizeCallbackTest {
             every { authenticationFrame } returns bitmap
         })
         val callback = RecognizeCallback().init(authCallbackJson()) as PingOneRecognizeAuthenticateCallback
-        val result = callback.authenticate(retrieveSelfie = true)
+        val result = callback.authenticate { retrieveSelfie = true }
         assertTrue(result.isSuccess)
         assertEquals(bitmap, result.getOrThrow().selfie)
     }
@@ -1044,7 +1041,7 @@ class RecognizeCallbackTest {
             every { enrollmentFrame } returns bitmap
         })
         val callback = RecognizeCallback().init(authWithClientStateJson()) as PingOneRecognizeAuthenticateCallback
-        val result = callback.authenticate(retrieveSelfie = true)
+        val result = callback.authenticate { retrieveSelfie = true }
         assertTrue(result.isSuccess)
         assertEquals(bitmap, result.getOrThrow().selfie)
     }
@@ -1055,7 +1052,7 @@ class RecognizeCallbackTest {
         val enrollSlot = slot<BiomEnrollConfig>()
         coEvery { Recognize.enroll(capture(enrollSlot)) } returns Result.success(enrollSuccess)
         val callback = RecognizeCallback().init(authWithClientStateJson()) as PingOneRecognizeAuthenticateCallback
-        assertTrue(callback.authenticate(retrieveSelfie = true).isSuccess)
+        assertTrue(callback.authenticate { retrieveSelfie = true }.isSuccess)
         assertTrue(enrollSlot.captured.shouldRetrieveEnrollmentFrame)
     }
 

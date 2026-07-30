@@ -8,7 +8,7 @@
 package com.pingidentity.recognize.journey
 
 import com.pingidentity.recognize.Recognize
-import com.pingidentity.recognize.RecognizeException
+import com.pingidentity.recognize.asRecognizeException
 import com.pingidentity.recognize.RecognizeSuccess
 
 /**
@@ -66,7 +66,7 @@ class PingOneRecognizeEnrollCallback : AbstractRecognizeCallback() {
                 )
             }
             .onFailure { error ->
-                val ex = error as RecognizeException
+                val ex = error.asRecognizeException()
                 submitResult(
                     signedJwt = "",
                     clientState = "",
@@ -83,7 +83,6 @@ class PingOneRecognizeEnrollCallback : AbstractRecognizeCallback() {
                     keylessId = success.keylessId,
                 )
             }
-            .recoverCatching { throw it as RecognizeException }
     }
 
     private fun submitResult(

@@ -36,3 +36,7 @@ class RecognizeException(
         )
     }
 }
+
+internal fun Throwable.asRecognizeException(): RecognizeException =
+    this as? RecognizeException
+        ?: RecognizeException(code = -1, message = message ?: "UNKNOWN_ERROR", debuggingInfo = emptyMap(), cause = this)
