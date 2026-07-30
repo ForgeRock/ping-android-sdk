@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 - 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2024 - 2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -17,7 +17,7 @@ package com.pingidentity.exception
  * @param status The status code of the API response.
  * @param content The content message of the API response.
  */
-class ApiException(val status: Int, val content: String) : Exception(content) {
+open class ApiException(val status: Int, val content: String) : Exception(content) {
 
     /**
      * Overrides the toString function from the Exception class.

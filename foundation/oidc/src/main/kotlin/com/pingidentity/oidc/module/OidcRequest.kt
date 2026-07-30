@@ -154,8 +154,9 @@ private const val AS_DEVICE_AUTHORIZATION_PATH = "/as/device_authorization"
  * - `https://pingone.petrov.ca/as/device_authorization`
  *   → `https://pingone.petrov.ca/applications/{clientId}/deviceFlow?userCode={userCode}`
  *
- * @param userCode The user code obtained from the device authorization response that needs to be verified.
- * @return The populated [Request] ready for execution.
+ * The first argument is the base request, the second is the user code from the device authorization
+ * response that needs to be verified.
+ * Returns the populated [Request] ready for execution.
  */
 val populateDeviceFlowVerificationRequest: suspend OidcClientConfig.(Request, String) -> Request =
     { request, userCode ->

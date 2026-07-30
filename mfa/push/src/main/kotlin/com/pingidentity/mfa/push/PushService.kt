@@ -33,6 +33,7 @@ import com.pingidentity.mfa.push.PushConstants.KEY_USERNAME
 import com.pingidentity.mfa.push.exception.DeviceTokenMissingException
 import com.pingidentity.mfa.push.exception.NotificationExpiredException
 import com.pingidentity.mfa.push.exception.NotificationNotFoundException
+import com.pingidentity.mfa.push.exception.PushNumberChallengeException
 import com.pingidentity.mfa.push.storage.PushStorage
 import com.pingidentity.network.HttpClient
 import kotlinx.coroutines.currentCoroutineContext
@@ -728,7 +729,7 @@ internal class PushService(
             val handler = pushHandlers[platform] ?: throw MfaException("No handler for platform: $platform")
 
             // Send the approval with any additional parameters
-            val result = handler.sendApproval(credential, notification, params)
+            val result = handler.sendApproval(credential, notification, params).getOrThrow()
             if (result) {
                 // Update the notification status
                 notification.markApproved()
@@ -746,6 +747,8 @@ internal class PushService(
         } catch (e: CredentialNotFoundException) {
             throw e
         } catch (e: CredentialLockedException) {
+            throw e
+        } catch (e: PushNumberChallengeException) {
             throw e
         } catch (e: Exception) {
             currentCoroutineContext().ensureActive()
@@ -798,7 +801,7 @@ internal class PushService(
             val handler = pushHandlers[platform] ?: throw MfaException("No handler for platform: $platform")
 
             // Send the denial with any additional parameters
-            val result = handler.sendDenial(credential, notification, params)
+            val result = handler.sendDenial(credential, notification, params).getOrThrow()
             if (result) {
                 // Update the notification status
                 notification.markDenied()

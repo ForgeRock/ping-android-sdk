@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2025 - 2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -11,12 +11,15 @@ plugins {
     id("com.pingidentity.convention.centralPublish")
     id("com.pingidentity.convention.jacoco")
     alias(libs.plugins.androidLibrary)
-    alias(libs.plugins.kotlinAndroid)
     alias(libs.plugins.compose.compiler)
 }
 
 android {
     namespace = "com.pingidentity.device.binding.ui"
+}
+
+tasks.withType<com.android.build.gradle.tasks.factory.AndroidUnitTest>().configureEach {
+    failOnNoDiscoveredTests = false
 }
 
 dependencies {

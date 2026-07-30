@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2025-2026  Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -69,14 +69,16 @@ interface PushHandler {
      * @param credential The credential to use for the response.
      * @param notification The notification to approve.
      * @param params Additional parameters.
-     * @return True if the approval was sent successfully, false otherwise.
+     * @return [Result.success] with `true` on success, [Result.success] with `false` if the
+     * approval could not be sent due to missing input, or [Result.failure] wrapping an exception
+     * if a server or network error occurred.
      */
     suspend fun sendApproval(
         credential: PushCredential,
         notification: PushNotification,
         params: Map<String, Any>
-    ): Boolean
-    
+    ): Result<Boolean>
+
     /**
      * Send a denial response for a notification.
      * How the denial is sent depends on the platform and the implementation of this handler.
@@ -86,13 +88,14 @@ interface PushHandler {
      * @param credential The credential to use for the response.
      * @param notification The notification to deny.
      * @param params Additional parameters.
-     * @return True if the denial was sent successfully, false otherwise.
+     * @return [Result.success] with `true` on success, or [Result.failure] wrapping an exception
+     * if a server or network error occurred.
      */
     suspend fun sendDenial(
         credential: PushCredential,
         notification: PushNotification,
         params: Map<String, Any>
-    ): Boolean
+    ): Result<Boolean>
 
     /**
      * Register or update the device token. This is typically called when the

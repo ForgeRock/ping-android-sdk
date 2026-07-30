@@ -224,3 +224,38 @@ fun tokeErrorResponse() =
                 "  \"error\" : \"Invalid Grant\"\n" +
                 "}",
     )
+
+fun metadataNodeResponse() =
+    ByteReadChannel(
+        """
+        {
+            "_links": {
+                "next": {
+                    "href": "http://auth.test-one-pingone.com/sdkIntegrator"
+                }
+            },
+            "interactionId": "008bccea-914b-49da-b2a1-5cd3f83f4372",
+            "interactionToken": "dummy-interaction-token",
+            "eventName": "continue",
+            "isResponseCompatibleWithMobileAndWebSdks": true,
+            "id": "4r92vx2x9u",
+            "form": {
+                "name": "SDK Integrator Form",
+                "description": "",
+                "category": "CUSTOM_HTML",
+                "components": {
+                    "fields": [
+                        {
+                            "type": "METADATA",
+                            "key": "sdkMetadata",
+                            "payload": {
+                                "sdk": "PROTECT",
+                                "action": "INITIALIZE"
+                            }
+                        }
+                    ]
+                }
+            }
+        }
+        """
+    )
