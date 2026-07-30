@@ -83,7 +83,6 @@ class PingOneRecognizeAuthenticateCallback : AbstractRecognizeCallback() {
                 submitResult(
                     signedJwt = result.signedJwt ?: "",
                     clientState = result.clientState ?: "",
-                    devicePublicSigningKey = "",
                     clientError = "",
                     clientErrorCode = "",
                 )
@@ -93,7 +92,6 @@ class PingOneRecognizeAuthenticateCallback : AbstractRecognizeCallback() {
                 submitResult(
                     signedJwt = "",
                     clientState = "",
-                    devicePublicSigningKey = "",
                     clientError = ex.message,
                     clientErrorCode = ex.code.toString(),
                 )
@@ -131,21 +129,19 @@ class PingOneRecognizeAuthenticateCallback : AbstractRecognizeCallback() {
     private fun submitResult(
         signedJwt: String,
         clientState: String,
-        devicePublicSigningKey: String,
         clientError: String,
         clientErrorCode: String,
     ) {
-        if (derivedCallback) {
-            setValueCallback(SIGNED_JWT_SUFFIX, signedJwt)
-            setValueCallback(CLIENT_STATE_SUFFIX, clientState)
-            // recognizeId is not returned for authentication
-            setValueCallback(DEVICE_PUBLIC_SIGNING_KEY_SUFFIX, devicePublicSigningKey)
-            setValueCallback(CLIENT_ERROR_SUFFIX, clientError)
-            setValueCallback(CLIENT_ERROR_CODE_SUFFIX, clientErrorCode)
-        } else {
-            // Auth input order: signedJwt, clientState, recognizeId (empty), devicePublicSigningKey,
-            // clientError, clientErrorCode
-            input(signedJwt, clientState, "", devicePublicSigningKey, clientError, clientErrorCode)
-        }
+        val recognizeId = ""
+        val devicePublicSigningKey = ""
+
+        input(
+            signedJwt,
+            clientState,
+            recognizeId,
+            devicePublicSigningKey,
+            clientError,
+            clientErrorCode
+        )
     }
 }

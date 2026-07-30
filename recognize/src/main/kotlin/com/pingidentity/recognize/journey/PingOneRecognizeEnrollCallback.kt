@@ -92,14 +92,12 @@ class PingOneRecognizeEnrollCallback : AbstractRecognizeCallback() {
         clientError: String,
         clientErrorCode: String,
     ) {
-        if (derivedCallback) {
-            setValueCallback(SIGNED_JWT_SUFFIX, signedJwt)
-            setValueCallback(CLIENT_STATE_SUFFIX, clientState)
-            setValueCallback(RECOGNIZE_ID_SUFFIX, recognizeId)
-            setValueCallback(CLIENT_ERROR_SUFFIX, clientError)
-            setValueCallback(CLIENT_ERROR_CODE_SUFFIX, clientErrorCode)
-        } else {
-            input(signedJwt, clientState, recognizeId, clientError, clientErrorCode)
-        }
+        input(
+            signedJwt,
+            clientState,
+            recognizeId,
+            clientError,
+            clientErrorCode
+        )
     }
 }

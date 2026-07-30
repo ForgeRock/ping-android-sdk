@@ -8,9 +8,6 @@
 package com.pingidentity.recognize.journey
 
 import android.graphics.Bitmap
-import com.pingidentity.journey.plugin.Callback
-import com.pingidentity.journey.plugin.ValueCallback
-import com.pingidentity.orchestrate.ContinueNode
 import com.pingidentity.recognize.Recognize
 import com.pingidentity.recognize.RecognizeException
 import io.keyless.sdk.errorshandling.AuthenticationSuccess
@@ -28,7 +25,6 @@ import io.mockk.unmockkObject
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -77,56 +73,6 @@ class RecognizeCallbackTest {
     }
 
     // ── Helpers ─────────────────────────────────────────────────────────────────
-
-    private fun metadataCallbackJson(operationType: String): JsonObject = Json.parseToJsonElement(
-        """
-        {
-          "type": "MetadataCallback",
-          "output": [
-            {
-              "name": "data",
-              "value": {
-                "operationType":     "$operationType",
-                "host":              "https://recognize.example.com",
-                "apiKey":            "test-api-key",
-                "transactionData":   "tx-data",
-                "clientState":       "cs",
-                "generateClientState": ""
-              }
-            }
-          ],
-          "_id": 0
-        }
-        """
-    ) as JsonObject
-
-    private data class MetadataNodeFixture(
-        val node: ContinueNode,
-        val signedJwt: ValueCallback,
-        val clientState: ValueCallback,
-        val recognizeId: ValueCallback,
-        val devicePublicSigningKey: ValueCallback,
-        val clientError: ValueCallback,
-        val errorCode: ValueCallback,
-    )
-
-    private fun makeMetadataContinueNode(): MetadataNodeFixture {
-        fun valueCallback(suffix: String): ValueCallback = object : ValueCallback {
-            override val id = "IDToken1$suffix"
-            override var value = ""
-            override fun init(jsonObject: JsonObject): Callback = this
-            override fun payload(): JsonObject = buildJsonObject {}
-        }
-        val signedJwt            = valueCallback(AbstractRecognizeCallback.SIGNED_JWT_SUFFIX)
-        val clientState          = valueCallback(AbstractRecognizeCallback.CLIENT_STATE_SUFFIX)
-        val recognizeId          = valueCallback(AbstractRecognizeCallback.RECOGNIZE_ID_SUFFIX)
-        val devicePublicSigningKey = valueCallback(AbstractRecognizeCallback.DEVICE_PUBLIC_SIGNING_KEY_SUFFIX)
-        val clientError          = valueCallback(AbstractRecognizeCallback.CLIENT_ERROR_SUFFIX)
-        val errorCode            = valueCallback(AbstractRecognizeCallback.CLIENT_ERROR_CODE_SUFFIX)
-        val node                 = mockk<ContinueNode>()
-        every { node.actions } returns listOf(signedJwt, clientState, recognizeId, devicePublicSigningKey, clientError, errorCode)
-        return MetadataNodeFixture(node, signedJwt, clientState, recognizeId, devicePublicSigningKey, clientError, errorCode)
-    }
 
     /** Enroll input slots: signedJwt, clientState, recognizeId, clientError, clientErrorCode */
     private fun enrollCallbackJson(): JsonObject = Json.parseToJsonElement(
@@ -1095,79 +1041,4 @@ class RecognizeCallbackTest {
         assertEquals(5, setupSlot.captured.numberOfEnrollmentCircuits)
     }
 
-    // ── MetadataCallback mode — operationType from data object ───────────────────
-
-    @Test
-    fun `MetadataCallback ENROLL dispatches to PingOneRecognizeEnrollCallback`() {
-        val result = RecognizeCallback().init(metadataCallbackJson("ENROLL"))
-        assertIs<PingOneRecognizeEnrollCallback>(result)
-    }
-
-    @Test
-    fun `MetadataCallback AUTHENTICATE dispatches to PingOneRecognizeAuthenticateCallback`() {
-        val result = RecognizeCallback().init(metadataCallbackJson("AUTHENTICATE"))
-        assertIs<PingOneRecognizeAuthenticateCallback>(result)
-    }
-
-    @Test
-    fun `MetadataCallback enroll success writes to sibling ValueCallbacks`() = runTest {
-        val f = makeMetadataContinueNode()
-        val callback = (RecognizeCallback().init(metadataCallbackJson("ENROLL")) as PingOneRecognizeEnrollCallback)
-            .also { it.continueNode = f.node }
-
-        assertTrue(callback.enroll().isSuccess)
-        assertEquals("signed-jwt",   f.signedJwt.value)
-        assertEquals("client-state", f.clientState.value)
-        assertEquals("keyless-id",   f.recognizeId.value)
-        assertEquals("",             f.clientError.value)
-        assertEquals("",             f.errorCode.value)
-    }
-
-    @Test
-    fun `MetadataCallback enroll failure writes error to sibling clientError ValueCallback`() = runTest {
-        val error = RecognizeException(code = 21, message = "enroll failed", debuggingInfo = emptyMap())
-        coEvery { Recognize.enroll(any()) } returns Result.failure(error)
-
-        val f = makeMetadataContinueNode()
-        val callback = (RecognizeCallback().init(metadataCallbackJson("ENROLL")) as PingOneRecognizeEnrollCallback)
-            .also { it.continueNode = f.node }
-
-        assertTrue(callback.enroll().isFailure)
-        assertEquals("",              f.signedJwt.value)
-        assertEquals("",              f.clientState.value)
-        assertEquals("",              f.recognizeId.value)
-        assertEquals("enroll failed", f.clientError.value)
-    }
-
-    @Test
-    fun `MetadataCallback authenticate success writes to sibling ValueCallbacks`() = runTest {
-        val f = makeMetadataContinueNode()
-        val callback = (RecognizeCallback().init(metadataCallbackJson("AUTHENTICATE")) as PingOneRecognizeAuthenticateCallback)
-            .also { it.continueNode = f.node }
-
-        assertTrue(callback.authenticate().isSuccess)
-        assertEquals("signed-jwt",   f.signedJwt.value)
-        assertEquals("client-state", f.clientState.value)
-        assertEquals("",             f.recognizeId.value) // no recognizeId for auth
-        assertEquals("",             f.devicePublicSigningKey.value)
-        assertEquals("",             f.clientError.value)
-        assertEquals("",             f.errorCode.value)
-    }
-
-    @Test
-    fun `MetadataCallback authenticate failure writes error to sibling clientError ValueCallback`() = runTest {
-        val error = RecognizeException(code = 21, message = "auth failed", debuggingInfo = emptyMap())
-        coEvery { Recognize.authenticate(any()) } returns Result.failure(error)
-
-        val f = makeMetadataContinueNode()
-        val callback = (RecognizeCallback().init(metadataCallbackJson("AUTHENTICATE")) as PingOneRecognizeAuthenticateCallback)
-            .also { it.continueNode = f.node }
-
-        assertTrue(callback.authenticate().isFailure)
-        assertEquals("",            f.signedJwt.value)
-        assertEquals("",            f.clientState.value)
-        assertEquals("",            f.recognizeId.value)
-        assertEquals("",            f.devicePublicSigningKey.value)
-        assertEquals("auth failed", f.clientError.value)
-    }
 }

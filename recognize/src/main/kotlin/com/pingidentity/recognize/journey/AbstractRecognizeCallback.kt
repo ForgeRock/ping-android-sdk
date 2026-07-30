@@ -8,11 +8,6 @@
 package com.pingidentity.recognize.journey
 
 import com.pingidentity.journey.plugin.AbstractCallback
-import com.pingidentity.journey.plugin.Callback
-import com.pingidentity.journey.plugin.ValueCallback
-import com.pingidentity.journey.plugin.callbacks
-import com.pingidentity.orchestrate.ContinueNode
-import com.pingidentity.orchestrate.ContinueNodeAware
 import io.keyless.sdk.biom.liveness.LivenessSettings
 import io.keyless.sdk.configurations.ClientStateType
 import io.keyless.sdk.configurations.OperationInfo
@@ -23,25 +18,18 @@ import io.keyless.sdk.core.actions.model.JwtSigningInfo
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.contentOrNull
-import kotlinx.serialization.json.jsonArray
-import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
 /**
  * Abstract base for Recognize Journey callbacks.
  *
  * Parses all common output fields from the server response and exposes them as typed properties.
- * Handles the dual-mode delivery: fields can arrive either as a first-class typed callback
- * (`PingOneRecognizeCallback`) or wrapped inside a `MetadataCallback`.
  *
  * Shared config builders ([buildSetupConfig], [buildOperationInfo], [buildJwtSigningInfo],
  * [buildGeneratingClientState]) are defined here. The enroll-specific [buildEnrollConfig] is a
  * package-level extension on this class to keep enroll SDK types out of the base.
  */
-abstract class AbstractRecognizeCallback : ContinueNodeAware, AbstractCallback() {
-
-    override lateinit var continueNode: ContinueNode
-    protected var derivedCallback: Boolean = false
+abstract class AbstractRecognizeCallback : AbstractCallback() {
 
     // ── Common output fields ──────────────────────────────────────────────────
 
@@ -98,29 +86,10 @@ abstract class AbstractRecognizeCallback : ContinueNodeAware, AbstractCallback()
     var mobileSDKOptions: JsonObject = JsonObject(emptyMap())
         private set
 
-    override fun init(jsonObject: JsonObject): Callback {
-        val type = jsonObject["type"]?.jsonPrimitive?.content
-        if (type == "MetadataCallback") {
-            derivedCallback = true
-            jsonObject["output"]?.jsonArray?.let { output ->
-                output[0].jsonObject.let { nameValuePair ->
-                    if (nameValuePair["name"]?.jsonPrimitive?.contentOrNull == "data") {
-                        nameValuePair["value"]?.jsonObject?.let { value ->
-                            value.forEach { attr -> init(attr.key, attr.value) }
-                        }
-                    }
-                }
-            }
-            return this
-        } else {
-            return super.init(jsonObject)
-        }
-    }
-
     /**
      * Parses a single named output field and stores it in the corresponding property.
      *
-     * Called once per field in the server JSON output array (or per key in the `data` envelope).
+     * Called once per field in the server JSON output array.
      *
      * @param name Field name as returned by the server (e.g. `"transactionData"`).
      * @param value Raw JSON element for the field value.
@@ -173,29 +142,13 @@ abstract class AbstractRecognizeCallback : ContinueNodeAware, AbstractCallback()
     internal fun buildGeneratingClientState(): ClientStateType? =
         if (generateClientState.equals("true", ignoreCase = true)) ClientStateType.BACKUP else null
 
-    protected fun setValueCallback(idSuffix: String, value: String) {
-        continueNode.callbacks.forEach { callback ->
-            if (callback is ValueCallback && callback.id.contains(idSuffix)) {
-                callback.value = value
-            }
-        }
-    }
-
-    internal companion object {
-        const val SIGNED_JWT_SUFFIX = "signedJwt"
-        const val CLIENT_STATE_SUFFIX = "clientState"
-        const val RECOGNIZE_ID_SUFFIX = "recognizeId"
-        const val DEVICE_PUBLIC_SIGNING_KEY_SUFFIX = "devicePublicSigningKey"
-        const val CLIENT_ERROR_SUFFIX = "clientError"
-        const val CLIENT_ERROR_CODE_SUFFIX = "clientErrorCode"
-    }
 }
 
 /**
  * Builds a [BiomEnrollConfig] from this callback's current output fields.
  *
  * Kept as a package-level extension so the enroll-specific SDK types
- * ([BiomEnrollConfig], enroll [PresentationStyle]) do not leak into [AbstractRecognizeCallback].
+ * ([BiomEnrollConfig], enroll [io.keyless.sdk.configurations.enroll.PresentationStyle]) do not leak into [AbstractRecognizeCallback].
  *
  * @param clientStateOverride When non-null, overrides the server-supplied `clientState` field.
  * Pass an explicit value when enrolling from a clientState received during authentication.
