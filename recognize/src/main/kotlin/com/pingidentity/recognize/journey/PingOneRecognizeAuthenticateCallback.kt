@@ -59,7 +59,8 @@ class PingOneRecognizeAuthenticateCallback : AbstractRecognizeCallback() {
      *
      * @return [Result] containing [RecognizeSuccess] on success, or a [Throwable] on failure.
      */
-    suspend fun authenticate(retrieveSelfie: Boolean = false): Result<RecognizeSuccess> {
+    suspend fun authenticate(config: RecognizeAuthenticateConfig.() -> Unit = {}): Result<RecognizeSuccess> {
+        val resolvedConfig = RecognizeAuthenticateConfig().apply(config)
         val storedClientState = clientState
 
         return Recognize.setup(buildSetupConfig())
@@ -69,10 +70,10 @@ class PingOneRecognizeAuthenticateCallback : AbstractRecognizeCallback() {
                     val shouldEnroll = storedClientState.isNotEmpty() &&
                         !Recognize.validateUserAndDeviceActive().isSuccess
                     if (shouldEnroll) {
-                        Recognize.enroll(buildEnrollConfig(clientStateOverride = storedClientState, retrieveSelfie = retrieveSelfie))
+                        Recognize.enroll(buildEnrollConfig(clientStateOverride = storedClientState, retrieveSelfie = resolvedConfig.retrieveSelfie))
                             .map { success -> RecognizeSuccess(selfie = success.enrollmentFrame, signedJwt = success.signedJwt, clientState = success.clientState, keylessId = success.keylessId) }
                     } else {
-                        Recognize.authenticate(buildAuthConfig(retrieveSelfie))
+                        Recognize.authenticate(buildAuthConfig(resolvedConfig.retrieveSelfie))
                             .map { success -> RecognizeSuccess(selfie = success.authenticationFrame, signedJwt = success.signedJwt, clientState = success.clientState, keylessId = "") }
                     }
                 },

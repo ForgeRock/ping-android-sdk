@@ -49,10 +49,11 @@ class PingOneRecognizeEnrollCallback : AbstractRecognizeCallback() {
      *
      * @return [Result] containing [RecognizeSuccess] on success, or a [Throwable] on failure.
      */
-    suspend fun enroll(retrieveSelfie: Boolean = false): Result<RecognizeSuccess> {
+    suspend fun enroll(config: RecognizeEnrollConfig.() -> Unit = {}): Result<RecognizeSuccess> {
+        val resolvedConfig = RecognizeEnrollConfig().apply(config)
         return Recognize.setup(buildSetupConfig())
             .fold(
-                onSuccess = { Recognize.enroll(buildEnrollConfig(retrieveSelfie = retrieveSelfie)) },
+                onSuccess = { Recognize.enroll(buildEnrollConfig(retrieveSelfie = resolvedConfig.retrieveSelfie)) },
                 onFailure = { Result.failure(it) }
             )
             .onSuccess { success ->
