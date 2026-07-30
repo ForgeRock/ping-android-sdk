@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 - 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2024 - 2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -12,34 +12,36 @@ import org.gradle.accessors.dm.LibrariesForLibs
 import org.gradle.api.Project
 import org.gradle.kotlin.dsl.the
 
-fun Project.configureKotlinAndroid(extension: CommonExtension<*, *, *, *, *, *>) {
+fun Project.configureKotlinAndroid(extension: CommonExtension) {
     val libs = the<LibrariesForLibs>()
+
+    val releaseTagName = System.getenv("RELEASE_TAG_NAME") ?: "0.0.0"
 
     extension.apply {
         compileSdk = libs.versions.compileSdk.get().toInt()
 
-        defaultConfig {
+        defaultConfig.apply {
             minSdk = libs.versions.minSdk.get().toInt()
             testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+            buildConfigField(
+                "String",
+                "VERSION_NAME",
+                "\"$releaseTagName\""
+            )
         }
 
-        testOptions {
-            unitTests {
+        testOptions.apply {
+            // Robolectric 4.16.1 + Java 17: SDK 36 requires Java 21, so cap at 35.
+            targetSdk = 35
+            unitTests.apply {
                 isIncludeAndroidResources = true
                 isReturnDefaultValues = true
             }
         }
 
-        buildFeatures {
+        buildFeatures.apply {
             buildConfig = true
         }
-
-        //val version: String by project
-        val version: String  = System.getenv("RELEASE_TAG_NAME") ?: "0.0.0"
-
-        defaultConfig {
-            buildConfigField("String", "VERSION_NAME", "\"$version\"")
-        }
-
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2025 - 2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -1022,6 +1022,125 @@ class KtorHttpClientTest {
         assertNotNull(recordedRequest)
         assertEquals("ping-sdk", recordedRequest.getHeader("x-requested-with"))
         assertEquals("android", recordedRequest.getHeader("x-requested-platform"))
+
+        httpClient.close()
+        mockWebServer.shutdown()
+    }
+
+    // ── KTOR-8614 regression tests ─────────────────────────────────────────────
+    // https://youtrack.jetbrains.com/issue/KTOR-8614
+    // CIO Engine treats response header names case-sensitively and drops earlier
+    // repeated headers.
+    //
+    // Both tests MUST use MockWebServer + the HttpClient {} factory (CIO engine)
+    // so that real HTTP response bytes are parsed.  Using MockEngine would bypass
+    // the CIO HTTP parser and hide the bug.
+
+    @Test
+    fun `KTOR-8614 - should collect all Set-Cookie headers when names use mixed casing`() = runTest {
+        // The CIO engine bug: header names are compared case-sensitively, so a
+        // server that sends `set-cookie` (lowercase) or `SET-COOKIE` (uppercase)
+        // produces entries that are NOT found by getAll("Set-Cookie"), causing
+        // cookies() to return fewer values than actually sent.
+        //
+        // This test FAILS when the bug is present and PASSES once it is fixed.
+
+        val mockWebServer = MockWebServer()
+        mockWebServer.enqueue(
+            MockResponse()
+                .setResponseCode(200)
+                .setBody("OK")
+                .addHeader("Set-Cookie", "session=abc; Path=/; HttpOnly")  // canonical casing
+                .addHeader("set-cookie", "token=xyz; Path=/; Secure")      // all-lowercase
+                .addHeader("SET-COOKIE", "lang=en; Path=/")                // all-uppercase
+        )
+        mockWebServer.start()
+
+        val httpClient = HttpClient {
+            timeout = 10.toDuration(DurationUnit.SECONDS)
+            logger = Logger.WARN
+        }
+
+        val response = httpClient.request {
+            url = mockWebServer.url("/login").toString()
+        }
+
+        val cookies = response.cookies()
+
+        // All 3 Set-Cookie headers must be collected regardless of header-name casing.
+        // With the KTOR-8614 bug, cookies() returns only the headers whose name exactly
+        // matches "Set-Cookie", so this assertion would fail (size < 3).
+        assertEquals(
+            3,
+            cookies.size,
+            "All 3 Set-Cookie headers must be returned regardless of header name casing (KTOR-8614)",
+        )
+        assertTrue(
+            cookies.any { it.startsWith("session=abc") },
+            "Cookie 'session=abc' (canonical casing) must be present",
+        )
+        assertTrue(
+            cookies.any { it.startsWith("token=xyz") },
+            "Cookie 'token=xyz' (lowercase 'set-cookie') must be present",
+        )
+        assertTrue(
+            cookies.any { it.startsWith("lang=en") },
+            "Cookie 'lang=en' (uppercase 'SET-COOKIE') must be present",
+        )
+
+        httpClient.close()
+        mockWebServer.shutdown()
+    }
+
+    @Test
+    fun `KTOR-8614 - should not drop earlier Set-Cookie headers when multiple are sent`() = runTest {
+        // The CIO engine bug: when multiple headers share the same name, earlier
+        // entries are silently dropped and only the last value survives.
+        //
+        // This test FAILS when the bug is present and PASSES once it is fixed.
+
+        val mockWebServer = MockWebServer()
+        mockWebServer.enqueue(
+            MockResponse()
+                .setResponseCode(200)
+                .setBody("OK")
+                .addHeader("Set-Cookie", "first=1; Path=/")    // sent first — must NOT be dropped
+                .addHeader("Set-Cookie", "second=2; Path=/")   // sent second
+                .addHeader("Set-Cookie", "third=3; Path=/")    // sent last
+        )
+        mockWebServer.start()
+
+        val httpClient = HttpClient {
+            timeout = 10.toDuration(DurationUnit.SECONDS)
+            logger = Logger.WARN
+        }
+
+        val response = httpClient.request {
+            url = mockWebServer.url("/auth").toString()
+        }
+
+        val cookies = response.cookies()
+
+        // All 3 same-name Set-Cookie headers must be preserved.
+        // With the KTOR-8614 bug, earlier headers are dropped so size would be 1
+        // (only "third=3" survives), causing this assertion to fail.
+        assertEquals(
+            3,
+            cookies.size,
+            "All 3 repeated Set-Cookie headers must be preserved — none dropped (KTOR-8614)",
+        )
+        assertTrue(
+            cookies.any { it.startsWith("first=1") },
+            "First cookie 'first=1' must not be dropped",
+        )
+        assertTrue(
+            cookies.any { it.startsWith("second=2") },
+            "Second cookie 'second=2' must not be dropped",
+        )
+        assertTrue(
+            cookies.any { it.startsWith("third=3") },
+            "Third cookie 'third=3' must not be dropped",
+        )
 
         httpClient.close()
         mockWebServer.shutdown()

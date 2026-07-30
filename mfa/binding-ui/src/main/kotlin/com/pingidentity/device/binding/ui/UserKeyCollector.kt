@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2025 - 2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -24,15 +24,12 @@ import kotlin.coroutines.resumeWithException
  * to the user when multiple device bindings exist. It provides the necessary details for
  * the user to identify and select the appropriate key for authentication.
  *
- * @property id The unique identifier of the user key. This corresponds to the [com.pingidentity.device.binding.UserKey.id]
- *              and is used internally to identify the selected key.
- * @property username The friendly username or display name associated with this key.
- *                    This is shown in the selection UI to help users identify their keys.
- *                    Corresponds to [com.pingidentity.device.binding.UserKey.username].
+ * @property id The unique identifier of the user key, used internally to identify the selected key.
+ * @property username The friendly username or display name associated with this key,
+ *                    shown in the selection UI to help users identify their keys.
  * @property authenticationType The type of authentication used by this key
- *                             (e.g., "BIOMETRIC_ONLY", "BIOMETRIC_OR_DEVICE_CREDENTIAL", "APPLICATION_PIN").
- *                             Displayed to users to help them understand how authentication will work.
- *                             Corresponds to [com.pingidentity.device.binding.authenticator.DeviceBindingAuthenticationType].
+ *                             (e.g., "BIOMETRIC_ONLY", "BIOMETRIC_OR_DEVICE_CREDENTIAL", "APPLICATION_PIN"),
+ *                             displayed to users to help them understand how authentication will work.
  */
 data class UserKeyOption(
     val id: String,
@@ -76,8 +73,7 @@ data class UserKeyOption(
  * 2. Multiple keys are available in storage
  * 3. No custom user key collector has been configured
  *
- * Custom implementations can be provided via [com.pingidentity.device.binding.authenticator.UserKeyAuthenticator]
- * configuration.
+ * Custom implementations can be provided via a UserKeyAuthenticator configuration.
  *
  * @param activity The Android Activity that will host the user key selection dialog.
  *                 This activity's UI thread is used for view operations.
@@ -91,8 +87,8 @@ data class UserKeyOption(
  *
  * @see UserKeyOption
  * @see UserKeyDialog
- * @see com.pingidentity.device.binding.authenticator.UserKeyAuthenticator
- * @see com.pingidentity.device.binding.UserKey
+ * @see UserKeyOption
+ * @see UserKeyDialog
  */
 suspend fun collectUserKey(
     activity: Activity,

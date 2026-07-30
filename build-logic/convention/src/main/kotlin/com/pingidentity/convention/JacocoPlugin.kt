@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 - 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2024 - 2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -7,22 +7,14 @@
 
 package com.pingidentity.convention
 
-import com.android.build.gradle.BaseExtension
+import com.android.build.api.dsl.CommonExtension
 import java.util.Locale
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.kotlin.dsl.register
-import org.gradle.testing.jacoco.plugins.JacocoPluginExtension
 import org.gradle.testing.jacoco.tasks.JacocoReport
 
 class JacocoPlugin : Plugin<Project> {
-    private val Project.android: BaseExtension
-        get() = extensions.findByName("android") as? BaseExtension
-            ?: error("Not an Android module: $name")
-
-    private val Project.jacoco: JacocoPluginExtension
-        get() = extensions.findByName("jacoco") as? JacocoPluginExtension
-            ?: error("Not a Jacoco module: $name")
 
     private val excludedFiles = mutableSetOf(
         "**/R.class",
@@ -41,13 +33,23 @@ class JacocoPlugin : Plugin<Project> {
 
     override fun apply(project: Project) =
         with(project) {
-            plugins.run {
-                apply("jacoco")
+            pluginManager.apply("jacoco")
+
+            pluginManager.withPlugin("com.android.application") {
+                jacocoAndroidAfterEvaluate()
             }
-            jacocoAfterEvaluate()
+
+            pluginManager.withPlugin("com.android.library") {
+                jacocoAndroidAfterEvaluate()
+            }
+
+            // Non-Android modules like :davinci should not go through Android Jacoco setup.
         }
 
-    private fun Project.jacocoAfterEvaluate() = afterEvaluate {
+    private fun Project.jacocoAndroidAfterEvaluate() = afterEvaluate {
+        val android = extensions.findByName("android") as? CommonExtension
+            ?: return@afterEvaluate
+
         val buildTypes = android.buildTypes.map { type -> type.name }
         var productFlavors = android.productFlavors.map { flavor -> flavor.name }
 
@@ -65,17 +67,13 @@ class JacocoPlugin : Plugin<Project> {
                     sourcePath = buildTypeName
                 } else {
                     sourceName = "${flavorName}${buildTypeName.replaceFirstChar {
-                        if (it.isLowerCase()) it.titlecase(
-                            Locale.ENGLISH
-                        ) else it.toString()
+                        if (it.isLowerCase()) it.titlecase(Locale.ENGLISH) else it.toString()
                     }}"
                     sourcePath = "${flavorName}/${buildTypeName}"
                 }
 
                 val testTaskName = "test${sourceName.replaceFirstChar {
-                    if (it.isLowerCase()) it.titlecase(
-                        Locale.ENGLISH
-                    ) else it.toString()
+                    if (it.isLowerCase()) it.titlecase(Locale.ENGLISH) else it.toString()
                 }}UnitTest"
 
                 registerCodeCoverageTask(
@@ -87,9 +85,7 @@ class JacocoPlugin : Plugin<Project> {
                 )
 
                 val connectedCheckTaskName = "connected${sourceName.replaceFirstChar {
-                    if (it.isLowerCase()) it.titlecase(
-                        Locale.ENGLISH
-                    ) else it.toString()
+                    if (it.isLowerCase()) it.titlecase(Locale.ENGLISH) else it.toString()
                 }}AndroidTest"
 
                 registerCodeCoverageTask(

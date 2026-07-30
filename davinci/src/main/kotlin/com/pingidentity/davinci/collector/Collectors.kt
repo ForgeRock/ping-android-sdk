@@ -59,13 +59,22 @@ internal fun Collectors.asJson(): JsonObject {
     return buildJsonObject {
         val map = mutableMapOf<String, Any>()
         forEach {
-            if (it is SubmitCollector || it is FlowCollector) {
-                it.payload()?.let { _ ->
-                    put("actionKey", it.id())
+            when {
+                it is MetadataCollector -> {
+                    it.payload()?.let { payload ->
+                        put("actionKey", it.id())
+                        map[it.id()] = payload
+                    }
                 }
-            } else {
-                it.payload()?.let { payload ->
-                    map[it.id()] = payload
+                it is SubmitCollector || it is FlowCollector -> {
+                    it.payload()?.let { _ ->
+                        put("actionKey", it.id())
+                    }
+                }
+                else -> {
+                    it.payload()?.let { payload ->
+                        map[it.id()] = payload
+                    }
                 }
             }
         }
