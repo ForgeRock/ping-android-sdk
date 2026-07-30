@@ -15,8 +15,8 @@ pluginManagement {
     }
 }
 
-val cloudsmithTokenRecognize: String by settings
-val cloudsmithTokenAesWrap: String by settings
+val cloudsmithTokenRecognize: String = if (extra.has("cloudsmithTokenRecognize")) extra["cloudsmithTokenRecognize"] as String else ""
+val cloudsmithTokenAesWrap: String = if (extra.has("cloudsmithTokenAesWrap")) extra["cloudsmithTokenAesWrap"] as String else ""
 
 dependencyResolutionManagement {
     repositories {
