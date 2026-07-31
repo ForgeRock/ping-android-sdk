@@ -70,5 +70,6 @@ class RecognizeCallback : AbstractCallback() {
         }
     }
 
+    /** Returns the raw callback JSON to be submitted back to the server. */
     override fun payload(): JsonObject = json
 }

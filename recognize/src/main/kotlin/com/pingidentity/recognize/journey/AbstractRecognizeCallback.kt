@@ -112,6 +112,9 @@ abstract class AbstractRecognizeCallback : AbstractCallback() {
         }
     }
 
+    /**
+     * Builds a [SetupConfig] from the output fields received from the server.
+     */
     internal fun buildSetupConfig(): SetupConfig = SetupConfig(
         apiKey = apiKey,
         hosts = listOf(host),
@@ -120,6 +123,10 @@ abstract class AbstractRecognizeCallback : AbstractCallback() {
             ?: SetupConfig.DEFAULT_ENROLLMENT_CIRCUIT_NUMBER,
     )
 
+    /**
+     * Builds an [OperationInfo] from the `mobileSDKOptions` fields, or returns `null` if none
+     * of `operationInfoId`, `operationInfoPayload`, or `operationInfoExternalUserId` are present.
+     */
     internal fun buildOperationInfo(): OperationInfo? {
         val opId = mobileSDKOptions["operationInfoId"]?.jsonPrimitive?.contentOrNull
         val opPayload = mobileSDKOptions["operationInfoPayload"]?.jsonPrimitive?.contentOrNull
@@ -133,12 +140,20 @@ abstract class AbstractRecognizeCallback : AbstractCallback() {
         } else null
     }
 
+    /**
+     * Builds a [JwtSigningInfo] from [transactionData] and [audience].
+     * The `audience` claim is omitted when blank.
+     */
     internal fun buildJwtSigningInfo(): JwtSigningInfo = if (audience.isNotBlank()) {
         JwtSigningInfo(claimTransactionData = transactionData, audience = audience)
     } else {
         JwtSigningInfo(claimTransactionData = transactionData)
     }
 
+    /**
+     * Returns [ClientStateType.BACKUP] when the server instructs the SDK to generate a new client
+     * state, or `null` otherwise.
+     */
     internal fun buildGeneratingClientState(): ClientStateType? =
         if (generateClientState.equals("true", ignoreCase = true)) ClientStateType.BACKUP else null
 

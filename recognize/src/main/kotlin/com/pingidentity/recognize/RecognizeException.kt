@@ -28,6 +28,12 @@ class RecognizeException(
 ) : Exception(message, cause) {
 
     companion object {
+        /**
+         * Converts a [KeylessSdkError] into a [RecognizeException].
+         *
+         * @param error The raw Keyless SDK error.
+         * @return A [RecognizeException] populated from [error].
+         */
         fun from(error: KeylessSdkError): RecognizeException = RecognizeException(
             code = error.code,
             message = error.message ?: "UNKNOWN_ERROR",
@@ -37,6 +43,9 @@ class RecognizeException(
     }
 }
 
+/**
+ * Returns this throwable as a [RecognizeException], casting if already one or wrapping otherwise.
+ */
 internal fun Throwable.asRecognizeException(): RecognizeException =
     this as? RecognizeException
         ?: RecognizeException(code = -1, message = message ?: "UNKNOWN_ERROR", debuggingInfo = emptyMap(), cause = this)

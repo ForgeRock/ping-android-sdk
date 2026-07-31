@@ -16,7 +16,16 @@ import io.keyless.sdk.errorshandling.EnrollmentSuccess
 import io.keyless.sdk.errorshandling.KeylessSdkError
 import kotlinx.coroutines.suspendCancellableCoroutine
 
+/**
+ * Coroutine wrappers around the Keyless SDK that bridge its callback-based API into suspending functions.
+ */
 object Recognize {
+    /**
+     * Verifies that the current user and device are active in the Keyless SDK.
+     *
+     * @return [Result.success] with [Unit] if the check passes, or [Result.failure] wrapping a
+     * [RecognizeException] if the SDK reports an error.
+     */
     internal suspend fun validateUserAndDeviceActive(): Result<Unit> =
         suspendCancellableCoroutine { cont ->
             Keyless.validateUserAndDeviceActive { result ->
@@ -35,6 +44,12 @@ object Recognize {
             }
         }
 
+    /**
+     * Configures the Keyless SDK with the given [setupConfig].
+     *
+     * @param setupConfig SDK configuration (API key, hosts, circuit count).
+     * @return [Result.success] on completion, or [Result.failure] wrapping a [RecognizeException].
+     */
     internal suspend fun setup(
         setupConfig: SetupConfig
     ) = suspendCancellableCoroutine { continuation ->
@@ -58,6 +73,13 @@ object Recognize {
         }
     }
 
+    /**
+     * Runs a biometric enrollment flow using the Keyless SDK.
+     *
+     * @param biomEnrollConfig Enrollment parameters (liveness, presentation style, selfie capture, etc.).
+     * @return [Result.success] with [EnrollmentSuccess] on completion, or [Result.failure] wrapping
+     * a [RecognizeException].
+     */
     suspend fun enroll(
         biomEnrollConfig: BiomEnrollConfig
     ): Result<EnrollmentSuccess> = suspendCancellableCoroutine { cont ->
@@ -77,6 +99,13 @@ object Recognize {
         }
     }
 
+    /**
+     * Runs a biometric authentication flow using the Keyless SDK.
+     *
+     * @param config Authentication parameters.
+     * @return [Result.success] with [AuthenticationSuccess] on completion, or [Result.failure]
+     * wrapping a [RecognizeException].
+     */
     suspend fun authenticate(
         config: BiomAuthConfig
     ): Result<AuthenticationSuccess> = suspendCancellableCoroutine { cont ->
