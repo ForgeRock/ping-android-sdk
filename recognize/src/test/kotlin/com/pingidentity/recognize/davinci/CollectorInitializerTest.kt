@@ -10,6 +10,7 @@ package com.pingidentity.recognize.davinci
 import android.content.Context
 import com.pingidentity.davinci.plugin.CollectorFactory
 import io.mockk.mockk
+import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertNotNull
@@ -19,6 +20,11 @@ class CollectorInitializerTest {
 
     @BeforeTest
     fun setUp() {
+        CollectorFactory.reset()
+    }
+
+    @AfterTest
+    fun tearDown() {
         CollectorFactory.reset()
     }
 
