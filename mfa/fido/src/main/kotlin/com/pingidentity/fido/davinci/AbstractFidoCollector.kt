@@ -119,12 +119,12 @@ abstract class AbstractFidoCollector : Collector<JsonObject>, DaVinciAware, Subm
 
             is CreatePublicKeyCredentialDomException -> {
                 logger.d("DOM exception occurred: ${exception.domError::class.simpleName}")
-                errorCode = exception.domError::class.simpleName
+                errorCode = exception.domError::class.simpleName ?: UnknownError::class.simpleName
             }
 
             is GetPublicKeyCredentialDomException -> {
                 logger.d("DOM exception occurred: ${exception.domError::class.simpleName}")
-                errorCode = exception.domError::class.simpleName
+                errorCode = exception.domError::class.simpleName ?: UnknownError::class.simpleName
             }
 
             else -> {

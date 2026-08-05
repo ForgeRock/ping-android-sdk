@@ -55,10 +55,11 @@ internal fun Collectors.asJson(): JsonObject {
     return buildJsonObject {
         val map = mutableMapOf<String, Any>()
         forEach {
-            if (it is ActionKeyProvider && it.actionKey != null) {
-                put("actionKey", it.actionKey!!)
+            val key = (it as? ActionKeyProvider)?.actionKey
+            if (key != null) {
+                put("actionKey", key)
                 it.payload()?.let { payload ->
-                    if (payload is JsonObject && payload.isNotEmpty()) map[it.actionKey!!] = payload
+                    if (payload is JsonObject && payload.isNotEmpty()) map[key] = payload
                 }
             } else {
                 it.payload()?.let { payload -> map[it.id()] = payload }
