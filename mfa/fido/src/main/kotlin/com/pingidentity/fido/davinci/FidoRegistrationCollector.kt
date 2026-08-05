@@ -9,6 +9,7 @@ package com.pingidentity.fido.davinci
 
 import com.pingidentity.davinci.plugin.Collector
 import com.pingidentity.fido.Constants
+import kotlinx.coroutines.CancellationException
 import com.pingidentity.fido.FidoClient
 import com.pingidentity.fido.FidoRegistrationCustomizer
 import com.pingidentity.fido.toBase64
@@ -72,12 +73,14 @@ class FidoRegistrationCollector : AbstractFidoCollector(), Closeable {
     ): Result<JsonObject> {
         logger.d("Starting FIDO2 registration")
         errorCode = null
+        attestationValue = null
         return FidoClient {
             logger = this@FidoRegistrationCollector.logger
         }.register(publicKeyCredentialCreationOptions, block).onSuccess {
             logger.d("FIDO2 registration successful")
             attestationValue = it
         }.onFailure { exception ->
+            if (exception is CancellationException) throw exception
             logger.e("FIDO2 registration failed", exception)
             handleError(exception)
         }

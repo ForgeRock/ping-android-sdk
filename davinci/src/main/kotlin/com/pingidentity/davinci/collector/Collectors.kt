@@ -22,12 +22,8 @@ import com.pingidentity.network.HttpRequest as Request
 internal fun Collectors.eventType(): String? {
     forEach {
         when (it) {
-            is Submittable -> {
-                val eventType = it.eventType()
-                if (it.payload() != null) {
-                    return eventType
-                }
-            }
+            is Submittable if it is ActionKeyProvider && it.actionKey != null -> return it.eventType()
+            is Submittable if it !is ActionKeyProvider && it.payload() != null -> return it.eventType()
             else -> {}
         }
     }
@@ -59,28 +55,13 @@ internal fun Collectors.asJson(): JsonObject {
     return buildJsonObject {
         val map = mutableMapOf<String, Any>()
         forEach {
-            when {
-                it is MetadataCollector -> {
-                    it.payload()?.let { payload ->
-                        put("actionKey", it.id())
-                        map[it.id()] = payload
-                    }
+            if (it is ActionKeyProvider && it.actionKey != null) {
+                put("actionKey", it.actionKey!!)
+                it.payload()?.let { payload ->
+                    if (payload is JsonObject && payload.isNotEmpty()) map[it.actionKey!!] = payload
                 }
-
-                it is SubmitCollector || it is FlowCollector -> {
-                    it.payload()?.let { _ ->
-                        put("actionKey", it.id())
-                    }
-                }
-                else -> {
-                    if (it is ActionKeyProvider && it.actionKey != null) {
-                        put("actionKey", it.actionKey)
-                    } else {
-                        it.payload()?.let { payload ->
-                            map[it.id()] = payload
-                        }
-                    }
-                }
+            } else {
+                it.payload()?.let { payload -> map[it.id()] = payload }
             }
         }
         put("formData", mapToJsonObject(map))

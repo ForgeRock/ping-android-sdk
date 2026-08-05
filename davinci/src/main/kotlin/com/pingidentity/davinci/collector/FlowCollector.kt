@@ -7,6 +7,7 @@
 
 package com.pingidentity.davinci.collector
 
+import com.pingidentity.davinci.plugin.ActionKeyProvider
 import com.pingidentity.davinci.plugin.Submittable
 import com.pingidentity.orchestrate.Closeable
 
@@ -20,8 +21,10 @@ private const val ACTION = "action"
  *
  * @constructor Creates a new FlowCollector with the given input.
  */
-class FlowCollector : SingleValueCollector(), Submittable, Closeable {
+class FlowCollector : SingleValueCollector(), Submittable, ActionKeyProvider, Closeable {
     override fun eventType() = ACTION
+
+    override val actionKey: String? get() = if (value.isEmpty()) null else id()
 
     override fun close() {
         value = ""

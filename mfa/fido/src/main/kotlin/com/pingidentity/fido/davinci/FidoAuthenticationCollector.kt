@@ -9,6 +9,7 @@ package com.pingidentity.fido.davinci
 
 import com.pingidentity.davinci.plugin.Collector
 import com.pingidentity.fido.Constants
+import kotlinx.coroutines.CancellationException
 import com.pingidentity.fido.Constants.FIELD_ALLOW_CREDENTIALS
 import com.pingidentity.fido.Constants.FIELD_CHALLENGE
 import com.pingidentity.fido.FidoAuthenticateCustomizer
@@ -98,6 +99,7 @@ class FidoAuthenticationCollector : AbstractFidoCollector(), Closeable {
         block: FidoAuthenticateCustomizer.() -> Unit = {}
     ): Result<JsonObject> {
         errorCode = null
+        assertionValue = null
         logger.d("Starting FIDO2 authentication")
         return FidoClient { logger = this@FidoAuthenticationCollector.logger }.authenticate(
             publicKeyCredentialRequestOptions, block
@@ -105,6 +107,7 @@ class FidoAuthenticationCollector : AbstractFidoCollector(), Closeable {
             logger.d("FIDO2 authentication successful")
             assertionValue = it
         }.onFailure { exception ->
+            if (exception is CancellationException) throw exception
             logger.e("FIDO2 authentication failed", exception)
             handleError(exception)
         }

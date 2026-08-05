@@ -9,6 +9,7 @@ package com.pingidentity.fido.davinci
 
 import com.pingidentity.davinci.plugin.DaVinci
 import com.pingidentity.fido.Constants
+import kotlinx.coroutines.CancellationException
 import com.pingidentity.fido.FidoClient
 import com.pingidentity.logger.CONSOLE
 import com.pingidentity.logger.Logger
@@ -506,6 +507,43 @@ class FidoRegistrationCollectorTest {
 
         assertNull(collector.errorCode)
         assertEquals("submit", collector.eventType())
+    }
+
+    @Test
+    fun `register should rethrow CancellationException without setting errorCode`() = runTest {
+        collector.init(getRegistrationInput())
+        coEvery { mockFidoClient.register(any(), any()) } returns Result.failure(CancellationException("cancelled"))
+
+        var threw = false
+        try {
+            collector.register()
+        } catch (e: CancellationException) {
+            threw = true
+        }
+
+        assertTrue(threw)
+        assertNull(collector.errorCode)
+    }
+
+    @Test
+    fun `register should clear stale attestation before retry`() = runTest {
+        collector.init(getRegistrationInput())
+        val attestation = buildJsonObject { put("test", JsonPrimitive("value")) }
+        coEvery { mockFidoClient.register(any(), any()) } returns Result.success(attestation)
+        collector.register()
+        assertNotNull(collector.payload())
+
+        // Second call fails — stale attestation must not survive
+        val exception = mockk<androidx.credentials.exceptions.CreateCredentialCancellationException>(relaxed = true)
+        every { exception.message } returns "User cancelled"
+        coEvery { mockFidoClient.register(any(), any()) } returns Result.failure(exception)
+        collector.register()
+
+        // payload() returns empty sentinel (errorCode set), not the stale success payload
+        val payload = collector.payload()
+        assertNotNull(payload)
+        assertTrue(payload!!.isEmpty())
+        assertEquals("NotAllowedError", collector.errorCode)
     }
 
 }

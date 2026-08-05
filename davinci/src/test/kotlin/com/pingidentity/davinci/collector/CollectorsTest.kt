@@ -105,8 +105,7 @@ class CollectorsTest {
     }
 
     @Test
-    fun `eventType should return action when ActionKeyProvider has non-null payload (error sentinel)`() {
-        // Empty payload is the sentinel that signals an error occurred
+    fun `eventType should return action when ActionKeyProvider has non-null actionKey`() {
         val collectors: Collectors = listOf(
             TestActionKeyCollector("provider1", buildJsonObject { }, "NotAllowedError", "action")
         )
@@ -114,20 +113,30 @@ class CollectorsTest {
     }
 
     @Test
-    fun `eventType should return null when ActionKeyProvider has no payload`() {
+    fun `eventType should return null when ActionKeyProvider actionKey is null even if payload is non-null`() {
+        // payload present but actionKey null — not a user action, no eventType
+        val payload = buildJsonObject { put("key", JsonPrimitive("value")) }
         val collectors: Collectors = listOf(
-            TestActionKeyCollector("provider1", null, "NotAllowedError", "action")
+            TestActionKeyCollector("provider1", payload, null, "action")
         )
         assertNull(collectors.eventType())
     }
 
     @Test
-    fun `eventType should return submit when ActionKeyProvider has payload but no actionKey`() {
-        val payload = buildJsonObject { put("key", JsonPrimitive("value")) }
+    fun `eventType should return null when ActionKeyProvider has no payload and no actionKey`() {
         val collectors: Collectors = listOf(
-            TestActionKeyCollector("provider1", payload, null, "submit")
+            TestActionKeyCollector("provider1", null, null, "action")
         )
-        assertEquals("submit", collectors.eventType())
+        assertNull(collectors.eventType())
+    }
+
+    @Test
+    fun `eventType should return action when ActionKeyProvider actionKey is set regardless of payload`() {
+        // actionKey drives eventType, not payload
+        val collectors: Collectors = listOf(
+            TestActionKeyCollector("provider1", null, "NotAllowedError", "action")
+        )
+        assertEquals("action", collectors.eventType())
     }
 
     @Test
@@ -370,6 +379,51 @@ class CollectorsTest {
         val booleanField = formData?.get("booleanField")?.jsonObject
         assertEquals(true, booleanField?.get("enabled")?.jsonPrimitive?.content?.toBoolean())
         assertEquals(false, booleanField?.get("disabled")?.jsonPrimitive?.content?.toBoolean())
+    }
+
+    @Test
+    fun `asJson should set actionKey and include payload in formData for MetadataCollector with result`() {
+        val resultPayload = buildJsonObject { put("score", JsonPrimitive(42)) }
+        val metadataCollector = MetadataCollector()
+        metadataCollector.init(buildJsonObject {
+            put("key", JsonPrimitive("deviceProfile"))
+            put("payload", buildJsonObject { put("challenge", JsonPrimitive("abc123")) })
+        })
+        metadataCollector.setResult(resultPayload)
+
+        val collectors: Collectors = listOf(metadataCollector)
+        val result = collectors.asJson()
+
+        assertEquals("deviceProfile", result["actionKey"]?.jsonPrimitive?.content)
+        val formData = result["formData"]?.jsonObject
+        assertEquals(resultPayload, formData?.get("deviceProfile")?.jsonObject)
+    }
+
+    @Test
+    fun `asJson should not set actionKey for MetadataCollector without result`() {
+        val metadataCollector = MetadataCollector()
+        metadataCollector.init(buildJsonObject {
+            put("key", JsonPrimitive("deviceProfile"))
+            put("payload", buildJsonObject { put("challenge", JsonPrimitive("abc123")) })
+        })
+
+        val collectors: Collectors = listOf(metadataCollector)
+        val result = collectors.asJson()
+
+        assertNull(result["actionKey"])
+        assertEquals(0, result["formData"]?.jsonObject?.size)
+    }
+
+    @Test
+    fun `asJson should not include empty error sentinel payload in formData`() {
+        // FIDO error path: actionKey set, payload is empty sentinel — must not pollute formData
+        val collectors: Collectors = listOf(
+            TestActionKeyCollector("fido2", buildJsonObject { }, "NotAllowedError", "action")
+        )
+        val result = collectors.asJson()
+
+        assertEquals("NotAllowedError", result["actionKey"]?.jsonPrimitive?.content)
+        assertEquals(0, result["formData"]?.jsonObject?.size)
     }
 
     @Test
