@@ -39,6 +39,9 @@ object DaVinciTestConfig {
     var davinciMetadataAcrValues: String = ""
         private set
 
+    var davinciImageAcrValues: String = ""
+        private set
+
     // Credentials
     var davinciUsername: String = ""
         private set
@@ -92,6 +95,7 @@ object DaVinciTestConfig {
             davinciFormFieldsAcrValues = properties.getProperty("DAVINCI_FORM_FIELDS_ACR_VALUES", "")
             davinciPollingAcrValues = properties.getProperty("DAVINCI_POLLING_ACR_VALUES", "")
             davinciMetadataAcrValues = properties.getProperty("DAVINCI_METADATA_ACR_VALUES", "")
+            davinciImageAcrValues = properties.getProperty("DAVINCI_IMAGE_ACR_VALUES", "")
 
             davinciUsername = properties.getProperty("DAVINCI_USERNAME", "")
             davinciPassword = properties.getProperty("DAVINCI_PASSWORD", "")

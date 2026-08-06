@@ -1324,56 +1324,6 @@
     }
   ],
   "forms": {
-    "420f772d-25e6-4c7d-a00f-3a9d8720e2f9": {
-      "id": "420f772d-25e6-4c7d-a00f-3a9d8720e2f9",
-      "environment": {
-        "id": "300c4f2a-39d4-4ba9-a18a-f6de246006f4"
-      },
-      "name": "Automation - Message",
-      "description": "",
-      "category": "CUSTOM",
-      "components": {
-        "fields": [
-          {
-            "type": "ERROR_DISPLAY",
-            "position": {
-              "row": 0,
-              "col": 0
-            }
-          },
-          {
-            "type": "SLATE_TEXTBLOB",
-            "position": {
-              "row": 1,
-              "col": 0
-            },
-            "content": "[{\"children\":[{\"text\":\"{{message}}\"}]}]",
-            "key": "rich-text",
-            "icon": {
-              "type": "NONE",
-              "size": "MEDIUM"
-            }
-          },
-          {
-            "position": {
-              "row": 2,
-              "col": 0
-            },
-            "label": "[{\"type\":\"paragraph\",\"children\":[{\"text\":\"Continue\"}]}]",
-            "type": "SUBMIT_BUTTON"
-          }
-        ]
-      },
-      "cols": 4,
-      "markOptional": true,
-      "markRequired": false,
-      "textAutoCompleteEnabled": false,
-      "passwordAutoCompleteEnabled": false,
-      "translationMethod": "TRANSLATE",
-      "created": "2026-07-30T23:14:59.329Z",
-      "modified": "2026-08-05T20:07:12.807Z",
-      "readOnly": false
-    },
     "e3ccf840-0e5b-4690-aa73-782412dd377f": {
       "id": "e3ccf840-0e5b-4690-aa73-782412dd377f",
       "environment": {
@@ -1422,9 +1372,9 @@
               },
               "alignment": "CENTER"
             },
-            "enableHyperlink": false,
+            "enableHyperlink": true,
             "hyperlinkSource": "URL",
-            "hyperlinkUrl": "",
+            "hyperlinkUrl": "https://www.pingidentity.com/en.html",
             "openInNewTab": true,
             "enableCustomAttributes": false,
             "customAttributes": {
@@ -1450,7 +1400,57 @@
       "passwordAutoCompleteEnabled": false,
       "translationMethod": "TRANSLATE",
       "created": "2026-08-05T18:13:12.620Z",
-      "modified": "2026-08-05T19:03:40.444Z",
+      "modified": "2026-08-05T23:32:04.975Z",
+      "readOnly": false
+    },
+    "420f772d-25e6-4c7d-a00f-3a9d8720e2f9": {
+      "id": "420f772d-25e6-4c7d-a00f-3a9d8720e2f9",
+      "environment": {
+        "id": "300c4f2a-39d4-4ba9-a18a-f6de246006f4"
+      },
+      "name": "Automation - Message",
+      "description": "",
+      "category": "CUSTOM",
+      "components": {
+        "fields": [
+          {
+            "type": "ERROR_DISPLAY",
+            "position": {
+              "row": 0,
+              "col": 0
+            }
+          },
+          {
+            "type": "SLATE_TEXTBLOB",
+            "position": {
+              "row": 1,
+              "col": 0
+            },
+            "content": "[{\"children\":[{\"text\":\"{{message}}\"}]}]",
+            "key": "rich-text",
+            "icon": {
+              "type": "NONE",
+              "size": "MEDIUM"
+            }
+          },
+          {
+            "position": {
+              "row": 2,
+              "col": 0
+            },
+            "label": "[{\"type\":\"paragraph\",\"children\":[{\"text\":\"Continue\"}]}]",
+            "type": "SUBMIT_BUTTON"
+          }
+        ]
+      },
+      "cols": 4,
+      "markOptional": true,
+      "markRequired": false,
+      "textAutoCompleteEnabled": false,
+      "passwordAutoCompleteEnabled": false,
+      "translationMethod": "TRANSLATE",
+      "created": "2026-07-30T23:14:59.329Z",
+      "modified": "2026-08-05T20:07:12.807Z",
       "readOnly": false
     }
   },
