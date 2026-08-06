@@ -19,12 +19,31 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import com.pingidentity.network.HttpRequest as Request
 
+/**
+ * Returns the event type for this list of collectors.
+ *
+ * Uses a two-pass strategy to ensure explicit user actions always take precedence:
+ * - First pass: returns the event type of the first [SubmitCollector] or [FlowCollector] whose
+ *   [ActionKeyProvider.actionKey] is non-null (i.e. the user has selected that button).
+ * - Second pass: falls back to the first [Submittable] whose `payload()` is non-null
+ *   (e.g. a FIDO collector reporting a WebAuthn error).
+ *
+ * This ordering prevents a concurrently-failed collector (e.g. FIDO) from shadowing an explicit
+ * user action in the same node, regardless of its position in the list.
+ *
+ * @return the event type string, or null if no matching collector is found.
+ */
 internal fun Collectors.eventType(): String? {
+    // First pass: honor explicit Submit/Flow actions.
     forEach {
-        when (it) {
-            is Submittable if it is ActionKeyProvider && it.actionKey != null -> return it.eventType()
-            is Submittable if it !is ActionKeyProvider && it.payload() != null -> return it.eventType()
-            else -> {}
+        if ((it is SubmitCollector || it is FlowCollector) && it.actionKey != null) {
+            return (it as Submittable).eventType()
+        }
+    }
+    // Second pass: fall back to any Submittable with a payload (e.g. FIDO errors).
+    forEach {
+        if (it is Submittable && it.payload() != null) {
+            return it.eventType()
         }
     }
     return null
@@ -44,25 +63,57 @@ internal fun Collectors.request(context: FlowContext, request: Request): Request
 }
 
 /**
- * Represents a list of collectors as a JSON object for posting to the server.
+ * Serialises this list of collectors into a JSON object for posting to the DaVinci server.
  *
- * This function takes a list of collectors and represents it as a JSON object. It iterates over the list of collectors,
- * adding each collector's key and value to the JSON object if the collector's value is not empty.
+ * The `actionKey` field is populated with strict priority:
+ * 1. [SubmitCollector] / [FlowCollector] — always set `actionKey` when their
+ *    [ActionKeyProvider.actionKey] is non-null (explicit user action).
+ * 2. [MetadataCollector] — sets `actionKey` and adds its payload to `formData` only when
+ *    both [ActionKeyProvider.actionKey] and `payload()` are non-null.
+ * 3. Any other [ActionKeyProvider] (e.g. a FIDO error collector) — sets `actionKey` only if
+ *    it has not already been set by a higher-priority collector; payload is always added to `formData`.
+ * 4. All other collectors — payload is added to `formData` under the collector's id.
  *
- * @return A JSON object representing the list of collectors.
+ * @return a [JsonObject] with an `actionKey` field and a `formData` object.
  */
 internal fun Collectors.asJson(): JsonObject {
     return buildJsonObject {
         val map = mutableMapOf<String, Any>()
+        var actionKeySet = false
         forEach {
-            val key = (it as? ActionKeyProvider)?.actionKey
-            if (key != null) {
-                put("actionKey", key)
-                it.payload()?.let { payload ->
-                    if (payload is JsonObject && payload.isNotEmpty()) map[key] = payload
+            when {
+                (it is SubmitCollector || it is FlowCollector) -> {
+                    it.actionKey?.let { key ->
+                        put("actionKey", key)
+                        actionKeySet = true
+                    }
                 }
-            } else {
-                it.payload()?.let { payload -> map[it.id()] = payload }
+                it is MetadataCollector -> {
+                    val key = it.actionKey
+                    val payload = it.payload()
+                    if (key != null && !payload.isNullOrEmpty()) {
+                        put("actionKey", key)
+                        actionKeySet = true
+                        map[key] = payload
+                    }
+                }
+                it is ActionKeyProvider -> {
+                    val key = it.actionKey
+                    if (key != null) {
+                        if (!actionKeySet) {
+                            put("actionKey", key)
+                            actionKeySet = true
+                        }
+                        it.payload()?.let { payload ->
+                            if (payload is JsonObject && payload.isNotEmpty()) map[key] = payload
+                        }
+                    } else {
+                        it.payload()?.let { payload -> map[it.id()] = payload }
+                    }
+                }
+                else -> {
+                    it.payload()?.let { payload -> map[it.id()] = payload }
+                }
             }
         }
         put("formData", mapToJsonObject(map))

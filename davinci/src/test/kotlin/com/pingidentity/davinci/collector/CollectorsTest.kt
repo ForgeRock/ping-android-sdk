@@ -113,13 +113,13 @@ class CollectorsTest {
     }
 
     @Test
-    fun `eventType should return null when ActionKeyProvider actionKey is null even if payload is non-null`() {
-        // payload present but actionKey null — not a user action, no eventType
+    fun `eventType should return action when ActionKeyProvider actionKey is null but payload is non-null`() {
+        // Second pass: any Submittable with a non-null payload returns its eventType (e.g. FIDO error fallback).
         val payload = buildJsonObject { put("key", JsonPrimitive("value")) }
         val collectors: Collectors = listOf(
             TestActionKeyCollector("provider1", payload, null, "action")
         )
-        assertNull(collectors.eventType())
+        assertEquals("action", collectors.eventType())
     }
 
     @Test
@@ -131,12 +131,12 @@ class CollectorsTest {
     }
 
     @Test
-    fun `eventType should return action when ActionKeyProvider actionKey is set regardless of payload`() {
-        // actionKey drives eventType, not payload
+    fun `eventType should return null when ActionKeyProvider actionKey is set but payload is null`() {
+        // Neither pass fires: first pass requires SubmitCollector/FlowCollector, second pass requires non-null payload.
         val collectors: Collectors = listOf(
             TestActionKeyCollector("provider1", null, "NotAllowedError", "action")
         )
-        assertEquals("action", collectors.eventType())
+        assertNull(collectors.eventType())
     }
 
     @Test
