@@ -11,7 +11,6 @@ import androidx.test.filters.SmallTest
 import com.pingidentity.davinci.collector.FlowCollector
 import com.pingidentity.davinci.collector.ImageCollector
 import com.pingidentity.davinci.collector.LabelCollector
-import com.pingidentity.davinci.collector.SubmitCollector
 import com.pingidentity.davinci.module.Oidc
 import com.pingidentity.davinci.module.name
 import com.pingidentity.davinci.plugin.collectors

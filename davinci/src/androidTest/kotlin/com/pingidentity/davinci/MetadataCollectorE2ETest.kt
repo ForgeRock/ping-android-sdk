@@ -7,8 +7,7 @@
 
 package com.pingidentity.davinci
 
-import androidx.test.filters.SmallTest
-import com.pingidentity.davinci.collector.FlowCollector
+import androidx.test.filters.LargeTest
 import com.pingidentity.davinci.collector.LabelCollector
 import com.pingidentity.davinci.collector.MetadataCollector
 import com.pingidentity.davinci.collector.SubmitCollector
@@ -18,15 +17,11 @@ import com.pingidentity.davinci.plugin.collectors
 import com.pingidentity.logger.Logger
 import com.pingidentity.logger.STANDARD
 import com.pingidentity.orchestrate.ContinueNode
-import com.pingidentity.testrail.TestRailCase
-import com.pingidentity.testrail.TestRailWatcher
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
-import org.junit.Rule
-import org.junit.rules.TestWatcher
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -45,7 +40,7 @@ import kotlin.test.assertTrue
  * which echoes the submitted value back to the client, confirming what DaVinci received.
  *
  */
-@SmallTest
+@LargeTest
 class MetadataCollectorE2ETest {
 
     companion object {
