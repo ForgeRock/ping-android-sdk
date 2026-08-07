@@ -6,6 +6,7 @@
 
 package com.pingidentity.davinci.collector
 
+import com.pingidentity.davinci.plugin.ActionKeyProvider
 import com.pingidentity.davinci.plugin.Submittable
 import com.pingidentity.orchestrate.Closeable
 import kotlinx.serialization.json.JsonObject
@@ -25,7 +26,7 @@ import kotlinx.serialization.json.put
  * The collector is considered ready to submit once either [setResult] or [setError]
  * has been called — [validate] returns a [Required] error until then.
  */
-class MetadataCollector : FieldCollector<JsonObject>(), Submittable, Closeable {
+class MetadataCollector : FieldCollector<JsonObject>(), Submittable, ActionKeyProvider, Closeable {
 
     /**
      * The metadata payload sent by the server — arbitrary JSON the SDK must process.
@@ -34,6 +35,8 @@ class MetadataCollector : FieldCollector<JsonObject>(), Submittable, Closeable {
         private set
 
     private var result: JsonObject? = null
+
+    override val actionKey: String? get() = if (result == null) null else id()
 
     override fun init(input: JsonObject): MetadataCollector {
         super.init(input)

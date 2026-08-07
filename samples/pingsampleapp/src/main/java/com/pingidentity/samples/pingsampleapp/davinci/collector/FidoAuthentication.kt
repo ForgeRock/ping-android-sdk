@@ -16,11 +16,7 @@ import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.material3.Button
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -31,12 +27,9 @@ import kotlinx.coroutines.launch
 @Composable
 fun FidoAuthentication(
     collector: FidoAuthenticationCollector,
-    onStart: () -> Unit,
     onNext: () -> Unit,
 ) {
     val coroutineScope = rememberCoroutineScope()
-    var showErrorDialog by remember { mutableStateOf(false) }
-    var errorMessage by remember { mutableStateOf("") }
 
     // Function to perform authentication
     val performAuthentication: () -> Unit = {
@@ -51,8 +44,7 @@ fun FidoAuthentication(
                     "Failed to Authenticate",
                     it
                 )
-                errorMessage = it.message ?: "Authentication failed"
-                showErrorDialog = true
+                onNext()
             }
         }
     }
@@ -62,17 +54,6 @@ fun FidoAuthentication(
         if (collector.trigger != "BUTTON") {
             performAuthentication()
         }
-    }
-
-    if (showErrorDialog) {
-        ErrorDialog(
-            message = errorMessage,
-            onDismiss = { showErrorDialog = false },
-            onRetry = {
-                showErrorDialog = false
-                onStart()
-            }
-        )
     }
 
     // Only show button if trigger is BUTTON
