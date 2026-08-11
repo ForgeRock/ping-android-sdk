@@ -13,21 +13,12 @@ on:
         description: Platform to execute on
         type: string
         default: ubuntu-latest
-      testrail-run-id:
-        description: The TestRail run ID
-        type: string
     secrets:
       SLACK_WEBHOOK:
         description: Slack Notifier Incoming Webhook
         required: true
       CODECOV_TOKEN:
         description: Codecov token
-        required: true
-      TESTRAIL_USERNAME:
-        description: TestRail username
-        required: true
-      TESTRAIL_API_KEY:
-        description: TestRail API key
         required: true
 jobs:
   build-and-test:
@@ -51,14 +42,6 @@ jobs:
 
       # Execute all unit tests from all modules
       - name: Execute unit tests
-        env:
-          TESTRAIL_ENABLE: ${{vars.TESTRAIL_ENABLE}}
-          TESTRAIL_DEBUG: ${{vars.TESTRAIL_DEBUG}}
-          TESTRAIL_URL: ${{vars.TESTRAIL_URL}}
-          TESTRAIL_PROJECT_ID: ${{vars.TESTRAIL_PROJECT_ID}}
-          TESTRAIL_RUN_ID: ${{inputs.testrail-run-id}}
-          TESTRAIL_USERNAME: ${{secrets.TESTRAIL_USERNAME}}
-          TESTRAIL_API_KEY: ${{secrets.TESTRAIL_API_KEY}}
         run: |
           ./gradlew --rerun-tasks testDebugUnitTestCoverage --stacktrace --no-daemon
 
