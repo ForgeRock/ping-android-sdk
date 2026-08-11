@@ -7,6 +7,8 @@ The Ping Orchestration SDK for Android is designed for creating mobile native ap
 It offers a range of APIs for user authentication, user device management, and accessing resources
 secured by PingOne.
 
+Minor change. 
+
 # Documentation
 
 - **Quick Starts** - Find specific setup instructions in the quick start guide for each SDK module.
