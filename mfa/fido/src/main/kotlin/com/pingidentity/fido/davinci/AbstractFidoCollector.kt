@@ -79,7 +79,7 @@ abstract class AbstractFidoCollector : Collector<JsonObject>, DaVinciAware, Subm
 
     /**
      * Returns an empty [JsonObject] when a FIDO error has occurred — non-null sentinel so
-     * [Collectors.eventType] picks up this collector and the `actionKey` error path fires.
+     * `Collectors.eventType` picks up this collector and the `actionKey` error path fires.
      * Subclasses override to provide the success payload.
      */
     override fun payload(): JsonObject? {

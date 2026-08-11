@@ -13,8 +13,11 @@ on:
         description: Platform to execute on
         type: string
         default: ubuntu-latest
-      testrail-run-id:
-        description: The TestRail run ID
+      head_sha:
+        description: Head commit SHA to check out
+        type: string
+      head_repo:
+        description: Head repository to check out
         type: string
     secrets:
       SLACK_WEBHOOK:
@@ -22,12 +25,6 @@ on:
         required: true
       CODECOV_TOKEN:
         description: Codecov token
-        required: true
-      TESTRAIL_USERNAME:
-        description: TestRail username
-        required: true
-      TESTRAIL_API_KEY:
-        description: TestRail API key
         required: true
 jobs:
   build-and-test:
@@ -38,8 +35,9 @@ jobs:
       - name: Clone the repository
         uses: actions/checkout@v5
         with:
-          ref: ${{ github.event.pull_request.head.ref }}
-          repository: ${{github.event.pull_request.head.repo.full_name}}
+          ref: ${{ inputs.head_sha || github.event.pull_request.head.sha }}
+          repository: ${{ inputs.head_repo || github.event.pull_request.head.repo.full_name }}
+          persist-credentials: false
 
       # Setup JDK and cache and restore dependencies.
       - name: Setup JDK 17
@@ -51,20 +49,13 @@ jobs:
 
       # Execute all unit tests from all modules
       - name: Execute unit tests
-        env:
-          TESTRAIL_ENABLE: ${{vars.TESTRAIL_ENABLE}}
-          TESTRAIL_DEBUG: ${{vars.TESTRAIL_DEBUG}}
-          TESTRAIL_URL: ${{vars.TESTRAIL_URL}}
-          TESTRAIL_PROJECT_ID: ${{vars.TESTRAIL_PROJECT_ID}}
-          TESTRAIL_RUN_ID: ${{inputs.testrail-run-id}}
-          TESTRAIL_USERNAME: ${{secrets.TESTRAIL_USERNAME}}
-          TESTRAIL_API_KEY: ${{secrets.TESTRAIL_API_KEY}}
         run: |
           ./gradlew --rerun-tasks testDebugUnitTestCoverage --stacktrace --no-daemon
 
       # Publish test reports for the unit tests
+      # dorny/test-reporter needs checks:write which is unavailable for fork PRs
       - name: Publish test results
-        if: success() || failure()
+        if: (success() || failure()) && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
         uses: dorny/test-reporter@v2
         with:
           name: Unit tests results
@@ -103,4 +94,4 @@ jobs:
           status: ${{ job.status }}
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
-        if: always()
+        if: always() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
