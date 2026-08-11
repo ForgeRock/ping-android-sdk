@@ -39,11 +39,11 @@ jobs:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
   # Build and sign BrowserStack test artifacts
-  # Skip this step for PRs created by dependabot
+  # Skip for dependabot and fork PRs (signing secrets unavailable for forks)
   browserstack-prepare-artifacts:
     name: Prepare device farm artifacts
     uses: ./.github/workflows/browserstack-prepare-artifacts.yaml
-    if: ${{ github.actor != 'dependabot[bot]' }}
+    if: github.actor != 'dependabot[bot]' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
     needs: build-and-test
     secrets:
       E2E_CONFIG: ${{ secrets.E2E_CONFIG }}
@@ -146,27 +146,30 @@ jobs:
     with:
       browserstack-push-build-id: ${{ needs.browserstack-push-run.outputs.browserstack-push-build-id }}
 
-  # Run Mend SCA Scan
+  # Run Mend SCA Scan — skip for fork PRs (Mend credentials unavailable)
   mend-sca-scan:
     name: Mend SCA Scan
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     uses: ./.github/workflows/mend-sca-scan.yaml
     secrets:
       MEND_EMAIL: ${{ secrets.MEND_EMAIL }}
       MEND_USER_KEY: ${{ secrets.MEND_USER_KEY }}
       SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
 
-  # Run Mend SAST Scan
+  # Run Mend SAST Scan — skip for fork PRs (Mend credentials unavailable)
   mend-sast-scan:
     name: Mend SAST Scan
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     uses: ./.github/workflows/mend-sast-scan.yaml
     secrets:
       MEND_EMAIL: ${{ secrets.MEND_EMAIL }}
       MEND_USER_KEY: ${{ secrets.MEND_USER_KEY }}
       SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
 
-  # Generate and publish API docs
+  # Generate and publish API docs — only on pushes to main branches, not on PRs
   docs:
     name: Docs
+    if: github.event_name == 'push'
     uses: ./.github/workflows/docs.yaml
 
   # Calculate package sizes

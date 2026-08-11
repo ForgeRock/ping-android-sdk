@@ -46,8 +46,9 @@ jobs:
           ./gradlew --rerun-tasks testDebugUnitTestCoverage --stacktrace --no-daemon
 
       # Publish test reports for the unit tests
+      # dorny/test-reporter needs checks:write which is unavailable for fork PRs
       - name: Publish test results
-        if: success() || failure()
+        if: (success() || failure()) && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
         uses: dorny/test-reporter@v2
         with:
           name: Unit tests results
@@ -86,4 +87,4 @@ jobs:
           status: ${{ job.status }}
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
-        if: always()
+        if: always() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
