@@ -14,6 +14,12 @@ on:
         description: Platform to execute on
         type: string
         default: ubuntu-latest
+      head_sha:
+        description: Head commit SHA to check out
+        type: string
+      head_repo:
+        description: Head repository to check out
+        type: string
     secrets:
       SLACK_WEBHOOK:
         description: Slack Notifier Incoming Webhook
@@ -50,8 +56,8 @@ jobs:
       - name: Clone the repository
         uses: actions/checkout@v5
         with:
-          ref: ${{ github.event.pull_request.head.ref }}
-          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: ${{ inputs.head_sha || github.event.pull_request.head.sha }}
+          repository: ${{ inputs.head_repo || github.event.pull_request.head.repo.full_name }}
 
       - name: Setup config file for e2e tests
         run: |

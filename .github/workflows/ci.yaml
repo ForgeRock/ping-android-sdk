@@ -7,7 +7,6 @@
 
 name: CI
 
-# Trigger on push or pull request
 on:
   pull_request:
     types: [opened, reopened, synchronize, edited]
@@ -17,12 +16,73 @@ on:
       - master
       - develop
 
+  # Allows maintainers to trigger the full CI against a fork PR by commenting /run-ci
+  issue_comment:
+    types: [created]
+
 permissions: write-all
+
 jobs:
+  # Resolves head SHA and repo for all event types.
+  # For issue_comment, also validates the /run-ci command and commenter permissions,
+  # and reacts with 👀 to acknowledge the trigger.
+  resolve-context:
+    name: Resolve PR context
+    runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'push' ||
+      github.event_name == 'pull_request' ||
+      (github.event_name == 'issue_comment' &&
+       github.event.issue.pull_request &&
+       contains(github.event.comment.body, '/run-ci') &&
+       (github.event.comment.author_association == 'OWNER' ||
+        github.event.comment.author_association == 'MEMBER' ||
+        github.event.comment.author_association == 'COLLABORATOR'))
+    outputs:
+      head_sha: ${{ steps.ctx.outputs.head_sha }}
+      head_repo: ${{ steps.ctx.outputs.head_repo }}
+    steps:
+      - name: React to /run-ci comment with 👀
+        if: github.event_name == 'issue_comment'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.reactions.createForIssueComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: context.payload.comment.id,
+              content: 'eyes'
+            });
+
+      - name: Resolve head SHA and repo
+        id: ctx
+        uses: actions/github-script@v7
+        with:
+          script: |
+            if (context.eventName === 'push') {
+              core.setOutput('head_sha', context.sha);
+              core.setOutput('head_repo', `${context.repo.owner}/${context.repo.repo}`);
+            } else if (context.eventName === 'pull_request') {
+              core.setOutput('head_sha', context.payload.pull_request.head.sha);
+              core.setOutput('head_repo', context.payload.pull_request.head.repo.full_name);
+            } else {
+              const pr = await github.rest.pulls.get({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: context.issue.number,
+              });
+              core.setOutput('head_sha', pr.data.head.sha);
+              core.setOutput('head_repo', pr.data.head.repo.full_name);
+            }
+
   # Build and run unit tests
   build-and-test:
     name: Build and test
+    needs: resolve-context
     uses: ./.github/workflows/build-and-test.yaml
+    with:
+      head_sha: ${{ needs.resolve-context.outputs.head_sha }}
+      head_repo: ${{ needs.resolve-context.outputs.head_repo }}
     secrets:
       SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
@@ -30,8 +90,12 @@ jobs:
   # Run integration tests on emulators
   integration-tests:
     name: Integration tests
-    uses: ./.github/workflows/integration-tests.yaml
     if: ${{ vars.ENABLE_INTEGRATION_TESTS == 'true' }}
+    needs: resolve-context
+    uses: ./.github/workflows/integration-tests.yaml
+    with:
+      head_sha: ${{ needs.resolve-context.outputs.head_sha }}
+      head_repo: ${{ needs.resolve-context.outputs.head_repo }}
     secrets:
       E2E_CONFIG: ${{ secrets.E2E_CONFIG }}
       DAVINCI_E2E_CONFIG: ${{ secrets.DAVINCI_E2E_CONFIG }}
@@ -42,9 +106,14 @@ jobs:
   # Skip for dependabot and fork PRs (signing secrets unavailable for forks)
   browserstack-prepare-artifacts:
     name: Prepare device farm artifacts
-    uses: ./.github/workflows/browserstack-prepare-artifacts.yaml
     if: github.actor != 'dependabot[bot]' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
-    needs: build-and-test
+    needs:
+      - build-and-test
+      - resolve-context
+    uses: ./.github/workflows/browserstack-prepare-artifacts.yaml
+    with:
+      head_sha: ${{ needs.resolve-context.outputs.head_sha }}
+      head_repo: ${{ needs.resolve-context.outputs.head_repo }}
     secrets:
       E2E_CONFIG: ${{ secrets.E2E_CONFIG }}
       DAVINCI_E2E_CONFIG: ${{ secrets.DAVINCI_E2E_CONFIG }}
@@ -150,7 +219,11 @@ jobs:
   mend-sca-scan:
     name: Mend SCA Scan
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    needs: resolve-context
     uses: ./.github/workflows/mend-sca-scan.yaml
+    with:
+      head_sha: ${{ needs.resolve-context.outputs.head_sha }}
+      head_repo: ${{ needs.resolve-context.outputs.head_repo }}
     secrets:
       MEND_EMAIL: ${{ secrets.MEND_EMAIL }}
       MEND_USER_KEY: ${{ secrets.MEND_USER_KEY }}
@@ -160,7 +233,11 @@ jobs:
   mend-sast-scan:
     name: Mend SAST Scan
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    needs: resolve-context
     uses: ./.github/workflows/mend-sast-scan.yaml
+    with:
+      head_sha: ${{ needs.resolve-context.outputs.head_sha }}
+      head_repo: ${{ needs.resolve-context.outputs.head_repo }}
     secrets:
       MEND_EMAIL: ${{ secrets.MEND_EMAIL }}
       MEND_USER_KEY: ${{ secrets.MEND_USER_KEY }}
@@ -172,7 +249,49 @@ jobs:
     if: github.event_name == 'push'
     uses: ./.github/workflows/docs.yaml
 
-  # Calculate package sizes
+  # Calculate package sizes — not applicable for issue_comment (no PR merge ref available)
   package-sizes:
     name: Package Sizes
+    if: github.event_name != 'issue_comment'
     uses: ./.github/workflows/package-sizes.yml
+
+  # Post /run-ci result back to the PR as a comment and update the reaction
+  notify:
+    name: Notify /run-ci result
+    if: always() && github.event_name == 'issue_comment' && needs.resolve-context.result != 'skipped'
+    needs:
+      - resolve-context
+      - build-and-test
+      - browserstack-oath-results
+      - browserstack-push-results
+      - mend-sca-scan
+      - mend-sast-scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Post result comment and update reaction
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const results = [
+              '${{ needs.build-and-test.result }}',
+              '${{ needs.browserstack-oath-results.result }}',
+              '${{ needs.browserstack-push-results.result }}',
+              '${{ needs.mend-sca-scan.result }}',
+              '${{ needs.mend-sast-scan.result }}',
+            ];
+            const allPassed = results.every(r => r === 'success' || r === 'skipped');
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: allPassed
+                ? `✅ \`/run-ci\` — CI passed. [View run](${runUrl})`
+                : `❌ \`/run-ci\` — CI failed. [View run](${runUrl})`
+            });
+            await github.rest.reactions.createForIssueComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: context.payload.comment.id,
+              content: allPassed ? 'rocket' : '-1'
+            });
