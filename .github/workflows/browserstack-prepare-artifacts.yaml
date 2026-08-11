@@ -48,6 +48,7 @@ jobs:
         with:
           ref: ${{ inputs.head_sha || github.event.pull_request.head.sha }}
           repository: ${{ inputs.head_repo || github.event.pull_request.head.repo.full_name }}
+          persist-credentials: false
 
       # Set up the variables for the tests from the secrets
       - name: Setup config file for e2e tests

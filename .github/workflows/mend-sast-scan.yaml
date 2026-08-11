@@ -35,6 +35,7 @@ jobs:
         with:
           ref: ${{ inputs.head_sha || github.event.pull_request.head.sha }}
           repository: ${{ inputs.head_repo || github.event.pull_request.head.repo.full_name }}
+          persist-credentials: false
 
       - name: Download and cache the Mend CLI executable
         id: cache-mend
@@ -150,7 +151,7 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               name: "Mend SAST Report",
-              head_sha: context.sha,
+              head_sha: '${{ inputs.head_sha || github.event.pull_request.head.sha || github.sha }}',
               status: "completed",
               conclusion: "${{ steps.sast_conclusion.outputs.conclusion }}",
               output: {

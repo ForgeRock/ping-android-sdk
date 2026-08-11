@@ -20,7 +20,13 @@ on:
   issue_comment:
     types: [created]
 
-permissions: write-all
+permissions:
+  contents: read
+  checks: write
+  issues: write
+  pull-requests: write
+  pages: write
+  id-token: write
 
 jobs:
   # Resolves head SHA and repo for all event types.
@@ -34,7 +40,7 @@ jobs:
       github.event_name == 'pull_request' ||
       (github.event_name == 'issue_comment' &&
        github.event.issue.pull_request &&
-       contains(github.event.comment.body, '/run-ci') &&
+       startsWith(github.event.comment.body, '/run-ci') &&
        (github.event.comment.author_association == 'OWNER' ||
         github.event.comment.author_association == 'MEMBER' ||
         github.event.comment.author_association == 'COLLABORATOR'))
@@ -47,6 +53,10 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
+            if (context.payload.comment.body.trim() !== '/run-ci') {
+              core.setFailed('Comment must be exactly "/run-ci" to trigger CI.');
+              return;
+            }
             await github.rest.reactions.createForIssueComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -262,6 +272,7 @@ jobs:
     needs:
       - resolve-context
       - build-and-test
+      - integration-tests
       - browserstack-oath-results
       - browserstack-push-results
       - mend-sca-scan
@@ -274,6 +285,7 @@ jobs:
           script: |
             const results = [
               '${{ needs.build-and-test.result }}',
+              '${{ needs.integration-tests.result }}',
               '${{ needs.browserstack-oath-results.result }}',
               '${{ needs.browserstack-push-results.result }}',
               '${{ needs.mend-sca-scan.result }}',
