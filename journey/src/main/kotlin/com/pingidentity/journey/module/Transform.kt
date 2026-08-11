@@ -69,7 +69,7 @@ internal val NodeTransform =
                             FailureNode(ApiException(it.status, errorMessage))
                         } else {
                             // API error
-                            error(this, errorBody)
+                            error(this, errorBody, it.status)
                         }
                     }
                 }
@@ -78,7 +78,7 @@ internal val NodeTransform =
                     //For api errors, return ErrorNode
                     // 5XX errors are treated as unrecoverable failures
                     catch {
-                        error(this, it.body().asJson())
+                        error(this, it.body().asJson(), it.status)
                     }
                 }
             }
@@ -89,8 +89,17 @@ private fun String.asJson(): JsonObject {
     return Json.parseToJsonElement(this).jsonObject
 }
 
-private fun error(flowContext: FlowContext, json: JsonObject): ErrorNode {
-    return ErrorNode(flowContext, json, json["message"]?.jsonPrimitive?.content ?: "")
+private fun error(
+    flowContext: FlowContext,
+    json: JsonObject,
+    statusCode: Int?,
+): ErrorNode {
+    return ErrorNode(
+        context = flowContext,
+        input = json,
+        message = json["message"]?.jsonPrimitive?.content ?: "",
+        status = statusCode
+    )
 }
 
 
