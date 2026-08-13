@@ -64,6 +64,7 @@ import com.pingidentity.samples.pingsampleapp.pingonemfa.ui.PingOneMFAAccountsSc
 import com.pingidentity.samples.pingsampleapp.pingonemfa.ui.PingOneOTPScreen
 import com.pingidentity.samples.pingsampleapp.pingonemfa.ui.PingOnePayloadScreen
 import com.pingidentity.samples.pingsampleapp.pingonemfa.ui.PingOneQrScannerScreen
+import com.pingidentity.samples.pingsampleapp.journey.BackchannelAuthScreen
 import com.pingidentity.samples.pingsampleapp.journey.JourneyScreen
 import com.pingidentity.samples.pingsampleapp.journey.JourneyRoute
 import com.pingidentity.samples.pingsampleapp.journey.JourneyViewModel
@@ -113,6 +114,9 @@ object Route {
     const val ROUTE_PINGONE_PAYLOAD = "pingone_payload"
     const val ROUTE_PINGONE_QR_SCANNER = "pingone_qr_scanner"
     const val DEVICE_AUTHORIZATION_GRANT = "device_authorization_grant"
+    const val BACKCHANNEL_AUTH = "backchannel_auth"
+    internal const val BACKCHANNEL_JOURNEY = "backchannel_journey/{uri}"
+    fun backchannelJourney(uri: String) = "backchannel_journey/${android.net.Uri.encode(uri)}"
     const val DAVINCI_DEVICE_APPROVE = "davinci_device_approve?uri={uri}"
     const val JOURNEY_DEVICE_APPROVAL = "journey_device_approval?uri={uri}"
     internal const val JOURNEY_WITH_VERIFICATION = "$JOURNEY/{name}?verificationUri={verificationUri}"
@@ -210,7 +214,10 @@ fun AppNavigation(
                 },
                 onDeviceAuthorizationGrantClick = {
                     navController.navigate(Route.DEVICE_AUTHORIZATION_GRANT)
-                }
+                },
+                onBackchannelAuthClick = {
+                    navController.navigate(Route.BACKCHANNEL_AUTH)
+                },
             )
         }
         
@@ -616,6 +623,34 @@ fun AppNavigation(
                 onApproveWithJourney = { uri ->
                     navController.navigate(Route.journeyDeviceApproval(uri))
                 },
+            )
+        }
+
+        composable(Route.BACKCHANNEL_AUTH) {
+            BackchannelAuthScreen(
+                onStartAuth = { uri ->
+                    navController.navigate(Route.backchannelJourney(uri))
+                },
+                onBack = { navController.navigateUp() },
+            )
+        }
+
+        composable(
+            route = Route.BACKCHANNEL_JOURNEY,
+            arguments = listOf(navArgument("uri") { type = NavType.StringType }),
+        ) { backStackEntry ->
+            val uri = backStackEntry.arguments?.getString("uri") ?: ""
+            val journeyViewModel = viewModel<JourneyViewModel>(
+                factory = JourneyViewModel.factoryForBackchannel(uri)
+            )
+            JourneyScreen(
+                journeyViewModel = journeyViewModel,
+                onSuccess = {
+                    navController.navigate(Route.userProfile(UserProfileType.JOURNEY)) {
+                        popUpTo(Route.HOME) { inclusive = false }
+                    }
+                },
+                onBack = { navController.navigateUp() },
             )
         }
 

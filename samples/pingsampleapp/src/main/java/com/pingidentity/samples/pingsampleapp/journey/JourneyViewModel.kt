@@ -21,6 +21,7 @@ import kotlinx.coroutines.launch
 class JourneyViewModel(
     private val journeyName: String,
     private val verificationUri: String? = null,
+    private val backChannelAuthorizationUri: String? = null,
 ) : ViewModel() {
     var state = MutableStateFlow(JourneyState())
         private set
@@ -39,7 +40,10 @@ class JourneyViewModel(
                 journey?.start(journeyName) {
                     VERIFICATION_URI_COMPLETE to verificationUri.toUri()
                 }
-            } else {
+            } else if (!backChannelAuthorizationUri.isNullOrBlank()) {
+                journey?.start(backchannelUri = backChannelAuthorizationUri.toUri())
+            }
+            else {
                 journey?.start(journeyName)
             }
             state.update { it.copy(node = next) }
@@ -81,6 +85,16 @@ class JourneyViewModel(
                 @Suppress("UNCHECKED_CAST")
                 override fun <T : ViewModel> create(modelClass: Class<T>): T =
                     JourneyViewModel(journeyName, verificationUri) as T
+            }
+
+        fun factoryForBackchannel(backchannelUri: String): ViewModelProvider.Factory =
+            object : ViewModelProvider.Factory {
+                @Suppress("UNCHECKED_CAST")
+                override fun <T : ViewModel> create(modelClass: Class<T>): T =
+                    JourneyViewModel(
+                        journeyName = "",
+                        backChannelAuthorizationUri = backchannelUri,
+                    ) as T
             }
     }
 }
