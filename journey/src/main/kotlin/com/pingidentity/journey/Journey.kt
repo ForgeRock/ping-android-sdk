@@ -25,7 +25,6 @@ import com.pingidentity.journey.module.NodeTransform
 import com.pingidentity.journey.module.Oidc
 import com.pingidentity.journey.module.RequestUrl
 import com.pingidentity.journey.module.Session
-import com.pingidentity.exception.ApiException
 import com.pingidentity.oidc.JsonConfigKey
 import com.pingidentity.oidc.JsonConfigParser
 import com.pingidentity.oidc.update
@@ -37,7 +36,6 @@ import com.pingidentity.orchestrate.Workflow
 import com.pingidentity.orchestrate.WorkflowConfig
 import com.pingidentity.orchestrate.module.CustomHeader
 import com.pingidentity.utils.toAcceptLanguage
-import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.serialization.json.JsonObject
 import com.pingidentity.network.HttpRequest as Request
 
@@ -125,13 +123,13 @@ suspend fun Journey.resume(uri: Uri, option: Option.() -> Unit = {}): Node {
  */
 suspend fun Journey.start(backchannelUri: Uri, option: Option.() -> Unit = {}): Node {
     if (config !is JourneyConfig) {
-        return FailureNode(ApiException(400, "JourneyConfig missing"))
+        return FailureNode(IllegalArgumentException("JourneyConfig missing"))
     }
 
     val journeyConfig = config as JourneyConfig
     val configHost = Uri.parse(journeyConfig.serverUrl).host
     if (configHost == null || backchannelUri.host != configHost) {
-        return FailureNode(ApiException(400, "Backchannel URI host does not match configured serverUrl"))
+        return FailureNode(IllegalArgumentException("Backchannel URI host does not match configured serverUrl"))
     }
 
     val authIndexType: String?
@@ -140,12 +138,11 @@ suspend fun Journey.start(backchannelUri: Uri, option: Option.() -> Unit = {}): 
         authIndexType = backchannelUri.getQueryParameter(AUTH_INDEX_TYPE)
         authIndexValue = backchannelUri.getQueryParameter(AUTH_INDEX_VALUE)
     } catch (t: Throwable) {
-        if (t is CancellationException) throw t
-        return FailureNode(ApiException(400, "Invalid URI"))
+        return FailureNode(IllegalArgumentException("Invalid URI", t))
     }
 
     if (authIndexType.isNullOrBlank() || authIndexValue.isNullOrBlank()) {
-        return FailureNode(ApiException(400, "Missing authIndexType or authIndexValue"))
+        return FailureNode(IllegalArgumentException("Missing authIndexType or authIndexValue"))
     }
 
     return start {
