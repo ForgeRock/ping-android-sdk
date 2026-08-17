@@ -47,10 +47,10 @@ import com.pingidentity.samples.pingsampleapp.R
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BackchannelAuthScreen(
-    onStartAuth: (redirectUri: String) -> Unit,
+    onStartAuth: (backchannelUri: String) -> Unit,
     onBack: () -> Unit,
 ) {
-    var redirectUri by rememberSaveable { mutableStateOf("") }
+    var backchannelUri by rememberSaveable { mutableStateOf("") }
 
     Scaffold(
         topBar = {
@@ -106,8 +106,8 @@ fun BackchannelAuthScreen(
                 Spacer(modifier = Modifier.height(32.dp))
 
                 OutlinedTextField(
-                    value = redirectUri,
-                    onValueChange = { redirectUri = it },
+                    value = backchannelUri,
+                    onValueChange = { backchannelUri = it },
                     placeholder = { Text(stringResource(R.string.backchannel_uri_hint)) },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(8.dp),
@@ -117,8 +117,8 @@ fun BackchannelAuthScreen(
 
             Column {
                 Button(
-                    onClick = { onStartAuth(redirectUri.trim()) },
-                    enabled = redirectUri.isNotBlank(),
+                    onClick = { onStartAuth(backchannelUri.trim()) },
+                    enabled = backchannelUri.isNotBlank(),
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(bottom = 32.dp),

@@ -19,7 +19,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class JourneyViewModel(
-    private val journeyName: String,
+    private val journeyName: String? = null,
     private val verificationUri: String? = null,
     private val backChannelAuthorizationUri: String? = null,
 ) : ViewModel() {
@@ -36,15 +36,16 @@ class JourneyViewModel(
     fun start() {
         loading.update { true }
         viewModelScope.launch {
-            val next = if (!verificationUri.isNullOrBlank()) {
-                journey?.start(journeyName) {
-                    VERIFICATION_URI_COMPLETE to verificationUri.toUri()
-                }
-            } else if (!backChannelAuthorizationUri.isNullOrBlank()) {
-                journey?.start(backchannelUri = backChannelAuthorizationUri.toUri())
-            }
-            else {
-                journey?.start(journeyName)
+            val next = when {
+                !verificationUri.isNullOrBlank() ->
+                    journey?.start(requireJourneyName()) {
+                        VERIFICATION_URI_COMPLETE to verificationUri.toUri()
+                    }
+
+                !backChannelAuthorizationUri.isNullOrBlank() ->
+                    journey?.start(backchannelUri = backChannelAuthorizationUri.toUri())
+
+                else -> journey?.start(requireJourneyName())
             }
             state.update { it.copy(node = next) }
             loading.update { false }
@@ -65,6 +66,9 @@ class JourneyViewModel(
             }
         }
     }
+
+    private fun requireJourneyName(): String =
+        checkNotNull(journeyName) { "journeyName is required for a named journey start" }
 
     fun refresh() {
         state.update {
@@ -92,7 +96,6 @@ class JourneyViewModel(
                 @Suppress("UNCHECKED_CAST")
                 override fun <T : ViewModel> create(modelClass: Class<T>): T =
                     JourneyViewModel(
-                        journeyName = "",
                         backChannelAuthorizationUri = backchannelUri,
                     ) as T
             }

@@ -21,6 +21,7 @@ import com.pingidentity.journey.Constants.RESOURCE_2_1_PROTOCOL_1_0
 import com.pingidentity.journey.Constants.SERVICE
 import com.pingidentity.journey.Constants.START_REQUEST
 import com.pingidentity.journey.Constants.SUSPENDED_ID
+import com.pingidentity.journey.Constants.TRANSACTION
 import com.pingidentity.journey.module.NodeTransform
 import com.pingidentity.journey.module.Oidc
 import com.pingidentity.journey.module.RequestUrl
@@ -52,6 +53,14 @@ class JourneyConfig : WorkflowConfig() {
     lateinit var serverUrl: String
     var realm: String = REALM
     var cookie: String = COOKIE
+
+    /**
+     * Whether [serverUrl] has been assigned. Reading [serverUrl] before it is assigned throws
+     * `UninitializedPropertyAccessException`, so callers that need to fail gracefully check this
+     * first. `isInitialized` is only usable from within the declaring class, hence this accessor.
+     */
+    internal val isServerUrlInitialized: Boolean
+        get() = ::serverUrl.isInitialized
 }
 
 /**
@@ -111,38 +120,58 @@ suspend fun Journey.resume(uri: Uri, option: Option.() -> Unit = {}): Node {
  * (path, realm) are ignored; the authenticate endpoint is always reconstructed from
  * [JourneyConfig.serverUrl] and [JourneyConfig.realm].
  *
+ * Host validation only establishes that the URI names the configured server. It does not
+ * establish that the transaction belongs to the current user, so confirm the transaction
+ * details with the user before completing the journey.
+ *
+ * This entry point handles transactional authentication only: `authIndexType` must be
+ * `transaction`. Use [start] with a journey name for a normal `service` journey.
+ *
  * @param backchannelUri The URI supplied by the backchannel initiation (e.g. from a push
- *   notification payload or QR code). Must be a hierarchical URI containing `authIndexType`
- *   and `authIndexValue` query parameters.
+ *   notification payload or QR code). Must be a hierarchical URI whose `authIndexType` query
+ *   parameter is `transaction` and whose `authIndexValue` query parameter carries the
+ *   transaction id.
  * @param option A lambda to configure additional options (e.g. [Option.forceAuth],
  *   [Option.noSession]) for this request.
  * @return A [Node] representing the result. Returns [FailureNode] immediately (without a
- *   network call) if the Journey is not configured with [JourneyConfig], if the URI host does
- *   not match [JourneyConfig.serverUrl], if the URI is unparseable, or if either required
- *   query parameter is absent or blank.
+ *   network call) if the Journey is not configured with a [JourneyConfig] carrying a usable
+ *   [JourneyConfig.serverUrl], if the URI is opaque (non-hierarchical), if the URI host does
+ *   not match [JourneyConfig.serverUrl], if either required query parameter is absent or
+ *   blank, or if `authIndexType` is not `transaction`.
  */
 suspend fun Journey.start(backchannelUri: Uri, option: Option.() -> Unit = {}): Node {
-    if (config !is JourneyConfig) {
-        return FailureNode(IllegalArgumentException("JourneyConfig missing"))
+    val journeyConfig = config as? JourneyConfig
+        ?: return FailureNode(IllegalArgumentException("JourneyConfig missing"))
+
+    if (!journeyConfig.isServerUrlInitialized) {
+        return FailureNode(IllegalArgumentException("JourneyConfig.serverUrl is not configured"))
     }
 
-    val journeyConfig = config as JourneyConfig
     val configHost = Uri.parse(journeyConfig.serverUrl).host
-    if (configHost == null || backchannelUri.host != configHost) {
+        ?: return FailureNode(IllegalArgumentException("JourneyConfig.serverUrl has no host"))
+
+    // Opaque URIs have no query string; getQueryParameter would throw UnsupportedOperationException.
+    if (!backchannelUri.isHierarchical) {
+        return FailureNode(IllegalArgumentException("Backchannel URI is not hierarchical"))
+    }
+
+    // Hostnames are case-insensitive, see RFC 3986 section 3.2.2.
+    if (!configHost.equals(backchannelUri.host, ignoreCase = true)) {
         return FailureNode(IllegalArgumentException("Backchannel URI host does not match configured serverUrl"))
     }
 
-    val authIndexType: String?
-    val authIndexValue: String?
-    try {
-        authIndexType = backchannelUri.getQueryParameter(AUTH_INDEX_TYPE)
-        authIndexValue = backchannelUri.getQueryParameter(AUTH_INDEX_VALUE)
-    } catch (t: Throwable) {
-        return FailureNode(IllegalArgumentException("Invalid URI", t))
-    }
-
+    val authIndexType = backchannelUri.getQueryParameter(AUTH_INDEX_TYPE)
+    val authIndexValue = backchannelUri.getQueryParameter(AUTH_INDEX_VALUE)
     if (authIndexType.isNullOrBlank() || authIndexValue.isNullOrBlank()) {
         return FailureNode(IllegalArgumentException("Missing authIndexType or authIndexValue"))
+    }
+
+    // This entry point is for transactional authentication only. Any other authIndexType (service,
+    // composite_advice, resource, ...) belongs to a different Journey start overload.
+    if (authIndexType != TRANSACTION) {
+        return FailureNode(
+            IllegalArgumentException("Unsupported authIndexType '$authIndexType', expected '$TRANSACTION'")
+        )
     }
 
     return start {
