@@ -30,8 +30,8 @@
 
     <!-- Backchannel Auth screen -->
     <string name="backchannel_screen_title">Backchannel Authentication</string>
-    <string name="backchannel_description">Paste the redirect URI supplied by the federation gateway. The SDK reads authIndexType / authIndexValue from it and drives the authenticate journey.</string>
-    <string name="backchannel_uri_hint">Redirect URI</string>
+    <string name="backchannel_description">Paste the backchannel URI. The SDK reads authIndexType / authIndexValue from it and drives the authenticate journey.</string>
+    <string name="backchannel_uri_hint">Backchannel URI</string>
     <string name="backchannel_start_button">Start Backchannel Auth</string>
 
     <!-- User Management section -->

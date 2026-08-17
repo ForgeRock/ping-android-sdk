@@ -108,9 +108,10 @@ suspend fun Journey.resume(uri: Uri, option: Option.() -> Unit = {}): Node {
  * push notification, QR code, or deep link.
  *
  * The URI's `authIndexType` and `authIndexValue` query parameters are extracted and forwarded
- * to the AM authenticate endpoint. All other URI components (host, path, realm) are ignored;
- * the authenticate endpoint is always reconstructed from [JourneyConfig.serverUrl] and
- * [JourneyConfig.realm].
+ * to the AM authenticate endpoint. The URI's host is validated against [JourneyConfig.serverUrl]
+ * to ensure the backchannel URI originated from the configured server. All other URI components
+ * (path, realm) are ignored; the authenticate endpoint is always reconstructed from
+ * [JourneyConfig.serverUrl] and [JourneyConfig.realm].
  *
  * @param backchannelUri The URI supplied by the backchannel initiation (e.g. from a push
  *   notification payload or QR code). Must be a hierarchical URI containing `authIndexType`
@@ -118,12 +119,19 @@ suspend fun Journey.resume(uri: Uri, option: Option.() -> Unit = {}): Node {
  * @param option A lambda to configure additional options (e.g. [Option.forceAuth],
  *   [Option.noSession]) for this request.
  * @return A [Node] representing the result. Returns [FailureNode] immediately (without a
- *   network call) if the Journey is not configured with [JourneyConfig], if the URI is
- *   unparseable, or if either required query parameter is absent or blank.
+ *   network call) if the Journey is not configured with [JourneyConfig], if the URI host does
+ *   not match [JourneyConfig.serverUrl], if the URI is unparseable, or if either required
+ *   query parameter is absent or blank.
  */
 suspend fun Journey.start(backchannelUri: Uri, option: Option.() -> Unit = {}): Node {
     if (config !is JourneyConfig) {
         return FailureNode(ApiException(400, "JourneyConfig missing"))
+    }
+
+    val journeyConfig = config as JourneyConfig
+    val configHost = Uri.parse(journeyConfig.serverUrl).host
+    if (configHost == null || backchannelUri.host != configHost) {
+        return FailureNode(ApiException(400, "Backchannel URI host does not match configured serverUrl"))
     }
 
     val authIndexType: String?

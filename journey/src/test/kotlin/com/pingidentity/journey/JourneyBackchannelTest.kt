@@ -42,9 +42,9 @@ class JourneyBackchannelTest {
     private val mockContext: Context = mockk()
     private lateinit var mockEngine: MockEngine
 
-    // A valid backchannel URI with URL-encoded realm, authIndexType=transaction, authIndexValue=abc-123
+    // A valid backchannel URI whose host matches the serverUrl used in test journeys ("localhost").
     private val validUri =
-        "https://tenant/am/UI/Login?realm=%2Falpha&authIndexType=transaction&authIndexValue=abc-123".toUri()
+        "https://localhost/am/UI/Login?realm=%2Falpha&authIndexType=transaction&authIndexValue=abc-123".toUri()
 
     @BeforeTest
     fun setUp() {
@@ -305,11 +305,32 @@ class JourneyBackchannelTest {
         assertEquals(0, mockEngine.requestHistory.size, "Expected no network call but got ${mockEngine.requestHistory.size}")
     }
 
+    // Case 11a: Host mismatch — URI host differs from serverUrl host
+    @Test
+    fun `backchannel start returns FailureNode when URI host does not match serverUrl`() = runTest {
+        val maliciousUri =
+            "https://attacker.example.com/am/UI/Login?authIndexType=transaction&authIndexValue=abc-123".toUri()
+
+        val journey = Journey {
+            serverUrl = "http://localhost/am"
+            realm = "root"
+            httpClient = KtorHttpClient(HttpClient(mockEngine) { followRedirects = false })
+            module(Session) {
+                storage = { MemoryStorage() }
+            }
+        }
+
+        val node = journey.start(backchannelUri = maliciousUri)
+
+        assertTrue(node is FailureNode, "Expected FailureNode but got $node")
+        assertEquals(0, mockEngine.requestHistory.size, "Expected no network call but got ${mockEngine.requestHistory.size}")
+    }
+
     // Case 11: Realm-from-config safety — URI realm is ignored, config realm is used
     @Test
     fun `backchannel start uses config realm and ignores realm in URI`() = runTest {
         val bravoUri =
-            "https://tenant/am/UI/Login?realm=%2Fbravo&authIndexType=transaction&authIndexValue=abc-123".toUri()
+            "https://localhost/am/UI/Login?realm=%2Fbravo&authIndexType=transaction&authIndexValue=abc-123".toUri()
 
         val journey = Journey {
             serverUrl = "http://localhost/am"
