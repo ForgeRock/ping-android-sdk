@@ -317,6 +317,61 @@ class JourneyBackchannelTest {
         assertRejected(node, "Missing authIndexType or authIndexValue")
     }
 
+    // Case 10b: Whitespace-only authIndexType — isNullOrBlank must reject, not just isNullOrEmpty
+    @Test
+    fun `backchannel start returns FailureNode when authIndexType is whitespace only`() = runTest {
+        // "%20" decodes to a single space, so getQueryParameter returns " ".
+        val uri = "https://localhost/am/UI/Login?authIndexType=%20&authIndexValue=abc-123".toUri()
+
+        val journey = Journey {
+            serverUrl = "http://localhost/am"
+            httpClient = KtorHttpClient(HttpClient(mockEngine) { followRedirects = false })
+            module(Session) {
+                storage = { MemoryStorage() }
+            }
+        }
+
+        val node = journey.start(backchannelUri = uri)
+
+        assertRejected(node, "Missing authIndexType or authIndexValue")
+    }
+
+    // Case 10c: Whitespace-only authIndexValue — an all-blank transaction id is not a valid id
+    @Test
+    fun `backchannel start returns FailureNode when authIndexValue is whitespace only`() = runTest {
+        val uri =
+            "https://localhost/am/UI/Login?authIndexType=transaction&authIndexValue=%20%20".toUri()
+
+        val journey = Journey {
+            serverUrl = "http://localhost/am"
+            httpClient = KtorHttpClient(HttpClient(mockEngine) { followRedirects = false })
+            module(Session) {
+                storage = { MemoryStorage() }
+            }
+        }
+
+        val node = journey.start(backchannelUri = uri)
+
+        assertRejected(node, "Missing authIndexType or authIndexValue")
+    }
+
+    // Case 10d: serverUrl assigned but has no host — must not compare against a null host
+    @Test
+    fun `backchannel start returns FailureNode when serverUrl has no host`() = runTest {
+        val journey = Journey {
+            // No scheme or authority, so Uri.parse(serverUrl).host is null.
+            serverUrl = "localhost/am"
+            httpClient = KtorHttpClient(HttpClient(mockEngine) { followRedirects = false })
+            module(Session) {
+                storage = { MemoryStorage() }
+            }
+        }
+
+        val node = journey.start(backchannelUri = validUri)
+
+        assertRejected(node, "JourneyConfig.serverUrl has no host")
+    }
+
     // Case 11a: Host mismatch — URI host differs from serverUrl host
     @Test
     fun `backchannel start returns FailureNode when URI host does not match serverUrl`() = runTest {
