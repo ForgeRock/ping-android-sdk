@@ -14,7 +14,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -52,8 +51,6 @@ import com.pingidentity.orchestrate.ContinueNode
 import com.pingidentity.protect.journey.PingOneProtectEvaluationCallback
 import com.pingidentity.protect.journey.PingOneProtectInitializeCallback
 import com.pingidentity.recaptcha.enterprise.ReCaptchaEnterpriseCallback
-import com.pingidentity.recognize.journey.PingOneRecognizeAuthenticateCallback
-import com.pingidentity.recognize.journey.PingOneRecognizeEnrollCallback
 
 @Composable
 fun JourneyContinueNode(
@@ -174,15 +171,7 @@ fun JourneyContinueNode(
                     showNext = false
                 }
 
-                is PingOneRecognizeEnrollCallback -> {
-                    LaunchedEffect(it) { it.enroll(); onNext() }
-                    showNext = false
-                }
-
-                is PingOneRecognizeAuthenticateCallback -> {
-                    LaunchedEffect(it) { it.authenticate(); onNext() }
-                    showNext = false
-                }
+                else -> if (RecognizeCallbacks(it, onNext)) showNext = false
             }
         }
 
