@@ -17,12 +17,12 @@ import android.graphics.Bitmap
  *   did not return a frame.
  * @property signedJwt The signed JWT produced by the Keyless SDK, forwarded to the server.
  * @property clientState Opaque client state returned by the SDK.
- * @property keylessId The Keyless SDK user identifier. Populated after enroll; empty after a pure
+ * @property recognizeId The Keyless SDK user identifier. Populated after enroll; empty after a pure
  *   authenticate operation.
  */
 data class RecognizeSuccess(
     val selfie: Bitmap?,
     val signedJwt: String?,
     val clientState: String?,
-    val keylessId: String,
+    val recognizeId: String,
 )

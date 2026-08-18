@@ -80,7 +80,7 @@ class PingOneRecognizeEnrollCallback : AbstractRecognizeCallback() {
                     selfie = success.enrollmentFrame,
                     signedJwt = success.signedJwt,
                     clientState = success.clientState,
-                    keylessId = success.keylessId,
+                    recognizeId = success.keylessId,
                 )
             }
     }

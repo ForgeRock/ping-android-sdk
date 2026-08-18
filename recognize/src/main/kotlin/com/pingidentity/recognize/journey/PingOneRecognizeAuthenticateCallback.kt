@@ -71,10 +71,10 @@ class PingOneRecognizeAuthenticateCallback : AbstractRecognizeCallback() {
                         !Recognize.validateUserAndDeviceActive().isSuccess
                     if (shouldEnroll) {
                         Recognize.enroll(buildEnrollConfig(clientStateOverride = storedClientState, retrieveSelfie = resolvedConfig.retrieveSelfie))
-                            .map { success -> RecognizeSuccess(selfie = success.enrollmentFrame, signedJwt = success.signedJwt, clientState = success.clientState, keylessId = success.keylessId) }
+                            .map { success -> RecognizeSuccess(selfie = success.enrollmentFrame, signedJwt = success.signedJwt, clientState = success.clientState, recognizeId = success.keylessId) }
                     } else {
                         Recognize.authenticate(buildAuthConfig(resolvedConfig.retrieveSelfie))
-                            .map { success -> RecognizeSuccess(selfie = success.authenticationFrame, signedJwt = success.signedJwt, clientState = success.clientState, keylessId = "") }
+                            .map { success -> RecognizeSuccess(selfie = success.authenticationFrame, signedJwt = success.signedJwt, clientState = success.clientState, recognizeId = "") }
                     }
                 },
                 onFailure = { Result.failure(it) }
