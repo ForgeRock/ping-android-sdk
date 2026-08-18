@@ -4,7 +4,7 @@
 
 ## Overview
 
-The `recognize` module integrates [PingOne Recognize](https://docs.pingidentity.com/pingoneaic/latest/) (powered by the Keyless biometric SDK) into both **Journey** and **DaVinci**-based authentication flows on Android. It handles biometric **enrollment** (registering a user's face) and **authentication** (verifying a returning user) through standard Journey callbacks and DaVinci collectors.
+The `recognize` module integrates [PingOne Recognize](https://docs.pingidentity.com/recognize/pingone-recognize.html) (powered by the Keyless biometric SDK) into both **Journey** and **DaVinci**-based authentication flows on Android. It handles biometric **enrollment** (registering a user's face) and **authentication** (verifying a returning user) through standard Journey callbacks and DaVinci collectors.
 
 The module registers its callbacks and collectors automatically via AndroidX App Startup — no manual initialisation is required in your `Application` class.
 
