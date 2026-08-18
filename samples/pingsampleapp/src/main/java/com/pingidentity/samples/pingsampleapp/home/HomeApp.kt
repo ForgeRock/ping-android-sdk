@@ -28,6 +28,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
+import androidx.compose.material.icons.filled.AccountBox
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Aod
 import androidx.compose.material.icons.filled.ChevronRight
@@ -36,6 +37,7 @@ import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.LockPerson
 import androidx.compose.material.icons.filled.LogoDev
 import androidx.compose.material.icons.filled.Map
+import androidx.compose.material.icons.filled.Memory
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.Preview
@@ -43,6 +45,7 @@ import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.SwapHoriz
+import androidx.compose.material.icons.filled.Tag
 import androidx.compose.material.icons.filled.Token
 import androidx.compose.material.icons.filled.VpnKey
 import androidx.compose.material3.Card
@@ -103,6 +106,10 @@ fun HomeApp(
     onDeviceIdClick : () -> Unit,
     onAuthTestScreenClick : () -> Unit,
     onAuthMigrationClick : () -> Unit,
+    onPingOneAccountsClick : () -> Unit,
+    onPingOneOTPClick : () -> Unit,
+    onPingOnePayloadClick : () -> Unit,
+    onPingOneQrScannerClick : () -> Unit,
     onDeviceAuthorizationGrantClick : () -> Unit,
 ) {
     var deviceId by remember { mutableStateOf("Loading Device ID...") }
@@ -323,6 +330,43 @@ fun HomeApp(
                     onClick = onAuthMigrationClick
                 )
 
+                // PingOne MFA Section
+                Text(
+                    text = stringResource(R.string.text_home_section_pingone_mfa),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    modifier = Modifier.padding(vertical = 16.dp)
+                )
+
+                IconRowItem(
+                    icon = Icons.Default.QrCodeScanner,
+                    title = stringResource(R.string.text_pingone_mfa_qr_scanner_title),
+                    subtitle = stringResource(R.string.text_pingone_mfa_qr_scanner_subtitle),
+                    onClick = onPingOneQrScannerClick
+                )
+
+                IconRowItem(
+                    icon = Icons.Default.AccountBox,
+                    title = stringResource(R.string.text_pingone_mfa_accounts_title),
+                    subtitle = stringResource(R.string.text_pingone_mfa_accounts_subtitle),
+                    onClick = onPingOneAccountsClick
+                )
+
+                IconRowItem(
+                    icon = Icons.Default.Tag,
+                    title = stringResource(R.string.text_pingone_mfa_otp_title),
+                    subtitle = stringResource(R.string.text_pingone_mfa_otp_subtitle),
+                    onClick = onPingOneOTPClick
+                )
+
+                IconRowItem(
+                    icon = Icons.Default.Memory,
+                    title = stringResource(R.string.text_pingone_mfa_payload_title),
+                    subtitle = stringResource(R.string.text_pingone_mfa_payload_subtitle),
+                    onClick = onPingOnePayloadClick
+                )
+
                 // Developer Tools Section
                 Text(
                     text = stringResource(R.string.text_home_section_developer_tools),
@@ -507,6 +551,10 @@ fun PreviewHomeApp() {
         onDeviceIdClick = {},
         onAuthTestScreenClick = {},
         onAuthMigrationClick = {},
+        onPingOneAccountsClick = {},
+        onPingOneOTPClick = {},
+        onPingOnePayloadClick = {},
+        onPingOneQrScannerClick = {},
         onDeviceAuthorizationGrantClick = {},
     )
 }

@@ -57,6 +57,7 @@ secured by PingOne.
     │   ├── oath                              # TOTP / HOTP one-time passwords
     │   └── push                              # Push notification authentication
     ├── protect                               # PingOne Protect fraud signals
+    ├── pingonemfa                            # PingOne MFA authentication
     ├── recaptcha-enterprise                  # reCAPTCHA Enterprise integration
     └── samples                               # Sample applications
         └── pingsampleapp                     # Combined Ping sample app
