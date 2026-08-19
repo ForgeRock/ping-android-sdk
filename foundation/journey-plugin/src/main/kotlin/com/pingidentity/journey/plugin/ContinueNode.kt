@@ -9,6 +9,9 @@ package com.pingidentity.journey.plugin
 
 import com.pingidentity.orchestrate.ContinueNode
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
@@ -27,15 +30,26 @@ private const val SUBMIT_BUTTON_TEXT = "submitButtonText"
 private const val PAGE_FOOTER = "pageFooter"
 
 /**
+ * Safely extracts a string value from a [JsonObject] by key, returning an empty string
+ * when the key is absent, JSON `null`, or maps to a JSON object/array.
+ *
+ * @param key The key to look up in the [JsonObject].
+ * @return The string value associated with the key, or an empty string if not present or not a string.
+ */
+private fun JsonObject.stringOrEmpty(key: String): String =
+    (this[key] as? JsonPrimitive)?.contentOrNull ?: ""
+
+/**
  * Extension property to retrieve the header text for this ContinueNode.
  *
  * The header text is typically displayed at the top of the authentication screen
  * to provide context about the current step in the journey.
  *
- * @return The header text from the node's input, or an empty string if not present
+ * @return The header text from the node's input, or an empty string if the key is absent,
+ * JSON `null`, or maps to a JSON object/array.
  */
 val ContinueNode.header: String
-    get() = this.input[HEADER]?.jsonPrimitive?.content ?: ""
+    get() = this.input.stringOrEmpty(HEADER)
 
 /**
  * Extension property to retrieve the description text for this ContinueNode.
@@ -43,11 +57,12 @@ val ContinueNode.header: String
  * The description provides additional context or instructions for the current
  * authentication step, typically displayed below the header.
  *
- * @return The description text from the node's input, or an empty string if not present
+ * @return The description text from the node's input, or an empty string if the key is absent,
+ * JSON `null`, or maps to a JSON object/array.
  *
  */
 val ContinueNode.description: String
-    get() = this.input[DESCRIPTION]?.jsonPrimitive?.content ?: ""
+    get() = this.input.stringOrEmpty(DESCRIPTION)
 
 /**
  * Extension property to retrieve the stage identifier for this ContinueNode.
@@ -59,11 +74,12 @@ val ContinueNode.description: String
  * This property returns the raw stage value as a string. For parsed localized values,
  * use [submitButtonText] or [pageFooter] properties instead.
  *
- * @return The stage identifier from the node's input, or an empty string if not present
+ * @return The stage identifier from the node's input, or an empty string if the key is absent,
+ * JSON `null`, or maps to a JSON object/array.
  *
  */
 val ContinueNode.stage: String
-    get() = this.input[STAGE]?.jsonPrimitive?.content ?: ""
+    get() = this.input.stringOrEmpty(STAGE)
 
 /**
  * Extension property to retrieve the localized submit button text for this ContinueNode.
@@ -156,8 +172,8 @@ val ContinueNode.pageFooter: String
  */
 private fun ContinueNode.getLocalizedValueFromStage(key: String): String? {
     return try {
-        val stageValue = this.input[STAGE]?.jsonPrimitive?.content
-        if (stageValue.isNullOrEmpty()) return null
+        val stageValue = this.stage
+        if (stageValue.isEmpty()) return null
 
         val jsonObject = Json.parseToJsonElement(stageValue).jsonObject
         val localizedDict = jsonObject[key]?.jsonObject ?: return null

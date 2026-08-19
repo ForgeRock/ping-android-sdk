@@ -11,8 +11,12 @@ import com.pingidentity.orchestrate.Action
 import com.pingidentity.orchestrate.ContinueNode
 import io.mockk.every
 import io.mockk.mockk
+import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.add
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
+import kotlinx.serialization.json.putJsonArray
+import kotlinx.serialization.json.putJsonObject
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -489,6 +493,161 @@ class ContinueNodeTest {
         val result = continueNode.submitButtonText
 
         assertEquals("Submit", result)
+    }
+
+    @Test
+    fun `Should return empty string when header field is a JSON object`() {
+        val continueNode = mockk<ContinueNode> {
+            every { input } returns buildJsonObject {
+                putJsonObject("header") { put("en", "Welcome") }
+            }
+        }
+
+        val result = continueNode.header
+
+        assertEquals("", result)
+    }
+
+    @Test
+    fun `Should return empty string when description field is a JSON object`() {
+        val continueNode = mockk<ContinueNode> {
+            every { input } returns buildJsonObject {
+                putJsonObject("description") { put("en", "Welcome") }
+            }
+        }
+
+        val result = continueNode.description
+
+        assertEquals("", result)
+    }
+
+    @Test
+    fun `Should return empty string when stage field is a JSON object`() {
+        val continueNode = mockk<ContinueNode> {
+            every { input } returns buildJsonObject {
+                putJsonObject("stage") { put("en", "Welcome") }
+            }
+        }
+
+        val result = continueNode.stage
+
+        assertEquals("", result)
+    }
+
+    @Test
+    fun `Should return empty string when header field is a JSON array`() {
+        val continueNode = mockk<ContinueNode> {
+            every { input } returns buildJsonObject {
+                putJsonArray("header") { add("a"); add("b") }
+            }
+        }
+
+        val result = continueNode.header
+
+        assertEquals("", result)
+    }
+
+    @Test
+    fun `Should return empty string when description field is a JSON array`() {
+        val continueNode = mockk<ContinueNode> {
+            every { input } returns buildJsonObject {
+                putJsonArray("description") { add("a"); add("b") }
+            }
+        }
+
+        val result = continueNode.description
+
+        assertEquals("", result)
+    }
+
+    @Test
+    fun `Should return empty string when stage field is a JSON array`() {
+        val continueNode = mockk<ContinueNode> {
+            every { input } returns buildJsonObject {
+                putJsonArray("stage") { add("a"); add("b") }
+            }
+        }
+
+        val result = continueNode.stage
+
+        assertEquals("", result)
+    }
+
+    @Test
+    fun `Should return empty string when header field is JSON null`() {
+        val continueNode = mockk<ContinueNode> {
+            every { input } returns buildJsonObject {
+                put("header", JsonNull)
+            }
+        }
+
+        val result = continueNode.header
+
+        assertEquals("", result)
+    }
+
+    @Test
+    fun `Should return empty string when description field is JSON null`() {
+        val continueNode = mockk<ContinueNode> {
+            every { input } returns buildJsonObject {
+                put("description", JsonNull)
+            }
+        }
+
+        val result = continueNode.description
+
+        assertEquals("", result)
+    }
+
+    @Test
+    fun `Should return empty string when stage field is JSON null`() {
+        val continueNode = mockk<ContinueNode> {
+            every { input } returns buildJsonObject {
+                put("stage", JsonNull)
+            }
+        }
+
+        val result = continueNode.stage
+
+        assertEquals("", result)
+    }
+
+    @Test
+    fun `Should coerce numeric header value to its string form`() {
+        val continueNode = mockk<ContinueNode> {
+            every { input } returns buildJsonObject {
+                put("header", 123)
+            }
+        }
+
+        val result = continueNode.header
+
+        assertEquals("123", result)
+    }
+
+    @Test
+    fun `Should coerce boolean header value to its string form`() {
+        val continueNode = mockk<ContinueNode> {
+            every { input } returns buildJsonObject {
+                put("header", true)
+            }
+        }
+
+        val result = continueNode.header
+
+        assertEquals("true", result)
+    }
+
+    @Test
+    fun `Should return empty string for submitButtonText and pageFooter when stage field is a JSON object`() {
+        val continueNode = mockk<ContinueNode> {
+            every { input } returns buildJsonObject {
+                putJsonObject("stage") { put("submitButtonText", "Submit") }
+            }
+        }
+
+        assertEquals("", continueNode.submitButtonText)
+        assertEquals("", continueNode.pageFooter)
     }
 }
 
