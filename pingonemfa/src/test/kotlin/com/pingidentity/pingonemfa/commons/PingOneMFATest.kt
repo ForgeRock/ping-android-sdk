@@ -187,7 +187,7 @@ class PingOneMFATest {
             PingOne.setDeviceToken(any(), any(), any(), any())
         } answers {
             val callback = arg<PingOne.PingOneSetDeviceTokenCallback>(3)
-            callback.onComplete(Array(1) { null })
+            callback.onComplete(null)
         }
 
         val result = PingOneMFA.setDeviceToken("token")
@@ -295,7 +295,7 @@ class PingOneMFATest {
             PingOne.getInfo(any(), any())
         } answers {
             val callback = arg<PingOne.PingOneGetInfoCallback>(1)
-            callback.onComplete(mockDeviceInfo, Array(1) { null })
+            callback.onComplete(mockDeviceInfo, emptyArray<PingOneSDKError>())
         }
 
         val result = PingOneMFA.getDeviceInfo()
