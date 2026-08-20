@@ -1,3 +1,8 @@
+## [Unreleased]
+
+#### Added
+- Added AM/AIC transactional backchannel authentication support to the Journey module via `Journey.start(backchannelUri)` [SDKS-5157]
+
 ## [2.1.0]
 
 #### Added
