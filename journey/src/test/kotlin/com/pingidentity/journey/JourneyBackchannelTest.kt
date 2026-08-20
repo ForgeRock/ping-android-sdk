@@ -369,7 +369,24 @@ class JourneyBackchannelTest {
 
         val node = journey.start(backchannelUri = validUri)
 
-        assertRejected(node, "JourneyConfig.serverUrl has no host")
+        assertRejected(node, "JourneyConfig.serverUrl must be an absolute http(s) URL with a host")
+    }
+
+    // Case 10e: serverUrl is a schemeless network-path reference — Uri.host is non-null
+    // ("localhost") even though there is no scheme, so a host-only check would wrongly accept it.
+    @Test
+    fun `backchannel start returns FailureNode when serverUrl has no scheme`() = runTest {
+        val journey = Journey {
+            serverUrl = "//localhost/am"
+            httpClient = KtorHttpClient(HttpClient(mockEngine) { followRedirects = false })
+            module(Session) {
+                storage = { MemoryStorage() }
+            }
+        }
+
+        val node = journey.start(backchannelUri = validUri)
+
+        assertRejected(node, "JourneyConfig.serverUrl must be an absolute http(s) URL with a host")
     }
 
     // Case 11a: Host mismatch — URI host differs from serverUrl host
@@ -429,9 +446,11 @@ class JourneyBackchannelTest {
         assertContains(mockEngine.requestHistory[0].url.encodedQuery, "authIndexValue=abc-123")
     }
 
-    // Case 11d: Non-transactional authIndexType is rejected — this overload is transaction-only
+    // Case 11d: authIndexType other than "transaction" is forwarded, not restricted — this
+    // entry point parses whatever the redirectUri supplies rather than hardcoding "transaction",
+    // matching the iOS implementation and the AM backchannel design (SDKS-4734).
     @Test
-    fun `backchannel start returns FailureNode when authIndexType is not transaction`() = runTest {
+    fun `backchannel start forwards authIndexType other than transaction`() = runTest {
         val serviceUri =
             "https://localhost/am/UI/Login?authIndexType=service&authIndexValue=Login".toUri()
 
@@ -446,7 +465,10 @@ class JourneyBackchannelTest {
 
         val node = journey.start(backchannelUri = serviceUri)
 
-        assertRejected(node, "Unsupported authIndexType 'service', expected 'transaction'")
+        assertTrue(node is ContinueNode, "Expected ContinueNode but got $node")
+        val request = mockEngine.requestHistory[0]
+        assertContains(request.url.encodedQuery, "authIndexType=service")
+        assertContains(request.url.encodedQuery, "authIndexValue=Login")
     }
 
     // Case 11: Realm-from-config safety — URI realm is ignored, config realm is used

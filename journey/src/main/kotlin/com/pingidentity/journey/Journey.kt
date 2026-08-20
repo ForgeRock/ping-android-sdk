@@ -21,7 +21,6 @@ import com.pingidentity.journey.Constants.RESOURCE_2_1_PROTOCOL_1_0
 import com.pingidentity.journey.Constants.SERVICE
 import com.pingidentity.journey.Constants.START_REQUEST
 import com.pingidentity.journey.Constants.SUSPENDED_ID
-import com.pingidentity.journey.Constants.TRANSACTION
 import com.pingidentity.journey.module.NodeTransform
 import com.pingidentity.journey.module.Oidc
 import com.pingidentity.journey.module.RequestUrl
@@ -124,20 +123,21 @@ suspend fun Journey.resume(uri: Uri, option: Option.() -> Unit = {}): Node {
  * establish that the transaction belongs to the current user, so confirm the transaction
  * details with the user before completing the journey.
  *
- * This entry point handles transactional authentication only: `authIndexType` must be
- * `transaction`. Use [start] with a journey name for a normal `service` journey.
+ * `authIndexType` is forwarded as supplied by the URI rather than restricted to `transaction`,
+ * so this method also works if AM ever routes another `authIndexType` through a backchannel
+ * `redirectUri`. See the AM Backchannel Authentication design (SDKS-4734) for the iOS
+ * implementation this mirrors.
  *
  * @param backchannelUri The URI supplied by the backchannel initiation (e.g. from a push
- *   notification payload or QR code). Must be a hierarchical URI whose `authIndexType` query
- *   parameter is `transaction` and whose `authIndexValue` query parameter carries the
- *   transaction id.
+ *   notification payload or QR code). Must be a hierarchical URI whose `authIndexType` and
+ *   `authIndexValue` query parameters are present and non-blank.
  * @param option A lambda to configure additional options (e.g. [Option.forceAuth],
  *   [Option.noSession]) for this request.
  * @return A [Node] representing the result. Returns [FailureNode] immediately (without a
- *   network call) if the Journey is not configured with a [JourneyConfig] carrying a usable
- *   [JourneyConfig.serverUrl], if the URI is opaque (non-hierarchical), if the URI host does
- *   not match [JourneyConfig.serverUrl], if either required query parameter is absent or
- *   blank, or if `authIndexType` is not `transaction`.
+ *   network call) if the Journey is not configured with a [JourneyConfig] carrying a usable,
+ *   absolute HTTP(S) [JourneyConfig.serverUrl], if the URI is opaque (non-hierarchical), if the
+ *   URI host does not match [JourneyConfig.serverUrl], or if either required query parameter is
+ *   absent or blank.
  */
 suspend fun Journey.start(backchannelUri: Uri, option: Option.() -> Unit = {}): Node {
     val journeyConfig = config as? JourneyConfig
@@ -147,8 +147,13 @@ suspend fun Journey.start(backchannelUri: Uri, option: Option.() -> Unit = {}): 
         return FailureNode(IllegalArgumentException("JourneyConfig.serverUrl is not configured"))
     }
 
-    val configHost = Uri.parse(journeyConfig.serverUrl).host
-        ?: return FailureNode(IllegalArgumentException("JourneyConfig.serverUrl has no host"))
+    val configUri = Uri.parse(journeyConfig.serverUrl)
+    val configHost = configUri.host
+    if ((configUri.scheme != "http" && configUri.scheme != "https") || configHost.isNullOrBlank()) {
+        return FailureNode(
+            IllegalArgumentException("JourneyConfig.serverUrl must be an absolute http(s) URL with a host")
+        )
+    }
 
     // Opaque URIs have no query string; getQueryParameter would throw UnsupportedOperationException.
     if (!backchannelUri.isHierarchical) {
@@ -164,14 +169,6 @@ suspend fun Journey.start(backchannelUri: Uri, option: Option.() -> Unit = {}): 
     val authIndexValue = backchannelUri.getQueryParameter(AUTH_INDEX_VALUE)
     if (authIndexType.isNullOrBlank() || authIndexValue.isNullOrBlank()) {
         return FailureNode(IllegalArgumentException("Missing authIndexType or authIndexValue"))
-    }
-
-    // This entry point is for transactional authentication only. Any other authIndexType (service,
-    // composite_advice, resource, ...) belongs to a different Journey start overload.
-    if (authIndexType != TRANSACTION) {
-        return FailureNode(
-            IllegalArgumentException("Unsupported authIndexType '$authIndexType', expected '$TRANSACTION'")
-        )
     }
 
     return start {
