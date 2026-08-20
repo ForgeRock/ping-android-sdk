@@ -28,17 +28,18 @@ object DaVinciTestConfig {
         private set
     var davinciProtectAcrValues: String = ""
         private set
-    var davinciMfaAcrValues: String = ""
+    var davinciMfaDeviceAcrValues: String = ""
         private set
 
-    // Form field tests (FormFieldsTest, FormFieldValidationTest, PollingCollectorE2ETests)
-    var davinciFormClientId: String = ""
-        private set
-    var davinciFormDiscoveryEndpoint: String = ""
-        private set
     var davinciFormFieldsAcrValues: String = ""
         private set
     var davinciPollingAcrValues: String = ""
+        private set
+
+    var davinciMetadataAcrValues: String = ""
+        private set
+
+    var davinciImageAcrValues: String = ""
         private set
 
     // Credentials
@@ -48,9 +49,15 @@ object DaVinciTestConfig {
         private set
     var davinciVerificationCode: String = ""
         private set
-    var davinciProtectUsername: String = ""
+
+    // PAR (PARDaVinciE2ETest, PARCentralizedLoginDaVinciE2ETest)
+    var parClientId: String = ""
         private set
-    var davinciProtectPassword: String = ""
+    var parDiscoveryEndpoint: String = ""
+        private set
+    var parRedirectUri: String = ""
+        private set
+    var parAcrValues: String = ""
         private set
 
     // Device Authorization Grant
@@ -83,18 +90,21 @@ object DaVinciTestConfig {
             davinciDiscoveryEndpoint = properties.getProperty("DAVINCI_DISCOVERY_ENDPOINT", "")
             davinciAcrValues = properties.getProperty("DAVINCI_ACR_VALUES", "")
             davinciProtectAcrValues = properties.getProperty("DAVINCI_PROTECT_ACR_VALUES", "")
-            davinciMfaAcrValues = properties.getProperty("DAVINCI_MFA_ACR_VALUES", "")
+            davinciMfaDeviceAcrValues = properties.getProperty("DAVINCI_MFA_DEVICE_ACR_VALUES", "")
 
-            davinciFormClientId = properties.getProperty("DAVINCI_FORM_CLIENT_ID", "")
-            davinciFormDiscoveryEndpoint = properties.getProperty("DAVINCI_FORM_DISCOVERY_ENDPOINT", "")
             davinciFormFieldsAcrValues = properties.getProperty("DAVINCI_FORM_FIELDS_ACR_VALUES", "")
             davinciPollingAcrValues = properties.getProperty("DAVINCI_POLLING_ACR_VALUES", "")
+            davinciMetadataAcrValues = properties.getProperty("DAVINCI_METADATA_ACR_VALUES", "")
+            davinciImageAcrValues = properties.getProperty("DAVINCI_IMAGE_ACR_VALUES", "")
 
             davinciUsername = properties.getProperty("DAVINCI_USERNAME", "")
             davinciPassword = properties.getProperty("DAVINCI_PASSWORD", "")
             davinciVerificationCode = properties.getProperty("DAVINCI_VERIFICATION_CODE", "")
-            davinciProtectUsername = properties.getProperty("DAVINCI_PROTECT_USERNAME", "")
-            davinciProtectPassword = properties.getProperty("DAVINCI_PROTECT_PASSWORD", "")
+
+            parClientId = properties.getProperty("PAR_CLIENT_ID", "")
+            parDiscoveryEndpoint = properties.getProperty("PAR_DISCOVERY_ENDPOINT", "")
+            parRedirectUri = properties.getProperty("PAR_REDIRECT_URI", "")
+            parAcrValues = properties.getProperty("PAR_ACR_VALUES", "")
 
             deviceClientId = properties.getProperty("DEVICE_CLIENT_ID", "")
             deviceDiscoveryEndpoint = properties.getProperty("DEVICE_DISCOVERY_ENDPOINT", "")

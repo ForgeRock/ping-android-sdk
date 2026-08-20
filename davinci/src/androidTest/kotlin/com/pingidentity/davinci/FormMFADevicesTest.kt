@@ -53,7 +53,7 @@ class FormMFADevicesTest {
             discoveryEndpoint = DaVinciTestConfig.davinciDiscoveryEndpoint
             scopes = mutableSetOf("openid", "email", "address", "phone", "profile")
             redirectUri = DaVinciTestConfig.davinciRedirectUri
-            acrValues = DaVinciTestConfig.davinciMfaAcrValues
+            acrValues = DaVinciTestConfig.davinciMfaDeviceAcrValues
         }
     }
 
@@ -177,7 +177,7 @@ class FormMFADevicesTest {
         (node.collectors[1] as? FlowCollector)?.value = "click"
         node = node.next() as ContinueNode
 
-        assertEquals("SDK Automation - Device Authentication", node.name)
+        assertEquals("Automation - Device Authentication", node.name)
         assertEquals("Test form for DEVICE_AUTHENTICATION collector", node.description)
 
         // There is only one collector in this node ("device-authentication" collector)
@@ -223,7 +223,7 @@ class FormMFADevicesTest {
         (node.collectors[1] as? FlowCollector)?.value = "click"
         node = node.next() as ContinueNode
 
-        assertEquals("SDK Automation - Device Authentication", node.name)
+        assertEquals("Automation - Device Authentication", node.name)
         deviceAuthenticationCollector = node.collectors[0] as DeviceAuthenticationCollector
 
         // Assert the available devices
@@ -309,7 +309,7 @@ class FormMFADevicesTest {
         node = node.next() as ContinueNode
 
         // Make sure that we are at the user registration form
-        assertEquals("SDK Automation - Sign On", node.name)
+        assertEquals("Automation - Sign On", node.name)
 
         // Fill in the login form with valid credentials and submit...
         (node.collectors[1] as? TextCollector)?.value = username
@@ -359,7 +359,7 @@ class FormMFADevicesTest {
         node = node.next() as ContinueNode
 
         // Make sure that we are at the EMAIL device registration form
-        assertEquals("SDK Automation - Enter Email", node.name)
+        assertEquals("Automation - Enter Email", node.name)
         assertEquals("Enter email for registration", node.description)
 
         // Assert the collectors
@@ -402,7 +402,7 @@ class FormMFADevicesTest {
         node = node.next() as ContinueNode
 
         // Make sure that we are at the Phone Number registration form
-        assertEquals("SDK Automation - Enter Phone Number", node.name)
+        assertEquals("Automation - Enter Phone Number", node.name)
         assertEquals("Enter phone number", node.description)
 
         // Assert the collectors

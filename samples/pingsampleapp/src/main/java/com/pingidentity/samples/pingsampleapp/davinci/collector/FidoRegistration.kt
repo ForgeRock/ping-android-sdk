@@ -16,11 +16,7 @@ import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.material3.Button
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -30,12 +26,9 @@ import kotlinx.coroutines.launch
 @Composable
 fun FidoRegistration(
     collector: FidoRegistrationCollector,
-    onStart: () -> Unit,
     onNext: () -> Unit,
 ) {
     val coroutineScope = rememberCoroutineScope()
-    var showErrorDialog by remember { mutableStateOf(false) }
-    var errorMessage by remember { mutableStateOf("") }
 
     // Function to perform registration
     val performRegistration: () -> Unit = {
@@ -50,8 +43,7 @@ fun FidoRegistration(
                     "Failed to register",
                     it
                 )
-                errorMessage = it.message ?: "Registration failed"
-                showErrorDialog = true
+                onNext()
             }
         }
     }
@@ -61,17 +53,6 @@ fun FidoRegistration(
         if (collector.trigger != "BUTTON") {
             performRegistration()
         }
-    }
-
-    if (showErrorDialog) {
-        ErrorDialog(
-            message = errorMessage,
-            onDismiss = { showErrorDialog = false },
-            onRetry = {
-                showErrorDialog = false
-                onStart()
-            }
-        )
     }
 
     // Only show button if trigger is BUTTON
