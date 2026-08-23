@@ -56,6 +56,7 @@ import com.pingidentity.samples.pingsampleapp.authenticator.util.NavigationAnima
 import com.pingidentity.samples.pingsampleapp.authgrant.DeviceAuthorizationGrantScreen
 import com.pingidentity.samples.pingsampleapp.config.Env
 import com.pingidentity.samples.pingsampleapp.davinci.DaVinci
+import com.pingidentity.samples.pingsampleapp.pingonemfa.davinci.PingOneMfaDaVinciViewModel
 import com.pingidentity.samples.pingsampleapp.devicemanagement.DeviceManagement
 import com.pingidentity.samples.pingsampleapp.devicemanagement.DeviceManagementViewModel
 import com.pingidentity.samples.pingsampleapp.devtools.DeviceInfo
@@ -113,6 +114,7 @@ object Route {
     const val ROUTE_PINGONE_OTP = "pingone_otp"
     const val ROUTE_PINGONE_PAYLOAD = "pingone_payload"
     const val ROUTE_PINGONE_QR_SCANNER = "pingone_qr_scanner"
+    const val ROUTE_PINGONE_DAVINCI_PAIRING = "pingone_davinci_pairing"
     const val DEVICE_AUTHORIZATION_GRANT = "device_authorization_grant"
     const val BACKCHANNEL_AUTH = "backchannel_auth"
     internal const val BACKCHANNEL_JOURNEY = "backchannel_journey?uri={uri}"
@@ -211,6 +213,9 @@ fun AppNavigation(
                 },
                 onPingOneQrScannerClick = {
                     navController.navigate(Route.ROUTE_PINGONE_QR_SCANNER)
+                },
+                onPingOneDaVinciPairingClick = {
+                    navController.navigate(Route.ROUTE_PINGONE_DAVINCI_PAIRING)
                 },
                 onDeviceAuthorizationGrantClick = {
                     navController.navigate(Route.DEVICE_AUTHORIZATION_GRANT)
@@ -604,6 +609,28 @@ fun AppNavigation(
             PingOneQrScannerScreen(
                 onBack = { navController.popBackStack() },
                 onPairComplete = { navController.popBackStack() }
+            )
+        }
+
+        composable(Route.ROUTE_PINGONE_DAVINCI_PAIRING) {
+            val pingOneMfaDaVinciViewModel = viewModel<PingOneMfaDaVinciViewModel>()
+            val state by pingOneMfaDaVinciViewModel.state.collectAsState()
+            val loading by pingOneMfaDaVinciViewModel.loading.collectAsState()
+            val pairingComplete by pingOneMfaDaVinciViewModel.pairingComplete.collectAsState()
+
+            // Once the pairing result is submitted to the server, exit immediately.
+            LaunchedEffect(pairingComplete) {
+                if (pairingComplete) navController.popBackStack()
+            }
+
+            DaVinci(
+                state = state,
+                loading = loading,
+                onNodeUpdated = { pingOneMfaDaVinciViewModel.refresh() },
+                onNext = { pingOneMfaDaVinciViewModel.next(it) },
+                onStart = { pingOneMfaDaVinciViewModel.start() },
+                onSuccess = { navController.popBackStack() },
+                onBack = { navController.popBackStack() },
             )
         }
 
