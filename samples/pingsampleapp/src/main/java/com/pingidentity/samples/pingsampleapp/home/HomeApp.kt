@@ -111,6 +111,7 @@ fun HomeApp(
     onPingOnePayloadClick : () -> Unit,
     onPingOneQrScannerClick : () -> Unit,
     onDeviceAuthorizationGrantClick : () -> Unit,
+    onBackchannelAuthClick : () -> Unit,
 ) {
     var deviceId by remember { mutableStateOf("Loading Device ID...") }
     var deviceStatus by remember { mutableStateOf("Loading device status...") }
@@ -252,6 +253,13 @@ fun HomeApp(
                     title = stringResource(R.string.text_device_authorization_grant_title),
                     subtitle = stringResource(R.string.text_device_authorization_grant_subtitle),
                     onClick = onDeviceAuthorizationGrantClick
+                )
+
+                IconRowItem(
+                    icon = Icons.Default.SwapHoriz,
+                    title = stringResource(R.string.text_backchannel_auth_title),
+                    subtitle = stringResource(R.string.text_backchannel_auth_subtitle),
+                    onClick = onBackchannelAuthClick
                 )
 
                 // User Management Section
@@ -556,6 +564,7 @@ fun PreviewHomeApp() {
         onPingOnePayloadClick = {},
         onPingOneQrScannerClick = {},
         onDeviceAuthorizationGrantClick = {},
+        onBackchannelAuthClick = {},
     )
 }
 

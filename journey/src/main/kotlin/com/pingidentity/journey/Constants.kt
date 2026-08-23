@@ -21,6 +21,9 @@ internal object Constants {
     const val AUTH_INDEX_VALUE = "authIndexValue"
     const val SERVICE = "service"
     const val SUSPENDED_ID = "suspendedId"
+    /** The `authIndexType` AM places in a backchannel `redirectUri`. Referenced by tests only —
+     * `start(backchannelUri)` forwards whatever `authIndexType` the URI supplies. */
+    const val TRANSACTION = "transaction"
 
     const val FORCE_AUTH_PARAM = "ForceAuth"
     const val NO_SESSION_PARAM = "noSession"

@@ -25,6 +25,14 @@
     <string name="text_oidc_subtitle">OpenID Connect Flow</string>
     <string name="text_device_authorization_grant_title">Device Authorization Grant</string>
     <string name="text_device_authorization_grant_subtitle">Start or verify Device Auth</string>
+    <string name="text_backchannel_auth_title">Backchannel Auth</string>
+    <string name="text_backchannel_auth_subtitle">AM/AIC transactional backchannel auth</string>
+
+    <!-- Backchannel Auth screen -->
+    <string name="backchannel_screen_title">Backchannel Authentication</string>
+    <string name="backchannel_description">Paste the backchannel URI. The SDK reads authIndexType / authIndexValue from it and drives the authenticate journey.</string>
+    <string name="backchannel_uri_hint">Backchannel URI</string>
+    <string name="backchannel_start_button">Start Backchannel Auth</string>
 
     <!-- User Management section -->
     <string name="text_user_profile_title">User Profile</string>
