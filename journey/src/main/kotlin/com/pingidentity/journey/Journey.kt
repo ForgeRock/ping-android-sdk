@@ -28,6 +28,7 @@ import com.pingidentity.journey.module.Session
 import com.pingidentity.oidc.JsonConfigKey
 import com.pingidentity.oidc.JsonConfigParser
 import com.pingidentity.oidc.update
+import com.pingidentity.orchestrate.FailureNode
 import com.pingidentity.orchestrate.Node
 import com.pingidentity.orchestrate.Setup
 import com.pingidentity.orchestrate.SharedContext
@@ -51,6 +52,14 @@ class JourneyConfig : WorkflowConfig() {
     lateinit var serverUrl: String
     var realm: String = REALM
     var cookie: String = COOKIE
+
+    /**
+     * Whether [serverUrl] has been assigned. Reading [serverUrl] before it is assigned throws
+     * `UninitializedPropertyAccessException`, so callers that need to fail gracefully check this
+     * first. `isInitialized` is only usable from within the declaring class, hence this accessor.
+     */
+    internal val isServerUrlInitialized: Boolean
+        get() = ::serverUrl.isInitialized
 }
 
 /**
@@ -95,6 +104,77 @@ suspend fun Journey.resume(uri: Uri, option: Option.() -> Unit = {}): Node {
             START_REQUEST to fun Request.() {
                 parameter(SUSPENDED_ID, it)
             }
+        }
+        option(this, option)
+    }
+}
+
+/**
+ * Starts the authentication journey from a backchannel (transactional) URI received via
+ * push notification, QR code, or deep link.
+ *
+ * The URI's `authIndexType` and `authIndexValue` query parameters are extracted and forwarded
+ * to the AM authenticate endpoint. The URI's host is validated against [JourneyConfig.serverUrl]
+ * to ensure the backchannel URI originated from the configured server. All other URI components
+ * (path, realm) are ignored; the authenticate endpoint is always reconstructed from
+ * [JourneyConfig.serverUrl] and [JourneyConfig.realm].
+ *
+ * Host validation only establishes that the URI names the configured server. It does not
+ * establish that the transaction belongs to the current user, so confirm the transaction
+ * details with the user before completing the journey.
+ *
+ * `authIndexType` is forwarded as supplied by the URI rather than restricted to `transaction`,
+ * so this method also works if AM ever routes another `authIndexType` through a backchannel
+ * `redirectUri`. See the AM Backchannel Authentication design (SDKS-4734) for the iOS
+ * implementation this mirrors.
+ *
+ * @param backchannelUri The URI supplied by the backchannel initiation (e.g. from a push
+ *   notification payload or QR code). Must be a hierarchical URI whose `authIndexType` and
+ *   `authIndexValue` query parameters are present and non-blank.
+ * @param option A lambda to configure additional options (e.g. [Option.forceAuth],
+ *   [Option.noSession]) for this request.
+ * @return A [Node] representing the result. Returns [FailureNode] immediately (without a
+ *   network call) if the Journey is not configured with a [JourneyConfig] carrying a usable,
+ *   absolute HTTP(S) [JourneyConfig.serverUrl], if the URI is opaque (non-hierarchical), if the
+ *   URI host does not match [JourneyConfig.serverUrl], or if either required query parameter is
+ *   absent or blank.
+ */
+suspend fun Journey.start(backchannelUri: Uri, option: Option.() -> Unit = {}): Node {
+    val journeyConfig = config as? JourneyConfig
+        ?: return FailureNode(IllegalArgumentException("JourneyConfig missing"))
+
+    if (!journeyConfig.isServerUrlInitialized) {
+        return FailureNode(IllegalArgumentException("JourneyConfig.serverUrl is not configured"))
+    }
+
+    val configUri = Uri.parse(journeyConfig.serverUrl)
+    val configHost = configUri.host
+    if ((configUri.scheme != "http" && configUri.scheme != "https") || configHost.isNullOrBlank()) {
+        return FailureNode(
+            IllegalArgumentException("JourneyConfig.serverUrl must be an absolute http(s) URL with a host")
+        )
+    }
+
+    // Opaque URIs have no query string; getQueryParameter would throw UnsupportedOperationException.
+    if (!backchannelUri.isHierarchical) {
+        return FailureNode(IllegalArgumentException("Backchannel URI is not hierarchical"))
+    }
+
+    // Hostnames are case-insensitive, see RFC 3986 section 3.2.2.
+    if (!configHost.equals(backchannelUri.host, ignoreCase = true)) {
+        return FailureNode(IllegalArgumentException("Backchannel URI host does not match configured serverUrl"))
+    }
+
+    val authIndexType = backchannelUri.getQueryParameter(AUTH_INDEX_TYPE)
+    val authIndexValue = backchannelUri.getQueryParameter(AUTH_INDEX_VALUE)
+    if (authIndexType.isNullOrBlank() || authIndexValue.isNullOrBlank()) {
+        return FailureNode(IllegalArgumentException("Missing authIndexType or authIndexValue"))
+    }
+
+    return start {
+        START_REQUEST to fun Request.() {
+            parameter(AUTH_INDEX_TYPE, authIndexType)
+            parameter(AUTH_INDEX_VALUE, authIndexValue)
         }
         option(this, option)
     }
