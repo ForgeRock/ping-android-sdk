@@ -15,10 +15,8 @@ import kotlinx.serialization.json.put
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
-import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
 import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 
 /**
  * Tests for the [RecognizeCollector] factory.
@@ -71,26 +69,29 @@ class RecognizeCollectorTest {
     }
 
     @Test
-    fun `unknown operationType throws IllegalArgumentException`() {
+    fun `unknown operationType falls back to RecognizeEnrollCollector`() {
         val input = buildJsonObject {
             put("operationType", "UNKNOWN_OP")
         }
-        val exception = assertFailsWith<IllegalArgumentException> {
-            RecognizeCollector().init(input)
-        }
-        assertTrue(
-            exception.message?.contains("UNKNOWN_OP") == true,
-            "Exception message should include the unknown operationType value",
-        )
+
+        assertIs<RecognizeEnrollCollector>(RecognizeCollector().init(input))
     }
 
     @Test
-    fun `missing operationType throws IllegalArgumentException`() {
+    fun `missing operationType falls back to RecognizeEnrollCollector`() {
         val input = buildJsonObject {
             put("key", "recognizeKey")
         }
-        assertFailsWith<IllegalArgumentException> {
-            RecognizeCollector().init(input)
+
+        assertIs<RecognizeEnrollCollector>(RecognizeCollector().init(input))
+    }
+
+    @Test
+    fun `blank operationType falls back to RecognizeEnrollCollector`() {
+        val input = buildJsonObject {
+            put("operationType", " ")
         }
+
+        assertIs<RecognizeEnrollCollector>(RecognizeCollector().init(input))
     }
 }

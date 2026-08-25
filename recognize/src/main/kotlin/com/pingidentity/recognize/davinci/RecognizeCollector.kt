@@ -16,14 +16,12 @@ import kotlinx.serialization.json.jsonPrimitive
  *
  * Reads the `operationType` discriminator from the server JSON and returns a fully initialised
  * concrete collector:
- * - `"ENROLL"` → [RecognizeEnrollCollector]
  * - `"AUTHENTICATE"` → [RecognizeAuthenticateCollector]
+ * - `"ENROLL"`, missing, blank, or unsupported values → [RecognizeEnrollCollector]
  *
  * The factory itself performs no SDK calls. Once [init] returns, the child collector replaces
  * the factory in the DaVinci pipeline — the factory's [id] and [payload] defaults are never
  * invoked at runtime.
- *
- * @throws IllegalArgumentException if `operationType` is missing or unsupported.
  */
 class RecognizeCollector : Collector<JsonObject> {
 
@@ -33,15 +31,12 @@ class RecognizeCollector : Collector<JsonObject> {
      *
      * @param input The JSON object received from the DaVinci server.
      * @return A fully initialised [RecognizeEnrollCollector] or [RecognizeAuthenticateCollector].
-     * @throws IllegalArgumentException if `operationType` is absent or not one of the supported values.
      */
     override fun init(input: JsonObject): Collector<JsonObject> {
         val operationType = input["operationType"]?.jsonPrimitive?.content
-            ?: throw IllegalArgumentException("operationType is required")
         return when (operationType) {
-            "ENROLL" -> RecognizeEnrollCollector()
             "AUTHENTICATE" -> RecognizeAuthenticateCollector()
-            else -> throw IllegalArgumentException("operationType: $operationType is not supported")
+            else -> RecognizeEnrollCollector()
         }.apply {
             init(input)
         }
