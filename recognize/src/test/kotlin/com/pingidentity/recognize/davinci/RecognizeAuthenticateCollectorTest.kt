@@ -245,12 +245,4 @@ class RecognizeAuthenticateCollectorTest {
         assertTrue(collector.collect().isSuccess)
     }
 
-    @Test
-    fun `shouldRemovePin is parsed`() = runTest {
-        val input = authInput {
-            put("shouldRemovePin", "true")
-        }
-        val collector = RecognizeAuthenticateCollector().apply { init(input) }
-        assertTrue(collector.collect().isSuccess)
-    }
 }

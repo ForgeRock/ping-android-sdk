@@ -915,36 +915,6 @@ class RecognizeCallbackTest {
     }
 
     @Test
-    fun `auth mobileSDKOptions shouldRemovePin is forwarded`() = runTest {
-        val json = Json.parseToJsonElement(
-            """
-            {
-              "type": "PingOneRecognizeCallback",
-              "output": [
-                { "name": "operationType",    "value": "AUTHENTICATE" },
-                { "name": "host",             "value": "h" },
-                { "name": "apiKey",           "value": "k" },
-                { "name": "mobileSDKOptions", "value": { "shouldRemovePin": "true" } }
-              ],
-              "input": [
-                { "name": "IDToken1signedJwt",              "value": "" },
-                { "name": "IDToken1clientState",            "value": "" },
-                { "name": "IDToken1recognizeId",            "value": "" },
-                { "name": "IDToken1devicePublicSigningKey", "value": "" },
-                { "name": "IDToken1clientError",            "value": "" },
-                { "name": "IDToken1clientErrorCode",        "value": "" }
-              ]
-            }
-            """
-        ) as JsonObject
-        val authSlot = slot<BiomAuthConfig>()
-        coEvery { Recognize.authenticate(capture(authSlot)) } returns Result.success(authSuccess)
-        val callback = RecognizeCallback().init(json) as PingOneRecognizeAuthenticateCallback
-        assertTrue(callback.authenticate().isSuccess)
-        assertTrue(authSlot.captured.shouldRemovePin)
-    }
-
-    @Test
     fun `authenticate with retrieveSelfie true sets shouldRetrieveAuthenticationFrame on BiomAuthConfig`() = runTest {
         val authSlot = slot<BiomAuthConfig>()
         coEvery { Recognize.authenticate(capture(authSlot)) } returns Result.success(authSuccess)

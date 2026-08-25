@@ -43,7 +43,6 @@ import kotlin.coroutines.coroutineContext
  * | `mobileSDKOptions.livenessEnvironmentAware`         | `livenessEnvironmentAware`            |
  * | `mobileSDKOptions.cameraDelaySeconds`               | `cameraDelaySeconds`                  |
  * | `mobileSDKOptions.showSuccessFeedback`              | `showSuccessFeedback`                 |
- * | `mobileSDKOptions.shouldRemovePin`                  | `shouldRemovePin`                     |
  * | `mobileSDKOptions.presentationStyle`                | `presentationStyle`                   |
  * | `mobileSDKOptions.shouldRetriveAuthenticationFrame` | `shouldRetrieveAuthenticationFrame`   |
  *
@@ -110,8 +109,6 @@ class RecognizeAuthenticateCollector : AbstractRecognizeCollector() {
             }
 
             val biomAuthConfig = BiomAuthConfig(
-                shouldRemovePin = opts["shouldRemovePin"]?.jsonPrimitive?.contentOrNull
-                    ?.toBoolean() ?: base.shouldRemovePin,
                 operationInfo = operationInfo,
                 jwtSigningInfo = jwtSigningInfo,
                 dynamicLinkingInfo = base.dynamicLinkingInfo,

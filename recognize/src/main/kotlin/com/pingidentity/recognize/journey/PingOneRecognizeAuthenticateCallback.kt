@@ -54,7 +54,6 @@ class PingOneRecognizeAuthenticateCallback : AbstractRecognizeCallback() {
      * | `mobileSDKOptions.cameraDelaySeconds`               | `cameraDelaySeconds`                 |
      * | `mobileSDKOptions.showSuccessFeedback`              | `showSuccessFeedback`                |
      * | `mobileSDKOptions.presentationStyle`                | `presentationStyle`                  |
-     * | `mobileSDKOptions.shouldRemovePin`                  | `shouldRemovePin`                    |
      * | `mobileSDKOptions.numberOfEnrollmentCircuits`       | `setupConfig.numberOfEnrollmentCircuits` |
      *
      * @return [Result] containing [RecognizeSuccess] on success, or a [Throwable] on failure.
@@ -102,8 +101,6 @@ class PingOneRecognizeAuthenticateCallback : AbstractRecognizeCallback() {
         val opts = mobileSDKOptions
         val base = BiomAuthConfig()
         return BiomAuthConfig(
-            shouldRemovePin = opts["shouldRemovePin"]?.jsonPrimitive?.contentOrNull
-                ?.toBoolean() ?: base.shouldRemovePin,
             operationInfo = buildOperationInfo(),
             jwtSigningInfo = buildJwtSigningInfo(),
             dynamicLinkingInfo = base.dynamicLinkingInfo,

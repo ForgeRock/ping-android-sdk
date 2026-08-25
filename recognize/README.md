@@ -153,7 +153,6 @@ On success, `IDToken1signedJwt`, `IDToken1clientState`, and `IDToken1recognizeId
 | `mobileSDKOptions.cameraDelaySeconds`                    | `cameraDelaySeconds`                    |
 | `mobileSDKOptions.showSuccessFeedback`                   | `showSuccessFeedback`                   |
 | `mobileSDKOptions.presentationStyle`                     | `presentationStyle`                     |
-| `mobileSDKOptions.shouldRemovePin`                       | `shouldRemovePin`                       |
 | `mobileSDKOptions.shouldRetriveAuthenticationFrame`      | `shouldRetrieveAuthenticationFrame`     |
 | `mobileSDKOptions.numberOfEnrollmentCircuits`            | `setupConfig.numberOfEnrollmentCircuits`|
 
