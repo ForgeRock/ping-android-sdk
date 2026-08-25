@@ -135,7 +135,6 @@ For Push notifications:
 2. Configure Firebase Cloud Messaging in Firebase Console
 3. Enable push notifications in device settings
 
-<<<<<<< HEAD
 ### PingOne MFA Setup
 
 The PingOne MFA module (`pingonemfa`) requires additional one-time configuration:
@@ -143,7 +142,6 @@ The PingOne MFA module (`pingonemfa`) requires additional one-time configuration
 2. The FCM token is registered with PingOne automatically via `PingOneMFA.setDeviceToken(token)` whenever Firebase delivers a new token
 3. See the [pingonemfa README](../pingonemfa/README.md) for the full list of supported regions and API reference
 4. See the [PingOne MFA documentation](https://docs.pingidentity.com/pingone/strong_authentication_mfa/p1_strong_authentication_configure_mobile_applications.html) for server-side configuration and integration details
-=======
 ### PingOne Recognize integration
 
 The Recognize integration is optional because its Keyless SDK dependencies are hosted in protected Cloudsmith repositories.
@@ -179,7 +177,6 @@ If `cloudsmithTokenRecognize` is missing or blank, the sample remains buildable 
 
 This means you can work on the sample without Recognize Cloudsmith access, then add the required tokens locally whenever you need to exercise the full integration. After changing either token, sync or rerun Gradle so the correct repository and dependency graph are selected.
 
->>>>>>> 6b68ae4 ([docs] Document Recognize sample setup)
 ## Implementation Highlights
 
 ### ViewModel Initialization
