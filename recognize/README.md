@@ -107,7 +107,7 @@ for await node in journey.start() {
 
 #### Retrieving the selfie frame (optional)
 
-Both callbacks accept a `retrieveSelfie: Boolean` parameter. When `true`, the captured face frame is returned in `RecognizeSuccess.selfie` as a `Bitmap`:
+Both callbacks accept a `retrieveSelfie: Boolean` parameter. When `true`, the captured face frame is returned in `RecognizeSuccess.selfie` as a `Bitmap`. Every successful enroll or authenticate operation also retrieves the current device public signing key from the Keyless SDK and exposes it as `RecognizeSuccess.devicePublicSigningKey`. If key retrieval fails, the operation returns a failure rather than a successful result with an empty key.
 
 ```kotlin
 val result = callback.enroll(retrieveSelfie = true)
@@ -158,7 +158,7 @@ On success, `IDToken1signedJwt`, `IDToken1clientState`, and `IDToken1recognizeId
 
 > **Note:** `shouldRetriveAuthenticationFrame` preserves the server-side typo (missing `e` in `Retrieve`) — this is the exact JSON key the server sends.
 
-On success, `IDToken1signedJwt` and `IDToken1clientState` are submitted automatically.
+On success, `IDToken1signedJwt`, `IDToken1clientState`, and `IDToken1devicePublicSigningKey` are submitted automatically. The signing key is freshly retrieved from the Keyless SDK for each successful authentication. Journey enrollment retains its existing five-input contract, so its key is available through `RecognizeSuccess.devicePublicSigningKey` rather than a Journey input field.
 
 #### Enroll-from-clientState (auth flow)
 

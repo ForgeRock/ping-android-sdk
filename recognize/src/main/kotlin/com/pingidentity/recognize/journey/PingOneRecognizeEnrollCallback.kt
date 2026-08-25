@@ -19,8 +19,10 @@ import com.pingidentity.recognize.RecognizeSuccess
  * this class only adds the [enroll] operation.
  *
  * On success, the signed JWT, client state, and recognize ID are submitted to the Journey
- * via the five input fields: `IDToken1signedJwt`, `IDToken1clientState`,
- * `IDToken1recognizeId`, `IDToken1clientError`, `IDToken1clientErrorCode`.
+ * via the existing five input fields: `IDToken1signedJwt`, `IDToken1clientState`,
+ * `IDToken1recognizeId`, `IDToken1clientError`, `IDToken1clientErrorCode`. The freshly retrieved
+ * device public signing key is exposed through [RecognizeSuccess], but Journey enrollment has no
+ * corresponding input slot. Key retrieval failure is returned as a failed operation.
  *
  * @see RecognizeCallback
  * @see PingOneRecognizeAuthenticateCallback
@@ -51,38 +53,45 @@ class PingOneRecognizeEnrollCallback : AbstractRecognizeCallback() {
      */
     suspend fun enroll(config: RecognizeEnrollConfig.() -> Unit = {}): Result<RecognizeSuccess> {
         val resolvedConfig = RecognizeEnrollConfig().apply(config)
-        return Recognize.setup(buildSetupConfig())
-            .fold(
-                onSuccess = { Recognize.enroll(buildEnrollConfig(retrieveSelfie = resolvedConfig.retrieveSelfie)) },
-                onFailure = { Result.failure(it) }
+        val result = Recognize.setup(buildSetupConfig()).fold(
+            onSuccess = {
+                Recognize.enroll(buildEnrollConfig(retrieveSelfie = resolvedConfig.retrieveSelfie)).fold(
+                    onSuccess = { success ->
+                        Recognize.getDevicePublicSigningKey().map { devicePublicSigningKey ->
+                            RecognizeSuccess(
+                                selfie = success.enrollmentFrame,
+                                signedJwt = success.signedJwt,
+                                clientState = success.clientState,
+                                recognizeId = success.keylessId,
+                                devicePublicSigningKey = devicePublicSigningKey,
+                            )
+                        }
+                    },
+                    onFailure = { Result.failure(it) },
+                )
+            },
+            onFailure = { Result.failure(it) },
+        )
+
+        result.onSuccess { success ->
+            submitResult(
+                signedJwt = success.signedJwt ?: "",
+                clientState = success.clientState ?: "",
+                recognizeId = success.recognizeId,
+                clientError = "",
+                clientErrorCode = "",
             )
-            .onSuccess { success ->
-                submitResult(
-                    signedJwt = success.signedJwt ?: "",
-                    clientState = success.clientState ?: "",
-                    recognizeId = success.keylessId,
-                    clientError = "",
-                    clientErrorCode = "",
-                )
-            }
-            .onFailure { error ->
-                val ex = error.asRecognizeException()
-                submitResult(
-                    signedJwt = "",
-                    clientState = "",
-                    recognizeId = "",
-                    clientError = ex.message,
-                    clientErrorCode = ex.code.toString(),
-                )
-            }
-            .map { success ->
-                RecognizeSuccess(
-                    selfie = success.enrollmentFrame,
-                    signedJwt = success.signedJwt,
-                    clientState = success.clientState,
-                    recognizeId = success.keylessId,
-                )
-            }
+        }.onFailure { error ->
+            val ex = error.asRecognizeException()
+            submitResult(
+                signedJwt = "",
+                clientState = "",
+                recognizeId = "",
+                clientError = ex.message,
+                clientErrorCode = ex.code.toString(),
+            )
+        }
+        return result
     }
 
     private fun submitResult(

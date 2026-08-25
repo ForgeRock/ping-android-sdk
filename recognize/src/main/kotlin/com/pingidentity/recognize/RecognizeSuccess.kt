@@ -19,10 +19,12 @@ import android.graphics.Bitmap
  * @property clientState Opaque client state returned by the SDK.
  * @property recognizeId The Keyless SDK user identifier. Populated after enroll; empty after a pure
  *   authenticate operation.
+ * @property devicePublicSigningKey The freshly retrieved device public signing key.
  */
 data class RecognizeSuccess(
     val selfie: Bitmap?,
     val signedJwt: String?,
     val clientState: String?,
     val recognizeId: String,
+    val devicePublicSigningKey: String,
 )

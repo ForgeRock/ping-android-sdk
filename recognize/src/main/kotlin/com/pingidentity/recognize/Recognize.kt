@@ -74,6 +74,24 @@ object Recognize {
     }
 
     /**
+     * Retrieves the device public signing key from the configured Keyless SDK.
+     *
+     * The key is read synchronously and is not cached so callers can retrieve the
+     * current key before submitting each completed operation.
+     *
+     * @return [Result.success] with the public signing key, or [Result.failure]
+     * wrapping a [RecognizeException] when retrieval fails.
+     */
+    internal fun getDevicePublicSigningKey(): Result<String> = try {
+        when (val result = Keyless.getDevicePublicSigningKey()) {
+            is Keyless.KeylessResult.Success -> Result.success(result.value)
+            is Keyless.KeylessResult.Failure -> Result.failure(RecognizeException.from(result.error))
+        }
+    } catch (error: Throwable) {
+        Result.failure(error.asRecognizeException())
+    }
+
+    /**
      * Runs a biometric enrollment flow using the Keyless SDK.
      *
      * @param biomEnrollConfig Enrollment parameters (liveness, presentation style, selfie capture, etc.).

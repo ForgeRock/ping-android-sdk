@@ -23,9 +23,10 @@ import kotlinx.serialization.json.jsonPrimitive
  * `operationType = "AUTHENTICATE"`. All output fields are parsed by [AbstractRecognizeCallback];
  * this class only adds the [authenticate] operation.
  *
- * On success, the signed JWT and client state are submitted to the Journey via the six
- * input fields: `IDToken1signedJwt`, `IDToken1clientState`, `IDToken1recognizeId` (empty),
- * `IDToken1devicePublicSigningKey`, `IDToken1clientError`, `IDToken1clientErrorCode`.
+ * On success, the signed JWT, client state, and freshly retrieved device public signing key are
+ * submitted to the Journey via the six input fields: `IDToken1signedJwt`, `IDToken1clientState`,
+ * `IDToken1recognizeId` (empty), `IDToken1devicePublicSigningKey`, `IDToken1clientError`,
+ * `IDToken1clientErrorCode`. Key retrieval failure is returned as a failed operation.
  *
  * @see RecognizeCallback
  * @see PingOneRecognizeEnrollCallback
@@ -62,39 +63,70 @@ class PingOneRecognizeAuthenticateCallback : AbstractRecognizeCallback() {
         val resolvedConfig = RecognizeAuthenticateConfig().apply(config)
         val storedClientState = clientState
 
-        return Recognize.setup(buildSetupConfig())
-            .fold(
-                onSuccess = {
-                    // validateUserAndDeviceActive requires the SDK to be configured first.
-                    val shouldEnroll = storedClientState.isNotEmpty() &&
-                        !Recognize.validateUserAndDeviceActive().isSuccess
-                    if (shouldEnroll) {
-                        Recognize.enroll(buildEnrollConfig(clientStateOverride = storedClientState, retrieveSelfie = resolvedConfig.retrieveSelfie))
-                            .map { success -> RecognizeSuccess(selfie = success.enrollmentFrame, signedJwt = success.signedJwt, clientState = success.clientState, recognizeId = success.keylessId) }
-                    } else {
-                        Recognize.authenticate(buildAuthConfig(resolvedConfig.retrieveSelfie))
-                            .map { success -> RecognizeSuccess(selfie = success.authenticationFrame, signedJwt = success.signedJwt, clientState = success.clientState, recognizeId = "") }
-                    }
-                },
-                onFailure = { Result.failure(it) }
+        val result = Recognize.setup(buildSetupConfig()).fold(
+            onSuccess = {
+                // validateUserAndDeviceActive requires the SDK to be configured first.
+                val shouldEnroll = storedClientState.isNotEmpty() &&
+                    !Recognize.validateUserAndDeviceActive().isSuccess
+                if (shouldEnroll) {
+                    Recognize.enroll(
+                        buildEnrollConfig(
+                            clientStateOverride = storedClientState,
+                            retrieveSelfie = resolvedConfig.retrieveSelfie,
+                        )
+                    ).fold(
+                        onSuccess = { success ->
+                            Recognize.getDevicePublicSigningKey().map { devicePublicSigningKey ->
+                                RecognizeSuccess(
+                                    selfie = success.enrollmentFrame,
+                                    signedJwt = success.signedJwt,
+                                    clientState = success.clientState,
+                                    recognizeId = success.keylessId,
+                                    devicePublicSigningKey = devicePublicSigningKey,
+                                )
+                            }
+                        },
+                        onFailure = { Result.failure(it) },
+                    )
+                } else {
+                    Recognize.authenticate(buildAuthConfig(resolvedConfig.retrieveSelfie)).fold(
+                        onSuccess = { success ->
+                            Recognize.getDevicePublicSigningKey().map { devicePublicSigningKey ->
+                                RecognizeSuccess(
+                                    selfie = success.authenticationFrame,
+                                    signedJwt = success.signedJwt,
+                                    clientState = success.clientState,
+                                    recognizeId = "",
+                                    devicePublicSigningKey = devicePublicSigningKey,
+                                )
+                            }
+                        },
+                        onFailure = { Result.failure(it) },
+                    )
+                }
+            },
+            onFailure = { Result.failure(it) },
+        )
+
+        result.onSuccess { success ->
+            submitResult(
+                signedJwt = success.signedJwt ?: "",
+                clientState = success.clientState ?: "",
+                devicePublicSigningKey = success.devicePublicSigningKey,
+                clientError = "",
+                clientErrorCode = "",
             )
-            .onSuccess { result ->
-                submitResult(
-                    signedJwt = result.signedJwt ?: "",
-                    clientState = result.clientState ?: "",
-                    clientError = "",
-                    clientErrorCode = "",
-                )
-            }
-            .onFailure { error ->
-                val ex = error.asRecognizeException()
-                submitResult(
-                    signedJwt = "",
-                    clientState = "",
-                    clientError = ex.message,
-                    clientErrorCode = ex.code.toString(),
-                )
-            }
+        }.onFailure { error ->
+            val ex = error.asRecognizeException()
+            submitResult(
+                signedJwt = "",
+                clientState = "",
+                devicePublicSigningKey = "",
+                clientError = ex.message,
+                clientErrorCode = ex.code.toString(),
+            )
+        }
+        return result
     }
 
     private fun buildAuthConfig(retrieveSelfie: Boolean): BiomAuthConfig {
@@ -126,16 +158,14 @@ class PingOneRecognizeAuthenticateCallback : AbstractRecognizeCallback() {
     private fun submitResult(
         signedJwt: String,
         clientState: String,
+        devicePublicSigningKey: String,
         clientError: String,
         clientErrorCode: String,
     ) {
-        val recognizeId = ""
-        val devicePublicSigningKey = ""
-
         input(
             signedJwt,
             clientState,
-            recognizeId,
+            "",
             devicePublicSigningKey,
             clientError,
             clientErrorCode

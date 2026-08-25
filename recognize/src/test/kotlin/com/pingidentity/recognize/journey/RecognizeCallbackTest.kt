@@ -65,6 +65,7 @@ class RecognizeCallbackTest {
         coEvery { Recognize.enroll(any()) } returns Result.success(enrollSuccess)
         coEvery { Recognize.authenticate(any()) } returns Result.success(authSuccess)
         coEvery { Recognize.validateUserAndDeviceActive() } returns Result.success(Unit)
+        every { Recognize.getDevicePublicSigningKey() } returns Result.success("device-public-key")
     }
 
     @AfterTest
@@ -218,6 +219,7 @@ class RecognizeCallbackTest {
         val callback = RecognizeCallback().init(enrollCallbackJson()) as PingOneRecognizeEnrollCallback
         val result = callback.enroll()
         assertTrue(result.isSuccess)
+        assertEquals("device-public-key", result.getOrThrow().devicePublicSigningKey)
 
         val inputs = callback.payload()["input"]!!.jsonArray
         assertEquals("signed-jwt",  inputs[0].jsonObject["value"]!!.jsonPrimitive.content)
@@ -290,7 +292,7 @@ class RecognizeCallbackTest {
         assertEquals("signed-jwt",   inputs[0].jsonObject["value"]!!.jsonPrimitive.content)
         assertEquals("client-state", inputs[1].jsonObject["value"]!!.jsonPrimitive.content)
         assertEquals("",             inputs[2].jsonObject["value"]!!.jsonPrimitive.content) // recognizeId empty for auth
-        assertEquals("",             inputs[3].jsonObject["value"]!!.jsonPrimitive.content) // devicePublicSigningKey
+        assertEquals("device-public-key", inputs[3].jsonObject["value"]!!.jsonPrimitive.content) // devicePublicSigningKey
         assertEquals("",             inputs[4].jsonObject["value"]!!.jsonPrimitive.content)
         assertEquals("",             inputs[5].jsonObject["value"]!!.jsonPrimitive.content)
     }
@@ -392,7 +394,9 @@ class RecognizeCallbackTest {
         coEvery { Recognize.enroll(capture(enrollSlot)) } returns Result.success(enrollSuccess)
 
         val callback = RecognizeCallback().init(authWithClientStateJson("my-client-state")) as PingOneRecognizeAuthenticateCallback
-        assertTrue(callback.authenticate().isSuccess)
+        val result = callback.authenticate()
+        assertTrue(result.isSuccess)
+        assertEquals("device-public-key", result.getOrThrow().devicePublicSigningKey)
 
         coVerify(exactly = 0) { Recognize.authenticate(any()) }
         coVerify(exactly = 1) { Recognize.enroll(any()) }
