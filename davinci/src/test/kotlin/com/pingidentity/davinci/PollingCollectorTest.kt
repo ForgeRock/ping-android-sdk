@@ -63,16 +63,16 @@ class PollingCollectorTest {
     fun `should initialize with default values from JsonObject`() {
         val pollingCollector = PollingCollector()
         val jsonObject = buildJsonObject {
-            put("pollInterval", "3000")
-            put("pollRetries", "30")
+            put("pollInterval", 3000)
+            put("pollRetries", 30)
             put("pollChallengeStatus", false)
             put("challenge", "testChallenge")
         }
 
         pollingCollector.init(jsonObject)
 
-        assertEquals("3000", pollingCollector.pollInterval)
-        assertEquals("30", pollingCollector.pollRetries)
+        assertEquals(3000, pollingCollector.pollInterval)
+        assertEquals(30, pollingCollector.pollRetries)
         assertFalse(pollingCollector.pollChallengeStatus)
         assertEquals("testChallenge", pollingCollector.challenge)
     }
@@ -84,8 +84,8 @@ class PollingCollectorTest {
 
         pollingCollector.init(jsonObject)
 
-        assertEquals("2000", pollingCollector.pollInterval)
-        assertEquals("60", pollingCollector.pollRetries)
+        assertEquals(2000, pollingCollector.pollInterval)
+        assertEquals(60, pollingCollector.pollRetries)
         assertFalse(pollingCollector.pollChallengeStatus)
         assertEquals("", pollingCollector.challenge)
     }
@@ -114,8 +114,8 @@ class PollingCollectorTest {
     fun `should execute simple polling without challenge status`() = runTest {
         val pollingCollector = PollingCollector()
         val jsonObject = buildJsonObject {
-            put("pollInterval", "10")
-            put("pollRetries", "5")
+            put("pollInterval", 10)
+            put("pollRetries", 5)
             put("pollChallengeStatus", false)
         }
 
@@ -155,8 +155,8 @@ class PollingCollectorTest {
 
         // Create test input
         val inputJson = buildJsonObject {
-            put("pollInterval", "10")
-            put("pollRetries", "5")
+            put("pollInterval", 10)
+            put("pollRetries", 5)
             put("pollChallengeStatus", true)
             put("challenge", "test-challenge-123")
             put("interactionId", "test-interaction-id")
@@ -217,8 +217,8 @@ class PollingCollectorTest {
 
         // Create test input
         val inputJson = buildJsonObject {
-            put("pollInterval", "10")
-            put("pollRetries", maxRetries.toString())
+            put("pollInterval", 10)
+            put("pollRetries", maxRetries)
             put("pollChallengeStatus", true)
             put("challenge", "test-challenge-456")
             put("interactionId", "test-interaction-id-2")
@@ -283,8 +283,8 @@ class PollingCollectorTest {
         every { daVinci.config.httpClient } returns httpClient
 
         val inputJson = buildJsonObject {
-            put("pollInterval", "10")
-            put("pollRetries", maxRetries.toString())
+            put("pollInterval", 10)
+            put("pollRetries", maxRetries)
             put("pollChallengeStatus", true)
             put("challenge", "test-challenge-789")
             put("interactionId", "test-interaction-id-3")
@@ -404,8 +404,8 @@ class PollingCollectorTest {
         every { daVinci.config.httpClient } returns httpClient
 
         val inputJson = buildJsonObject {
-            put("pollInterval", "10")
-            put("pollRetries", "3")
+            put("pollInterval", 10)
+            put("pollRetries", 3)
             put("pollChallengeStatus", true)
             put("challenge", "test-challenge-error")
             put("interactionId", "test-interaction-id-error")
@@ -518,8 +518,8 @@ class PollingCollectorTest {
         every { daVinci.config.httpClient } returns httpClient
 
         val inputJson = buildJsonObject {
-            put("pollInterval", "10")
-            put("pollRetries", "3")
+            put("pollInterval", 10)
+            put("pollRetries", 3)
             put("pollChallengeStatus", true)
             put("challenge", "test-challenge-parse-error")
             put("interactionId", "test-interaction-id-parse-error")
@@ -559,7 +559,7 @@ class PollingCollectorTest {
     fun `should not poll when pollChallengeStatus is false`() = runTest {
         val pollingCollector = PollingCollector()
         val inputJson = buildJsonObject {
-            put("pollInterval", "10")
+            put("pollInterval", 10)
             put("pollChallengeStatus", false)
             put("challenge", "test-challenge")
         }
@@ -580,7 +580,7 @@ class PollingCollectorTest {
         val pollingCollector = PollingCollector()
 
         val inputJson = buildJsonObject {
-            put("pollInterval", "10")
+            put("pollInterval", 10)
             put("pollChallengeStatus", true)
             put("challenge", "")
         }
@@ -600,8 +600,8 @@ class PollingCollectorTest {
     fun `should emit TimeOut when simple polling retries reach 0`() = runTest {
         val pollingCollector = PollingCollector()
         val inputJson = buildJsonObject {
-            put("pollInterval", "10")
-            put("pollRetries", "1") // Only 1 retry
+            put("pollInterval", 10)
+            put("pollRetries", 1) // Only 1 retry
             put("pollChallengeStatus", false)
         }
 
@@ -620,8 +620,8 @@ class PollingCollectorTest {
     fun `should emit Complete with continue on each poll call and TimedOut when retries exhausted`() = runTest {
         val pollingCollector = PollingCollector()
         val inputJson = buildJsonObject {
-            put("pollInterval", "10")
-            put("pollRetries", "3")
+            put("pollInterval", 10)
+            put("pollRetries", 3)
             put("pollChallengeStatus", false)
         }
 

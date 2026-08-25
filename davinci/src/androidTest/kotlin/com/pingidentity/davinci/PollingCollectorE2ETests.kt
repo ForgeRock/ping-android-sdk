@@ -83,8 +83,8 @@ class PollingCollectorE2ETests {
         assertEquals("Automation - Polling", node.name)
         val pollingCollector = node.collectors.filterIsInstance<PollingCollector>().first()
         assertFalse(pollingCollector.pollChallengeStatus)
-        assertEquals(2000, pollingCollector.pollInterval.toInt())
-        assertEquals(3, pollingCollector.pollRetries.toInt())
+        assertEquals(2000, pollingCollector.pollInterval)
+        assertEquals(3, pollingCollector.pollRetries)
         assertEquals(3, pollingCollector.retriesAllowed)
 
         // Cycle 1 — retriesAllowed 3→2, emits Complete("continue"); server rewinds to same form
@@ -178,8 +178,8 @@ class PollingCollectorE2ETests {
         assertEquals("Automation - Polling", node.name)
         val pollingCollector = node.collectors.filterIsInstance<PollingCollector>().first()
         assertTrue(pollingCollector.pollChallengeStatus)
-        assertEquals(2000, pollingCollector.pollInterval.toInt())
-        assertEquals(3, pollingCollector.pollRetries.toInt())
+        assertEquals(2000, pollingCollector.pollInterval)
+        assertEquals(3, pollingCollector.pollRetries)
         assertTrue(pollingCollector.challenge.isNotEmpty())
 
         val statuses = pollingCollector.pollStatus().toList()
@@ -231,8 +231,8 @@ class PollingCollectorE2ETests {
         assertEquals("Automation - Polling", node.name)
         val pollingCollector = node.collectors.filterIsInstance<PollingCollector>().first()
         assertTrue(pollingCollector.pollChallengeStatus)
-        assertTrue(pollingCollector.pollInterval.toInt() > 0)
-        assertTrue(pollingCollector.pollRetries.toInt() > 0)
+        assertTrue(pollingCollector.pollInterval > 0)
+        assertTrue(pollingCollector.pollRetries > 0)
         assertTrue(pollingCollector.challenge.isNotEmpty())
 
         // The OOB URL is embedded in the label as "Number Challenge <url>"
@@ -316,7 +316,7 @@ class PollingCollectorE2ETests {
         // Verify PollingCollector is present and configured for challenge-status polling
         val pollingCollector = node.collectors.filterIsInstance<PollingCollector>().first()
         assertTrue(pollingCollector.pollChallengeStatus)
-        assertEquals(2000, pollingCollector.pollInterval.toInt())
+        assertEquals(2000, pollingCollector.pollInterval)
         assertTrue(pollingCollector.challenge.isNotEmpty())
 
         // Poll until all retries are exhausted — no OOB approval, so TimedOut is emitted last

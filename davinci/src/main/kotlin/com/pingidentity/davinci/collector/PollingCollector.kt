@@ -25,6 +25,7 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.boolean
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import kotlin.time.Duration.Companion.milliseconds
 
 // JSON field constants for polling configuration and status
 
@@ -165,14 +166,14 @@ class PollingCollector : SingleValueCollector(), Submittable, ContinueNodeAware,
      * Polling interval in milliseconds between each polling attempt.
      * Default value is "2000" (2 seconds).
      */
-    lateinit var pollInterval: String
+    var pollInterval: Int = 2000
         private set
 
     /**
      * Maximum number of polling attempts before timing out.
      * Default value is "60".
      */
-    lateinit var pollRetries: String
+    var pollRetries: Int = 60
         private set
 
     /**
@@ -222,14 +223,14 @@ class PollingCollector : SingleValueCollector(), Submittable, ContinueNodeAware,
     override fun init(input: JsonObject): PollingCollector {
         super.init(input)
         // Extract polling configuration from input JSON with sensible defaults
-        pollInterval = input[POLL_INTERVAL]?.jsonPrimitive?.content ?: "2000" // Default: 2 seconds
-        pollRetries = input[POLL_RETRIES]?.jsonPrimitive?.content ?: "60" // Default: 60 attempts
+        pollInterval = input[POLL_INTERVAL]?.jsonPrimitive?.content?.toInt() ?: 2000 // Default: 2 seconds
+        pollRetries = input[POLL_RETRIES]?.jsonPrimitive?.content?.toInt() ?: 60 // Default: 60 attempts
         pollChallengeStatus =
             input[POLL_CHALLENGE_STATUS]?.jsonPrimitive?.boolean ?: false // Default: simple polling
         challenge = input[CHALLENGE]?.jsonPrimitive?.content ?: "" // Default: no challenge ID
 
         // Initialize remaining retries counter for simple polling mode
-        retriesAllowed = pollRetries.toInt()
+        retriesAllowed = pollRetries
         return this
     }
 
@@ -315,8 +316,8 @@ class PollingCollector : SingleValueCollector(), Submittable, ContinueNodeAware,
                 val pollingUrl = "$baseUrl/davinci/user/credentials/challenge/$challenge/status"
 
                 val httpClient = davinci.config.httpClient
-                val maxRetries = pollRetries.toIntOrNull() ?: 60
-                val interval = pollInterval.toLongOrNull() ?: 2000L
+                val maxRetries = pollRetries
+                val interval = pollInterval
 
                 var retryCount = 0
                 var shouldContinuePolling = true
@@ -324,7 +325,7 @@ class PollingCollector : SingleValueCollector(), Submittable, ContinueNodeAware,
                 // Poll repeatedly until challenge is complete, max retries reached, or error occurs
                 while (retryCount < maxRetries && shouldContinuePolling) {
                     // Wait before making the next polling request
-                    delay(interval)
+                    delay(interval.milliseconds)
 
                     try {
                         // Make HTTP POST request to check challenge status
@@ -392,9 +393,9 @@ class PollingCollector : SingleValueCollector(), Submittable, ContinueNodeAware,
             // --- Continue Polling Mode ---
             // Performs a simple delay without actively checking server status
 
-            if (pollInterval.toInt() > 0) {
+            if (pollInterval > 0) {
                 // Wait for the specified interval
-                delay(pollInterval.toLong())
+                delay(pollInterval.milliseconds)
 
                 // Decrement retries and emit Continue status
                 if (--retriesAllowed <= 0) {
