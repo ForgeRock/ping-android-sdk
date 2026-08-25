@@ -109,6 +109,9 @@ dependencies {
     implementation(project(":mfa:auth-migration"))
     implementation(project(":foundation:migration"))
 
+    // PingOne MFA
+    implementation(project(":pingonemfa"))
+
     //Application Pin
     implementation(libs.bcpkix.jdk18on)
 

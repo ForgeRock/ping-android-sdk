@@ -21,11 +21,13 @@ sealed interface Node
  * Represents a failure node in the workflow.
  * @property input The input JSON object.
  * @property message The failure message.
+ * @property status The optional HTTP status code associated with the failure.
  */
 data class ErrorNode(
     val context: FlowContext,
     val input: JsonObject = buildJsonObject { },
-    val message: String
+    val message: String,
+    val status: Int? = null
 ) : Node
 
 /**

@@ -8,6 +8,13 @@
 name: Prepare Device Farm Artifacts
 on:
   workflow_call:
+    inputs:
+      head_sha:
+        description: Head commit SHA to check out
+        type: string
+      head_repo:
+        description: Head repository to check out
+        type: string
     secrets:
       SIGNING_KEYSTORE:
         description: 'Needed for signing the apk artifacts'
@@ -39,8 +46,9 @@ jobs:
       - name: Clone the repository
         uses: actions/checkout@v5
         with:
-          ref: ${{ github.event.pull_request.head.ref }}
-          repository: ${{github.event.pull_request.head.repo.full_name}}
+          ref: ${{ inputs.head_sha || github.event.pull_request.head.sha }}
+          repository: ${{ inputs.head_repo || github.event.pull_request.head.repo.full_name }}
+          persist-credentials: false
 
       # Set up the variables for the tests from the secrets
       - name: Setup config file for e2e tests

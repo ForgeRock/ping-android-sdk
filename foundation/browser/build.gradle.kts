@@ -16,8 +16,16 @@ plugins {
 
 android {
     namespace = "com.pingidentity.browser"
-    defaultConfig {
-        manifestPlaceholders["appRedirectUriScheme"] = "com.pingidentity.test"
+
+    // SDKS-5296: Scope the redirect-scheme placeholder to the debug build type only.
+    // The release AAR (the published variant) intentionally leaves ${appRedirectUriScheme}
+    // unresolved so that downstream apps can supply their own value via manifestPlaceholders.
+    // The debugUnitTest and debugAndroidTest variants inherit this value from debug,
+    // which is sufficient for all local test runs.
+    buildTypes {
+        debug {
+            manifestPlaceholders["appRedirectUriScheme"] = "com.pingidentity.test"
+        }
     }
 }
 
