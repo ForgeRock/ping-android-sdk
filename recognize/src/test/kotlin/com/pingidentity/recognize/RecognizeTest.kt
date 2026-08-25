@@ -13,6 +13,7 @@ import io.keyless.sdk.configurations.enroll.BiomEnrollConfig
 import io.keyless.sdk.errorshandling.AuthenticationSuccess
 import io.keyless.sdk.errorshandling.EnrollmentSuccess
 import io.mockk.coEvery
+import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkObject
 import io.mockk.unmockkObject
@@ -42,6 +43,14 @@ class RecognizeTest {
 
         val result = Recognize.setup(SetupConfig(apiKey = "k", hosts = emptyList()))
         assertEquals(expected, result)
+    }
+
+    @Test
+    fun getUserIdIsMockableViaMockkObject() {
+        val expected = Result.success("user-id")
+        every { Recognize.getUserId() } returns expected
+
+        assertEquals(expected, Recognize.getUserId())
     }
 
     @Test

@@ -92,6 +92,21 @@ object Recognize {
     }
 
     /**
+     * Retrieves the current user identifier from the configured Keyless SDK.
+     *
+     * @return [Result.success] with the user identifier, or [Result.failure]
+     * wrapping a [RecognizeException] when retrieval fails.
+     */
+    internal fun getUserId(): Result<String> = try {
+        when (val result = Keyless.getUserId()) {
+            is Keyless.KeylessResult.Success -> Result.success(result.value)
+            is Keyless.KeylessResult.Failure -> Result.failure(RecognizeException.from(result.error))
+        }
+    } catch (error: Throwable) {
+        Result.failure(error.asRecognizeException())
+    }
+
+    /**
      * Runs a biometric enrollment flow using the Keyless SDK.
      *
      * @param biomEnrollConfig Enrollment parameters (liveness, presentation style, selfie capture, etc.).

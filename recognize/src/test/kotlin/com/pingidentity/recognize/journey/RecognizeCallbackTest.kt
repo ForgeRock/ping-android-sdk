@@ -66,6 +66,7 @@ class RecognizeCallbackTest {
         coEvery { Recognize.authenticate(any()) } returns Result.success(authSuccess)
         coEvery { Recognize.validateUserAndDeviceActive() } returns Result.success(Unit)
         every { Recognize.getDevicePublicSigningKey() } returns Result.success("device-public-key")
+        every { Recognize.getUserId() } returns Result.success("user-id")
     }
 
     @AfterTest
@@ -99,7 +100,7 @@ class RecognizeCallbackTest {
         """
     ) as JsonObject
 
-    /** Auth input slots: signedJwt, clientState, recognizeId (empty), devicePublicSigningKey, clientError, clientErrorCode */
+    /** Auth input slots: signedJwt, clientState, recognizeId, devicePublicSigningKey, clientError, clientErrorCode */
     private fun authCallbackJson(): JsonObject = Json.parseToJsonElement(
         """
         {
@@ -287,11 +288,12 @@ class RecognizeCallbackTest {
         val callback = RecognizeCallback().init(authCallbackJson()) as PingOneRecognizeAuthenticateCallback
         val result = callback.authenticate()
         assertTrue(result.isSuccess)
+        assertEquals("user-id", result.getOrThrow().recognizeId)
 
         val inputs = callback.payload()["input"]!!.jsonArray
         assertEquals("signed-jwt",   inputs[0].jsonObject["value"]!!.jsonPrimitive.content)
         assertEquals("client-state", inputs[1].jsonObject["value"]!!.jsonPrimitive.content)
-        assertEquals("",             inputs[2].jsonObject["value"]!!.jsonPrimitive.content) // recognizeId empty for auth
+        assertEquals("user-id",       inputs[2].jsonObject["value"]!!.jsonPrimitive.content) // recognizeId
         assertEquals("device-public-key", inputs[3].jsonObject["value"]!!.jsonPrimitive.content) // devicePublicSigningKey
         assertEquals("",             inputs[4].jsonObject["value"]!!.jsonPrimitive.content)
         assertEquals("",             inputs[5].jsonObject["value"]!!.jsonPrimitive.content)
@@ -381,7 +383,11 @@ class RecognizeCallbackTest {
         coEvery { Recognize.validateUserAndDeviceActive() } returns Result.success(Unit)
 
         val callback = RecognizeCallback().init(authWithClientStateJson()) as PingOneRecognizeAuthenticateCallback
-        assertTrue(callback.authenticate().isSuccess)
+        val result = callback.authenticate()
+        assertTrue(result.isSuccess)
+        assertEquals("user-id", result.getOrThrow().recognizeId)
+        val inputs = callback.payload()["input"]!!.jsonArray
+        assertEquals("user-id", inputs[2].jsonObject["value"]!!.jsonPrimitive.content)
 
         coVerify(exactly = 1) { Recognize.authenticate(any()) }
         coVerify(exactly = 0) { Recognize.enroll(any()) }
@@ -396,7 +402,11 @@ class RecognizeCallbackTest {
         val callback = RecognizeCallback().init(authWithClientStateJson("my-client-state")) as PingOneRecognizeAuthenticateCallback
         val result = callback.authenticate()
         assertTrue(result.isSuccess)
+        assertEquals("keyless-id", result.getOrThrow().recognizeId)
         assertEquals("device-public-key", result.getOrThrow().devicePublicSigningKey)
+
+        val inputs = callback.payload()["input"]!!.jsonArray
+        assertEquals("keyless-id", inputs[2].jsonObject["value"]!!.jsonPrimitive.content)
 
         coVerify(exactly = 0) { Recognize.authenticate(any()) }
         coVerify(exactly = 1) { Recognize.enroll(any()) }

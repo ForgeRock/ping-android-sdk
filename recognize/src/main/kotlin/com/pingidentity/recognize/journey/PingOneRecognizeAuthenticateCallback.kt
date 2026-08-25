@@ -23,10 +23,11 @@ import kotlinx.serialization.json.jsonPrimitive
  * `operationType = "AUTHENTICATE"`. All output fields are parsed by [AbstractRecognizeCallback];
  * this class only adds the [authenticate] operation.
  *
- * On success, the signed JWT, client state, and freshly retrieved device public signing key are
- * submitted to the Journey via the six input fields: `IDToken1signedJwt`, `IDToken1clientState`,
- * `IDToken1recognizeId` (empty), `IDToken1devicePublicSigningKey`, `IDToken1clientError`,
- * `IDToken1clientErrorCode`. Key retrieval failure is returned as a failed operation.
+ * On success, the signed JWT, current user ID, client state, and freshly retrieved device public
+ * signing key are submitted to the Journey via the six input fields: `IDToken1signedJwt`,
+ * `IDToken1clientState`, `IDToken1recognizeId`, `IDToken1devicePublicSigningKey`,
+ * `IDToken1clientError`, `IDToken1clientErrorCode`. User ID or key retrieval failure is returned
+ * as a failed operation.
  *
  * @see RecognizeCallback
  * @see PingOneRecognizeEnrollCallback
@@ -91,15 +92,20 @@ class PingOneRecognizeAuthenticateCallback : AbstractRecognizeCallback() {
                 } else {
                     Recognize.authenticate(buildAuthConfig(resolvedConfig.retrieveSelfie)).fold(
                         onSuccess = { success ->
-                            Recognize.getDevicePublicSigningKey().map { devicePublicSigningKey ->
-                                RecognizeSuccess(
-                                    selfie = success.authenticationFrame,
-                                    signedJwt = success.signedJwt,
-                                    clientState = success.clientState,
-                                    recognizeId = "",
-                                    devicePublicSigningKey = devicePublicSigningKey,
-                                )
-                            }
+                            Recognize.getUserId().fold(
+                                onSuccess = { recognizeId ->
+                                    Recognize.getDevicePublicSigningKey().map { devicePublicSigningKey ->
+                                        RecognizeSuccess(
+                                            selfie = success.authenticationFrame,
+                                            signedJwt = success.signedJwt,
+                                            clientState = success.clientState,
+                                            recognizeId = recognizeId,
+                                            devicePublicSigningKey = devicePublicSigningKey,
+                                        )
+                                    }
+                                },
+                                onFailure = { Result.failure(it) },
+                            )
                         },
                         onFailure = { Result.failure(it) },
                     )
@@ -112,6 +118,7 @@ class PingOneRecognizeAuthenticateCallback : AbstractRecognizeCallback() {
             submitResult(
                 signedJwt = success.signedJwt ?: "",
                 clientState = success.clientState ?: "",
+                recognizeId = success.recognizeId,
                 devicePublicSigningKey = success.devicePublicSigningKey,
                 clientError = "",
                 clientErrorCode = "",
@@ -121,6 +128,7 @@ class PingOneRecognizeAuthenticateCallback : AbstractRecognizeCallback() {
             submitResult(
                 signedJwt = "",
                 clientState = "",
+                recognizeId = "",
                 devicePublicSigningKey = "",
                 clientError = ex.message,
                 clientErrorCode = ex.code.toString(),
@@ -158,6 +166,7 @@ class PingOneRecognizeAuthenticateCallback : AbstractRecognizeCallback() {
     private fun submitResult(
         signedJwt: String,
         clientState: String,
+        recognizeId: String,
         devicePublicSigningKey: String,
         clientError: String,
         clientErrorCode: String,
@@ -165,7 +174,7 @@ class PingOneRecognizeAuthenticateCallback : AbstractRecognizeCallback() {
         input(
             signedJwt,
             clientState,
-            "",
+            recognizeId,
             devicePublicSigningKey,
             clientError,
             clientErrorCode
