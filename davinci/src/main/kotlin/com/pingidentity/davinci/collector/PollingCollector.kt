@@ -324,8 +324,12 @@ class PollingCollector : SingleValueCollector(), Submittable, ContinueNodeAware,
 
                 // Poll repeatedly until challenge is complete, max retries reached, or error occurs
                 while (retryCount < maxRetries && shouldContinuePolling) {
+                    currentCoroutineContext().ensureActive()
+
                     // Wait before making the next polling request
                     delay(interval.milliseconds)
+                    // detect cancellation before making the request
+                    currentCoroutineContext().ensureActive()
 
                     try {
                         // Make HTTP POST request to check challenge status
