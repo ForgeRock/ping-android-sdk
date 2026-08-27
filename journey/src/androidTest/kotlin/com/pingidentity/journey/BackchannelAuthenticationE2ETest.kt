@@ -461,7 +461,7 @@ class BackchannelAuthenticationE2ETest : BaseJourneyTest() {
             val body = response.assertSuccess("backchannel/initialize")
 
             return Json.parseToJsonElement(body).jsonObject["redirectUri"]?.jsonPrimitive?.content
-                ?: error("backchannel/initialize response missing 'redirectUri': $body")
+                ?: error("backchannel/initialize response missing 'redirectUri'")
         } finally {
             client.close()
         }
@@ -538,13 +538,18 @@ class BackchannelAuthenticationE2ETest : BaseJourneyTest() {
         val body = response.assertSuccess("access_token")
 
         return Json.parseToJsonElement(body).jsonObject["access_token"]?.jsonPrimitive?.content
-            ?: error("access_token response missing 'access_token': $body")
+            ?: error("access_token response missing 'access_token'")
     }
 
-    /** Reads the response body and fails fast with the status/body if the call was not successful. */
+    /**
+     * Reads the response body and fails fast with the status if the call was not successful.
+     * Deliberately excludes the body from the failure message — it can carry OAuth tokens or
+     * transaction/redirect data, and instrumented-test failure messages are published in test
+     * reports.
+     */
     private suspend fun HttpResponse.assertSuccess(label: String): String {
         val body = body()
-        check(status.isSuccess()) { "$label call failed: HTTP $status — $body" }
+        check(status.isSuccess()) { "$label call failed: HTTP $status" }
         return body
     }
 }
