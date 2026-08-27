@@ -223,8 +223,8 @@ class PollingCollector : SingleValueCollector(), Submittable, ContinueNodeAware,
     override fun init(input: JsonObject): PollingCollector {
         super.init(input)
         // Extract polling configuration from input JSON with sensible defaults
-        pollInterval = input[POLL_INTERVAL]?.jsonPrimitive?.content?.toInt() ?: 2000 // Default: 2 seconds
-        pollRetries = input[POLL_RETRIES]?.jsonPrimitive?.content?.toInt() ?: 60 // Default: 60 attempts
+        pollInterval = input[POLL_INTERVAL]?.jsonPrimitive?.content?.toIntOrNull() ?: 2000 // Default: 2 seconds
+        pollRetries = input[POLL_RETRIES]?.jsonPrimitive?.content?.toIntOrNull() ?: 60 // Default: 60 attempts
         pollChallengeStatus =
             input[POLL_CHALLENGE_STATUS]?.jsonPrimitive?.boolean ?: false // Default: simple polling
         challenge = input[CHALLENGE]?.jsonPrimitive?.content ?: "" // Default: no challenge ID

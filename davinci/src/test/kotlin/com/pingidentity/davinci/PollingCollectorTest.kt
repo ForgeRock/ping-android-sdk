@@ -91,6 +91,74 @@ class PollingCollectorTest {
     }
 
     @Test
+    fun `should use default pollInterval when malformed in challenge mode`() = runTest {
+        val pollingCollector = PollingCollector()
+        val mockEngine = MockEngine {
+            respond(
+                content = """{"isChallengeComplete": true, "status": "approved"}""",
+                status = HttpStatusCode.OK,
+                headers = headersOf("Content-Type", "application/json")
+            )
+        }
+        val httpClient = KtorHttpClient(HttpClient(mockEngine))
+        every { daVinci.config.httpClient } returns httpClient
+
+        val inputJson = buildJsonObject {
+            put("pollInterval", "not-a-number")
+            put("pollRetries", 1)
+            put("pollChallengeStatus", true)
+            put("challenge", "test-challenge")
+            put("interactionId", "test-interaction-id")
+            putJsonObject("_links") {
+                putJsonObject("self") {
+                    put("href", "https://auth.pingone.ca/env-id/davinci/connections/connection-id/capabilities/test")
+                }
+            }
+        }
+        val continueNode = object : ContinueNode(
+            FlowContext(SharedContext(mutableMapOf())),
+            Workflow {},
+            inputJson,
+            emptyList<Action>()
+        ) {
+            override fun asRequest(): Request = daVinci.config.httpClient.request()
+        }
+
+        pollingCollector.init(inputJson)
+        pollingCollector.davinci = daVinci
+        pollingCollector.continueNode = continueNode
+
+        val statuses = pollingCollector.pollStatus().toList()
+
+        assertEquals(2000, pollingCollector.pollInterval)
+        assertEquals(1, statuses.size)
+        assertTrue(statuses.single() is PollingStatus.Complete)
+
+        mockEngine.close()
+        httpClient.close()
+    }
+
+    @Test
+    fun `should use default pollRetries when malformed in simple mode`() = runTest {
+        val pollingCollector = PollingCollector()
+        val jsonObject = buildJsonObject {
+            put("pollInterval", 1)
+            put("pollRetries", "not-a-number")
+            put("pollChallengeStatus", false)
+        }
+
+        pollingCollector.init(jsonObject)
+        pollingCollector.davinci = daVinci
+
+        val statuses = pollingCollector.pollStatus().toList()
+
+        assertEquals(60, pollingCollector.pollRetries)
+        assertEquals(59, pollingCollector.retriesAllowed)
+        assertEquals(1, statuses.size)
+        assertTrue(statuses.single() is PollingStatus.Complete)
+    }
+
+    @Test
     fun `should initialize with pollChallengeStatus true`() {
         val pollingCollector = PollingCollector()
         val jsonObject = buildJsonObject {
