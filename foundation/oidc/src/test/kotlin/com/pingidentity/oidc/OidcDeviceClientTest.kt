@@ -15,7 +15,13 @@ import io.ktor.client.engine.mock.respond
 import io.ktor.client.request.forms.FormDataContent
 import io.ktor.http.HttpStatusCode
 import io.ktor.utils.io.ByteReadChannel
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.async
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.add
 import kotlinx.serialization.json.buildJsonArray
@@ -23,6 +29,7 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import java.nio.channels.UnresolvedAddressException
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -302,6 +309,92 @@ class OidcDeviceClientTest {
     }
 
     // ------------------------------------------------------------------
+    // Recoverable transport failure
+    // ------------------------------------------------------------------
+
+    @Test
+    fun `deviceAuthorization retries a transport failure and resumes the server interval`() = runTest {
+        var tokenCallCount = 0
+        val recoveryEngine = MockEngine { request ->
+            when (request.url.encodedPath) {
+                "/openid-configuration" -> respond(openIdConfigurationWithDeviceEndpointResponse(), HttpStatusCode.OK, headers)
+                "/device_authorization" -> respond(
+                    ByteReadChannel(deviceAuthResponseJson.replace("\"interval\": 0", "\"interval\": 2")),
+                    HttpStatusCode.OK,
+                    headers
+                )
+                "/token" -> {
+                    tokenCallCount++
+                    when (tokenCallCount) {
+                        1 -> throw UnresolvedAddressException()
+                        2 -> respond(pendingResponse(), HttpStatusCode.BadRequest, headers)
+                        else -> respond(ByteReadChannel(tokenResponseJson), HttpStatusCode.OK, headers)
+                    }
+                }
+                else -> respond(ByteReadChannel(""), HttpStatusCode.InternalServerError)
+            }
+        }
+
+        val client = OidcDeviceClient {
+            discoveryEndpoint = "http://localhost/openid-configuration"
+            clientId = "test-client"
+            scopes = mutableSetOf("openid")
+            httpClient = KtorHttpClient(HttpClient(recoveryEngine))
+            storage = { MemoryStorage() }
+        }
+
+        val statuses = client.deviceAuthorization().toList()
+        val pollingStatuses = statuses.filterIsInstance<DeviceFlowStatus.Polling>()
+
+        assertIs<DeviceFlowStatus.Started>(statuses.first())
+        assertEquals(2, pollingStatuses.size)
+        assertEquals(1, pollingStatuses[0].pollCount)
+        assertTrue(pollingStatuses[0].pollInterval in 1..20)
+        assertEquals(2, pollingStatuses[1].pollCount)
+        assertEquals(2, pollingStatuses[1].pollInterval)
+        assertIs<DeviceFlowStatus.Success>(statuses.last())
+        assertTrue(statuses.none { it is DeviceFlowStatus.Failure })
+        recoveryEngine.close()
+    }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    @Test
+    fun `deviceAuthorization cancellation during transport retry propagates`() = runTest {
+        val retryStarted = CompletableDeferred<Unit>()
+        val cancellationEngine = MockEngine { request ->
+            when (request.url.encodedPath) {
+                "/openid-configuration" -> respond(openIdConfigurationWithDeviceEndpointResponse(), HttpStatusCode.OK, headers)
+                "/device_authorization" -> respond(ByteReadChannel(deviceAuthResponseJson), HttpStatusCode.OK, headers)
+                "/token" -> {
+                    retryStarted.complete(Unit)
+                    throw UnresolvedAddressException()
+                }
+                else -> respond(ByteReadChannel(""), HttpStatusCode.InternalServerError)
+            }
+        }
+
+        val client = OidcDeviceClient {
+            discoveryEndpoint = "http://localhost/openid-configuration"
+            clientId = "test-client"
+            scopes = mutableSetOf("openid")
+            httpClient = KtorHttpClient(HttpClient(cancellationEngine))
+            storage = { MemoryStorage() }
+        }
+
+        val statuses = mutableListOf<DeviceFlowStatus>()
+        val flow = async {
+            client.deviceAuthorization().onEach { statuses += it }.toList()
+        }
+        runCurrent()
+        retryStarted.await()
+        flow.cancel()
+
+        assertIs<CancellationException>(runCatching { flow.await() }.exceptionOrNull())
+        assertTrue(statuses.none { it is DeviceFlowStatus.Failure })
+        cancellationEngine.close()
+    }
+
+    // ------------------------------------------------------------------
     // Expired: expired_token
     // ------------------------------------------------------------------
 
@@ -386,7 +479,7 @@ class OidcDeviceClientTest {
 
         val failure = statuses.last()
         assertIs<DeviceFlowStatus.Failure>(failure)
-        assertTrue(failure.exception.message?.contains("some_unknown_error") == true)
+        assertEquals(failure.exception.message?.contains("some_unknown_error"), true)
         errorEngine.close()
     }
 
@@ -494,7 +587,7 @@ class OidcDeviceClientTest {
 
         val failure = statuses.last()
         assertIs<DeviceFlowStatus.Failure>(failure)
-        assertTrue(failure.exception.message?.contains("device_authorization_endpoint") == true)
+        assertEquals(failure.exception.message?.contains("device_authorization_endpoint"), true)
         noEndpointEngine.close()
     }
 
@@ -567,6 +660,6 @@ class OidcDeviceClientTest {
         assertEquals("/device_authorization", deviceAuthRequest.url.encodedPath)
         val formData = (deviceAuthRequest.body as FormDataContent).formData
         assertEquals("my-client", formData["client_id"])
-        assertTrue(formData["scope"]?.contains("openid") == true)
+        assertEquals(formData["scope"]?.contains("openid"), true)
     }
 }
