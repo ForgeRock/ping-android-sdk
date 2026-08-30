@@ -9,6 +9,7 @@ package com.pingidentity.pingonemfa.davinci
 
 import com.pingidentity.davinci.plugin.Collector
 import com.pingidentity.davinci.plugin.Submittable
+import com.pingidentity.orchestrate.Closeable
 import com.pingidentity.pingonemfa.commons.PingOneMFA
 import com.pingidentity.pingonemfa.commons.PingOneMFAException
 import kotlinx.serialization.json.JsonObject
@@ -52,7 +53,7 @@ import kotlinx.serialization.json.put
  * @see CollectorInitializer
  * @see PingOneMFA.pair
  */
-class MobilePairingCollector : Collector<JsonObject>, Submittable {
+class MobilePairingCollector : Collector<JsonObject>, Submittable, Closeable {
 
     /**
      * The field key sent by the DaVinci server, used as this collector's [id].
@@ -212,5 +213,12 @@ class MobilePairingCollector : Collector<JsonObject>, Submittable {
             ?.code
         val code = if (nativeCode != null) "$nativeCode" else "INTERNAL_ERROR"
         return ErrorInfo(code = code, message = message)
+    }
+
+    override fun close() {
+        synchronized(lock) {
+            value = null
+            cancelled = false
+        }
     }
 }
