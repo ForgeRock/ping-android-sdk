@@ -12,6 +12,7 @@ import com.pingidentity.davinci.plugin.Submittable
 import com.pingidentity.orchestrate.Closeable
 import com.pingidentity.pingonemfa.commons.PingOneMFA
 import com.pingidentity.pingonemfa.commons.PingOneMFAException
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -89,14 +90,23 @@ class MobilePairingCollector : Collector<JsonObject>, Submittable, Closeable {
      * Initializes this collector from the server-provided JSON object.
      *
      * Reads the `key` field (used as the collector's [id]) and the `pairingKey` field
-     * (passed to [PingOneMFA.pair] during [collect]).
+     * (passed to [PingOneMFA.pair] during [collect]). The `pairingKey` field is required:
+     * missing, empty, or JSON-null values throw [IllegalArgumentException].
      *
      * @param input The JSON object for this collector entry from the DaVinci node response.
      * @return This collector instance.
+     * @throws IllegalArgumentException If `pairingKey` is absent, empty, or JSON null.
      */
     override fun init(input: JsonObject): Collector<JsonObject> {
         key = input["key"]?.jsonPrimitive?.content ?: ""
-        pairingKey = input["pairingKey"]?.jsonPrimitive?.content ?: ""
+        pairingKey = input["pairingKey"]
+            ?.takeIf { it !is JsonNull }
+            ?.jsonPrimitive
+            ?.content
+            ?: ""
+        require(pairingKey.isNotEmpty()) {
+            "pairingKey is required for the MOBILE_PAIRING collector"
+        }
         return this
     }
 

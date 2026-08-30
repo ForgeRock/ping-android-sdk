@@ -22,6 +22,7 @@ import io.mockk.unmockkAll
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.async
 import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonObject
@@ -30,6 +31,7 @@ import kotlinx.serialization.json.put
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import kotlin.test.assertFailsWith
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
@@ -76,22 +78,59 @@ class MobilePairingCollectorTest {
     @Test
     fun `init returns this for chaining`() {
         val collector = MobilePairingCollector()
-        val result = collector.init(buildJsonObject { put("key", "mobilePairing") })
+        val result = collector.init(buildJsonObject {
+            put("key", "mobilePairing")
+            put("pairingKey", "pk-1")
+        })
         assertEquals(collector, result)
     }
 
     @Test
-    fun `init defaults key and pairingKey to empty when absent`() {
+    fun `init throws IllegalArgumentException when pairingKey is absent`() {
         val collector = MobilePairingCollector()
-        collector.init(buildJsonObject { })
+        assertFailsWith<IllegalArgumentException> {
+            collector.init(buildJsonObject { put("key", "mobilePairing") })
+        }
+    }
+
+    @Test
+    fun `init throws IllegalArgumentException when pairingKey is empty`() {
+        val collector = MobilePairingCollector()
+        assertFailsWith<IllegalArgumentException> {
+            collector.init(buildJsonObject {
+                put("key", "mobilePairing")
+                put("pairingKey", "")
+            })
+        }
+    }
+
+    @Test
+    fun `init throws IllegalArgumentException when pairingKey is JSON null`() {
+        val collector = MobilePairingCollector()
+        assertFailsWith<IllegalArgumentException> {
+            collector.init(buildJsonObject {
+                put("key", "mobilePairing")
+                put("pairingKey", JsonNull)
+            })
+        }
+    }
+
+    @Test
+    fun `init keeps key lenient and still defaults to empty when absent`() {
+        // Only pairingKey is validated; a missing `key` degrades to "" as before.
+        val collector = MobilePairingCollector()
+        collector.init(buildJsonObject { put("pairingKey", "pk-1") })
         assertEquals("", collector.key)
-        assertEquals("", collector.pairingKey)
+        assertEquals("pk-1", collector.pairingKey)
     }
 
     @Test
     fun `id returns key`() {
         val collector = MobilePairingCollector().apply {
-            init(buildJsonObject { put("key", "mobilePairing") })
+            init(buildJsonObject {
+                put("key", "mobilePairing")
+                put("pairingKey", "pk-1")
+            })
         }
         assertEquals("mobilePairing", collector.id())
     }
@@ -111,7 +150,10 @@ class MobilePairingCollectorTest {
     @Test
     fun `payload is null before collect or cancel`() {
         val collector = MobilePairingCollector().apply {
-            init(buildJsonObject { put("key", "mobilePairing") })
+            init(buildJsonObject {
+                put("key", "mobilePairing")
+                put("pairingKey", "pk-1")
+            })
         }
         assertNull(collector.payload())
     }
