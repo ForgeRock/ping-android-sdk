@@ -56,7 +56,6 @@ import com.pingidentity.samples.pingsampleapp.authenticator.util.NavigationAnima
 import com.pingidentity.samples.pingsampleapp.authgrant.DeviceAuthorizationGrantScreen
 import com.pingidentity.samples.pingsampleapp.config.Env
 import com.pingidentity.samples.pingsampleapp.davinci.DaVinci
-import com.pingidentity.samples.pingsampleapp.pingonemfa.davinci.PingOneMfaDaVinciViewModel
 import com.pingidentity.samples.pingsampleapp.devicemanagement.DeviceManagement
 import com.pingidentity.samples.pingsampleapp.devicemanagement.DeviceManagementViewModel
 import com.pingidentity.samples.pingsampleapp.devtools.DeviceInfo
@@ -613,22 +612,7 @@ fun AppNavigation(
         }
 
         composable(Route.ROUTE_PINGONE_DAVINCI_PAIRING) {
-            val pingOneMfaDaVinciViewModel = viewModel<PingOneMfaDaVinciViewModel>()
-            val state by pingOneMfaDaVinciViewModel.state.collectAsState()
-            val loading by pingOneMfaDaVinciViewModel.loading.collectAsState()
-            val pairingComplete by pingOneMfaDaVinciViewModel.pairingComplete.collectAsState()
-
-            // Once the pairing result is submitted to the server, exit immediately.
-            LaunchedEffect(pairingComplete) {
-                if (pairingComplete) navController.popBackStack()
-            }
-
             DaVinci(
-                state = state,
-                loading = loading,
-                onNodeUpdated = { pingOneMfaDaVinciViewModel.refresh() },
-                onNext = { pingOneMfaDaVinciViewModel.next(it) },
-                onStart = { pingOneMfaDaVinciViewModel.start() },
                 onSuccess = { navController.popBackStack() },
                 onBack = { navController.popBackStack() },
             )

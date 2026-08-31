@@ -92,11 +92,6 @@ private sealed class SheetContent {
         val config: DeviceAuthConfigState = DeviceAuthConfigState(),
         val customIndex: Int? = null,
     ) : SheetContent()
-
-    data class PingOneMfaDaVinciSheet(
-        val config: OidcConfigState = OidcConfigState(),
-        val customIndex: Int? = null,
-    ) : SheetContent()
 }
 
 // ---------------------------------------------------------------------------
@@ -163,20 +158,6 @@ fun Env(
                     onDelete = { envViewModel.deleteCustomDaVinciConfig(it) },
                     onDuplicate = { envViewModel.duplicateDaVinciConfig(it) },
                     onAdd = { sheetContent = SheetContent.DaVinciSheet() },
-                )
-
-                // PingOne MFA DaVinci card — dedicated config for the MFA pairing flow.
-                // Independent of the standard DaVinci config above; drives only the pairing screen.
-                OidcCard(
-                    title = "PingOne MFA DaVinci",
-                    presets = envViewModel.pingOneMfaDaVinciPresets,
-                    customConfigs = envViewModel.customPingOneMfaDaVinciConfigs,
-                    appliedConfig = envViewModel.appliedPingOneMfaDaVinciConfig,
-                    onSelect = { envViewModel.selectPingOneMfaDaVinciConfig(it) },
-                    onEdit = { cfg, idx -> sheetContent = SheetContent.PingOneMfaDaVinciSheet(cfg, idx) },
-                    onDelete = { envViewModel.deleteCustomPingOneMfaDaVinciConfig(it) },
-                    onDuplicate = { envViewModel.duplicatePingOneMfaDaVinciConfig(it) },
-                    onAdd = { sheetContent = SheetContent.PingOneMfaDaVinciSheet() },
                 )
 
                 // OIDC (Web) card
@@ -250,17 +231,6 @@ fun Env(
                         isEdit = content.customIndex != null,
                         onSave = { cfg ->
                             envViewModel.saveCustomDeviceAuthConfig(cfg, content.customIndex)
-                            dismiss()
-                        },
-                        onDismiss = ::dismiss,
-                    )
-                    is SheetContent.PingOneMfaDaVinciSheet -> OidcSheetContent(
-                        title = "PingOne MFA DaVinci Config",
-                        initial = content.config,
-                        isEdit = content.customIndex != null,
-                        showArcValue = true,
-                        onSave = { cfg ->
-                            envViewModel.saveCustomPingOneMfaDaVinciConfig(cfg, content.customIndex)
                             dismiss()
                         },
                         onDismiss = ::dismiss,

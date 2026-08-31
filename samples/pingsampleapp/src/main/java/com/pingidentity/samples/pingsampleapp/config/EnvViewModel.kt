@@ -91,12 +91,6 @@ internal data class AssetConfigs(
     val davinci: List<OidcConfigState> = emptyList(),
     val web: List<OidcConfigState> = emptyList(),
     val deviceAuth: List<DeviceAuthConfigState> = emptyList(),
-    /**
-     * Presets for the PingOne MFA pairing DaVinci flow — files that carry `"pingOneMfa": true`.
-     * These are NOT added to the DaVinci / Web / DeviceAuth preset lists so they don't pollute
-     * the other cards. Consumed only by the PingOne MFA DaVinci config card.
-     */
-    val pingOneMfa: List<OidcConfigState> = emptyList(),
 )
 
 /**
@@ -132,7 +126,6 @@ internal fun loadAssetConfigs(): AssetConfigs {
     val davinci = mutableListOf<OidcConfigState>()
     val web = mutableListOf<OidcConfigState>()
     val deviceAuth = mutableListOf<DeviceAuthConfigState>()
-    val pingOneMfa = mutableListOf<OidcConfigState>()
 
     fun JsonObject.str(key: String) = this[key]?.jsonPrimitive?.content ?: ""
 
@@ -143,27 +136,6 @@ internal fun loadAssetConfigs(): AssetConfigs {
             val root = Json.parseToJsonElement(
                 context.assets.open(fileName).bufferedReader().use { it.readText() }
             ).jsonObject
-
-            // Files marked with `"pingOneMfa": true` are dedicated to the MFA pairing flow.
-            // They must not appear in the DaVinci / Web / DeviceAuth preset lists.
-            if (root["pingOneMfa"]?.jsonPrimitive?.content?.toBooleanStrictOrNull() == true) {
-                val oidcMfa = root["oidc"]?.jsonObject ?: return@runCatching
-                val scopesMfa = oidcMfa["scopes"]?.let { el ->
-                    runCatching { el.jsonArray.joinToString(",") { it.jsonPrimitive.content } }
-                        .getOrElse { el.jsonPrimitive.content }
-                } ?: ""
-                pingOneMfa.add(
-                    OidcConfigState(
-                        clientId = oidcMfa.str("clientId"),
-                        discoveryEndpoint = oidcMfa.str("discoveryEndpoint"),
-                        scopes = scopesMfa,
-                        redirectUri = oidcMfa.str("redirectUri"),
-                        display = displayName,
-                        arcValue = oidcMfa.str("acrValues"),
-                    )
-                )
-                return@runCatching
-            }
 
             val isDaVinci = root.contains("journey").not()
             val oidc = root["oidc"]?.jsonObject ?: return@runCatching
@@ -222,7 +194,7 @@ internal fun loadAssetConfigs(): AssetConfigs {
             ))
         }
     }
-    return AssetConfigs(journey, davinci, web, deviceAuth, pingOneMfa)
+    return AssetConfigs(journey, davinci, web, deviceAuth)
 }
 
 // ---------------------------------------------------------------------------
@@ -232,12 +204,6 @@ internal fun loadAssetConfigs(): AssetConfigs {
 var journey: Journey? = null
 var oidcClient: OidcClient? = null
 var daVinci: DaVinci? = null
-/**
- * DaVinci instance used exclusively by the PingOne MFA pairing flow.
- * Auto-built at startup from the `assets/.json` file marked `"pingOneMfa": true`.
- * Never overwritten by user config changes in the DaVinci / Web / DeviceAuth cards.
- */
-var pingOneMfaDaVinci: DaVinci? = null
 var web: OidcWebClient? = null
 var oidcDeviceClient: OidcDeviceClient? = null
 /** Used by Journey's IdP (social identity provider) callback. Set only by [buildJourney]. */
@@ -307,27 +273,6 @@ internal fun buildDaVinci(config: OidcConfigState) {
         .onFailure { Logger.STANDARD.d("Failed to create DaVinci instance: ${it.message}") }
     // Store in the DaVinci-specific global so it never overwrites Journey's redirectUri
     daVinciRedirectUri = config.redirectUri.toUri()
-}
-
-/**
- * Builds a dedicated DaVinci instance for the PingOne MFA pairing flow.
- * Writes to [pingOneMfaDaVinci] on success. Never overwrites [daVinci].
- */
-internal fun buildPingOneMfaDaVinci(config: OidcConfigState) {
-    DaVinci(
-        buildJsonObject {
-            put(JsonConfigKey.LOG, "STANDARD")
-            put(JsonConfigKey.OIDC, buildJsonObject {
-                put(JsonConfigKey.CLIENT_ID, config.clientId)
-                put(JsonConfigKey.DISCOVERY_ENDPOINT, config.discoveryEndpoint)
-                put(JsonConfigKey.SCOPES, config.scopes.toScopesJsonArray())
-                put(JsonConfigKey.REDIRECT_URI, config.redirectUri)
-                put(JsonConfigKey.DISPLAY, config.display)
-                if (config.arcValue.isNotBlank()) put(JsonConfigKey.ACR_VALUES, config.arcValue)
-            })
-        }
-    ).onSuccess { pingOneMfaDaVinci = it }
-        .onFailure { Logger.STANDARD.d("Failed to create PingOne MFA DaVinci instance: ${it.message}") }
 }
 
 internal fun buildWeb(config: OidcConfigState) {
@@ -462,25 +407,11 @@ suspend fun initConfigs() {
         )
     }
 
-    val pmfaConfig = prefs[stringPreferencesKey("pmfa_clientId")]?.let { clientId ->
-        OidcConfigState(
-            clientId = clientId,
-            discoveryEndpoint = prefs[stringPreferencesKey("pmfa_discoveryEndpoint")] ?: "",
-            scopes = prefs[stringPreferencesKey("pmfa_scopes")] ?: "",
-            redirectUri = prefs[stringPreferencesKey("pmfa_redirectUri")] ?: "",
-            display = prefs[stringPreferencesKey("pmfa_display")] ?: "",
-            arcValue = prefs[stringPreferencesKey("pmfa_arcValue")] ?: "",
-        )
-    }
-
     // Each builder writes to its own global; no ordering dependency.
     jConfig?.let { buildJourney(it) }
     wConfig?.let { buildWeb(it) }
     dvConfig?.let { buildDaVinci(it) }
     daConfig?.let { buildDeviceAuthClient(it) }
-    // If no user-applied MFA config, fall back to the first asset preset so pairing works
-    // out of the box. Writes only to [pingOneMfaDaVinci] — never touches [daVinci].
-    (pmfaConfig ?: loadAssetConfigs().pingOneMfa.firstOrNull())?.let { buildPingOneMfaDaVinci(it) }
 }
 
 // ---------------------------------------------------------------------------
@@ -501,9 +432,6 @@ class EnvViewModel : ViewModel() {
     var deviceAuthPresets by mutableStateOf(emptyList<DeviceAuthConfigState>())
         private set
 
-    var pingOneMfaDaVinciPresets by mutableStateOf(emptyList<OidcConfigState>())
-        private set
-
     // -- Currently applied configs -------------------------------------------
 
     var appliedJourneyConfig by mutableStateOf<JourneyConfigState?>(null)
@@ -516,9 +444,6 @@ class EnvViewModel : ViewModel() {
         private set
 
     var appliedDeviceAuthConfig by mutableStateOf<DeviceAuthConfigState?>(null)
-        private set
-
-    var appliedPingOneMfaDaVinciConfig by mutableStateOf<OidcConfigState?>(null)
         private set
 
     // -- User-defined custom configs -----------------------------------------
@@ -535,9 +460,6 @@ class EnvViewModel : ViewModel() {
     var customDeviceAuthConfigs by mutableStateOf<List<DeviceAuthConfigState>>(emptyList())
         private set
 
-    var customPingOneMfaDaVinciConfigs by mutableStateOf<List<OidcConfigState>>(emptyList())
-        private set
-
     // -- Init ----------------------------------------------------------------
 
     init {
@@ -547,38 +469,28 @@ class EnvViewModel : ViewModel() {
             val dvApplied = loadAppliedDaVinciFromDataStore()
             val wApplied = loadAppliedWebFromDataStore()
             val daApplied = loadAppliedDeviceAuthConfig()
-            val pmfaApplied = loadAppliedPingOneMfaDaVinciFromDataStore()
             val jCustom = loadCustomJourneyFromDataStore()
             val dvCustom = loadCustomDaVinciFromDataStore()
             val wCustom = loadCustomWebFromDataStore()
             val daCustom = loadCustomDeviceAuthFromDataStore()
-            val pmfaCustom = loadCustomPingOneMfaDaVinciFromDataStore()
-
-            // If no user preference is stored, default to the first asset preset so pairing
-            // works out of the box. Doesn't persist — user must Apply from the UI to save.
-            val pmfaEffective = pmfaApplied ?: assetConfigs.pingOneMfa.firstOrNull()
 
             withContext(Dispatchers.Main) {
                 journeyPresets = assetConfigs.journey
                 daVinciPresets = assetConfigs.davinci
                 webPresets = assetConfigs.web
                 deviceAuthPresets = assetConfigs.deviceAuth
-                pingOneMfaDaVinciPresets = assetConfigs.pingOneMfa
                 customJourneyConfigs = jCustom
                 customDaVinciConfigs = dvCustom
                 customWebConfigs = wCustom
                 customDeviceAuthConfigs = daCustom
-                customPingOneMfaDaVinciConfigs = pmfaCustom
                 appliedJourneyConfig = jApplied
                 appliedDaVinciConfig = dvApplied
                 appliedWebConfig = wApplied
                 appliedDeviceAuthConfig = daApplied
-                appliedPingOneMfaDaVinciConfig = pmfaEffective
                 jApplied?.let { buildJourneyInstance(it) }
                 dvApplied?.let { buildDaVinciInstance(it) }
                 wApplied?.let { buildWebInstance(it) }
                 daApplied?.let { buildDeviceAuthInstance(it) }
-                pmfaEffective?.let { buildPingOneMfaDaVinciInstance(it) }
             }
         }
     }
@@ -607,12 +519,6 @@ class EnvViewModel : ViewModel() {
         buildDeviceAuthClient(config)
         appliedDeviceAuthConfig = config
         viewModelScope.launch(Dispatchers.IO) { persistAppliedDeviceAuthConfig(config) }
-    }
-
-    fun selectPingOneMfaDaVinciConfig(config: OidcConfigState) {
-        buildPingOneMfaDaVinciInstance(config)
-        appliedPingOneMfaDaVinciConfig = config
-        viewModelScope.launch(Dispatchers.IO) { persistAppliedPingOneMfaDaVinci(config) }
     }
 
     // -- Custom config CRUD --------------------------------------------------
@@ -721,47 +627,12 @@ class EnvViewModel : ViewModel() {
         viewModelScope.launch(Dispatchers.IO) { persistCustomDeviceAuthConfigs(customDeviceAuthConfigs) }
     }
 
-    fun saveCustomPingOneMfaDaVinciConfig(config: OidcConfigState, editIndex: Int?) {
-        customPingOneMfaDaVinciConfigs = if (editIndex == null) {
-            customPingOneMfaDaVinciConfigs + config
-        } else {
-            customPingOneMfaDaVinciConfigs.toMutableList().also { it[editIndex] = config }
-        }
-        selectPingOneMfaDaVinciConfig(config)
-        viewModelScope.launch(Dispatchers.IO) {
-            persistCustomPingOneMfaDaVinciConfigs(customPingOneMfaDaVinciConfigs)
-        }
-    }
-
-    fun deleteCustomPingOneMfaDaVinciConfig(index: Int) {
-        val deleted = customPingOneMfaDaVinciConfigs[index]
-        customPingOneMfaDaVinciConfigs =
-            customPingOneMfaDaVinciConfigs.toMutableList().also { it.removeAt(index) }
-        if (appliedPingOneMfaDaVinciConfig?.display == deleted.display) {
-            val fallback = pingOneMfaDaVinciPresets.firstOrNull()
-            if (fallback != null) selectPingOneMfaDaVinciConfig(fallback)
-            else { appliedPingOneMfaDaVinciConfig = null; pingOneMfaDaVinci = null }
-        }
-        viewModelScope.launch(Dispatchers.IO) {
-            persistCustomPingOneMfaDaVinciConfigs(customPingOneMfaDaVinciConfigs)
-        }
-    }
-
-    fun duplicatePingOneMfaDaVinciConfig(config: OidcConfigState) {
-        customPingOneMfaDaVinciConfigs =
-            customPingOneMfaDaVinciConfigs + config.copy(display = "Copy of ${config.display}")
-        viewModelScope.launch(Dispatchers.IO) {
-            persistCustomPingOneMfaDaVinciConfigs(customPingOneMfaDaVinciConfigs)
-        }
-    }
-
     // -- SDK instance builders (delegate to package-level functions) ---------
 
     private fun buildJourneyInstance(config: JourneyConfigState) = buildJourney(config)
     private fun buildDaVinciInstance(config: OidcConfigState) = buildDaVinci(config)
     private fun buildWebInstance(config: OidcConfigState) = buildWeb(config)
     private fun buildDeviceAuthInstance(config: DeviceAuthConfigState) = buildDeviceAuthClient(config)
-    private fun buildPingOneMfaDaVinciInstance(config: OidcConfigState) = buildPingOneMfaDaVinci(config)
 
     // -- DataStore: load applied configs -------------------------------------
 
@@ -805,19 +676,6 @@ class EnvViewModel : ViewModel() {
             display = prefs[stringPreferencesKey("w_display")] ?: "",
             arcValue = prefs[stringPreferencesKey("w_arcValue")] ?: "",
             par = prefs[stringPreferencesKey("w_par")]?.toBooleanStrictOrNull() ?: false,
-        )
-    }
-
-    private suspend fun loadAppliedPingOneMfaDaVinciFromDataStore(): OidcConfigState? {
-        val prefs = ContextProvider.context.settingDataStore.data.first()
-        val clientId = prefs[stringPreferencesKey("pmfa_clientId")] ?: return null
-        return OidcConfigState(
-            clientId = clientId,
-            discoveryEndpoint = prefs[stringPreferencesKey("pmfa_discoveryEndpoint")] ?: "",
-            scopes = prefs[stringPreferencesKey("pmfa_scopes")] ?: "",
-            redirectUri = prefs[stringPreferencesKey("pmfa_redirectUri")] ?: "",
-            display = prefs[stringPreferencesKey("pmfa_display")] ?: "",
-            arcValue = prefs[stringPreferencesKey("pmfa_arcValue")] ?: "",
         )
     }
 
@@ -865,12 +723,6 @@ class EnvViewModel : ViewModel() {
         return deserializeDeviceAuthConfigs(json)
     }
 
-    private suspend fun loadCustomPingOneMfaDaVinciFromDataStore(): List<OidcConfigState> {
-        val prefs = ContextProvider.context.settingDataStore.data.first()
-        val json = prefs[stringPreferencesKey("pmfa_custom_configs")] ?: return emptyList()
-        return deserializeOidcConfigs(json)
-    }
-
     // -- DataStore: persist applied configs ----------------------------------
 
     private suspend fun persistAppliedJourney(config: JourneyConfigState) {
@@ -907,17 +759,6 @@ class EnvViewModel : ViewModel() {
             prefs[stringPreferencesKey("w_display")] = config.display
             prefs[stringPreferencesKey("w_arcValue")] = config.arcValue
             prefs[stringPreferencesKey("w_par")] = config.par.toString()
-        }
-    }
-
-    private suspend fun persistAppliedPingOneMfaDaVinci(config: OidcConfigState) {
-        ContextProvider.context.settingDataStore.edit { prefs ->
-            prefs[stringPreferencesKey("pmfa_clientId")] = config.clientId
-            prefs[stringPreferencesKey("pmfa_discoveryEndpoint")] = config.discoveryEndpoint
-            prefs[stringPreferencesKey("pmfa_scopes")] = config.scopes
-            prefs[stringPreferencesKey("pmfa_redirectUri")] = config.redirectUri
-            prefs[stringPreferencesKey("pmfa_display")] = config.display
-            prefs[stringPreferencesKey("pmfa_arcValue")] = config.arcValue
         }
     }
 
@@ -960,12 +801,6 @@ class EnvViewModel : ViewModel() {
     private suspend fun persistCustomDeviceAuthConfigs(configs: List<DeviceAuthConfigState>) {
         ContextProvider.context.settingDataStore.edit { prefs ->
             prefs[stringPreferencesKey("da_custom_configs")] = serializeDeviceAuthConfigs(configs)
-        }
-    }
-
-    private suspend fun persistCustomPingOneMfaDaVinciConfigs(configs: List<OidcConfigState>) {
-        ContextProvider.context.settingDataStore.edit { prefs ->
-            prefs[stringPreferencesKey("pmfa_custom_configs")] = serializeOidcConfigs(configs)
         }
     }
 
