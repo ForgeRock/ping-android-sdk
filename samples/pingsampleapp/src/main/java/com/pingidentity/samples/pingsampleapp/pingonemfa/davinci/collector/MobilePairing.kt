@@ -60,9 +60,11 @@ private data class PairingError(
  * - **Failure** — red error icon + "Pairing failed" + detail text + Continue button.
  *
  * In the terminal states the user taps "Continue" to submit the result to the server via
- * [onNext]. The card stays visible while the submission is in flight ([isSubmitting] disables
- * the button to prevent double-taps). Cancel records a `USER_CANCELLED` payload so the
- * server-side connector can handle the cancellation gracefully.
+ * [onNext]. On failure, tapping Continue immediately hides the card (matching Cancel) while
+ * the submission runs in the background; on success the card stays visible until the
+ * submission completes ([isSubmitting] disables the button to prevent double-taps). Cancel
+ * records a `USER_CANCELLED` payload so the server-side connector can handle the
+ * cancellation gracefully.
  */
 @Composable
 fun MobilePairing(
@@ -70,7 +72,7 @@ fun MobilePairing(
     onNext: () -> Unit,
 ) {
     var pairingJob: Job? by remember { mutableStateOf(null) }
-    // Set to true only by Cancel — hides the entire card so Cancel is a one-shot action.
+    // Set to true by Cancel and by Continue on the failure card — hides the entire card.
     var isDone by remember(field) { mutableStateOf(false) }
     // True once collect() returned Result.success.
     var pairingSuccess by remember(field) { mutableStateOf(false) }
@@ -146,6 +148,8 @@ fun MobilePairing(
                 }
             }
 
+            // Failure — hide the card when the user taps Continue, matching the cancel
+            // behaviour: the submission continues in the background while the route pops.
             pairingError != null -> {
                 // Pairing failed — same Box(fillMaxSize, Center) gravity as the other states.
                 Box(
@@ -192,6 +196,7 @@ fun MobilePairing(
                             enabled = !isSubmitting,
                             onClick = {
                                 isSubmitting = true
+                                isDone = true
                                 onNext()
                             },
                         ) {

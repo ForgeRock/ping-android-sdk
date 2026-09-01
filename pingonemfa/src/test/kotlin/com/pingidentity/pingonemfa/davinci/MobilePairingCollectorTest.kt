@@ -23,7 +23,9 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.async
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -113,6 +115,64 @@ class MobilePairingCollectorTest {
                 put("pairingKey", JsonNull)
             })
         }
+    }
+
+    // ── init: non-primitive JSON values degrade to empty string ────────────────
+
+    @Test
+    fun `init treats object-valued pairingKey as missing and throws the controlled error`() {
+        // Regression guard: previously init read pairingKey with jsonPrimitive, which throws
+        // IllegalArgumentException("JsonPrimitive") from kotlinx-serialization when the field
+        // is present but non-primitive. Malformed server input must instead flow into the
+        // collector's own validation with its descriptive message.
+        val collector = MobilePairingCollector()
+        val e = assertFailsWith<IllegalArgumentException> {
+            collector.init(buildJsonObject {
+                put("key", "mobilePairing")
+                put("pairingKey", buildJsonObject { put("nested", "value") })
+            })
+        }
+        assertTrue(
+            e.message!!.contains("pairingKey is required"),
+            "expected the collector's validation message, got: ${e.message}",
+        )
+    }
+
+    @Test
+    fun `init treats array-valued pairingKey as missing`() {
+        val collector = MobilePairingCollector()
+        assertFailsWith<IllegalArgumentException> {
+            collector.init(buildJsonObject {
+                put("key", "mobilePairing")
+                put("pairingKey", buildJsonArray { add(JsonPrimitive("pk-1")) })
+            })
+        }
+    }
+
+    @Test
+    fun `init treats non-primitive key as absent and defaults to empty string`() {
+        // key stays lenient: any non-string value (object/array/null) must degrade to "",
+        // never the literal "null" (JsonNull is a JsonPrimitive whose content is "null").
+        val collector = MobilePairingCollector()
+        collector.init(buildJsonObject {
+            put("key", buildJsonObject { put("nested", "value") })
+            put("pairingKey", "pk-1")
+        })
+        assertEquals("", collector.key)
+        assertEquals("pk-1", collector.pairingKey)
+    }
+
+    @Test
+    fun `init treats JSON null key as empty string not the literal null`() {
+        // Guards the stringOrEmpty behaviour: contentOrNull (not content) must be used so
+        // JsonNull yields null -> "", not the string "null".
+        val collector = MobilePairingCollector()
+        collector.init(buildJsonObject {
+            put("key", JsonNull)
+            put("pairingKey", "pk-1")
+        })
+        assertEquals("", collector.key)
+        assertEquals("pk-1", collector.pairingKey)
     }
 
     @Test

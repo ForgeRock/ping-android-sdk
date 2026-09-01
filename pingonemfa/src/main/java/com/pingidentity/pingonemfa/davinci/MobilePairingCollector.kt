@@ -12,10 +12,10 @@ import com.pingidentity.davinci.plugin.Submittable
 import com.pingidentity.orchestrate.Closeable
 import com.pingidentity.pingonemfa.commons.PingOneMFA
 import com.pingidentity.pingonemfa.commons.PingOneMFAException
-import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.put
 
 /**
@@ -98,12 +98,8 @@ class MobilePairingCollector : Collector<JsonObject>, Submittable, Closeable {
      * @throws IllegalArgumentException If `pairingKey` is absent, empty, or JSON null.
      */
     override fun init(input: JsonObject): Collector<JsonObject> {
-        key = input["key"]?.jsonPrimitive?.content ?: ""
-        pairingKey = input["pairingKey"]
-            ?.takeIf { it !is JsonNull }
-            ?.jsonPrimitive
-            ?.content
-            ?: ""
+        key = input.stringOrEmpty("key")
+        pairingKey = input.stringOrEmpty("pairingKey")
         require(pairingKey.isNotEmpty()) {
             "pairingKey is required for the MOBILE_PAIRING collector"
         }
@@ -194,6 +190,18 @@ class MobilePairingCollector : Collector<JsonObject>, Submittable, Closeable {
     // -------------------------------------------------------------------------
     // Private helpers
     // -------------------------------------------------------------------------
+
+    /**
+     * Safely extracts a string field from a server-provided JSON object.
+     *
+     * Returns the primitive's content for JSON strings (and, leniently, numbers/booleans),
+     * `null` for JSON null, and `""` when the field is absent or non-primitive (object,
+     * array) — instead of throwing. Used in [init] so malformed server input degrades to
+     * the empty string and flows into the single `require` validation below rather than
+     * escaping as an opaque [IllegalArgumentException] from the serialization library.
+     */
+    private fun JsonObject.stringOrEmpty(key: String): String =
+        (this[key] as? JsonPrimitive)?.contentOrNull ?: ""
 
     private data class ErrorInfo(val code: String, val message: String)
 
