@@ -164,14 +164,14 @@ class PollingCollector : SingleValueCollector(), Submittable, ContinueNodeAware,
 
     /**
      * Polling interval in milliseconds between each polling attempt.
-     * Default value is "2000" (2 seconds).
+     * Default value is 2000 (2 seconds).
      */
     var pollInterval: Int = 2000
         private set
 
     /**
      * Maximum number of polling attempts before timing out.
-     * Default value is "60".
+     * Default value is 60.
      */
     var pollRetries: Int = 60
         private set
