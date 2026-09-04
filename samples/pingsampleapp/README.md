@@ -142,6 +142,41 @@ The PingOne MFA module (`pingonemfa`) requires additional one-time configuration
 2. The FCM token is registered with PingOne automatically via `PingOneMFA.setDeviceToken(token)` whenever Firebase delivers a new token
 3. See the [pingonemfa README](../pingonemfa/README.md) for the full list of supported regions and API reference
 4. See the [PingOne MFA documentation](https://docs.pingidentity.com/pingone/strong_authentication_mfa/p1_strong_authentication_configure_mobile_applications.html) for server-side configuration and integration details
+### PingOne Recognize integration
+
+The Recognize integration is optional because its Keyless SDK dependencies are hosted in protected Cloudsmith repositories.
+
+#### Required Cloudsmith tokens
+
+Add both tokens to a local Gradle properties file using these exact property names:
+
+| Gradle property | Repository | Used for |
+|---|---|---|
+| `cloudsmithTokenRecognize` | `keyless/partners` | PingOne Recognize / Keyless Mobile SDK |
+| `cloudsmithTokenAesWrap` | `keyless/aeswrap` | AES wrap dependencies used by the SDK |
+
+- **Recommended:** `~/.gradle/gradle.properties` — applies locally without changing the repository
+- **Alternative:** the repository's `gradle.properties` — keep this file local and never commit it
+
+```properties
+cloudsmithTokenRecognize=<your-recognize-cloudsmith-token>
+cloudsmithTokenAesWrap=<your-aeswrap-cloudsmith-token>
+```
+
+Do not place either token in source code, commit them, or share them in logs. The build reads both properties from Gradle properties and uses them to configure the protected Maven repositories in `settings.gradle.kts`.
+
+When `cloudsmithTokenRecognize` is present and non-blank, Gradle enables the `:recognize` module and the sample compiles its real Recognize callback integration. The AES wrap repository is configured separately through `cloudsmithTokenAesWrap`; provide that token whenever the dependency graph requires AES wrap artifacts.
+
+```bash
+./gradlew :samples:pingsampleapp:assembleDebug
+```
+
+#### Run without Recognize
+
+If `cloudsmithTokenRecognize` is missing or blank, the sample remains buildable without the protected Recognize dependency. The build excludes the `:recognize` module and selects the local Recognize stub, so Recognize callbacks are safely skipped rather than preventing the rest of the sample app from running.
+
+This means you can work on the sample without Recognize Cloudsmith access, then add the required tokens locally whenever you need to exercise the full integration. After changing either token, sync or rerun Gradle so the correct repository and dependency graph are selected.
+
 ## Implementation Highlights
 
 ### ViewModel Initialization
