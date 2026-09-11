@@ -202,7 +202,7 @@ jobs:
               "text": "*Mend SCA Scan Results*",
               "attachments": [
                 {
-                  "color": "${{ job.status == 'success' && 'good' || 'danger' }}",
+                  "color": "${{ (env.MEND_SCA_CRITICAL_COUNT == '0' && env.MEND_SCA_HIGH_COUNT == '0') && 'good' || 'danger' }}",
                   "fields": [
                     {
                       "title": "SCA scan",
@@ -215,3 +215,15 @@ jobs:
             }
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
+
+      # Fail the job (not just the informational Check above) so that
+      # ci.yaml's `needs:` gating and branch protection actually block on
+      # Critical/High findings instead of showing green.
+      - name: Fail on Critical/High severity vulnerabilities
+        shell: bash
+        run: |
+          if [ "$MEND_SCA_CRITICAL_COUNT" -gt 0 ] || [ "$MEND_SCA_HIGH_COUNT" -gt 0 ]; then
+            echo "::error::Mend SCA scan found ${MEND_SCA_CRITICAL_COUNT} critical and ${MEND_SCA_HIGH_COUNT} high severity vulnerabilities. See the Mend SCA Report step summary for details."
+            exit 1
+          fi
+          echo "No critical or high severity vulnerabilities found."
