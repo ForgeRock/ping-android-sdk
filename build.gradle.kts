@@ -72,15 +72,15 @@ allprojects {
             // Updated to 2.18.8 per Mend SCA (CVE-2026-54512, CVE-2026-54513, CVE-2026-54514)
             force("com.fasterxml.jackson.module:jackson-module-kotlin:2.18.8")
             force("com.fasterxml.jackson.dataformat:jackson-dataformat-xml:2.18.8")
-            force("com.fasterxml.jackson.core:jackson-databind:2.18.8")
+            force("com.fasterxml.jackson.core:jackson-databind:2.18.9")
 
             // Force secure version of netty-codec to address security vulnerabilities
             // Used transitively by com.android.tools.emulator:proto (build toolchain only)
             // Updated to 4.1.125.Final per Mend SCA recommendation (Nov 2025)
-            force("io.netty:netty-codec:4.1.125.Final")
-            force("io.netty:netty-codec-http:4.1.125.Final")
-            force("io.netty:netty-codec-http2:4.1.125.Final")
-            force("io.netty:netty-all:4.1.125.Final")
+            force("io.netty:netty-codec:4.1.136.Final")
+            force("io.netty:netty-codec-http:4.1.136.Final")
+            force("io.netty:netty-codec-http2:4.1.136.Final")
+            force("io.netty:netty-all:4.1.136.Final")
 
             // Force secure version of protobuf to address security vulnerabilities
             // Used transitively by AGP/build toolchain
