@@ -143,7 +143,17 @@ jobs:
             exit 0
           fi
 
-          
+
+      # Reduce the commit message to a single, JSON-safe line so it can't
+      # break the Slack custom_payload JSON below (commit bodies often
+      # contain raw newlines and quotes, e.g. sign-off/co-author trailers).
+      - name: Prepare Slack commit summary
+        if: always()
+        run: |
+          COMMIT_MSG="${{ github.event.head_commit.message || 'N/A' }}"
+          COMMIT_SUMMARY=$(printf '%s' "$COMMIT_MSG" | head -n1 | sed 's/\\/\\\\/g; s/"/\\"/g')
+          echo "COMMIT_SUMMARY=$COMMIT_SUMMARY" >> $GITHUB_ENV
+
       # Send slack notification with result status
       - name: Send slack notification
         uses: 8398a7/action-slack@v3
@@ -157,7 +167,7 @@ jobs:
                   "title": "BrowserStack Build: ${{ env.BROWSERSTACK_OATH_BUILD_ID }}",
                   "title_link": "${{ env.BROWSERSTACK_BUILD_URL }}",
                   "color": "${{ job.status == 'success' && 'good' || job.status == 'failure' && 'danger' || 'warning' }}",
-                  "text": "Test summary: ${{ job.status }}\nPassed: ${{ env.BROWSERSTACK_BUILD_PASSED }}, Failed: ${{ env.BROWSERSTACK_BUILD_FAILED }}, Skipped: ${{ env.BROWSERSTACK_BUILD_SKIPPED }}\nDevices: ${{ env.BROWSERSTACK_BUILD_DEVICE_COUNT }}\nDuration: ${{ env.BROWSERSTACK_BUILD_DURATION }}s\nWorkflow: ${{ github.workflow }} -> ${{ github.job }}\nPull request: ${{ github.event.pull_request.html_url || 'N/A' }}\nCommit: ${{ github.sha }} by ${{ github.actor }}\nMessage: ${{ github.event.head_commit.message || 'N/A' }}"
+                  "text": "Test summary: ${{ job.status }}\nPassed: ${{ env.BROWSERSTACK_BUILD_PASSED }}, Failed: ${{ env.BROWSERSTACK_BUILD_FAILED }}, Skipped: ${{ env.BROWSERSTACK_BUILD_SKIPPED }}\nDevices: ${{ env.BROWSERSTACK_BUILD_DEVICE_COUNT }}\nDuration: ${{ env.BROWSERSTACK_BUILD_DURATION }}s\nWorkflow: ${{ github.workflow }} -> ${{ github.job }}\nPull request: ${{ github.event.pull_request.html_url || 'N/A' }}\nCommit: ${{ github.sha }} by ${{ github.actor }}\nMessage: ${{ env.COMMIT_SUMMARY }}"
                 }
               ]
             }
