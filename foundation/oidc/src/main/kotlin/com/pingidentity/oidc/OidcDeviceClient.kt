@@ -23,13 +23,20 @@ import com.pingidentity.oidc.Constants.DEVICE_CODE
 import com.pingidentity.oidc.Constants.GRANT_TYPE
 import com.pingidentity.oidc.Constants.SCOPE
 import com.pingidentity.oidc.Constants.URN_DEVICE_CODE_GRANT_TYPE
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.serialization.json.JsonObject
+import java.net.ConnectException
+import java.net.SocketException
+import java.net.SocketTimeoutException
 import java.net.URL
+import java.net.UnknownHostException
+import java.nio.channels.UnresolvedAddressException
+import kotlin.time.Duration.Companion.milliseconds
 
 // Error codes defined by RFC 8628 §3.5
 private const val ERROR_AUTHORIZATION_PENDING = "authorization_pending"
@@ -37,6 +44,9 @@ private const val ERROR_SLOW_DOWN = "slow_down"
 private const val ERROR_EXPIRED_TOKEN = "expired_token"
 private const val ERROR_ACCESS_DENIED = "access_denied"
 private const val SLOW_DOWN_INCREMENT_SECONDS = 5
+private const val INITIAL_TRANSPORT_RETRY_DELAY_SECONDS = 1
+private const val MAX_TRANSPORT_RETRY_DELAY_SECONDS = 20
+private const val KTOR_CONNECT_FAILURE = "io.ktor.client.engine.cio.FailToConnectException"
 
 /**
  * Factory function to create an [OidcDeviceClient] with the provided configuration block.
@@ -116,13 +126,19 @@ fun OidcDeviceClient(json: JsonObject): Result<OidcDeviceClient> {
  */
 class OidcDeviceClient(internal val config: OidcClientConfig) {
 
+    internal var clock: () -> Long = System::currentTimeMillis
+    internal var retryDelay: suspend (Long) -> Unit = { delay(it.milliseconds) }
+
     /**
      * Starts the device authorization flow and polls for the token.
      *
      * Emits [DeviceFlowStatus.Started] immediately after obtaining the device code, then emits
-     * [DeviceFlowStatus.Polling] on each poll interval until one of the terminal states is reached:
+     * [DeviceFlowStatus.Polling] while waiting for authorization or retrying a transient transport
+     * failure. Transient token-endpoint failures are retried with bounded backoff while the device
+     * code remains valid. The flow continues until one of the terminal states is reached:
      * - [DeviceFlowStatus.Success] — access token received and stored.
-     * - [DeviceFlowStatus.Expired] — device code expired or access was denied.
+     * - [DeviceFlowStatus.Expired] — device code expired.
+     * - [DeviceFlowStatus.AccessDenied] — user denied the authorization request.
      * - [DeviceFlowStatus.Failure] — unrecoverable error occurred.
      *
      * The flow closes automatically after emitting any terminal state.
@@ -142,14 +158,21 @@ class OidcDeviceClient(internal val config: OidcClientConfig) {
             val deviceAuthResponse = requestDeviceAuthorization(deviceAuthEndpoint)
             emit(DeviceFlowStatus.Started(deviceAuthResponse))
 
-            val expiresAt = System.currentTimeMillis() + (deviceAuthResponse.expiresIn * 1000L)
+            val expiresAt = clock() + (deviceAuthResponse.expiresIn * 1000L)
             var pollInterval = deviceAuthResponse.interval
             var pollCount = 0
 
-            while (System.currentTimeMillis() < expiresAt) {
-                delay(pollInterval * 1000L)
+            var transportRetryDelaySeconds = INITIAL_TRANSPORT_RETRY_DELAY_SECONDS
+            var nextPollDelayMillis = pollInterval * 1000L
+            while (clock() < expiresAt) {
+                currentCoroutineContext().ensureActive()
+                val delayMillis = nextPollDelayMillis.coerceAtMost(
+                    (expiresAt - clock()).coerceAtLeast(0L)
+                )
+                retryDelay(delayMillis)
+                currentCoroutineContext().ensureActive()
 
-                if (System.currentTimeMillis() >= expiresAt) {
+                if (clock() >= expiresAt) {
                     logger.i("Device code expired (wall-clock)")
                     emit(DeviceFlowStatus.Expired)
                     return@flow
@@ -158,9 +181,37 @@ class OidcDeviceClient(internal val config: OidcClientConfig) {
                 pollCount++
                 logger.i("Polling token endpoint (attempt $pollCount)")
 
-                val tokenResponse =
+                val tokenResponse = try {
+                    currentCoroutineContext().ensureActive()
                     pollTokenEndpoint(deviceAuthResponse.deviceCode, config.openId.tokenEndpoint)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    if (!e.isTransientTransportFailure()) {
+                        throw e
+                    }
 
+                    val now = clock()
+                    val remainingSeconds = ((expiresAt - now).coerceAtLeast(0L) / 1000L).toInt()
+                    val retryDelaySeconds = transportRetryDelaySeconds.coerceAtMost(remainingSeconds)
+                    if (retryDelaySeconds <= 0) {
+                        logger.i("Device code expired (retry window closed)")
+                        emit(DeviceFlowStatus.Expired)
+                        return@flow
+                    }
+
+                    val retryDelayMillis = retryDelaySeconds * 1000L
+                    val nextPollAt = now + retryDelayMillis
+                    logger.w("Token poll network failure; retrying in ${retryDelaySeconds}s")
+                    emit(DeviceFlowStatus.Polling(pollCount, retryDelaySeconds, nextPollAt))
+                    transportRetryDelaySeconds =
+                        (transportRetryDelaySeconds * 2).coerceAtMost(MAX_TRANSPORT_RETRY_DELAY_SECONDS)
+                    nextPollDelayMillis = retryDelayMillis
+                    continue
+                }
+
+                // A response, including an RFC 8628 error response, means the transport recovered.
+                transportRetryDelaySeconds = INITIAL_TRANSPORT_RETRY_DELAY_SECONDS
                 when {
                     tokenResponse.isSuccess -> {
                         val token = json.decodeFromString<Token>(tokenResponse.body)
@@ -171,16 +222,38 @@ class OidcDeviceClient(internal val config: OidcClientConfig) {
                     }
 
                     tokenResponse.error == ERROR_AUTHORIZATION_PENDING -> {
-                        val nextPollAt = System.currentTimeMillis() + (pollInterval * 1000L)
-                        emit(DeviceFlowStatus.Polling(pollCount, pollInterval, nextPollAt))
+                        val now = clock()
+                        val effectiveDelayMillis = (pollInterval * 1000L).coerceAtMost(
+                            (expiresAt - now).coerceAtLeast(0L)
+                        )
+                        if (now >= expiresAt) {
+                            logger.i("Device code expired (polling interval elapsed)")
+                            emit(DeviceFlowStatus.Expired)
+                            return@flow
+                        }
+                        nextPollDelayMillis = effectiveDelayMillis
+                        val nextPollAt = now + effectiveDelayMillis
+                        val effectiveDelaySeconds = (effectiveDelayMillis / 1000L).toInt()
+                        emit(DeviceFlowStatus.Polling(pollCount, effectiveDelaySeconds, nextPollAt))
                     }
 
                     tokenResponse.error == ERROR_SLOW_DOWN -> {
                         // RFC 8628 §3.5: increase interval by 5 s on each slow_down response.
                         pollInterval += SLOW_DOWN_INCREMENT_SECONDS
                         logger.i("Slow down received; new interval: $pollInterval s")
-                        val nextPollAt = System.currentTimeMillis() + (pollInterval * 1000L)
-                        emit(DeviceFlowStatus.Polling(pollCount, pollInterval, nextPollAt))
+                        val now = clock()
+                        val effectiveDelayMillis = (pollInterval * 1000L).coerceAtMost(
+                            (expiresAt - now).coerceAtLeast(0L)
+                        )
+                        if (now >= expiresAt) {
+                            logger.i("Device code expired (polling interval elapsed)")
+                            emit(DeviceFlowStatus.Expired)
+                            return@flow
+                        }
+                        nextPollDelayMillis = effectiveDelayMillis
+                        val nextPollAt = now + effectiveDelayMillis
+                        val effectiveDelaySeconds = (effectiveDelayMillis / 1000L).toInt()
+                        emit(DeviceFlowStatus.Polling(pollCount, effectiveDelaySeconds, nextPollAt))
                     }
 
                     tokenResponse.error == ERROR_EXPIRED_TOKEN -> {
@@ -206,10 +279,10 @@ class OidcDeviceClient(internal val config: OidcClientConfig) {
 
             logger.i("Device code expired (polling loop exit)")
             emit(DeviceFlowStatus.Expired)
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
-            // Re-check active state before emitting: if the coroutine was cancelled, re-throw
-            // so the Flow terminates with CancellationException rather than swallowing it.
-            logger.w("Device flow failed with exception: ${e.message}", e)
+            logger.w("Device flow failed with an unexpected exception")
             currentCoroutineContext().ensureActive()
             emit(DeviceFlowStatus.Failure(e))
         }
@@ -277,12 +350,18 @@ class OidcDeviceClient(internal val config: OidcClientConfig) {
     )
 
     /**
-     * Sends a single token request to [tokenEndpoint] using the device-code grant type.
-     *
-     * @param deviceCode The `device_code` from the device authorization response.
-     * @param tokenEndpoint The token endpoint URL from the OpenID Connect discovery document.
-     * @return A [TokenPollResult] indicating success or the RFC 8628 error code.
+     * Returns whether this exception or one of its causes represents a transient transport failure.
      */
+    private fun Throwable.isTransientTransportFailure(): Boolean =
+        generateSequence(this) { it.cause }.any { cause ->
+            cause is ConnectException ||
+                cause is SocketException ||
+                cause is SocketTimeoutException ||
+                cause is UnknownHostException ||
+                cause is UnresolvedAddressException ||
+                cause::class.qualifiedName == KTOR_CONNECT_FAILURE
+        }
+
     private suspend fun pollTokenEndpoint(
         deviceCode: String,
         tokenEndpoint: String
