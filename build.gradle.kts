@@ -101,6 +101,10 @@ allprojects {
             // freemarker-2.3.32, transitive runtime dependency of
             // org.jetbrains.dokka:dokka-base:2.0.0 (build-time only, not shipped in the SDK).
             force("org.freemarker:freemarker:2.3.35")
+            // Due to [CVE-2025-48924]:
+            // commons-lang3-3.16.0, transitive runtime dependency of
+            // lint-gradle-32.2.1.jar (build-time only, not shipped in the SDK).
+            force("org.apache.commons:commons-lang3:3.18.0")
         }
     }
 }
