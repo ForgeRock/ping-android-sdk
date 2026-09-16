@@ -574,8 +574,10 @@ class FidoAuthenticateCustomizer {
  *
  * **API Selection Logic:**
  * The FIDO2 API used for each call is selected per request via
- * [FidoAuthenticateCustomizer.useFido2ApiClient] on the `authenticate { }` block
- * (default: `false` — Android Credential Manager).
+ * [FidoAuthenticateCustomizer.useFido2ApiClient] on the `authenticate { }` block.
+ * The default is auto-detected at runtime: Google Play Services FIDO2 when GMS is
+ * present (virtually every device with Play Services), Android Credential Manager
+ * otherwise. Set `false` explicitly to select Credential Manager.
  */
 @PingDsl
 class FidoClientConfig {

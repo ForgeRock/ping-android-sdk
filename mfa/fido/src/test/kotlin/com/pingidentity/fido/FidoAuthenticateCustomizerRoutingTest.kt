@@ -41,8 +41,9 @@ import com.google.android.gms.fido.fido2.api.common.PublicKeyCredential as GmsPu
 
 /**
  * Spike tests for SDKS-5411: verifies that [FidoAuthenticateCustomizer.useFido2ApiClient] is the
- * single source of truth for API selection on an `authenticate` call — default `false`
- * (Credential Manager), opt-in `true` for Google Play Services (e.g. device-bound credentials).
+ * single source of truth for API selection on an `authenticate` call — default auto-detected
+ * from GMS presence (`true` on any GMS device, `false` otherwise), with explicit per-call
+ * overrides for either path.
  */
 @RunWith(RobolectricTestRunner::class) // CredentialManager uses Android API
 class FidoAuthenticateCustomizerRoutingTest {
