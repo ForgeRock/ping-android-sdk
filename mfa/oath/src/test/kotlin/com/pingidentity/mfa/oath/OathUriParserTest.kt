@@ -277,6 +277,21 @@ class OathUriParserTest {
     }
 
     @Test
+    fun `test parse URI with blank secret throws IllegalArgumentException`() = runTest {
+        // secret param is present but blank - a value-validation failure (IllegalArgumentException),
+        // distinct from the missing-param case above which is a structural failure (InvalidUriException)
+        val uri = "otpauth://totp/Example:alice@example.com?secret=&issuer=Example"
+        try {
+            OathUriParser.parse(uri)
+            fail("Expected IllegalArgumentException for blank secret")
+        } catch (e: InvalidUriException) {
+            fail("Blank secret must be IllegalArgumentException, not InvalidUriException")
+        } catch (e: IllegalArgumentException) {
+            assertTrue(e.message?.contains("secret") == true)
+        }
+    }
+
+    @Test
     fun `test parse URI with issuer label mismatch throws InvalidUriException`() = runTest {
         // Label says "A" but issuer param says "B" — parseLabelComponents raises InvalidUriException
         val uri = "otpauth://totp/A:bob@example.com?secret=JBSWY3DPEHPK3PXP&issuer=B"

@@ -386,6 +386,26 @@ class OathCredentialTest {
     }
 
     @Test
+    fun `test create credential with blank secret`() {
+        val invalidSecretValues = listOf("", "   ")
+
+        invalidSecretValues.forEach { invalidSecret ->
+            try {
+                OathCredential(
+                    issuer = testIssuer,
+                    accountName = testAccountName,
+                    oathType = OathType.TOTP,
+                    secret = invalidSecret
+                )
+                fail("Expected IllegalArgumentException for blank secret")
+            } catch (e: IllegalArgumentException) {
+                // Expected - test passes for this value
+                assertTrue(e.message?.contains("secret") == true)
+            }
+        }
+    }
+
+    @Test
     fun `test create credential with valid digits`() {
         val validDigitsValues = listOf(6, 8)
         
