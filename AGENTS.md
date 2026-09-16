@@ -224,9 +224,13 @@ The root `build.gradle.kts` contains a `resolutionStrategy { force(...) }` block
 
 | Dependency | Pinned version | Reason |
 |-----------|---------------|--------|
-| `com.fasterxml.jackson.module:jackson-module-kotlin` | `2.15.0` | WS-2022-0468 (Dokka transitive) |
-| `com.fasterxml.jackson.dataformat:jackson-dataformat-xml` | `2.15.0` | WS-2022-0468 (Dokka transitive) |
-| `com.fasterxml.jackson.core:jackson-databind` | `2.15.0` | WS-2022-0468 (Dokka transitive) |
+| `com.fasterxml.jackson.module:jackson-module-kotlin` | `2.22.2` | CVE-2026-68494, CVE-2026-54512, CVE-2026-54513 (Dokka transitive) |
+| `com.fasterxml.jackson.dataformat:jackson-dataformat-xml` | `2.22.2` | CVE-2026-68494, CVE-2026-54512, CVE-2026-54513 (Dokka transitive) |
+| `com.fasterxml.jackson.core:jackson-databind` | `2.22.2` | CVE-2026-68494, CVE-2026-54512, CVE-2026-54513 (Dokka transitive) |
+| `org.jsoup:jsoup` | `1.23.2` | CVE-2026-71497 (Dokka transitive) |
+| `org.apache.httpcomponents:httpclient` | `4.5.13` | CVE-2020-13956 (AGP `sdklib` via `httpmime`) |
+| `org.freemarker:freemarker` | `2.3.35` | CVE-2026-84939 (Dokka transitive) |
+| `org.apache.commons:commons-lang3` | `3.18.0` | CVE-2025-48924 (AGP `sdklib` via `commons-compress`) |
 | `io.netty:netty-codec` | `4.1.125.Final` | Security vulnerabilities (Mend SCA, Nov 2025) |
 | `io.netty:netty-codec-http` | `4.1.125.Final` | Security vulnerabilities (Mend SCA, Nov 2025) |
 | `io.netty:netty-codec-http2` | `4.1.125.Final` | Security vulnerabilities (Mend SCA, Nov 2025) |
@@ -237,6 +241,9 @@ The root `build.gradle.kts` contains a `resolutionStrategy { force(...) }` block
 | `com.google.protobuf:protobuf-kotlin-lite` | `4.29.2` | CVE-2024-7254 and related CVEs |
 | `com.google.android.gms:play-services-basement` | `18.0.2` | CVE-2022-2390 |
 | `com.nimbusds:nimbus-jose-jwt` | `10.5` | CVE-2025-53864 |
+| `org.bouncycastle:bcprov-jdk18on` | `1.85` | CVE-2026-8763 (build-toolchain classpath, `lint-gradle`) |
+| `org.bouncycastle:bcpkix-jdk18on` | `1.85` | CVE-2026-8763 (build-toolchain classpath, `lint-gradle`) |
+| `org.bouncycastle:bcutil-jdk18on` | `1.85` | CVE-2026-8763 (build-toolchain classpath, `lint-gradle`) |
 
 If an agent-proposed dependency upgrade would silently override one of these pins, surface it explicitly in the PR description for reviewer sign-off.
 

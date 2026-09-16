@@ -42,10 +42,10 @@ buildscript {
     configurations.all {
         resolutionStrategy {
             // Force secure version of bouncy castle to address security vulnerabilities
-            // Fixes CVE-2025-14813 and CVE-2026-5598; targets build-toolchain classpath (lint-gradle)
-            force("org.bouncycastle:bcprov-jdk18on:1.84")
-            force("org.bouncycastle:bcpkix-jdk18on:1.84")
-            force("org.bouncycastle:bcutil-jdk18on:1.84")
+            // Fixes CVE-2026-8763; targets build-toolchain classpath (lint-gradle)
+            force(libs.bcprov.jdk18on)
+            force(libs.bcpkix.jdk18on)
+            force(libs.bcutil.jdk18on)
         }
     }
 }
@@ -64,15 +64,15 @@ allprojects {
             force("com.nimbusds:nimbus-jose-jwt:10.5")
 
             // Force secure version of bouncy castle to address security vulnerabilities
-            // Fixes CVE-2025-14813 and CVE-2026-5598; targets build-toolchain classpath (lint-gradle)
-            force("org.bouncycastle:bcprov-jdk18on:1.84")
-            force("org.bouncycastle:bcpkix-jdk18on:1.84")
-            force("org.bouncycastle:bcutil-jdk18on:1.84")
+            // Fixes CVE-2026-8763; targets build-toolchain classpath (lint-gradle)
+            force(libs.bcprov.jdk18on)
+            force(libs.bcpkix.jdk18on)
+            force(libs.bcutil.jdk18on)
 
-            // Updated to 2.18.8 per Mend SCA (CVE-2026-54512, CVE-2026-54513, CVE-2026-54514)
-            force("com.fasterxml.jackson.module:jackson-module-kotlin:2.18.8")
-            force("com.fasterxml.jackson.dataformat:jackson-dataformat-xml:2.18.8")
-            force("com.fasterxml.jackson.core:jackson-databind:2.18.8")
+            // Updated to 2.22.2 per Mend SCA vulnerability [CVE-2026-68494], [CVE-2026-54512], [CVE-2026-54513] from dokka project.
+            force(libs.jackson.module.kotlin)
+            force(libs.jackson.dataformat.xml)
+            force(libs.jackson.databind)
 
             // Force secure version of netty-codec to address security vulnerabilities
             // Used transitively by com.android.tools.emulator:proto (build toolchain only)
@@ -89,6 +89,26 @@ allprojects {
             force("com.google.protobuf:protobuf-kotlin:4.29.2")
             force("com.google.protobuf:protobuf-javalite:4.29.2")
             force("com.google.protobuf:protobuf-kotlin-lite:4.29.2")
+            //Due to [CVE-2026-71497]:
+            // org.jsoup:jsoup:1.16.1, transitive runtime dependency of
+            // org.jetbrains.dokka:dokka-base:2.2.0 (build-time only, not shipped in the SDK).
+            force("org.jsoup:jsoup:1.23.2")
+            // Due to [CVE-2020-13956]:
+            // org.apache.httpcomponents:httpclient:4.5.6, transitive runtime dependency of
+            // com.android.tools:sdklib:32.2.1 via org.apache.httpcomponents:httpmime:4.5.6
+            // (AGP build toolchain, build-time only, not shipped in the SDK). On the
+            // buildscript classpath it self-resolves to 4.5.14 via
+            // com.android.tools.analytics-library:crash, which also fixes the CVE.
+            force("org.apache.httpcomponents:httpclient:4.5.13")
+            // Due to [CVE-2026-84939]:
+            // org.freemarker:freemarker:2.3.32, transitive runtime dependency of
+            // org.jetbrains.dokka:dokka-base:2.2.0 (build-time only, not shipped in the SDK).
+            force("org.freemarker:freemarker:2.3.35")
+            // Due to [CVE-2025-48924]:
+            // org.apache.commons:commons-lang3:3.16.0, transitive runtime dependency of
+            // com.android.tools:sdklib:32.2.1 via commons-compress:1.27.1
+            // (AGP build toolchain, build-time only, not shipped in the SDK).
+            force("org.apache.commons:commons-lang3:3.18.0")
         }
     }
 }
