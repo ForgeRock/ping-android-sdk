@@ -249,7 +249,7 @@ class OathCredentialTest {
         assertTrue(json.contains("\"displayIssuer\":\"$testIssuer\""))
         assertTrue(json.contains("\"accountName\":\"$testAccountName\""))
         assertTrue(json.contains("\"displayAccountName\":\"$testAccountName\""))
-        assertTrue(json.contains("\"oathType\":\"TOTP\""))
+        assertTrue(json.contains("\"oathType\":\"totp\""))
         assertTrue(json.contains("\"secret\":\"$testSecret\""))
         assertTrue(json.contains("\"oathAlgorithm\":\"SHA1\""))
         assertTrue(json.contains("\"digits\":6"))
@@ -303,6 +303,58 @@ class OathCredentialTest {
         assertEquals("https://example.com/logo.png", credential.imageURL)
         assertEquals("#FF5733", credential.backgroundColor)
         assertFalse(credential.isLocked)
+    }
+
+    @Test
+    fun `test from JSON with legacy uppercase oathType`() {
+        val jsonString = """
+            {
+                "id": "test-id-123",
+                "issuer": "Test Issuer",
+                "displayIssuer": "Test Issuer",
+                "accountName": "testuser@example.com",
+                "displayAccountName": "testuser@example.com",
+                "oathType": "TOTP",
+                "secret": "JBSWY3DPEHPK3PXP",
+                "oathAlgorithm": "SHA1",
+                "digits": 6,
+                "period": 30,
+                "counter": 0,
+                "createdAt": 1688300000000,
+                "isLocked": false
+            }
+        """.trimIndent()
+
+        val credential = OathCredential.fromJson(jsonString)
+
+        assertEquals(OathType.TOTP, credential.oathType)
+        assertEquals("test-id-123", credential.id)
+    }
+
+    @Test
+    fun `test from JSON with lowercase oathType`() {
+        val jsonString = """
+            {
+                "id": "test-id-123",
+                "issuer": "Test Issuer",
+                "displayIssuer": "Test Issuer",
+                "accountName": "testuser@example.com",
+                "displayAccountName": "testuser@example.com",
+                "oathType": "hotp",
+                "secret": "JBSWY3DPEHPK3PXP",
+                "oathAlgorithm": "SHA1",
+                "digits": 6,
+                "period": 30,
+                "counter": 10,
+                "createdAt": 1688300000000,
+                "isLocked": false
+            }
+        """.trimIndent()
+
+        val credential = OathCredential.fromJson(jsonString)
+
+        assertEquals(OathType.HOTP, credential.oathType)
+        assertEquals("test-id-123", credential.id)
     }
 
     @Test
