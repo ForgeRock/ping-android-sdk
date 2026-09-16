@@ -273,6 +273,29 @@ val result = collector.authenticate {
 }
 ```
 
+#### Selecting the FIDO2 API per request
+
+The SDK automatically selects the FIDO2 API at runtime: **Google Play Services FIDO** when GMS
+is present on the device, otherwise the **Android Credential Manager API**. This default
+preserves the routing behaviour existing apps see today.
+
+- Credential Manager is the modern passkey experience and the only path that supports
+  conditional mediation (autofill with passkeys).
+- Google Play Services is required for non-discoverable, device-bound credentials.
+
+You can override the selection per call with `useFido2ApiClient` in the call block:
+
+```kotlin
+val result = collector.authenticate {
+    // Route this call through Credential Manager (e.g. for autofill with passkeys)
+  useFido2ApiClient = false
+}
+```
+
+`FidoAuthenticateCustomizer.useFido2ApiClient` is the single source of truth for API selection —
+there is no client-level configuration for it. The Credential Manager path requires the app to
+declare `androidx.credentials:credentials-play-services-auth` on API ≤ 33 (see the sample app).
+
 ## ⚠️ Important Migration Notice
 
 ### Deprecated Legacy ForgeRock SDK Method

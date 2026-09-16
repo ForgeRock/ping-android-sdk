@@ -289,8 +289,10 @@ class FidoClientTest {
                 )
             } returns mockGetResponse
 
-            // When
-            val result = FidoClient { useFido2Client = false }.authenticate(requestOptions)
+            // When - explicit Credential Manager routing
+            val result = FidoClient().authenticate(requestOptions) {
+                useFido2ApiClient = false
+            }
 
             // Then
             assertTrue(result.isSuccess)
@@ -321,8 +323,10 @@ class FidoClientTest {
             mockCredentialManager.getCredential(any(), any() as GetCredentialRequest)
         } throws expectedException
 
-        // When
-        val result = FidoClient { useFido2Client = false }.authenticate(requestOptions)
+        // When - explicit Credential Manager routing
+        val result = FidoClient().authenticate(requestOptions) {
+            useFido2ApiClient = false
+        }
 
         // Then
         assertTrue(result.isFailure)
@@ -345,8 +349,10 @@ class FidoClientTest {
                 mockCredentialManager.getCredential(any(), any() as GetCredentialRequest)
             } returns mockGetResponse
 
-            // When
-            val result = FidoClient { useFido2Client = false }.authenticate(requestOptions)
+            // When - explicit Credential Manager routing
+            val result = FidoClient().authenticate(requestOptions) {
+                useFido2ApiClient = false
+            }
 
             // Then
             assertTrue(result.isFailure)
@@ -380,7 +386,7 @@ class FidoClientTest {
         coEvery { getPublicKeyCredential(any(), any()) } returns mockCredential
 
         // When
-        val result = FidoClient { useFido2Client = true }.authenticate(buildJsonObject { })
+        val result = FidoClient().authenticate(buildJsonObject { }) { useFido2ApiClient = true }
 
         // Then
         assertTrue(result.isSuccess)
@@ -426,7 +432,7 @@ class FidoClientTest {
             coEvery { getPublicKeyCredential(any(), any()) } returns mockCredential
 
             // When
-            val result = FidoClient { useFido2Client = true }.authenticate(buildJsonObject { })
+            val result = FidoClient().authenticate(buildJsonObject { }) { useFido2ApiClient = true }
 
             // Then
             assertTrue(result.isSuccess)
@@ -457,7 +463,7 @@ class FidoClientTest {
         coEvery { getPublicKeyCredential(any(), any()) } returns mockCredential
 
         // When
-        val result = FidoClient { useFido2Client = true }.authenticate(buildJsonObject { })
+        val result = FidoClient().authenticate(buildJsonObject { }) { useFido2ApiClient = true }
 
         // Then
         assertTrue(result.isSuccess)
@@ -476,7 +482,7 @@ class FidoClientTest {
             coEvery { getPublicKeyCredential(any(), any()) } throws expectedException
 
             // When
-            val result = FidoClient { useFido2Client = true }.authenticate(buildJsonObject { })
+            val result = FidoClient().authenticate(buildJsonObject { }) { useFido2ApiClient = true }
 
             // Then
             assertTrue(result.isFailure)
@@ -498,7 +504,7 @@ class FidoClientTest {
             } throws CancellationException("Cancelled")
 
             // When
-            val result = FidoClient { useFido2Client = true }.authenticate(buildJsonObject { })
+            val result = FidoClient().authenticate(buildJsonObject { }) { useFido2ApiClient = true }
 
             // Then
             assertTrue(result.isFailure)
@@ -506,11 +512,9 @@ class FidoClientTest {
         }
 
     @Test
-    fun `authenticate with DSL customizer should apply onPublicKeyCredentialRequestOptions when useFido2Client is true`() = runTest {
+    fun `authenticate with DSL customizer should apply onPublicKeyCredentialRequestOptions when useFido2ApiClient is true`() = runTest {
         // Given
-        fidoClient = FidoClient {
-            useFido2Client = true
-        }
+        fidoClient = FidoClient()
 
         val challengeBytes = "test-challenge-for-dsl".toByteArray()
         val challengeBase64 = challengeBytes.toBase64()
@@ -542,6 +546,7 @@ class FidoClientTest {
 
         // When - using DSL customizer
         val result = fidoClient.authenticate(inputJson) {
+            useFido2ApiClient = true
             onPublicKeyCredentialRequestOptions { options ->
                 // Verify original options are correctly parsed
                 assertEquals("example.com", options.rpId)
@@ -573,11 +578,9 @@ class FidoClientTest {
     }
 
     @Test
-    fun `authenticate with DSL customizer should apply onGetPublicKeyCredentialOption when useFido2Client is false`() = runTest {
-        // Given
-        fidoClient = FidoClient {
-            useFido2Client = false
-        }
+    fun `authenticate with DSL customizer should apply onGetPublicKeyCredentialOption when useFido2ApiClient is false`() = runTest {
+        // Given - Credential Manager routing is requested explicitly
+        fidoClient = FidoClient()
 
         val inputJson = buildJsonObject {
             put(Constants.FIELD_RP_ID, "test.example.com")
@@ -601,8 +604,9 @@ class FidoClientTest {
             )
         } returns mockGetResponse
 
-        // When - using DSL customizer
+        // When - using DSL customizer (Credential Manager routing)
         val result = fidoClient.authenticate(inputJson) {
+            useFido2ApiClient = false
             onGetPublicKeyCredentialOption { option ->
                 // Verify the option contains the correct JSON with base64 challenge
                 assertTrue(option.requestJson.contains("test.example.com"))
@@ -636,9 +640,7 @@ class FidoClientTest {
     @Test
     fun `authenticate with DSL customizer should handle allowCredentials with real base64 decoding`() = runTest {
         // Given
-        fidoClient = FidoClient {
-            useFido2Client = true
-        }
+        fidoClient = FidoClient()
 
         val credentialId1 = "first-test-credential".toByteArray()
         val credentialId2 = "second-test-credential".toByteArray()
@@ -683,6 +685,7 @@ class FidoClientTest {
 
         // When - using DSL customizer with allowCredentials validation
         val result = fidoClient.authenticate(inputJson) {
+            useFido2ApiClient = true
             onPublicKeyCredentialRequestOptions { options ->
                 // Verify JSON parsing and allowCredentials processing
                 assertEquals("secure.example.com", options.rpId)
@@ -746,9 +749,7 @@ class FidoClientTest {
     @Test
     fun `authenticate with DSL customizer should handle both customizers when needed`() = runTest {
         // Given
-        fidoClient = FidoClient {
-            useFido2Client = true
-        }
+        fidoClient = FidoClient()
 
         val inputJson = buildJsonObject {
             put(Constants.FIELD_RP_ID, "multi.example.com")
@@ -778,8 +779,9 @@ class FidoClientTest {
         var requestOptionsCustomized = false
         var getOptionCustomized = false
 
-        // When - using DSL with both customizers (though only one will be used based on useFido2Client)
+        // When - using DSL with both customizers (though only one will be used based on useFido2ApiClient)
         val result = fidoClient.authenticate(inputJson) {
+            useFido2ApiClient = true
             onPublicKeyCredentialRequestOptions { options ->
                 requestOptionsCustomized = true
                 // Verify base64 challenge decoding
@@ -797,8 +799,8 @@ class FidoClientTest {
 
         // Then
         assertTrue(result.isSuccess)
-        assertTrue(requestOptionsCustomized) // Should be called since useFido2Client = true
-        assertTrue(!getOptionCustomized) // Should NOT be called since useFido2Client = true
+        assertTrue(requestOptionsCustomized) // Should be called since useFido2ApiClient = true
+        assertTrue(!getOptionCustomized) // Should NOT be called since useFido2ApiClient = true
 
         val capturedOptions = optionsSlot.captured
         assertEquals("multi.example.com", capturedOptions.rpId)
@@ -808,17 +810,16 @@ class FidoClientTest {
     @Test
     fun `authenticate with DSL customizer should handle exception in customizer gracefully`() = runTest {
         // Given
-        fidoClient = FidoClient {
-            useFido2Client = true
-        }
+        fidoClient = FidoClient()
 
         val inputJson = buildJsonObject {
             put(Constants.FIELD_RP_ID, "error.example.com")
             put(Constants.FIELD_CHALLENGE, "ZXJyb3ItdGVzdA") // "error-test" base64
         }
 
-        // When - customizer throws exception
+        // When - customizer throws exception (GMS path: the options customizer only runs there)
         val result = fidoClient.authenticate(inputJson) {
+            useFido2ApiClient = true
             onPublicKeyCredentialRequestOptions { options ->
                 // Verify the options are parsed correctly before throwing
                 assertEquals("error.example.com", options.rpId)
@@ -837,9 +838,7 @@ class FidoClientTest {
     @Test
     fun `authenticate with DSL customizer should handle invalid base64 in input JSON`() = runTest {
         // Given
-        fidoClient = FidoClient {
-            useFido2Client = true
-        }
+        fidoClient = FidoClient()
 
         val inputJson = buildJsonObject {
             put(Constants.FIELD_RP_ID, "invalid.example.com")
@@ -847,8 +846,9 @@ class FidoClientTest {
             put(Constants.FIELD_TIMEOUT, 30000.0)
         }
 
-        // When - should fail during JSON parsing before customizer is called
+        // When - should fail during GMS options building before the customizer is called
         val result = fidoClient.authenticate(inputJson) {
+            useFido2ApiClient = true
             onPublicKeyCredentialRequestOptions { options ->
                 // This should not be reached due to base64 decoding error
                 options
@@ -865,9 +865,7 @@ class FidoClientTest {
     @Test
     fun `authenticate with DSL customizer should work with minimal JSON and default values`() = runTest {
         // Given
-        fidoClient = FidoClient {
-            useFido2Client = true
-        }
+        fidoClient = FidoClient()
 
         // Minimal JSON with only required fields
         val inputJson = buildJsonObject {
@@ -898,6 +896,7 @@ class FidoClientTest {
 
         // When
         val result = fidoClient.authenticate(inputJson) {
+            useFido2ApiClient = true
             onPublicKeyCredentialRequestOptions { options ->
                 // Verify defaults and minimal parsing
                 assertEquals("", options.rpId) // Default for missing rpId
@@ -926,10 +925,8 @@ class FidoClientTest {
 
     @Test
     fun `authenticate with DSL customizer should properly switch between API paths`() = runTest {
-        // Test credential manager path (useFido2Client = false)
-        val credentialManagerClient = FidoClient {
-            useFido2Client = false
-        }
+        // Test credential manager path (useFido2ApiClient = false)
+        val credentialManagerClient = FidoClient()
 
         val inputJson = buildJsonObject {
             put(Constants.FIELD_RP_ID, "switch.example.com")
@@ -953,6 +950,7 @@ class FidoClientTest {
 
         // When
         val result = credentialManagerClient.authenticate(inputJson) {
+            useFido2ApiClient = false
             onPublicKeyCredentialRequestOptions { options ->
                 requestOptionsUsed = true
                 options
@@ -969,8 +967,8 @@ class FidoClientTest {
 
         // Then
         assertTrue(result.isSuccess)
-        assertTrue(!requestOptionsUsed) // Should NOT be called since useFido2Client = false
-        assertTrue(getOptionUsed) // Should be called since useFido2Client = false
+        assertTrue(!requestOptionsUsed) // Should NOT be called since useFido2ApiClient = false
+        assertTrue(getOptionUsed) // Should be called since useFido2ApiClient = false
 
         val response = result.getOrThrow()
         assertEquals("switch-id", response["id"]?.jsonPrimitive?.content)
@@ -979,9 +977,7 @@ class FidoClientTest {
     @Test
     fun `authenticate with empty DSL block should use default behavior with real base64`() = runTest {
         // Given
-        fidoClient = FidoClient {
-            useFido2Client = true
-        }
+        fidoClient = FidoClient()
 
         val testChallenge = "default-behavior-test".toByteArray()
         val inputJson = buildJsonObject {
@@ -1011,6 +1007,7 @@ class FidoClientTest {
 
         // When - empty DSL block (should use defaults)
         val result = fidoClient.authenticate(inputJson) {
+            useFido2ApiClient = true
             // Empty block - should not modify anything
         }
 
@@ -1066,7 +1063,7 @@ class FidoClientTest {
         coEvery { getPublicKeyCredential(any(), capture(optionsSlot)) } returns mockCredential
 
         // When
-        val result = FidoClient { useFido2Client = true }.authenticate(requestOptions)
+        val result = FidoClient().authenticate(requestOptions) { useFido2ApiClient = true }
 
         // Then
         assertTrue(result.isSuccess)
@@ -1104,7 +1101,7 @@ class FidoClientTest {
         coEvery { getPublicKeyCredential(any(), capture(optionsSlot)) } returns mockCredential
 
         // When
-        val result = FidoClient { useFido2Client = true }.authenticate(requestOptions)
+        val result = FidoClient().authenticate(requestOptions) { useFido2ApiClient = true }
 
         // Then
         assertTrue(result.isSuccess)
@@ -1138,7 +1135,7 @@ class FidoClientTest {
         coEvery { getPublicKeyCredential(any(), capture(optionsSlot)) } returns mockCredential
 
         // When
-        val result = FidoClient { useFido2Client = true }.authenticate(requestOptions)
+        val result = FidoClient().authenticate(requestOptions) { useFido2ApiClient = true }
 
         // Then
         assertTrue(result.isSuccess)
@@ -1186,7 +1183,7 @@ class FidoClientTest {
         coEvery { getPublicKeyCredential(any(), capture(optionsSlot)) } returns mockCredential
 
         // When
-        val result = FidoClient { useFido2Client = true }.authenticate(requestOptions)
+        val result = FidoClient().authenticate(requestOptions) { useFido2ApiClient = true }
 
         // Then
         assertTrue(result.isSuccess)
@@ -1231,7 +1228,7 @@ class FidoClientTest {
         coEvery { getPublicKeyCredential(any(), capture(optionsSlot)) } returns mockCredential
 
         // When
-        val result = FidoClient { useFido2Client = true }.authenticate(requestOptions)
+        val result = FidoClient().authenticate(requestOptions) { useFido2ApiClient = true }
 
         // Then
         assertTrue(result.isSuccess)
@@ -1266,7 +1263,7 @@ class FidoClientTest {
         coEvery { getPublicKeyCredential(any(), capture(optionsSlot)) } returns mockCredential
 
         // When
-        val result = FidoClient { useFido2Client = true }.authenticate(requestOptions)
+        val result = FidoClient().authenticate(requestOptions) { useFido2ApiClient = true }
 
         // Then
         assertTrue(result.isSuccess)
@@ -1315,7 +1312,7 @@ class FidoClientTest {
         coEvery { getPublicKeyCredential(any(), capture(optionsSlot)) } returns mockCredential
 
         // When
-        val result = FidoClient { useFido2Client = true }.authenticate(requestOptions)
+        val result = FidoClient().authenticate(requestOptions) { useFido2ApiClient = true }
 
         // Then
         assertTrue(result.isSuccess)
@@ -1352,7 +1349,8 @@ class FidoClientTest {
         coEvery { getPublicKeyCredential(any(), capture(optionsSlot)) } returns mockCredential
 
         // When
-        val result = FidoClient { useFido2Client = true }.authenticate(requestOptions) {
+        val result = FidoClient().authenticate(requestOptions) {
+            useFido2ApiClient = true
             onPublicKeyCredentialRequestOptions { options ->
                 // Customize the options
                 PublicKeyCredentialRequestOptions.Builder()
@@ -1372,7 +1370,7 @@ class FidoClientTest {
     }
 
     @Test
-    fun `authenticate should use customizer to modify GetPublicKeyCredentialOption when useFido2Client is false`() = runTest {
+    fun `authenticate should use customizer to modify GetPublicKeyCredentialOption when useFido2ApiClient is false`() = runTest {
         // Given
         val requestOptions = buildJsonObject {
             put("challenge", "dGVzdC1jaGFsbGVuZ2U")
@@ -1396,7 +1394,8 @@ class FidoClientTest {
         } returns mockGetResponse
 
         // When
-        val result = FidoClient { useFido2Client = false }.authenticate(requestOptions) {
+        val result = FidoClient().authenticate(requestOptions) {
+            useFido2ApiClient = false
             onGetPublicKeyCredentialOption { option ->
                 // Customize the option by creating a new one with modified JSON
                 val customJson = buildJsonObject {
@@ -1441,7 +1440,7 @@ class FidoClientTest {
         coEvery { getPublicKeyCredential(any(), capture(optionsSlot)) } returns mockCredential
 
         // When
-        val result = FidoClient { useFido2Client = true }.authenticate(requestOptions)
+        val result = FidoClient().authenticate(requestOptions) { useFido2ApiClient = true }
 
         // Then
         assertTrue(result.isSuccess)
@@ -1475,7 +1474,7 @@ class FidoClientTest {
         coEvery { getPublicKeyCredential(any(), capture(optionsSlot)) } returns mockCredential
 
         // When
-        val result = FidoClient { useFido2Client = true }.authenticate(requestOptions)
+        val result = FidoClient().authenticate(requestOptions) { useFido2ApiClient = true }
 
         // Then
         assertTrue(result.isSuccess)
@@ -1521,7 +1520,7 @@ class FidoClientTest {
         coEvery { getPublicKeyCredential(any(), capture(optionsSlot)) } returns mockCredential
 
         // When
-        val result = FidoClient { useFido2Client = true }.authenticate(requestOptions)
+        val result = FidoClient().authenticate(requestOptions) { useFido2ApiClient = true }
 
         // Then
         assertTrue(result.isSuccess)
@@ -1537,8 +1536,8 @@ class FidoClientTest {
     }
 
     @Test
-    fun `authenticate should handle both API paths based on useFido2Client config`() = runTest {
-        // Test Credential Manager path (useFido2Client = false)
+    fun `authenticate should handle both API paths based on useFido2ApiClient config`() = runTest {
+        // Test Credential Manager path (useFido2ApiClient = false)
         val requestOptions = buildJsonObject {
             put("challenge", "dGVzdC1jaGFsbGVuZ2U")
             put("rpId", "example.com")
@@ -1560,15 +1559,17 @@ class FidoClientTest {
             )
         } returns mockGetResponse
 
-        // When using Credential Manager
-        val credentialManagerResult = FidoClient { useFido2Client = false }.authenticate(requestOptions)
+        // When using Credential Manager (explicit opt-in)
+        val credentialManagerResult = FidoClient().authenticate(requestOptions) {
+            useFido2ApiClient = false
+        }
 
         // Then
         assertTrue(credentialManagerResult.isSuccess)
         val capturedRequest = credentialManagerRequestSlot.captured
         assertTrue(capturedRequest.credentialOptions.first() is GetPublicKeyCredentialOption)
 
-        // Test Google Play Services path (useFido2Client = true)
+        // Test Google Play Services path (useFido2ApiClient = true)
         val mockCredential = mockk<GmsPublicKeyCredential>()
         val mockResponse = mockk<AuthenticatorAssertionResponse>()
 
@@ -1587,7 +1588,7 @@ class FidoClientTest {
         coEvery { getPublicKeyCredential(any(), capture(gmsOptionsSlot)) } returns mockCredential
 
         // When using Google Play Services
-        val gmsResult = FidoClient { useFido2Client = true }.authenticate(requestOptions)
+        val gmsResult = FidoClient().authenticate(requestOptions) { useFido2ApiClient = true }
 
         // Then
         assertTrue(gmsResult.isSuccess)
