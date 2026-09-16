@@ -192,11 +192,13 @@ data class OathCredential(
 }
 
 /**
- * Custom serializer for the OathType enum
+ * Custom serializer for the OathType enum.
+ * Serializes as lowercase ("totp"/"hotp") to align with the iOS wire format;
+ * deserialization is case-insensitive (accepts previously-persisted uppercase values).
  */
 object OathTypeSerializer : KSerializer<OathType> {
     override val descriptor: SerialDescriptor = PrimitiveSerialDescriptor("OathType", PrimitiveKind.STRING)
-    override fun serialize(encoder: Encoder, value: OathType) = encoder.encodeString(value.name)
+    override fun serialize(encoder: Encoder, value: OathType) = encoder.encodeString(value.name.lowercase())
     override fun deserialize(decoder: Decoder): OathType = OathType.fromString(decoder.decodeString())
 }
 
