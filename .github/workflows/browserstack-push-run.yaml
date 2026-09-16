@@ -32,12 +32,12 @@ jobs:
     steps:
       # Get the test artifacts prepared in previous step
       - name: Get the app-debug-signed.apk artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: app-debug-signed.apk
 
       - name: Get the push-debug-androidTest-signed.apk artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: push-debug-androidTest-signed.apk
 

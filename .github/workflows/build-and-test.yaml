@@ -33,7 +33,7 @@ jobs:
     steps:
       # Clone the repo
       - name: Clone the repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
         with:
           ref: ${{ inputs.head_sha || github.event.pull_request.head.sha }}
           repository: ${{ inputs.head_repo || github.event.pull_request.head.repo.full_name }}
@@ -41,7 +41,7 @@ jobs:
 
       # Setup JDK and cache and restore dependencies.
       - name: Setup JDK 17
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v6
         with:
           distribution: 'temurin'
           java-version: '17'
@@ -56,7 +56,7 @@ jobs:
       # dorny/test-reporter needs checks:write which is unavailable for fork PRs
       - name: Publish test results
         if: (success() || failure()) && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
-        uses: dorny/test-reporter@v2
+        uses: dorny/test-reporter@v3
         with:
           name: Unit tests results
           path: '**/build/test-results/**/TEST-*.xml'
@@ -68,7 +68,7 @@ jobs:
 
       - name: Upload Android Test Report (HTML)
         if: success() || failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: unit-tests-report
           path: '**/build/reports/tests/testDebugUnitTest/**'
@@ -80,7 +80,7 @@ jobs:
 
       # Upload code coverage report to Codecov
       - name: Upload coverage reports to Codecov
-        uses: codecov/codecov-action@v4.5.0
+        uses: codecov/codecov-action@v7.0.0
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ${{ env.COVERAGE_REPORTS }}
