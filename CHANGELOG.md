@@ -17,6 +17,7 @@
 - Fixed `AbstractValidatedCallback` throwing when AM returns an empty `policies` array instead of an object [SDKS-5260]
 - Fixed `QRCodeCollector.id()` to return a stable key from the collector configuration instead of a random value [SDKS-5293]
 - Fixed FIDO2 collectors to report WebAuthn/credential errors as actionable events instead of generic submit failures [SDKS-4477]
+- Fixed FIDO2 authentication to support per-request API selection via `useFido2ApiClient` [SDKS-5411]
 - Fixed Jackson dependency versions to address security vulnerabilities (CVE-2026-54512, CVE-2026-54513, CVE-2026-54514, CVE-2026-54515) [SDKS-5199]
 
 ## [2.1.0]
