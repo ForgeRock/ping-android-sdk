@@ -56,8 +56,14 @@ allprojects {
         resolutionStrategy {
             // Force secure version of play-services-basement to address security vulnerabilities
             // Used transitively by recaptcha client and fido subprojects
-            // Updated to 18.0.2 which fixes CVE-2022-2390
-            force("com.google.android.gms:play-services-basement:18.0.2")
+            // 18.0.2 fixes CVE-2022-2390. 18.5.0 is the minimum floor required by
+            // play-services-identity-credentials:16.0.0-alpha08 (pulled by the
+            // androidx.credentials:credentials-play-services-auth:1.6.0 bridge, exposed by
+            // mfa:fido's api(libs.androidx.credentials)): its internals call ComplianceOptions,
+            // which was added in basement 18.5.0. Forcing below that crashes consumer apps with
+            // NoClassDefFoundError on the GoogleApiHandler thread when CredentialManager
+            // getCredential connects (CVE-2022-2390 remains fixed in 18.5.0).
+            force("com.google.android.gms:play-services-basement:18.5.0")
 
             // Force secure version of nimbus-jose-jwt to address security vulnerabilities
             // Used transitively by mfa:binding subproject; fixes CVE-2025-53864
