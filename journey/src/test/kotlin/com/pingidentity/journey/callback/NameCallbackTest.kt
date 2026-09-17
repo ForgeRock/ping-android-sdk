@@ -58,4 +58,39 @@ class NameCallbackTest {
         )
     }
 
+    @Test
+    fun initializesAutocompleteValuesWhenPresent() {
+        val withAutocomplete = buildJsonObject {
+            put("output", buildJsonArray {
+                add(buildJsonObject {
+                    put("name", JsonPrimitive("prompt"))
+                    put("value", JsonPrimitive("User Name"))
+                })
+                add(buildJsonObject {
+                    put("name", JsonPrimitive("autocompleteValues"))
+                    put("value", buildJsonArray {
+                        add(JsonPrimitive("username"))
+                        add(JsonPrimitive("webauthn"))
+                    })
+                })
+            })
+            put("input", buildJsonArray {
+                add(buildJsonObject {
+                    put("name", JsonPrimitive("IDToken1"))
+                    put("value", JsonPrimitive(""))
+                })
+            })
+        }
+        val callback = NameCallback()
+        callback.init(withAutocomplete)
+        assertEquals(listOf("username", "webauthn"), callback.autocompleteValues)
+    }
+
+    @Test
+    fun autocompleteValuesDefaultToEmptyListWhenAbsent() {
+        val callback = NameCallback()
+        callback.init(jsonObject)
+        assertEquals(emptyList(), callback.autocompleteValues)
+    }
+
 }

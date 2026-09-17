@@ -7,12 +7,14 @@
 
 package com.pingidentity.fido
 
+import android.os.Build
 import androidx.credentials.CreatePublicKeyCredentialRequest
 import androidx.credentials.CreatePublicKeyCredentialResponse
 import androidx.credentials.CredentialManager
 import androidx.credentials.GetCredentialRequest
 import androidx.credentials.GetPublicKeyCredentialOption
 import androidx.credentials.PublicKeyCredential
+import androidx.credentials.exceptions.GetCredentialUnsupportedException
 import com.google.android.gms.fido.common.Transport
 import com.google.android.gms.fido.fido2.api.common.AuthenticatorAssertionResponse
 import com.google.android.gms.fido.fido2.api.common.PublicKeyCredentialDescriptor
@@ -146,12 +148,18 @@ class FidoClient(private val config: FidoClientConfig) {
      *
      * @param credentialOption The authentication options including challenge,
      *                        timeout, and verification requirements
+     * @param customizer The per-call customizer supplying the [GetCredentialRequest]
+     *                        transformation
      * @return A [Result] containing the assertion response as a [JsonObject] on success,
      *         or an exception on failure
      */
-    private suspend fun authenticate(credentialOption: GetPublicKeyCredentialOption): Result<JsonObject> {
+    private suspend fun authenticate(
+        credentialOption: GetPublicKeyCredentialOption,
+        customizer: FidoAuthenticateCustomizer
+    ): Result<JsonObject> {
         val credentialManager = CredentialManager.create(ContextProvider.context)
-        val credentialRequest = GetCredentialRequest(listOf(credentialOption))
+        val credentialRequest =
+            customizer.getCredentialRequestCustomizer(GetCredentialRequest(listOf(credentialOption)))
         try {
             val result = credentialManager.getCredential(
                 context = ContextProvider.currentActivity,
@@ -269,15 +277,25 @@ class FidoClient(private val config: FidoClientConfig) {
      *
      *     // For Google Play Services
      *     onPublicKeyCredentialRequestOptions { options ->
-     *         options.toBuilder()
+     *         PublicKeyCredentialRequestOptions.Builder()
+     *             .setRpId(options.rpId)
+     *             .setChallenge(options.challenge)
+     *             .setAllowList(options.allowList)
      *             .setTimeoutSeconds(30.0)
      *             .build()
      *     }
      *
      *     // For Credential Manager
      *     onGetPublicKeyCredentialOption { option ->
-     *         GetPublicKeyCredentialOption(
-     *             option.requestJson,
+     *         GetPublicKeyCredentialOption(option.requestJson)
+     *     }
+     *
+     *     // For Credential Manager: request-level preferences such as
+     *     // preferImmediatelyAvailableCredentials (moved off GetPublicKeyCredentialOption
+     *     // in androidx.credentials 1.5.0)
+     *     onGetCredentialRequest { request ->
+     *         GetCredentialRequest(
+     *             request.credentialOptions,
      *             preferImmediatelyAvailableCredentials = true
      *         )
      *     }
@@ -322,13 +340,136 @@ class FidoClient(private val config: FidoClientConfig) {
                 return authenticate(
                     customizer.getOptionCustomizer(
                         GetPublicKeyCredentialOption(input.toString())
-                    )
+                    ),
+                    customizer
                 )
             }
         } catch (e: Exception) {
             currentCoroutineContext().ensureActive()
             return Result.failure(e)
         }
+    }
+
+    /**
+     * Builds a pending (View-attachable) authentication request for conditional mediation
+     * (autofill with passkeys), always routed through the Android Credential Manager.
+     *
+     * Unlike [authenticate], which runs the modal ceremony to completion, this method returns
+     * a [FidoPendingAuthentication] whose [FidoPendingAuthentication.request] must be attached
+     * to a View (`view.pendingGetCredentialRequest = pending.request`). The request is
+     * exercised when the user focuses that View; the assertion is delivered to
+     * [FidoPendingAuthentication.await].
+     *
+     * **Routing:** conditional mediation exists only on the Credential Manager path (the
+     * Google Play Services FIDO2 API has no conditional surface), so this call always uses
+     * Credential Manager. When the resolved routing — [FidoAuthenticateCustomizer.useFido2ApiClient]
+     * on the block, which auto-detects GMS by default — would have selected Google Play
+     * Services, a warning is logged and the call proceeds on Credential Manager anyway; a
+     * pending request routed to GMS would silently never autofill.
+     *
+     * **Feature gate:** fails fast with `Result.failure(GetCredentialUnsupportedException)`
+     * when the device cannot deliver pending requests — the same OS gate the androidx View
+     * handler applies (`SDK_INT >= 35`, or API 34 with a preview SDK). Consult
+     * [isConditionalMediationSupported] before calling to hide the affordance up front.
+     *
+     * **API 33 and older:** conditional mediation is only delivered on API 35+, but on older
+     * devices the Credential Manager path still routes through the
+     * `credentials-play-services-auth` bridge. When that bridge is not bundled the request can
+     * never be served, so a warning is logged (not an exception — the ceremony itself fails
+     * with an exception the existing error mapping already understands).
+     *
+     * **Error contract:** like the modal path, errors during the ceremony are not delivered
+     * through this method — androidx propagates none for pending requests. Only a final
+     * response, if any, reaches [FidoPendingAuthentication.await]; a dismissed suggestion
+     * sheet leaves it suspended (documented there) with the modal fallback as the recovery.
+     *
+     * **Customization:** the block is applied with the same chain as the modal Credential
+     * Manager path — [FidoAuthenticateCustomizer.onGetPublicKeyCredentialOption] customizes the
+     * credential option, [FidoAuthenticateCustomizer.onGetCredentialRequest] customizes the
+     * wrapping [GetCredentialRequest] (e.g. `preferImmediatelyAvailableCredentials`).
+     *
+     * @param input The WebAuthn-compatible authentication options containing challenge,
+     *             timeout, rpId, and optionally allowCredentials
+     * @param block A customization function applied to the [GetCredentialRequest] before the
+     *             pending request is built
+     * @return A [Result] containing the [FidoPendingAuthentication] to attach to a View, or a
+     *         `Result.failure` with a [GetCredentialUnsupportedException] when the OS gate is
+     *         unmet (before any request object exists)
+     */
+    suspend fun pendingAuthenticate(
+        input: JsonObject,
+        block: FidoAuthenticateCustomizer.() -> Unit = {}
+    ): Result<FidoPendingAuthentication> {
+        try {
+            val customizer = FidoAuthenticateCustomizer().apply(block)
+
+            // Conditional mediation has no GMS surface: force the Credential Manager path. Warn
+            // when the resolved routing (the customizer field, which auto-detects GMS) would
+            // have picked Google Play Services, so deliberate pins are explainable in logs.
+            if (customizer.useFido2ApiClient) {
+                config.logger.w(
+                    "pendingAuthenticate forces the Android Credential Manager API: conditional " +
+                        "mediation (autofill with passkeys) is not available through the Google " +
+                        "Play Services FIDO2 API selected by useFido2ApiClient. The pending " +
+                        "request proceeds on Credential Manager."
+                )
+            }
+
+            // The Credential Manager path on API <= 33 depends on the optional
+            // credentials-play-services-auth bridge; without it the request can never resolve.
+            // Probe for the bridge's public, version-stable Service and warn when absent.
+            if (Build.VERSION.SDK_INT <= 33 && !isBridgePresent()) {
+                config.logger.w(
+                    "Conditional mediation on Android API <= 33 requires the " +
+                        "androidx.credentials:credentials-play-services-auth dependency; it was " +
+                        "not found on the classpath, so the pending credential request will not " +
+                        "deliver suggestions. Add it to the app's dependencies."
+                )
+            }
+
+            // Fast-fail before building any request object: without the OS gate the androidx
+            // View handler accepts the tag but never delivers suggestions (SDK_INT < 35).
+            if (!isConditionalMediationSupported) {
+                return Result.failure(
+                    GetCredentialUnsupportedException(
+                        "Conditional mediation (pending credential request) requires Android 15 " +
+                            "(API 35); this device reports API ${Build.VERSION.SDK_INT}"
+                    )
+                )
+            }
+
+            // Same option-build + customizer chain as the modal Credential Manager path
+            // (authenticate(credentialOption, customizer)), but the GetCredentialRequest
+            // escapes into a PendingGetCredentialRequest instead of driving the ceremony.
+            val credentialRequest =
+                customizer.getCredentialRequestCustomizer(
+                    GetCredentialRequest(
+                        listOf(
+                            customizer.getOptionCustomizer(
+                                GetPublicKeyCredentialOption(input.toString())
+                            )
+                        )
+                    )
+                )
+
+            return Result.success(FidoPendingAuthentication(credentialRequest))
+        } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
+            return Result.failure(e)
+        }
+    }
+
+    /**
+     * Checks whether the `credentials-play-services-auth` bridge is bundled by probing its
+     * public, version-stable `CredentialProviderMetadataHolder` Service.
+     *
+     * @return true when the bridge class is resolvable on the current classloader
+     */
+    private fun isBridgePresent(): Boolean = try {
+        Class.forName(BRIDGE_PROBE_CLASS)
+        true
+    } catch (e: ClassNotFoundException) {
+        false
     }
 
     /**
@@ -414,6 +555,14 @@ class FidoClient(private val config: FidoClientConfig) {
 
     companion object {
         /**
+         * The bridge class probed to detect whether `credentials-play-services-auth` is
+         * bundled. It is a public Service, verified identical in bridge 1.5.0 and 1.6.0; a
+         * probe failure degrades to a missed warning, never a broken flow.
+         */
+        private const val BRIDGE_PROBE_CLASS =
+            "androidx.credentials.playservices.CredentialProviderMetadataHolder"
+
+        /**
          * Factory method to create a Fido2Client with customizable configuration.
          *
          * This factory method provides a convenient way to create and configure a Fido2Client
@@ -444,6 +593,36 @@ class FidoClient(private val config: FidoClientConfig) {
 }
 
 /**
+ * Customizes registration requests before the ceremony begins.
+ *
+ * This class provides a customization hook for the Google Play Services / Credential Manager
+ * registration request. It allows fine-tuning of the request before the registration
+ * ceremony begins.
+ *
+ * **Usage in Registration:**
+ * ```kotlin
+ * client.register(options) {
+ *     onCreatePublicKeyCredentialRequest { request ->
+ *         // Customize the registration request
+ *         CreatePublicKeyCredentialRequest(
+ *             request.requestJson,
+ *             preferImmediatelyAvailableCredentials = true
+ *         )
+ *     }
+ * }
+ * ```
+ */
+@PingDsl
+class FidoRegistrationCustomizer {
+    internal var customizer: (CreatePublicKeyCredentialRequest) -> CreatePublicKeyCredentialRequest =
+        { it }
+
+    fun onCreatePublicKeyCredentialRequest(block: (CreatePublicKeyCredentialRequest) -> CreatePublicKeyCredentialRequest) {
+        customizer = block
+    }
+}
+
+/**
  * Customizer for FIDO2 authentication requests.
  *
  * This class provides customization hooks for both Google Play Services and Credential Manager
@@ -455,31 +634,30 @@ class FidoClient(private val config: FidoClientConfig) {
  * client.authenticate(options) {
  *     onPublicKeyCredentialRequestOptions { options ->
  *         // Customize Google Play Services request
- *         options.toBuilder()
+ *         PublicKeyCredentialRequestOptions.Builder()
+ *             .setRpId(options.rpId)
+ *             .setChallenge(options.challenge)
+ *             .setAllowList(options.allowList)
  *             .setTimeoutSeconds(30.0)
  *             .build()
  *     }
  *
  *     onGetPublicKeyCredentialOption { option ->
  *         // Customize Credential Manager request
- *         GetPublicKeyCredentialOption(
- *             option.requestJson,
+ *         GetPublicKeyCredentialOption(option.requestJson)
+ *     }
+ *
+ *     onGetCredentialRequest { request ->
+ *         // Customize the Credential Manager request itself (request-level preferences)
+ *         GetCredentialRequest(
+ *             request.credentialOptions,
  *             preferImmediatelyAvailableCredentials = true
  *         )
  *     }
  * }
  * ```
  */
-
-class FidoRegistrationCustomizer {
-    internal var customizer: (CreatePublicKeyCredentialRequest) -> CreatePublicKeyCredentialRequest =
-        { it }
-
-    fun onCreatePublicKeyCredentialRequest(block: (CreatePublicKeyCredentialRequest) -> CreatePublicKeyCredentialRequest) {
-        customizer = block
-    }
-}
-
+@PingDsl
 class FidoAuthenticateCustomizer {
 
     /**
@@ -511,6 +689,8 @@ class FidoAuthenticateCustomizer {
         { it }
     internal var getOptionCustomizer: (GetPublicKeyCredentialOption) -> GetPublicKeyCredentialOption =
         { it }
+    internal var getCredentialRequestCustomizer: (GetCredentialRequest) -> GetCredentialRequest =
+        { it }
 
     /**
      * Customizes Google Play Services FIDO2 request options.
@@ -541,24 +721,57 @@ class FidoAuthenticateCustomizer {
      *
      * This method allows modification of GetPublicKeyCredentialOption before
      * it is passed to the Credential Manager API. This is useful for setting
-     * preferences like immediate credential availability or request priorities.
+     * option-level preferences such as the client data hash or auto-select
+     * behaviour.
      *
      * **Common Customizations:**
      * ```kotlin
      * onGetPublicKeyCredentialOption { option ->
      *     GetPublicKeyCredentialOption(
      *         option.requestJson,
-     *         preferImmediatelyAvailableCredentials = true,
-     *         isAutoSelectAllowed = false
+     *         clientDataHash = option.clientDataHash,
+     *         allowedProviders = setOf(ComponentName("com.example", "AuthenticatorService"))
      *     )
      * }
      * ```
+     *
+     * Note: `preferImmediatelyAvailableCredentials` is not a constructor parameter of
+     * [GetPublicKeyCredentialOption] as of androidx.credentials 1.5.0 — it lives on
+     * [GetCredentialRequest]. Use [onGetCredentialRequest] to set it.
      *
      * @param block Transformation function that receives the original option
      *             and returns modified option for the authentication request
      */
     fun onGetPublicKeyCredentialOption(block: (GetPublicKeyCredentialOption) -> GetPublicKeyCredentialOption) {
         getOptionCustomizer = block
+    }
+
+    /**
+     * Customizes the Android Credential Manager [GetCredentialRequest] that wraps the
+     * [GetPublicKeyCredentialOption].
+     *
+     * This hook gives access to request-level preferences that cannot be expressed on the
+     * individual credential option. The most notable is
+     * `preferImmediatelyAvailableCredentials`, which controls whether the ceremony returns
+     * immediately when no locally available credential exists instead of falling back to
+     * discovering remote (e.g. cross-device) options — a preference that moved from
+     * `GetPublicKeyCredentialOption` to `GetCredentialRequest` in androidx.credentials 1.5.0.
+     *
+     * **Common Customizations:**
+     * ```kotlin
+     * onGetCredentialRequest { request ->
+     *     GetCredentialRequest(
+     *         request.credentialOptions,
+     *         preferImmediatelyAvailableCredentials = true
+     *     )
+     * }
+     * ```
+     *
+     * @param block Transformation function that receives the original request
+     *             and returns modified request for the authentication ceremony
+     */
+    fun onGetCredentialRequest(block: (GetCredentialRequest) -> GetCredentialRequest) {
+        getCredentialRequestCustomizer = block
     }
 }
 

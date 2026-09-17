@@ -9,42 +9,115 @@ package com.pingidentity.samples.pingsampleapp.journey.callback
 
 import android.util.Log
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import com.pingidentity.fido.FidoPendingAuthentication
+import com.pingidentity.fido.isConditionalMediationSupported
 import com.pingidentity.fido.journey.FidoAuthenticationCallback
 import kotlinx.coroutines.launch
 
+/**
+ * Renders the FIDO conditional-mediation passkey support for a Journey node: creates the
+ * pending request (published via [onPending] so the regular username field can attach it)
+ * and provides the modal fallback button. This composable renders **no** username field of
+ * its own — the passkey suggestions surface inline on the regular field marked with
+ * autocompleteValues ["username","webauthn"] by the server.
+ */
 @Composable
 fun FidoAuthentication(
     callback: FidoAuthenticationCallback,
     onNext: () -> Unit,
+    onPending: (FidoPendingAuthentication?) -> Unit,
+    pending: FidoPendingAuthentication?,
 ) {
     val currentOnCompleted by rememberUpdatedState(onNext)
+    val coroutineScope = rememberCoroutineScope()
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .wrapContentSize(Alignment.Center)
-    ) {
-        CircularProgressIndicator()
-        LaunchedEffect(true) {
-            launch {
-                callback.authenticate().onSuccess {
-                    currentOnCompleted()
-                }.onFailure {
+    if (isConditionalMediationSupported) {
+        // Build the pending request up front; the username field's composable attaches it to
+        // the regular field, so suggestions appear when the user focuses it.
+        LaunchedEffect(callback) {
+            callback.pendingAuthenticate { useFido2ApiClient = false }
+                .onSuccess { onPending(it) }
+                .onFailure {
                     Log.e(
                         "Fido2Authentication",
-                        "Failed to Authenticate",
+                        "Failed to create pending request",
                         it
                     )
-                    currentOnCompleted()
+                    onPending(null)
+                }
+        }
+
+        // Deliver the outcome when the user picks a suggestion. A dismissed suggestion sheet
+        // never completes the await — the modal fallback below stays visible in that case.
+        LaunchedEffect(pending) {
+            val result = pending?.await() ?: return@LaunchedEffect
+            result.onSuccess {
+                currentOnCompleted()
+            }.onFailure {
+                Log.e(
+                    "Fido2Authentication",
+                    "Pending authentication cancelled",
+                    it
+                )
+            }
+        }
+
+        // Modal fallback: the conditional path delivers no errors, so this stays visible to
+        // cover dismissed suggestions.
+        Button(
+            modifier = Modifier.padding(4.dp),
+            onClick = {
+                coroutineScope.launch {
+                    callback.authenticate()
+                        .onSuccess { currentOnCompleted() }
+                        .onFailure {
+                            Log.e(
+                                "Fido2Authentication",
+                                "Failed to Authenticate",
+                                it
+                            )
+                            currentOnCompleted()
+                        }
+                }
+            }
+        ) {
+            Text("Use a passkey")
+        }
+    } else {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .wrapContentSize(Alignment.Center)
+        ) {
+            CircularProgressIndicator()
+            LaunchedEffect(true) {
+                launch {
+                    callback.authenticate().onSuccess {
+                        currentOnCompleted()
+                    }.onFailure {
+                        Log.e(
+                            "Fido2Authentication",
+                            "Failed to Authenticate",
+                            it
+                        )
+                        currentOnCompleted()
+                    }
                 }
             }
         }

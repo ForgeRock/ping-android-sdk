@@ -14,6 +14,11 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -22,6 +27,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.pingidentity.device.binding.journey.DeviceBindingCallback
 import com.pingidentity.device.binding.journey.DeviceSigningVerifierCallback
 import com.pingidentity.device.profile.DeviceProfileCallback
+import com.pingidentity.fido.FidoPendingAuthentication
 import com.pingidentity.fido.journey.FidoAuthenticationCallback
 import com.pingidentity.fido.journey.FidoRegistrationCallback
 import com.pingidentity.idp.journey.IdpCallback
@@ -91,6 +97,18 @@ fun JourneyContinueNode(
 
         var showNext = true
 
+        // The conditional-mediation (passkey autofill) request, created by the FIDO callback's
+        // composable and attached by the username field's composable when the server marks it
+        // with autocompleteValues ["username","webauthn"] — one shared request, no extra field.
+        var pending by remember { mutableStateOf<FidoPendingAuthentication?>(null) }
+
+        // Cancel the request when superseded or the node leaves composition, so an abandoned
+        // ceremony cannot submit an outcome after the screen is gone.
+        DisposableEffect(pending) {
+            val current = pending
+            onDispose { current?.cancel() }
+        }
+
         continueNode.callbacks.forEach {
             when (it) {
                 is BooleanAttributeInputCallback -> BooleanAttributeInputCallback(it, onNodeUpdated)
@@ -125,7 +143,7 @@ fun JourneyContinueNode(
                     showNext = false
                 }
 
-                is NameCallback -> NameCallback(it, onNodeUpdated)
+                is NameCallback -> NameCallback(it, onNodeUpdated, pending)
 
                 //External IdP
                 is SelectIdpCallback -> SelectIdpCallback(it, onNext)
@@ -152,7 +170,7 @@ fun JourneyContinueNode(
                 }
 
                 is FidoAuthenticationCallback -> {
-                    FidoAuthentication(it, onNext)
+                    FidoAuthentication(it, onNext, { pending = it }, pending)
                     showNext = false
                 }
 

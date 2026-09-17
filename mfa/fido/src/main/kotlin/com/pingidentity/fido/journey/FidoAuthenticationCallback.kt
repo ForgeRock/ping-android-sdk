@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2025 - 2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -29,10 +29,12 @@ import com.pingidentity.fido.Constants.FIELD_USER_HANDLE
 import com.pingidentity.fido.Constants.FIELD_USER_VERIFICATION
 import com.pingidentity.fido.FidoAuthenticateCustomizer
 import com.pingidentity.fido.FidoClient
+import com.pingidentity.fido.FidoPendingAuthentication
 import com.pingidentity.fido.base64DefaultToUrlSafe
 import com.pingidentity.fido.base64ToIntStr
 import com.pingidentity.fido.base64ToStr
 import com.pingidentity.fido.toBase64
+import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
@@ -101,8 +103,27 @@ class FidoAuthenticationCallback : FidoCallback() {
      * When true, authentication responses are wrapped in a JSON object with metadata.
      * When false, responses use the legacy string format for backward compatibility.
      * This flag is automatically detected from the server's configuration during init().
+     *
+     * Written in [init] on the workflow thread and read by [onAssertion] from the androidx
+     * delivery thread (the [FidoPendingAuthentication.observe] callback) — hence [Volatile].
      */
+    @Volatile
     private var supportsJsonResponse: Boolean = false
+
+    /**
+     * The in-flight pending request from the most recent [pendingAuthenticate] call, if any.
+     * A superseded request is cancelled when [pendingAuthenticate] or [authenticate] is called
+     * again, so an abandoned conditional ceremony cannot deliver an assertion into the new one.
+     * The Journey callback layer has no framework-driven close lifecycle (unlike the DaVinci
+     * collector's [com.pingidentity.orchestrate.Closeable]); the app is responsible for
+     * abandoning the ceremony ([FidoPendingAuthentication.cancel]) when its own screen goes
+     * away.
+     *
+     * Written on the caller's coroutine thread and cancelled from app lifecycle code on other
+     * threads — hence [Volatile].
+     */
+    @Volatile
+    private var pendingAuthentication: FidoPendingAuthentication? = null
 
     /**
      * Initializes the callback with data from the Journey workflow.
@@ -171,52 +192,135 @@ class FidoAuthenticationCallback : FidoCallback() {
      */
     suspend fun authenticate(
         block: FidoAuthenticateCustomizer.() -> Unit = {}): Result<JsonObject> {
+        // A superseded pending request must not deliver an outcome into the new ceremony
+        pendingAuthentication?.cancel()
+        pendingAuthentication = null
         return FidoClient {
             logger = this@FidoAuthenticationCallback.logger
         }.authenticate(
             publicKeyCredentialRequestOptions, block
         ).onSuccess { response ->
-            // Extract the response object from the credential
-            val authResponse =
-                response[FIELD_RESPONSE]?.jsonObject ?: JsonObject(emptyMap())
-
-            // Build the response data string with components separated by "::"
-            val data = listOf(
-                // Client data JSON - contains challenge, origin, and type
-                authResponse[FIELD_CLIENT_DATA_JSON]?.jsonPrimitive?.content?.base64ToStr()
-                    ?: "",
-                // Authenticator data - cryptographic proof from the authenticator
-                authResponse[FIELD_AUTHENTICATOR_DATA]?.jsonPrimitive?.content?.base64ToIntStr()
-                    ?: "",
-                // Signature - cryptographic signature over the client data and authenticator data
-                authResponse[FIELD_SIGNATURE]?.jsonPrimitive?.content?.base64ToIntStr()
-                    ?: "",
-                // Raw credential ID - unique identifier for the credential
-                response[FIELD_RAW_ID]?.jsonPrimitive?.content ?: "",
-                // User handle - optional user identifier (may be empty)
-                authResponse[FIELD_USER_HANDLE]?.jsonPrimitive?.content?.base64ToStr() ?: ""
-            ).joinToString(Constants.DATA_SEPARATOR)
-
-            // Format the response based on server capabilities
-            val callbackValue = if (supportsJsonResponse) {
-                // New JSON format with metadata
-                Json.encodeToString(
-                    FidoJsonResponse(
-                        response[FIELD_AUTHENTICATOR_ATTACHMENT]?.jsonPrimitive?.content
-                            ?: AUTHENTICATOR_PLATFORM, data
-                    )
-                )
-            } else {
-                // Legacy string format for backward compatibility
-                data
-            }
-
-            // Submit the response to the Journey workflow
-            valueCallback(callbackValue)
+            // Extract the response object from the credential and submit to the Journey workflow
+            onAssertion(response)
         }.onFailure {
             // Handle authentication errors and update the Journey workflow
             handleError(it)
         }
+    }
+
+    /**
+     * Performs FIDO2 authentication using conditional mediation (autofill with passkeys).
+     *
+     * Unlike [authenticate], which runs the modal ceremony to completion, this method returns
+     * a [FidoPendingAuthentication] whose request must be attached to the View that should
+     * surface passkey suggestions (typically the username field):
+     *
+     * ```kotlin
+     * val pending = callback.pendingAuthenticate().getOrThrow()
+     * view.pendingGetCredentialRequest = pending.request
+     * ```
+     *
+     * The callback observes the delivered assertion internally: whenever the user completes
+     * the ceremony from the attached View's suggestions, the response is shaped exactly as in
+     * [authenticate] (data-string build and `supportsJsonResponse` branch) and submitted to
+     * the Journey workflow via the `webAuthnOutcome` [ValueCallback] — even if the app never
+     * calls [FidoPendingAuthentication.await]. Ceremonies that never deliver (user dismissed
+     * the suggestions) leave the outcome unset; keep the modal [authenticate] available as
+     * the fallback.
+     *
+     * Fails fast with `ERROR::unsupported` through [handleError] when the device cannot
+     * deliver pending requests (OS gate unmet — see
+     * [com.pingidentity.fido.isConditionalMediationSupported]). Routing always uses the
+     * Android Credential Manager (the Google Play Services FIDO2 API has no conditional
+     * surface), regardless of the block's `useFido2ApiClient` setting.
+     *
+     * @param block A transformation function that converts JsonObject to GetPublicKeyCredentialOption.
+     *              Allows customization of credential manager options like preferImmediatelyAvailableCredentials.
+     * @return A [Result] containing the [FidoPendingAuthentication] to attach to a View on
+     *         success, or an exception on failure. A successfully completed ceremony is
+     *         automatically submitted to the Journey workflow.
+     */
+    suspend fun pendingAuthenticate(
+        block: FidoAuthenticateCustomizer.() -> Unit = {}
+    ): Result<FidoPendingAuthentication> {
+        // A superseded pending request must not deliver an assertion into the new ceremony
+        pendingAuthentication?.cancel()
+        logger.d("Starting FIDO2 pending authentication")
+        return FidoClient {
+            logger = this@FidoAuthenticationCallback.logger
+        }.pendingAuthenticate(
+            publicKeyCredentialRequestOptions, block
+        ).onSuccess { pending ->
+            logger.d("FIDO2 pending authentication request created")
+            pendingAuthentication = pending
+            pending.observe { result ->
+                result.onSuccess { assertion ->
+                    logger.d("FIDO2 pending authentication successful")
+                    onAssertion(assertion)
+                }.onFailure { exception ->
+                    // Cancellation is teardown, not a ceremony failure — the androidx pending
+                    // path itself never propagates errors.
+                    if (exception is CancellationException) {
+                        logger.d("FIDO2 pending authentication cancelled")
+                    } else {
+                        handleError(exception)
+                    }
+                }
+            }
+        }.onFailure {
+            // Handle setup errors (e.g. unsupported OS) and update the Journey workflow
+            handleError(it)
+        }
+    }
+
+    /**
+     * Shapes the delivered assertion for the Journey workflow and submits it.
+     *
+     * Builds the response data string with components separated by "::" and formats it based
+     * on the server's `supportsJsonResponse` capability, then submits the value through
+     * [valueCallback]. Shared verbatim by the modal [authenticate] path and the conditional
+     * [pendingAuthenticate] path so both produce identical payloads.
+     *
+     * @param response The assertion response as produced by [FidoClient]
+     */
+    private fun onAssertion(response: JsonObject) {
+        // Extract the response object from the credential
+        val authResponse =
+            response[FIELD_RESPONSE]?.jsonObject ?: JsonObject(emptyMap())
+
+        // Build the response data string with components separated by "::"
+        val data = listOf(
+            // Client data JSON - contains challenge, origin, and type
+            authResponse[FIELD_CLIENT_DATA_JSON]?.jsonPrimitive?.content?.base64ToStr()
+                ?: "",
+            // Authenticator data - cryptographic proof from the authenticator
+            authResponse[FIELD_AUTHENTICATOR_DATA]?.jsonPrimitive?.content?.base64ToIntStr()
+                ?: "",
+            // Signature - cryptographic signature over the client data and authenticator data
+            authResponse[FIELD_SIGNATURE]?.jsonPrimitive?.content?.base64ToIntStr()
+                ?: "",
+            // Raw credential ID - unique identifier for the credential
+            response[FIELD_RAW_ID]?.jsonPrimitive?.content ?: "",
+            // User handle - optional user identifier (may be empty)
+            authResponse[FIELD_USER_HANDLE]?.jsonPrimitive?.content?.base64ToStr() ?: ""
+        ).joinToString(Constants.DATA_SEPARATOR)
+
+        // Format the response based on server capabilities
+        val callbackValue = if (supportsJsonResponse) {
+            // New JSON format with metadata
+            Json.encodeToString(
+                FidoJsonResponse(
+                    response[FIELD_AUTHENTICATOR_ATTACHMENT]?.jsonPrimitive?.content
+                        ?: AUTHENTICATOR_PLATFORM, data
+                )
+            )
+        } else {
+            // Legacy string format for backward compatibility
+            data
+        }
+
+        // Submit the response to the Journey workflow
+        valueCallback(callbackValue)
     }
 
     /**
