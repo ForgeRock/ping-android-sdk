@@ -77,7 +77,12 @@ kotlin {
 
 configurations.all {
     resolutionStrategy {
-        force("com.google.android.gms:play-services-basement:18.4.0")
+        // play-services-basement must stay >= 18.5.0: play-services-identity-credentials
+        // 16.0.0-alpha08 (pulled by androidx.credentials:credentials-play-services-auth:1.6.0
+        // via mfa:fido's api(libs.androidx.credentials)) calls ComplianceOptions, which was
+        // added in basement 18.5.0. Forcing below that crashes with NoClassDefFoundError
+        // on the GoogleApiHandler thread when CredentialManager.getCredential connects.
+        force("com.google.android.gms:play-services-basement:18.5.0")
         force("com.google.android.gms:play-services-tasks:18.2.0")
         force("com.google.android.gms:play-services-base:18.5.0")
     }
