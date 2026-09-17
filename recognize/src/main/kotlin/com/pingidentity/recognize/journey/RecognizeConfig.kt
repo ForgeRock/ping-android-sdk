@@ -7,6 +7,7 @@
 
 package com.pingidentity.recognize.journey
 
+import com.pingidentity.recognize.RecognizeSuccess
 import com.pingidentity.utils.PingDsl
 
 /**
