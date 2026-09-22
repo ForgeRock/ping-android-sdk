@@ -56,8 +56,9 @@ allprojects {
         resolutionStrategy {
             // Force secure version of play-services-basement to address security vulnerabilities
             // Used transitively by recaptcha client and fido subprojects
-            // Updated to 18.0.2 which fixes CVE-2022-2390
-            force("com.google.android.gms:play-services-basement:18.0.2")
+            // Central version in gradle/libs.versions.toml; 18.5.0+ also satisfies
+            // play-services-identity-credentials (transitive of credentials-play-services-auth).
+            force(libs.play.services.basement)
 
             // Force secure version of nimbus-jose-jwt to address security vulnerabilities
             // Used transitively by mfa:binding subproject; fixes CVE-2025-53864
