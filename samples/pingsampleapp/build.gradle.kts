@@ -77,9 +77,15 @@ kotlin {
 
 configurations.all {
     resolutionStrategy {
-        force("com.google.android.gms:play-services-basement:18.4.0")
-        force("com.google.android.gms:play-services-tasks:18.2.0")
-        force("com.google.android.gms:play-services-base:18.5.0")
+        // GMS platform artifacts must stay mutually consistent: play-services-identity-credentials
+        // 16.0.0-alpha08 (transitive of credentials-play-services-auth 1.6.0) requires
+        // basement >= 18.5.0, the first version shipping
+        // com.google.android.gms.common.api.ComplianceOptions. Forcing an older basement crashes
+        // FIDO registration with NoClassDefFoundError on API 33 emulators/devices.
+        // Versions are managed centrally in gradle/libs.versions.toml.
+        force(libs.play.services.basement)
+        force(libs.play.services.tasks)
+        force(libs.play.services.base)
     }
 }
 
