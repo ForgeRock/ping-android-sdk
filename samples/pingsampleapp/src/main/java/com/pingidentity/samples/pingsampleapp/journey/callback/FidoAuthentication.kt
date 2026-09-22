@@ -9,9 +9,7 @@ package com.pingidentity.samples.pingsampleapp.journey.callback
 
 import android.util.Log
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.material3.Button
@@ -79,25 +77,36 @@ fun FidoAuthentication(
         }
 
         // Modal fallback: the conditional path delivers no errors, so this stays visible to
-        // cover dismissed suggestions.
-        Button(
-            modifier = Modifier.padding(4.dp),
-            onClick = {
-                coroutineScope.launch {
-                    callback.authenticate()
-                        .onSuccess { currentOnCompleted() }
-                        .onFailure {
-                            Log.e(
-                                "Fido2Authentication",
-                                "Failed to Authenticate",
-                                it
-                            )
-                            currentOnCompleted()
-                        }
+        // cover dismissed suggestions. Shown only when the server's WebAuthn node has
+        // "Authentication Button" enabled (manualButtonEnabled). A failed modal attempt (e.g.
+        // a transient Google Play services disconnection) keeps the user on the page — the
+        // password fields remain usable and the button can be pressed again — rather than
+        // submitting an error outcome and forcing a server round-trip.
+        //
+        // Routing: this journey is the conditional-UI one — the payload carries no rpId
+        // (_relyingPartyId is empty) and no allowCredentials, which the Google Play Services
+        // FIDO2 API requires (its process crashes on the empty rpId, surfacing as a GMS
+        // connection suspension / ApiException 20). The modal button therefore forces the
+        // Credential Manager path, which handles the empty rpId correctly.
+        if (callback.manualButtonEnabled) {
+            Button(
+                modifier = Modifier.padding(4.dp),
+                onClick = {
+                    coroutineScope.launch {
+                        callback.authenticate { useFido2ApiClient = false }
+                            .onSuccess { currentOnCompleted() }
+                            .onFailure {
+                                Log.e(
+                                    "Fido2Authentication",
+                                    "Failed to Authenticate",
+                                    it
+                                )
+                            }
+                    }
                 }
+            ) {
+                Text("Use a passkey")
             }
-        ) {
-            Text("Use a passkey")
         }
     } else {
         Box(

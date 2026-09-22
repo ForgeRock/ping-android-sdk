@@ -137,6 +137,52 @@ class FidoAuthenticationCallbackTest {
     }
 
     @Test
+    fun `init should omit rpId when the server sends an empty relyingPartyId`() {
+        // The AIC conditional-UI journey sends no RP ID (Username from device + conditional
+        // mediation). Emitting "rpId": "" would make the request unscoped — providers either
+        // reject it (GMS FIDO2 API crashes) or treat it as "any RP" (Samsung Pass offers
+        // credentials from other sites). An omitted rpId defaults to the caller's verified
+        // origin per the WebAuthn spec.
+        val sampleJson = buildJsonObject {
+            put("type", "MetadataCallback")
+            putJsonArray("output") {
+                addJsonObject {
+                    put("name", "data")
+                    putJsonObject("value") {
+                        put("_action", "webauthn_authentication")
+                        put("challenge", "IrmRP2U3shw3plwrICzAkw/yupRI60s2dnGhfwExd/o=")
+                        put("allowCredentials", "")
+                        putJsonArray("_allowCredentials") { }
+                        put("timeout", "60000")
+                        put("userVerification", "preferred")
+                        put("conditional", true)
+                        put("mediation", "conditional")
+                        put("_relyingPartyId", "")
+                        putJsonObject("extensions") { }
+                        put("_type", "WebAuthn")
+                        put("supportsJsonResponse", true)
+                    }
+                }
+            }
+        }
+
+        val callback = FidoAuthenticationCallback()
+        callback.journey = mockWorkflow
+        callback.init(sampleJson)
+
+        val options = callback.publicKeyCredentialRequestOptions
+        assertEquals(
+            "IrmRP2U3shw3plwrICzAkw_yupRI60s2dnGhfwExd_o",
+            options["challenge"]?.jsonPrimitive?.content
+        )
+        // The request must not carry an rpId key at all — absence, not an empty string
+        assertTrue(
+            "rpId must be omitted when empty",
+            !options.containsKey("rpId")
+        )
+    }
+
+    @Test
     fun `init should parse publicKeyCredentialRequestOptions with multiple allowCredentials`() {
         val sampleJson = buildJsonObject {
             put("type", "MetadataCallback")

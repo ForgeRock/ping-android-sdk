@@ -111,6 +111,18 @@ class FidoAuthenticationCallback : FidoCallback() {
     private var supportsJsonResponse: Boolean = false
 
     /**
+     * Indicates whether the server's WebAuthn node has "Authentication Button" enabled.
+     *
+     * When true, the app should surface an explicit button (e.g. "Use a passkey") that starts
+     * the modal ceremony — the fallback for users without a suitable passkey or who dismiss
+     * the conditional-mediation suggestions. When false, the server intends conditional
+     * mediation only, with no button affordance. Detected from the server's configuration
+     * during init().
+     */
+    var manualButtonEnabled: Boolean = false
+        private set
+
+    /**
      * The in-flight pending request from the most recent [pendingAuthenticate] call, if any.
      * A superseded request is cancelled when [pendingAuthenticate] or [authenticate] is called
      * again, so an abandoned conditional ceremony cannot deliver an assertion into the new one.
@@ -141,6 +153,10 @@ class FidoAuthenticationCallback : FidoCallback() {
             // Store the supportsJsonResponse flag before transformation
             supportsJsonResponse =
                 value[Constants.FIELD_SUPPORTS_JSON_RESPONSE]?.jsonPrimitive?.content?.toBoolean()
+                    ?: false
+            // Whether the server's WebAuthn node shows an explicit authentication button
+            manualButtonEnabled =
+                value[Constants.FIELD_MANUAL_BUTTON_ENABLED]?.jsonPrimitive?.content?.toBoolean()
                     ?: false
             publicKeyCredentialRequestOptions = transform(value)
         } else {
@@ -402,11 +418,16 @@ class FidoAuthenticationCallback : FidoCallback() {
                     ?: DEFAULT_USER_VERIFICATION
             )
 
-            // Extract relying party ID from internal field
-            put(
-                FIELD_RP_ID,
-                input[FIELD_RELYING_PARTY_ID_INTERNAL]?.jsonPrimitive?.content ?: ""
-            )
+            // Extract relying party ID from the internal field. An empty value is omitted
+            // rather than emitted as "rpId": "" — per the WebAuthn spec an absent rpId
+            // defaults to the caller's verified origin (the app's DAL-linked domain), while
+            // an empty string makes the request unscoped: providers either reject it (the
+            // GMS FIDO2 API process-crashes) or treat it as "any RP" (Samsung Pass surfaces
+            // credentials belonging to other sites).
+            input[FIELD_RELYING_PARTY_ID_INTERNAL]?.jsonPrimitive?.content
+                ?.takeIf { it.isNotEmpty() }?.let {
+                    put(FIELD_RP_ID, it)
+                }
 
             // Transform allowed credentials from byte arrays to Base64 strings
             putJsonArray(FIELD_ALLOW_CREDENTIALS) {

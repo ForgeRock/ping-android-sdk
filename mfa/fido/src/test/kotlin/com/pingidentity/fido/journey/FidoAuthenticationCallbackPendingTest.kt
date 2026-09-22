@@ -125,7 +125,10 @@ class FidoAuthenticationCallbackPendingTest {
         unmockkAll()
     }
 
-    private fun initCallback(supportsJsonResponse: Boolean = false): FidoAuthenticationCallback {
+    private fun initCallback(
+        supportsJsonResponse: Boolean = false,
+        manualButtonEnabled: Boolean? = null,
+    ): FidoAuthenticationCallback {
         val sampleJson = buildJsonObject {
             put("type", "MetadataCallback")
             putJsonArray("output") {
@@ -142,6 +145,7 @@ class FidoAuthenticationCallbackPendingTest {
                         putJsonObject("extensions") { }
                         put("_type", "WebAuthn")
                         put("supportsJsonResponse", supportsJsonResponse)
+                        manualButtonEnabled?.let { put("manualButtonEnabled", it) }
                     }
                 }
             }
@@ -290,6 +294,16 @@ class FidoAuthenticationCallbackPendingTest {
         // And a late delivery from the cancelled request is ignored — the modal outcome wins
         pending.request.callback(responseWith(modalFakeAssertion))
         assertEquals(expectedLegacyDataString, valueCallback.value)
+    }
+
+    @Test
+    fun `manualButtonEnabled parses from the server payload`() = runTest {
+        // A WebAuthn node with "Authentication Button" enabled
+        assertTrue(initCallback(manualButtonEnabled = true).manualButtonEnabled)
+
+        // Disabled or absent both default to false (no button affordance)
+        assertEquals(false, initCallback(manualButtonEnabled = false).manualButtonEnabled)
+        assertEquals(false, initCallback().manualButtonEnabled)
     }
 
     @Test
