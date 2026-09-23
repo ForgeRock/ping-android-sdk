@@ -131,30 +131,18 @@ class FidoAuthenticationCallback : FidoCallback() {
      * responsible for abandoning the ceremony ([FidoPendingAuthentication.cancel]) when its
      * own screen goes away. The holder encapsulates the single-slot supersede/observe
      * lifecycle shared with the DaVinci collector — see
-     * [com.pingidentity.fido.FidoPendingAuthenticationHolder].
-     */
-    /**
-     * Holds the in-flight pending request from the most recent [pendingAuthenticate] call.
-     * A superseded request is cancelled when [pendingAuthenticate] or [authenticate] is
-     * called again, so an abandoned conditional ceremony cannot deliver an assertion into
-     * the new one. The Journey callback layer has no framework-driven close lifecycle (unlike
-     * the DaVinci collector's [com.pingidentity.orchestrate.Closeable]); the app is
-     * responsible for abandoning the ceremony ([FidoPendingAuthentication.cancel]) when its
-     * own screen goes away. The holder encapsulates the single-slot supersede/observe
-     * lifecycle shared with the DaVinci collector — see
      * [com.pingidentity.fido.FidoPendingAuthenticationHolder]. Lazily initialized because the
      * logger (through [journey]) is only available after the workflow wires the callback.
      */
     private val pendingAuthentication by lazy {
         FidoPendingAuthenticationHolder(
+            logger,
             onDelivered = { assertion ->
                 onAssertion(assertion)
             },
             onError = { exception ->
                 handleError(exception)
             },
-            onLogD = logger::d,
-            onLogE = logger::e,
         )
     }
 

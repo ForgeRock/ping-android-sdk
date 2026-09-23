@@ -303,6 +303,39 @@ class FidoAuthenticationCallbackPendingTest {
     }
 
     @Test
+    fun `stale pending delivery is dropped after a newer ceremony supersedes it`() = runTest {
+        // Given - pending request A created
+        coEvery { getPublicKeyCredential(any(), any()) } throws gmsForbidden
+        val callback = initCallback(supportsJsonResponse = false)
+        val superseded = callback.pendingAuthenticate().getOrThrow()
+
+        // When - a newer pending ceremony B supersedes A
+        val current = callback.pendingAuthenticate().getOrThrow()
+
+        // And - the androidx delivery thread races the supersede: A's response arrives after
+        // B was registered. FidoPendingAuthentication's CAS means A's observer still fires
+        // (its internal completion was claimed), but the holder's ownership gate must drop
+        // it — A is no longer the current request.
+        superseded.request.callback(
+            responseWith("""{"id":"stale-id","rawId":"stale-raw","response":{}}""")
+        )
+
+        // Then - the stale delivery did not reach the workflow
+        assertEquals("", valueCallback.value, "superseded request must not deliver")
+
+        // And - the current request B still delivers normally
+        current.request.callback(
+            responseWith("""{"id":"current-id","rawId":"current-raw","response":{}}""")
+        )
+        // The legacy data string's rawId component carries B's rawId — proving the delivery
+        // came from the current request, not the superseded one
+        assertTrue(
+            valueCallback.value.endsWith("::current-raw::"),
+            "outcome must come from the current request, got: ${valueCallback.value}"
+        )
+    }
+
+    @Test
     fun `manualButtonEnabled parses from the server payload`() = runTest {
         // A WebAuthn node with "Authentication Button" enabled
         assertTrue(initCallback(manualButtonEnabled = true).manualButtonEnabled)

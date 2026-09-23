@@ -7,6 +7,7 @@
 
 package com.pingidentity.fido
 
+import com.pingidentity.logger.Logger
 import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.json.JsonObject
 
@@ -18,8 +19,11 @@ import kotlinx.serialization.json.JsonObject
  * cancelled so an abandoned conditional ceremony cannot deliver an assertion into the new
  * one. Delivery is observed exactly once via [FidoPendingAuthentication.observe], with
  * cancellation treated as teardown rather than a ceremony failure (the androidx pending path
- * itself never propagates errors). When the DaVinci collector gains pending support
- * (DV-24867), it shares this holder.
+ * itself never propagates errors). A request-identity check in [register]'s observer makes
+ * delivery atomic with slot ownership: a request whose observer fires after it was superseded
+ * (cancel + [register] of a newer ceremony on another thread) is dropped, so `@Volatile`'s
+ * per-write visibility is enough — no lock is needed for the delivery path. When the DaVinci
+ * collector gains pending support (DV-24867), it shares this holder.
  *
  * **Threading:** written on the caller's coroutine thread; cancelled from app lifecycle or
  * workflow-close code on other threads — hence [Volatile].
@@ -28,16 +32,14 @@ import kotlinx.serialization.json.JsonObject
  *   completes successfully — must be cheap and non-suspending (it stores the assertion into
  *   the collector's payload or submits the Journey outcome).
  * @param onError Called on the androidx delivery thread when delivery fails with a
- *   non-cancellation error — routes to the variant's `handleError`.
- * @param onLogD Debug-log hook for the holder's lifecycle transitions; failures are logged
- *   through [onLogE].
- * @param onLogE Error-log hook carrying the failing exception.
+ *   non-cancellation error — routes to the variant's `handleError`, which logs it.
+ * @param logger The variant's logger for the holder's lifecycle transitions (delivery,
+ *   cancellation, stale-drop) that `handleError` never sees.
  */
 internal class FidoPendingAuthenticationHolder(
+    private val logger: Logger,
     private val onDelivered: (JsonObject) -> Unit,
     private val onError: (Throwable) -> Unit,
-    private val onLogD: (String) -> Unit,
-    private val onLogE: (String, Throwable) -> Unit,
 ) {
 
     @Volatile
@@ -54,23 +56,31 @@ internal class FidoPendingAuthenticationHolder(
 
     /**
      * Stores [pending] as the in-flight request and observes its completion, forwarding the
-     * outcome to [onDelivered] or [onError]/[onLogE]. The caller supersedes via [cancel]
+     * outcome to [onDelivered] or [onError]. The caller supersedes via [cancel]
      * first; a registered request whose observer has already fired (delivered or cancelled)
      * can no longer deliver into anything new.
      */
     fun register(pending: FidoPendingAuthentication) {
         this.pending = pending
         pending.observe { result ->
+            // Ownership gate: only the request that is *still* current may deliver into the
+            // wrapper. A superseded request's late observer callback (the androidx delivery
+            // thread can race a concurrent cancel+register on another thread) is dropped —
+            // otherwise a stale ceremony could update the collector's assertion or submit the
+            // Journey outcome after a newer ceremony started.
+            if (this.pending !== pending) {
+                logger.d("FIDO2 pending authentication superseded; dropping stale delivery")
+                return@observe
+            }
             result.onSuccess { assertion ->
-                onLogD("FIDO2 pending authentication successful")
+                logger.d("FIDO2 pending authentication successful")
                 onDelivered(assertion)
             }.onFailure { exception ->
                 // Cancellation is teardown, not a ceremony failure — the androidx pending
                 // path itself never propagates errors.
                 if (exception is CancellationException) {
-                    onLogD("FIDO2 pending authentication cancelled")
+                    logger.d("FIDO2 pending authentication cancelled")
                 } else {
-                    onLogE("FIDO2 pending authentication failed", exception)
                     onError(exception)
                 }
             }
