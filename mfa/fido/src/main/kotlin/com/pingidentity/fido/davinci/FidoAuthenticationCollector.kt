@@ -14,9 +14,9 @@ import com.pingidentity.fido.Constants.FIELD_CHALLENGE
 import com.pingidentity.fido.FidoAuthenticateCustomizer
 import com.pingidentity.fido.FidoClient
 import com.pingidentity.fido.FidoPendingAuthentication
+import com.pingidentity.fido.FidoPendingAuthenticationHolder
 import com.pingidentity.fido.toBase64
 import com.pingidentity.orchestrate.Closeable
-import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -54,14 +54,26 @@ class FidoAuthenticationCollector : AbstractFidoCollector(), Closeable {
     private var assertionValue: JsonObject? = null
 
     /**
-     * The in-flight pending request from the most recent [pendingAuthenticate] call, if any;
-     * cancelled when [authenticate] or [pendingAuthenticate] supersedes it, and in [close] so an
-     * abandoned conditional ceremony cannot deliver an assertion into a collector the workflow
-     * has already moved past. Written on the caller's coroutine thread and read/cancelled in
-     * [close] from the workflow's close path — hence [Volatile].
+     * Holds the in-flight pending request from the most recent [pendingAuthenticate] call;
+     * cancelled when [authenticate] or [pendingAuthenticate] supersedes it, and in [close] so
+     * an abandoned conditional ceremony cannot deliver an assertion into a collector the
+     * workflow has already moved past. The holder encapsulates the single-slot
+     * supersede/observe lifecycle shared with the Journey callback — see
+     * [com.pingidentity.fido.FidoPendingAuthenticationHolder]. Lazily initialized because the
+     * logger (through [davinci]) is only available after the workflow wires the collector.
      */
-    @Volatile
-    private var pendingAuthentication: FidoPendingAuthentication? = null
+    private val pendingAuthentication by lazy {
+        FidoPendingAuthenticationHolder(
+            onDelivered = { assertion ->
+                assertionValue = assertion
+            },
+            onError = { exception ->
+                handleError(exception)
+            },
+            onLogD = logger::d,
+            onLogE = logger::e,
+        )
+    }
 
     /**
      * Initializes the collector with authentication request options.
@@ -117,8 +129,7 @@ class FidoAuthenticationCollector : AbstractFidoCollector(), Closeable {
         block: FidoAuthenticateCustomizer.() -> Unit = {}
     ): Result<JsonObject> {
         // A superseded pending request must not deliver an assertion into this modal ceremony
-        pendingAuthentication?.cancel()
-        pendingAuthentication = null
+        pendingAuthentication.cancel()
         errorCode = null
         assertionValue = null
         logger.d("Starting FIDO2 authentication")
@@ -166,7 +177,7 @@ class FidoAuthenticationCollector : AbstractFidoCollector(), Closeable {
         block: FidoAuthenticateCustomizer.() -> Unit = {}
     ): Result<FidoPendingAuthentication> {
         // A superseded pending request must not deliver an assertion into this new ceremony
-        pendingAuthentication?.cancel()
+        pendingAuthentication.cancel()
         errorCode = null
         assertionValue = null
         logger.d("Starting FIDO2 pending authentication")
@@ -174,22 +185,7 @@ class FidoAuthenticationCollector : AbstractFidoCollector(), Closeable {
             .pendingAuthenticate(publicKeyCredentialRequestOptions, block)
             .onSuccess { pending ->
                 logger.d("FIDO2 pending authentication request created")
-                pendingAuthentication = pending
-                pending.observe { result ->
-                    result.onSuccess { assertion ->
-                        logger.d("FIDO2 pending authentication successful")
-                        assertionValue = assertion
-                    }.onFailure { exception ->
-                        // Cancellation is teardown (close), not a ceremony failure — the
-                        // androidx pending path itself never propagates errors.
-                        if (exception is CancellationException) {
-                            logger.d("FIDO2 pending authentication cancelled")
-                        } else {
-                            logger.e("FIDO2 pending authentication failed", exception)
-                            handleError(exception)
-                        }
-                    }
-                }
+                pendingAuthentication.register(pending)
             }.onFailure { exception ->
                 logger.e("FIDO2 pending authentication failed", exception)
                 handleError(exception)
@@ -241,8 +237,7 @@ class FidoAuthenticationCollector : AbstractFidoCollector(), Closeable {
     }
 
     override fun close() {
-        pendingAuthentication?.cancel()
-        pendingAuthentication = null
+        pendingAuthentication.cancel()
         assertionValue = null
         errorCode = null
     }

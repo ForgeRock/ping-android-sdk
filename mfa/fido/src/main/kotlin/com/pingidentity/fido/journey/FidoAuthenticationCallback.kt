@@ -30,11 +30,11 @@ import com.pingidentity.fido.Constants.FIELD_USER_VERIFICATION
 import com.pingidentity.fido.FidoAuthenticateCustomizer
 import com.pingidentity.fido.FidoClient
 import com.pingidentity.fido.FidoPendingAuthentication
+import com.pingidentity.fido.FidoPendingAuthenticationHolder
 import com.pingidentity.fido.base64DefaultToUrlSafe
 import com.pingidentity.fido.base64ToIntStr
 import com.pingidentity.fido.base64ToStr
 import com.pingidentity.fido.toBase64
-import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
@@ -123,19 +123,40 @@ class FidoAuthenticationCallback : FidoCallback() {
         private set
 
     /**
-     * The in-flight pending request from the most recent [pendingAuthenticate] call, if any.
-     * A superseded request is cancelled when [pendingAuthenticate] or [authenticate] is called
-     * again, so an abandoned conditional ceremony cannot deliver an assertion into the new one.
-     * The Journey callback layer has no framework-driven close lifecycle (unlike the DaVinci
-     * collector's [com.pingidentity.orchestrate.Closeable]); the app is responsible for
-     * abandoning the ceremony ([FidoPendingAuthentication.cancel]) when its own screen goes
-     * away.
-     *
-     * Written on the caller's coroutine thread and cancelled from app lifecycle code on other
-     * threads — hence [Volatile].
+     * Holds the in-flight pending request from the most recent [pendingAuthenticate] call.
+     * A superseded request is cancelled when [pendingAuthenticate] or [authenticate] is
+     * called again, so an abandoned conditional ceremony cannot deliver an assertion into
+     * the new one. The Journey callback layer has no framework-driven close lifecycle (unlike
+     * the DaVinci collector's [com.pingidentity.orchestrate.Closeable]); the app is
+     * responsible for abandoning the ceremony ([FidoPendingAuthentication.cancel]) when its
+     * own screen goes away. The holder encapsulates the single-slot supersede/observe
+     * lifecycle shared with the DaVinci collector — see
+     * [com.pingidentity.fido.FidoPendingAuthenticationHolder].
      */
-    @Volatile
-    private var pendingAuthentication: FidoPendingAuthentication? = null
+    /**
+     * Holds the in-flight pending request from the most recent [pendingAuthenticate] call.
+     * A superseded request is cancelled when [pendingAuthenticate] or [authenticate] is
+     * called again, so an abandoned conditional ceremony cannot deliver an assertion into
+     * the new one. The Journey callback layer has no framework-driven close lifecycle (unlike
+     * the DaVinci collector's [com.pingidentity.orchestrate.Closeable]); the app is
+     * responsible for abandoning the ceremony ([FidoPendingAuthentication.cancel]) when its
+     * own screen goes away. The holder encapsulates the single-slot supersede/observe
+     * lifecycle shared with the DaVinci collector — see
+     * [com.pingidentity.fido.FidoPendingAuthenticationHolder]. Lazily initialized because the
+     * logger (through [journey]) is only available after the workflow wires the callback.
+     */
+    private val pendingAuthentication by lazy {
+        FidoPendingAuthenticationHolder(
+            onDelivered = { assertion ->
+                onAssertion(assertion)
+            },
+            onError = { exception ->
+                handleError(exception)
+            },
+            onLogD = logger::d,
+            onLogE = logger::e,
+        )
+    }
 
     /**
      * Initializes the callback with data from the Journey workflow.
@@ -209,8 +230,7 @@ class FidoAuthenticationCallback : FidoCallback() {
     suspend fun authenticate(
         block: FidoAuthenticateCustomizer.() -> Unit = {}): Result<JsonObject> {
         // A superseded pending request must not deliver an outcome into the new ceremony
-        pendingAuthentication?.cancel()
-        pendingAuthentication = null
+        pendingAuthentication.cancel()
         return FidoClient {
             logger = this@FidoAuthenticationCallback.logger
         }.authenticate(
@@ -239,10 +259,10 @@ class FidoAuthenticationCallback : FidoCallback() {
      * The callback observes the delivered assertion internally: whenever the user completes
      * the ceremony from the attached View's suggestions, the response is shaped exactly as in
      * [authenticate] (data-string build and `supportsJsonResponse` branch) and submitted to
-     * the Journey workflow via the `webAuthnOutcome` [ValueCallback] — even if the app never
-     * calls [FidoPendingAuthentication.await]. Ceremonies that never deliver (user dismissed
-     * the suggestions) leave the outcome unset; keep the modal [authenticate] available as
-     * the fallback.
+     * the Journey workflow via the `webAuthnOutcome` [com.pingidentity.journey.plugin.ValueCallback]
+     * — even if the app never calls [FidoPendingAuthentication.await]. Ceremonies that never
+     * deliver (user dismissed the suggestions) leave the outcome unset;
+     * keep the modal [authenticate] available as the fallback.
      *
      * Fails fast with `ERROR::unsupported` through [handleError] when the device cannot
      * deliver pending requests (OS gate unmet — see
@@ -260,7 +280,7 @@ class FidoAuthenticationCallback : FidoCallback() {
         block: FidoAuthenticateCustomizer.() -> Unit = {}
     ): Result<FidoPendingAuthentication> {
         // A superseded pending request must not deliver an assertion into the new ceremony
-        pendingAuthentication?.cancel()
+        pendingAuthentication.cancel()
         logger.d("Starting FIDO2 pending authentication")
         return FidoClient {
             logger = this@FidoAuthenticationCallback.logger
@@ -268,21 +288,7 @@ class FidoAuthenticationCallback : FidoCallback() {
             publicKeyCredentialRequestOptions, block
         ).onSuccess { pending ->
             logger.d("FIDO2 pending authentication request created")
-            pendingAuthentication = pending
-            pending.observe { result ->
-                result.onSuccess { assertion ->
-                    logger.d("FIDO2 pending authentication successful")
-                    onAssertion(assertion)
-                }.onFailure { exception ->
-                    // Cancellation is teardown, not a ceremony failure — the androidx pending
-                    // path itself never propagates errors.
-                    if (exception is CancellationException) {
-                        logger.d("FIDO2 pending authentication cancelled")
-                    } else {
-                        handleError(exception)
-                    }
-                }
-            }
+            pendingAuthentication.register(pending)
         }.onFailure {
             // Handle setup errors (e.g. unsupported OS) and update the Journey workflow
             handleError(it)
