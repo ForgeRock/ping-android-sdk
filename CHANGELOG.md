@@ -19,6 +19,7 @@
 - Fixed FIDO2 collectors to report WebAuthn/credential errors as actionable events instead of generic submit failures [SDKS-4477]
 - Fixed FIDO2 authentication to support per-request API selection via `useFido2ApiClient` [SDKS-5411]
 - Fixed Jackson dependency versions to address security vulnerabilities (CVE-2026-54512, CVE-2026-54513, CVE-2026-54514, CVE-2026-54515) [SDKS-5199]
+- Fixed missing blank-secret validation on `OathCredential` and `OathType` serialized as lowercase [SDKS-5075]
 
 ## [2.1.0]
 
