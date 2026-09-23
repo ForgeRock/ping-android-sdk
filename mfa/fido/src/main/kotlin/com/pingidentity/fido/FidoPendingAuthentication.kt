@@ -111,9 +111,9 @@ class FidoPendingAuthentication internal constructor(
 
     /**
      * Registers a module-internal observer notified exactly once when the deferred is completed
-     * — either by a delivered response or by [cancel]. Used by the DaVinci collector and
-     * Journey callback variants so the assertion reaches `payload()` even if the app never
-     * calls [await]. Not part of the app-facing API.
+     * — either by a delivered response or by [cancel]. Used by the Journey callback so the
+     * assertion reaches the workflow even if the app never calls [await]. Not part of the
+     * app-facing API.
      *
      * Observers registered after the deferred has already completed are invoked immediately
      * with the stored result, so registration order never loses a delivery.

@@ -11,15 +11,15 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.json.JsonObject
 
 /**
- * Single-slot holder for the in-flight pending (conditional-mediation) request, shared by the
- * DaVinci collector and Journey callback variants.
+ * Single-slot holder for the in-flight pending (conditional-mediation) request.
  *
- * Both variants enforce the same lifecycle: a request superseded by a new ceremony
+ * The Journey callback enforces this lifecycle: a request superseded by a new ceremony
  * ([cancel], called at the start of both `authenticate` and `pendingAuthenticate`) is
  * cancelled so an abandoned conditional ceremony cannot deliver an assertion into the new
  * one. Delivery is observed exactly once via [FidoPendingAuthentication.observe], with
  * cancellation treated as teardown rather than a ceremony failure (the androidx pending path
- * itself never propagates errors).
+ * itself never propagates errors). When the DaVinci collector gains pending support
+ * (DV-24867), it shares this holder.
  *
  * **Threading:** written on the caller's coroutine thread; cancelled from app lifecycle or
  * workflow-close code on other threads — hence [Volatile].

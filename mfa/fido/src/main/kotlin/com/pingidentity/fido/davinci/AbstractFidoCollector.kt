@@ -53,14 +53,7 @@ abstract class AbstractFidoCollector : Collector<JsonObject>, DaVinciAware, Subm
     var required = false
         private set
 
-    /**
-     * DOMException name set when a FIDO operation fails; drives the DaVinci error response.
-     *
-     * Written from the androidx delivery/cancellation thread (via [handleError] reached from a
-     * [FidoPendingAuthentication.observe] callback) and read by [eventType]/[actionKey]/
-     * [payload] on other threads — hence [Volatile].
-     */
-    @Volatile
+    /** DOMException name set when a FIDO operation fails; drives the DaVinci error response. */
     var errorCode: String? = null
 
     /** Supplies the DOMException name as `actionKey` when a FIDO error has occurred. */

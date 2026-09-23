@@ -13,8 +13,6 @@ import com.pingidentity.fido.Constants.FIELD_ALLOW_CREDENTIALS
 import com.pingidentity.fido.Constants.FIELD_CHALLENGE
 import com.pingidentity.fido.FidoAuthenticateCustomizer
 import com.pingidentity.fido.FidoClient
-import com.pingidentity.fido.FidoPendingAuthentication
-import com.pingidentity.fido.FidoPendingAuthenticationHolder
 import com.pingidentity.fido.toBase64
 import com.pingidentity.orchestrate.Closeable
 import kotlinx.serialization.json.JsonArray
@@ -44,36 +42,7 @@ class FidoAuthenticationCollector : AbstractFidoCollector(), Closeable {
     lateinit var publicKeyCredentialRequestOptions: JsonObject
         private set
 
-    /**
-     * The delivered assertion, stored from the [FidoPendingAuthentication.observe] callback on
-     * the androidx delivery thread and read by [payload]/[close] on other threads — hence
-     * [Volatile] so the fire-and-forget path (no [FidoPendingAuthentication.await]) is still
-     * visible.
-     */
-    @Volatile
     private var assertionValue: JsonObject? = null
-
-    /**
-     * Holds the in-flight pending request from the most recent [pendingAuthenticate] call;
-     * cancelled when [authenticate] or [pendingAuthenticate] supersedes it, and in [close] so
-     * an abandoned conditional ceremony cannot deliver an assertion into a collector the
-     * workflow has already moved past. The holder encapsulates the single-slot
-     * supersede/observe lifecycle shared with the Journey callback — see
-     * [com.pingidentity.fido.FidoPendingAuthenticationHolder]. Lazily initialized because the
-     * logger (through [davinci]) is only available after the workflow wires the collector.
-     */
-    private val pendingAuthentication by lazy {
-        FidoPendingAuthenticationHolder(
-            onDelivered = { assertion ->
-                assertionValue = assertion
-            },
-            onError = { exception ->
-                handleError(exception)
-            },
-            onLogD = logger::d,
-            onLogE = logger::e,
-        )
-    }
 
     /**
      * Initializes the collector with authentication request options.
@@ -128,8 +97,6 @@ class FidoAuthenticationCollector : AbstractFidoCollector(), Closeable {
     suspend fun authenticate(
         block: FidoAuthenticateCustomizer.() -> Unit = {}
     ): Result<JsonObject> {
-        // A superseded pending request must not deliver an assertion into this modal ceremony
-        pendingAuthentication.cancel()
         errorCode = null
         assertionValue = null
         logger.d("Starting FIDO2 authentication")
@@ -142,54 +109,6 @@ class FidoAuthenticationCollector : AbstractFidoCollector(), Closeable {
             logger.e("FIDO2 authentication failed", exception)
             handleError(exception)
         }
-    }
-
-    /**
-     * Builds a pending (View-attachable) FIDO2 authentication request for conditional
-     * mediation (autofill with passkeys).
-     *
-     * Unlike [authenticate], which runs the modal ceremony to completion, this method returns
-     * a [FidoPendingAuthentication] whose request must be attached to the View that should
-     * surface passkey suggestions (typically the username field):
-     *
-     * ```kotlin
-     * val pending = collector.pendingAuthenticate().getOrThrow()
-     * view.pendingGetCredentialRequest = pending.request
-     * ```
-     *
-     * The collector observes the delivered assertion internally: whenever the user completes
-     * the ceremony from the attached View's suggestions, [assertionValue] is stored and
-     * [payload] returns the assertion exactly as after a successful [authenticate] — even if
-     * the app never calls [FidoPendingAuthentication.await]. Ceremonies that never deliver
-     * (user dismissed the suggestions) leave the payload untouched; keep the modal
-     * [authenticate] available as the fallback.
-     *
-     * Fails fast with `errorCode = NotSupportedError` when the device cannot deliver pending
-     * requests (OS gate unmet — see [com.pingidentity.fido.isConditionalMediationSupported]).
-     * Routing always uses the Android Credential Manager (the Google Play Services FIDO2 API
-     * has no conditional surface), regardless of the block's `useFido2ApiClient` setting.
-     *
-     * @param block A lambda function that transforms the public key credential request options
-     * @return A [Result] containing the [FidoPendingAuthentication] to attach to a View on
-     *         success, or an exception on failure
-     */
-    suspend fun pendingAuthenticate(
-        block: FidoAuthenticateCustomizer.() -> Unit = {}
-    ): Result<FidoPendingAuthentication> {
-        // A superseded pending request must not deliver an assertion into this new ceremony
-        pendingAuthentication.cancel()
-        errorCode = null
-        assertionValue = null
-        logger.d("Starting FIDO2 pending authentication")
-        return FidoClient { logger = this@FidoAuthenticationCollector.logger }
-            .pendingAuthenticate(publicKeyCredentialRequestOptions, block)
-            .onSuccess { pending ->
-                logger.d("FIDO2 pending authentication request created")
-                pendingAuthentication.register(pending)
-            }.onFailure { exception ->
-                logger.e("FIDO2 pending authentication failed", exception)
-                handleError(exception)
-            }
     }
 
     /**
@@ -237,7 +156,6 @@ class FidoAuthenticationCollector : AbstractFidoCollector(), Closeable {
     }
 
     override fun close() {
-        pendingAuthentication.cancel()
         assertionValue = null
         errorCode = null
     }

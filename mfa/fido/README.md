@@ -180,16 +180,13 @@ if (node is ContinueNode) {
 - **FidoAuthenticationCollector**
   - `suspend fun authenticate(): Result<JsonObject>` — Authenticates using a registered FIDO
     authenticator.
-  - `suspend fun pendingAuthenticate(block: FidoAuthenticateCustomizer.() -> Unit = {}):
-    Result<FidoPendingAuthentication>` — Builds a pending
-    request for conditional mediation (autofill with passkeys) instead of launching the modal
-    ceremony. See "Conditional mediation (autofill with passkeys)" below.
 - **FidoAuthenticationCallback** (Journey)
   - `suspend fun authenticate(): Result<JsonObject>` — Authenticates using a registered FIDO
     authenticator.
   - `suspend fun pendingAuthenticate(block: FidoAuthenticateCustomizer.() -> Unit = {}):
-    Result<FidoPendingAuthentication>` — Journey equivalent
-    of the collector variant above. See "Conditional mediation (autofill with passkeys)" below.
+    Result<FidoPendingAuthentication>` — Builds a pending
+    request for conditional mediation (autofill with passkeys) instead of launching the modal
+    ceremony. See "Conditional mediation (autofill with passkeys)" below.
 - **FidoPendingAuthentication**
   - `val request: PendingGetCredentialRequest` — The request to attach to the username field:
     `view.pendingGetCredentialRequest = pending.request`. **View-only** — the androidx extension
@@ -346,7 +343,8 @@ declare `androidx.credentials:credentials-play-services-auth` on API ≤ 33 (see
 On Android 15 (API 35) the SDK can attach a *pending* credential request to a View (typically
 the username field): when the user focuses the field, passkey suggestions appear in the
 keyboard without launching the modal ceremony. Use `FidoClient.pendingAuthenticate` (or the
-collector/callback variants) to obtain the request, attach it to a View, and await the result:
+Journey callback's `pendingAuthenticate` variant) to obtain the request, attach it to a View,
+and await the result:
 
 ```kotlin
 if (isConditionalMediationSupported) {
