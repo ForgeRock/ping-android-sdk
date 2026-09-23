@@ -75,6 +75,11 @@ data class OathCredential(
     var isLocked: Boolean = false
 ) {
     init {
+        // Validate secret (must not be blank - required to generate OTP codes)
+        require(secret.isNotBlank()) {
+            "Invalid secret value: secret must not be blank."
+        }
+
         // Validate digits parameter (RFC 4226/6238 specifies 6 or 8 digits)
         require(digits == 6 || digits == 8) {
             "Invalid digits value: $digits. Digits must be 6 or 8."
@@ -191,7 +196,7 @@ data class OathCredential(
  */
 object OathTypeSerializer : KSerializer<OathType> {
     override val descriptor: SerialDescriptor = PrimitiveSerialDescriptor("OathType", PrimitiveKind.STRING)
-    override fun serialize(encoder: Encoder, value: OathType) = encoder.encodeString(value.name)
+    override fun serialize(encoder: Encoder, value: OathType) = encoder.encodeString(value.name.lowercase())
     override fun deserialize(decoder: Decoder): OathType = OathType.fromString(decoder.decodeString())
 }
 
