@@ -33,6 +33,7 @@ import io.mockk.mockk
 import io.mockk.mockkObject
 import io.mockk.mockkStatic
 import io.mockk.unmockkAll
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
@@ -209,6 +210,7 @@ class FidoAuthenticationCallbackPendingTest {
         coVerify(exactly = 0) { getPublicKeyCredential(any(), any()) }
     }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     @Test
     fun `valueCallback data is visible immediately after await returns success`() = runTest {
         // Given - a pending request created through the real client and awaited by the app
@@ -291,8 +293,12 @@ class FidoAuthenticationCallbackPendingTest {
         assertTrue(awaited.isFailure)
         assertTrue(awaited.exceptionOrNull() is CancellationException)
 
-        // And a late delivery from the cancelled request is ignored — the modal outcome wins
-        pending.request.callback(responseWith(modalFakeAssertion))
+        // And a late delivery from the cancelled request is ignored — the modal outcome wins.
+        // The late assertion carries a distinct rawId: if the cancelled request incorrectly
+        // delivered, the outcome would change to this string and the assertion would fail.
+        pending.request.callback(
+            responseWith("""{"id":"late-id","rawId":"late-raw","response":{}}""")
+        )
         assertEquals(expectedLegacyDataString, valueCallback.value)
     }
 

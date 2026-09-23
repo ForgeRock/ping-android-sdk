@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -63,32 +64,38 @@ fun NameCallback(
             // Same width the Compose OutlinedTextField enforces (Material minimum 280dp),
             // centered by the spacers exactly like the other fields on the node. Fixed
             // constraints only — wrap-content re-measures break the inflated layout's sizing.
-            AndroidView(
-                modifier = Modifier.width(280.dp),
-                factory = { context ->
-                    LayoutInflater.from(context)
-                        .inflate(R.layout.view_webauthn_username_field, null, false)
-                        .also { layout ->
-                            layout.findViewById<TextInputEditText>(
-                                R.id.webauthn_username_edit
-                            ).apply {
-                                setText(text)
-                                doOnTextChanged { value, _, _, _ ->
-                                    text = value?.toString().orEmpty()
-                                    field.name = text
-                                    onNodeUpdated()
+            // key(field): the factory captures `field` in its text listener — when a new
+            // NameCallback reaches this position in the composition (same slot, new node),
+            // the view must be recreated rather than kept with the stale listener writing
+            // into the previous callback.
+            key(field) {
+                AndroidView(
+                    modifier = Modifier.width(280.dp),
+                    factory = { context ->
+                        LayoutInflater.from(context)
+                            .inflate(R.layout.view_webauthn_username_field, null, false)
+                            .also { layout ->
+                                layout.findViewById<TextInputEditText>(
+                                    R.id.webauthn_username_edit
+                                ).apply {
+                                    setText(text)
+                                    doOnTextChanged { value, _, _, _ ->
+                                        text = value?.toString().orEmpty()
+                                        field.name = text
+                                        onNodeUpdated()
+                                    }
                                 }
+                                layout.findViewById<TextInputLayout>(
+                                    R.id.webauthn_username_layout
+                                ).hint = field.prompt
                             }
-                            layout.findViewById<TextInputLayout>(
-                                R.id.webauthn_username_layout
-                            ).hint = field.prompt
-                        }
-                },
-                update = { layout ->
-                    layout.findViewById<TextInputEditText>(R.id.webauthn_username_edit)
-                        .pendingGetCredentialRequest = pending?.request
-                },
-            )
+                    },
+                    update = { layout ->
+                        layout.findViewById<TextInputEditText>(R.id.webauthn_username_edit)
+                            .pendingGetCredentialRequest = pending?.request
+                    },
+                )
+            }
             Spacer(modifier = Modifier.weight(1f, true))
         }
     } else {

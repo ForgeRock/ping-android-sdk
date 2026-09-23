@@ -170,7 +170,18 @@ fun JourneyContinueNode(
                 }
 
                 is FidoAuthenticationCallback -> {
-                    FidoAuthentication(it, onNext, { pending = it }, pending)
+                    // A sibling NameCallback marked with "webauthn" in autocompleteValues is
+                    // the conditional-mediation target; without one (and without the manual
+                    // button) the composable falls back to launching the modal directly.
+                    FidoAuthentication(
+                        it,
+                        onNext,
+                        { pending = it },
+                        pending,
+                        continueNode.callbacks
+                            .filterIsInstance<NameCallback>()
+                            .any { name -> name.autocompleteValues.contains("webauthn") }
+                    )
                     showNext = false
                 }
 

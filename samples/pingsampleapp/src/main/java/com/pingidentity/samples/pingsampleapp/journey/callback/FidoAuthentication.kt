@@ -34,6 +34,10 @@ import kotlinx.coroutines.launch
  * and provides the modal fallback button. This composable renders **no** username field of
  * its own — the passkey suggestions surface inline on the regular field marked with
  * autocompleteValues ["username","webauthn"] by the server.
+ *
+ * @param hasConditionalTarget Whether a sibling NameCallback on this node is marked as the
+ *   passkey target ("webauthn" in autocompleteValues). When false there is no field to attach
+ *   the pending request to, so it is not created.
  */
 @Composable
 fun FidoAuthentication(
@@ -41,38 +45,42 @@ fun FidoAuthentication(
     onNext: () -> Unit,
     onPending: (FidoPendingAuthentication?) -> Unit,
     pending: FidoPendingAuthentication?,
+    hasConditionalTarget: Boolean,
 ) {
     val currentOnCompleted by rememberUpdatedState(onNext)
     val coroutineScope = rememberCoroutineScope()
 
-    if (isConditionalMediationSupported) {
-        // Build the pending request up front; the username field's composable attaches it to
-        // the regular field, so suggestions appear when the user focuses it.
-        LaunchedEffect(callback) {
-            callback.pendingAuthenticate { useFido2ApiClient = false }
-                .onSuccess { onPending(it) }
-                .onFailure {
+    if (isConditionalMediationSupported && (hasConditionalTarget || callback.manualButtonEnabled)) {
+        if (hasConditionalTarget) {
+            // Build the pending request up front; the username field's composable attaches it
+            // to the regular field, so suggestions appear when the user focuses it.
+            LaunchedEffect(callback) {
+                callback.pendingAuthenticate { useFido2ApiClient = false }
+                    .onSuccess { onPending(it) }
+                    .onFailure {
+                        Log.e(
+                            "Fido2Authentication",
+                            "Failed to create pending request",
+                            it
+                        )
+                        onPending(null)
+                    }
+            }
+
+            // Deliver the outcome when the user picks a suggestion. A dismissed suggestion
+            // sheet never completes the await — the modal fallback below stays visible in
+            // that case.
+            LaunchedEffect(pending) {
+                val result = pending?.await() ?: return@LaunchedEffect
+                result.onSuccess {
+                    currentOnCompleted()
+                }.onFailure {
                     Log.e(
                         "Fido2Authentication",
-                        "Failed to create pending request",
+                        "Pending authentication cancelled",
                         it
                     )
-                    onPending(null)
                 }
-        }
-
-        // Deliver the outcome when the user picks a suggestion. A dismissed suggestion sheet
-        // never completes the await — the modal fallback below stays visible in that case.
-        LaunchedEffect(pending) {
-            val result = pending?.await() ?: return@LaunchedEffect
-            result.onSuccess {
-                currentOnCompleted()
-            }.onFailure {
-                Log.e(
-                    "Fido2Authentication",
-                    "Pending authentication cancelled",
-                    it
-                )
             }
         }
 
@@ -109,6 +117,9 @@ fun FidoAuthentication(
             }
         }
     } else {
+        // No conditional surface usable on this node (unsupported OS, or neither a marked
+        // username field nor the manual button): launch the modal ceremony directly so the
+        // node stays reachable.
         Box(
             modifier = Modifier
                 .fillMaxSize()
