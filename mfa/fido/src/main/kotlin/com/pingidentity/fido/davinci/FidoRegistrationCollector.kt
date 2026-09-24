@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2025 - 2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -50,7 +50,9 @@ class FidoRegistrationCollector : AbstractFidoCollector(), Closeable {
     }
 
     override fun payload(): JsonObject? {
-        // Return a wrapped attestation value if available, otherwise null.
+        if (errorCode != null) {
+            return buildJsonObject { }
+        }
         return attestationValue?.let {
             logger.d("Returning attestation payload for FIDO2 registration")
             buildJsonObject {
@@ -69,6 +71,8 @@ class FidoRegistrationCollector : AbstractFidoCollector(), Closeable {
         block: FidoRegistrationCustomizer.() -> Unit = {}
     ): Result<JsonObject> {
         logger.d("Starting FIDO2 registration")
+        errorCode = null
+        attestationValue = null
         return FidoClient {
             logger = this@FidoRegistrationCollector.logger
         }.register(publicKeyCredentialCreationOptions, block).onSuccess {
@@ -76,6 +80,7 @@ class FidoRegistrationCollector : AbstractFidoCollector(), Closeable {
             attestationValue = it
         }.onFailure { exception ->
             logger.e("FIDO2 registration failed", exception)
+            handleError(exception)
         }
     }
 
@@ -145,5 +150,6 @@ class FidoRegistrationCollector : AbstractFidoCollector(), Closeable {
 
     override fun close() {
         attestationValue = null
+        errorCode = null
     }
 }

@@ -285,7 +285,33 @@ class OidcClientTest {
         }
 
     @Test
-    fun `refresh should refresh token and revoke non expired access token`() =
+    fun `refresh should failed if no RefreshToken`() =
+        runTest {
+            val testStorage = MemoryStorage<Token>()
+            val oidcClient =
+                OidcClient {
+                    this.httpClient = KtorHttpClient(HttpClient(mockEngine))
+                    discoveryEndpoint = "http://localhost/openid-configuration"
+                    redirectUri = "http://localhost/redirect"
+                    clientId = "test-client-id"
+                    storage = { testStorage }
+                    updateAgent(testAgent)
+                }
+            // Seed storage with a token that has no refresh token
+            testStorage.save(Token(accessToken = "Dummy AccessToken", expiresIn = 3600))
+
+            val result = oidcClient.refresh()
+            assertTrue(result is Failure<OidcError>)
+            assertTrue(result.value is OidcError.Unknown)
+
+            assertEquals(
+                "No Refresh token. Cannot refresh the access token.",
+                (result.value as OidcError.Unknown).cause.message
+            )
+        }
+
+    @Test
+    fun `refresh should refresh token without revoking the access token`() =
         runTest {
             val httpClient = KtorHttpClient(HttpClient(mockEngine))
             val oidcClientConfig =
@@ -306,7 +332,7 @@ class OidcClientTest {
             // Then, refresh the access token
             oidcClient.refresh()
 
-            // Check that the token is no longer in storage
+            // The refreshed token should be in storage
             val tokenInStorage = oidcClientConfig.tokenStorage.get()
             assertNotNull(tokenInStorage)
 
@@ -339,10 +365,9 @@ class OidcClientTest {
                 "refresh_token should be present."
             )
             assertEquals("test-client-id", formData["client_id"], "client_id should be present.")
-            assertEquals("code", formData["response_type"], "response_type should be code.")
 
             assertEquals(2, requestTokenCount, "The /token endpoint was not called twice.")
-            assertEquals(1, revokeTokenCount, "The /revoke endpoint was not called.")
+            assertEquals(0, revokeTokenCount, "The /revoke endpoint should not be called.")
         }
 
 

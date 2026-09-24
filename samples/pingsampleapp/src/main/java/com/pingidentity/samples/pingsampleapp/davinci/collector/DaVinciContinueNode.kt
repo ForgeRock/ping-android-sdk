@@ -33,6 +33,8 @@ import com.pingidentity.davinci.collector.ReadOnlyTextCollector
 import com.pingidentity.davinci.collector.PollingCollector
 import com.pingidentity.davinci.collector.QRCodeCollector
 import com.pingidentity.davinci.collector.BooleanCollector
+import com.pingidentity.davinci.collector.ImageCollector
+import com.pingidentity.davinci.collector.MetadataCollector
 import com.pingidentity.davinci.collector.SingleSelectCollector
 import com.pingidentity.davinci.collector.SubmitCollector
 import com.pingidentity.davinci.collector.TextCollector
@@ -44,7 +46,9 @@ import com.pingidentity.fido.davinci.FidoAuthenticationCollector
 import com.pingidentity.fido.davinci.FidoRegistrationCollector
 import com.pingidentity.idp.davinci.IdpCollector
 import com.pingidentity.orchestrate.ContinueNode
+import com.pingidentity.pingonemfa.davinci.MobilePairingCollector
 import com.pingidentity.protect.davinci.ProtectCollector
+import com.pingidentity.samples.pingsampleapp.pingonemfa.davinci.collector.MobilePairing
 
 @Composable
 fun DaVinciContinueNode(
@@ -120,14 +124,17 @@ fun DaVinciContinueNode(
                 is IdpCollector -> SocialLoginButton(it, onStart, onNext)
                 is DeviceRegistrationCollector -> DeviceRegistration(it, onNext)
                 is DeviceAuthenticationCollector -> DeviceAuthentication(it, onNext)
-                is FidoRegistrationCollector -> FidoRegistration(it, onStart, onNext)
-                is FidoAuthenticationCollector -> FidoAuthentication(it, onStart, onNext)
+                is FidoRegistrationCollector -> FidoRegistration(it, onNext)
+                is FidoAuthenticationCollector -> FidoAuthentication(it, onNext)
                 is PhoneNumberCollector -> PhoneNumber(it, onNodeUpdated)
                 is ProtectCollector -> Protect(it, onNodeUpdated)
                 is PollingCollector -> Polling(it, onNext)
                 is QRCodeCollector -> QRCode(it)
 
                 is BooleanCollector -> SingleCheckbox(it, onNodeUpdated)
+                is ImageCollector -> Image(it)
+                is MetadataCollector -> Metadata(it, onNext)
+                is MobilePairingCollector -> MobilePairing(it, onNext)
             }
             if (it is Submittable) {
                 hasAction = true

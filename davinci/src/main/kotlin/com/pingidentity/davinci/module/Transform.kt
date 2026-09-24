@@ -62,7 +62,12 @@ internal val NodeTransform =
                         }
                     }
                     // If we're still here, we have a 4XX failure that should be recoverable
-                    return@transform ErrorNode(this, jsonResponse, message)
+                    return@transform ErrorNode(
+                        context = this,
+                        input = jsonResponse,
+                        message = message,
+                        status = statusCode,
+                    )
                 }
                 // Handle success (2XX) responses
                 200 -> {

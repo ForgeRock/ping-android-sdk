@@ -66,7 +66,6 @@ import kotlinx.serialization.json.jsonPrimitive
  * // Custom configuration
  * val client = FidoClient {
  *     logger = customLogger
- *     useFido2Client = true // Force to use Fido2 Library
  * }
  * ```
  *
@@ -239,12 +238,15 @@ class FidoClient(private val config: FidoClientConfig) {
      * Unified authentication method that automatically selects the appropriate API.
      *
      * This method provides a single entry point for FIDO2 authentication that automatically
-     * chooses between Credential Manager and Google Play Services based on configuration
-     * and availability. It supports both discoverable and non-discoverable credential modes.
+     * chooses between Credential Manager and Google Play Services based on the
+     * [FidoAuthenticateCustomizer.useFido2ApiClient] setting on the `authenticate { }` block
+     * (default: auto-detected — Google Play Services when GMS is present, Credential
+     * Manager otherwise). It supports both discoverable and
+     * non-discoverable credential modes.
      *
      * **API Selection Logic:**
      * ```
-     * if (config.useFido2Client) {
+     * if (customizer.useFido2ApiClient) {
      *     // Use Google Play Services FIDO2
      *     // - Better for non-discoverable credentials
      *     // - Broader device compatibility
@@ -254,6 +256,7 @@ class FidoClient(private val config: FidoClientConfig) {
      *     // - Better for discoverable credentials
      *     // - Modern passkey experience
      *     // - Automatic credential discovery
+     *     // - Required for conditional mediation (autofill with passkeys)
      * }
      * ```
      *
@@ -261,6 +264,9 @@ class FidoClient(private val config: FidoClientConfig) {
      * The block parameter allows customization of the authentication request:
      * ```kotlin
      * client.authenticate(options) {
+     *     // Optional: opt into Google Play Services for this call
+     *     useFido2ApiClient = true // For non-discoverable (device-bound) credentials
+     *
      *     // For Google Play Services
      *     onPublicKeyCredentialRequestOptions { options ->
      *         options.toBuilder()
@@ -293,7 +299,7 @@ class FidoClient(private val config: FidoClientConfig) {
         try {
             val customizer = FidoAuthenticateCustomizer().apply(block)
 
-            if (config.useFido2Client) {
+            if (customizer.useFido2ApiClient) {
                 val publicKeyCredentialRequestOptions = PublicKeyCredentialRequestOptions.Builder()
                     .setAllowList(getAllowCredentials(input))
                     .setRpId(input[Constants.FIELD_RP_ID]?.jsonPrimitive?.content ?: "")
@@ -423,17 +429,6 @@ class FidoClient(private val config: FidoClientConfig) {
          * val client = Fido2Client {
          *     logger = Logger.CONSOLE
          * }
-         *
-         * // Force Google Play Services
-         * val client = Fido2Client {
-         *     useFido2Client = true
-         * }
-         *
-         * // Complete customization
-         * val client = Fido2Client {
-         *     logger = customLogger
-         *     useFido2Client = shouldUsePlayServices
-         * }
          * ```
          *
          * @param block Configuration lambda that receives a [FidoClientConfig] instance
@@ -486,6 +481,32 @@ class FidoRegistrationCustomizer {
 }
 
 class FidoAuthenticateCustomizer {
+
+    /**
+     * The single source of truth for FIDO2 API selection.
+     *
+     * **Default**: auto-detected — `true` (Google Play Services FIDO2) when GMS is
+     * present on the device, `false` (Android Credential Manager) otherwise. The
+     * auto-detection preserves the routing behaviour existing apps see today.
+     * Set `false` to route this call through the Android Credential Manager API
+     * (required for conditional mediation / autofill with passkeys), or `true`
+     * to explicitly use Google Play Services (required for non-discoverable,
+     * device-bound credentials).
+     *
+     * **Common Customizations:**
+     * ```kotlin
+     * client.authenticate(options) {
+     *     useFido2ApiClient = false // Force Credential Manager (e.g. for conditional mediation)
+     * }
+     * ```
+     */
+    var useFido2ApiClient: Boolean = try {
+        Class.forName("com.google.android.gms.fido.Fido")
+        true
+    } catch (e: ClassNotFoundException) {
+        false
+    }
+
     internal var requestOptionsCustomizer: (PublicKeyCredentialRequestOptions) -> PublicKeyCredentialRequestOptions =
         { it }
     internal var getOptionCustomizer: (GetPublicKeyCredentialOption) -> GetPublicKeyCredentialOption =
@@ -550,12 +571,13 @@ class FidoAuthenticateCustomizer {
  *
  * **Configuration Options:**
  * - **logger**: Controls logging output and verbosity
- * - **useFido2Client**: Determines API selection strategy
  *
  * **API Selection Logic:**
- * The `useFido2Client` property is automatically initialized based on runtime
- * detection of Google Play Services FIDO availability, but can be overridden
- * for testing or specific deployment requirements.
+ * The FIDO2 API used for each call is selected per request via
+ * [FidoAuthenticateCustomizer.useFido2ApiClient] on the `authenticate { }` block.
+ * The default is auto-detected at runtime: Google Play Services FIDO2 when GMS is
+ * present (virtually every device with Play Services), Android Credential Manager
+ * otherwise. Set `false` explicitly to select Credential Manager.
  */
 @PingDsl
 class FidoClientConfig {
@@ -572,34 +594,4 @@ class FidoClientConfig {
      * - Custom Logger implementations
      */
     var logger: Logger = Logger.logger
-
-    /**
-     * Determines whether to use Google Play Services FIDO2 API.
-     *
-     * When true, the client prefers Google Play Services FIDO2 API for broader
-     * device compatibility. When false, it uses Android Credential Manager API
-     * for modern passkey experiences.
-     *
-     * **Auto-detection Logic:**
-     * The default value is determined by runtime detection of the
-     * `com.google.android.gms.fido.Fido` class. If the class is found,
-     * Google Play Services is assumed to be available.
-     *
-     * **Manual Override:**
-     * This can be manually set to force a specific API choice:
-     * ```kotlin
-     * Fido2Client {
-     *     useFido2Client = true  // Force Google Play Services
-     * }
-     * ```
-     *
-     * **Default**: Auto-detected based on Google Play Services availability
-     */
-    var useFido2Client = try {
-        Class.forName("com.google.android.gms.fido.Fido")
-        true
-    } catch (e: ClassNotFoundException) {
-        false
-    }
-
 }

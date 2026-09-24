@@ -32,12 +32,12 @@ jobs:
     steps:
       # Get the test artifacts prepared in previous step
       - name: Get the app-debug-signed.apk artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: app-debug-signed.apk
 
       - name: Get the oath-debug-androidTest-signed.apk artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: oath-debug-androidTest-signed.apk
 
@@ -76,6 +76,10 @@ jobs:
             "deviceLogs": ${{ vars.BS_DEVICE_LOGS }},
             "networkLogs": ${{ vars.BS_NETWORK_LOGS }},
             "video": ${{ vars.BS_VIDEO }},
+            "shards": {
+              "numberOfShards": 2, 
+              "deviceSelection": "all"
+            },
             "project": "oath-tests"
           }
           EOF

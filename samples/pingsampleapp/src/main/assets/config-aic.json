@@ -1,0 +1,15 @@
+{
+  "timeout": 30000,
+  "log": "DEBUG",
+  "journey": {
+    "serverUrl": "https://openam-sdks.forgeblocks.com/am",
+    "realm": "alpha",
+    "cookieName": "5421aeddf91aa20"
+  },
+  "oidc": {
+    "clientId": "stoyan",
+    "discoveryEndpoint": "https://openam-sdks.forgeblocks.com/am/oauth2/alpha/.well-known/openid-configuration",
+    "scopes": ["openid", "profile", "email"],
+    "redirectUri": "frauth://oauth2redirect"
+  }
+}

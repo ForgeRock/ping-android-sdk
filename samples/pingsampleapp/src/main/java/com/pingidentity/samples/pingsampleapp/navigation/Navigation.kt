@@ -25,6 +25,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -37,6 +38,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.pingidentity.orchestrate.SuccessNode
 import com.pingidentity.samples.pingsampleapp.PingSampleApplication
 import com.pingidentity.samples.pingsampleapp.authenticator.data.AuthenticatorViewModel
 import com.pingidentity.samples.pingsampleapp.authenticator.ui.AboutScreen
@@ -56,10 +58,16 @@ import com.pingidentity.samples.pingsampleapp.authenticator.util.NavigationAnima
 import com.pingidentity.samples.pingsampleapp.authgrant.DeviceAuthorizationGrantScreen
 import com.pingidentity.samples.pingsampleapp.config.Env
 import com.pingidentity.samples.pingsampleapp.davinci.DaVinci
+import com.pingidentity.samples.pingsampleapp.davinci.DaVinciViewModel
 import com.pingidentity.samples.pingsampleapp.devicemanagement.DeviceManagement
 import com.pingidentity.samples.pingsampleapp.devicemanagement.DeviceManagementViewModel
 import com.pingidentity.samples.pingsampleapp.devtools.DeviceInfo
 import com.pingidentity.samples.pingsampleapp.home.HomeApp
+import com.pingidentity.samples.pingsampleapp.pingonemfa.ui.PingOneMFAAccountsScreen
+import com.pingidentity.samples.pingsampleapp.pingonemfa.ui.PingOneOTPScreen
+import com.pingidentity.samples.pingsampleapp.pingonemfa.ui.PingOnePayloadScreen
+import com.pingidentity.samples.pingsampleapp.pingonemfa.ui.PingOneQrScannerScreen
+import com.pingidentity.samples.pingsampleapp.journey.BackchannelAuthScreen
 import com.pingidentity.samples.pingsampleapp.journey.JourneyScreen
 import com.pingidentity.samples.pingsampleapp.journey.JourneyRoute
 import com.pingidentity.samples.pingsampleapp.journey.JourneyViewModel
@@ -104,7 +112,15 @@ object Route {
     fun routeForAuthAppAccount(accountName: String) = "account/$accountName"
     const val ROUTE_AUTH_TEST_APP = "route_auth_test_app"
     const val AUTH_MIGRATION = "auth_migration"
+    const val ROUTE_PINGONE_ACCOUNTS = "pingone_accounts"
+    const val ROUTE_PINGONE_OTP = "pingone_otp"
+    const val ROUTE_PINGONE_PAYLOAD = "pingone_payload"
+    const val ROUTE_PINGONE_QR_SCANNER = "pingone_qr_scanner"
+    const val ROUTE_PINGONE_DAVINCI_PAIRING = "pingone_davinci_pairing"
     const val DEVICE_AUTHORIZATION_GRANT = "device_authorization_grant"
+    const val BACKCHANNEL_AUTH = "backchannel_auth"
+    internal const val BACKCHANNEL_JOURNEY = "backchannel_journey?uri={uri}"
+    fun backchannelJourney(uri: String) = "backchannel_journey?uri=${android.net.Uri.encode(uri)}"
     const val DAVINCI_DEVICE_APPROVE = "davinci_device_approve?uri={uri}"
     const val JOURNEY_DEVICE_APPROVAL = "journey_device_approval?uri={uri}"
     internal const val JOURNEY_WITH_VERIFICATION = "$JOURNEY/{name}?verificationUri={verificationUri}"
@@ -188,9 +204,27 @@ fun AppNavigation(
                 onAuthMigrationClick = {
                     navController.navigate(Route.AUTH_MIGRATION)
                 },
+                onPingOneAccountsClick = {
+                    navController.navigate(Route.ROUTE_PINGONE_ACCOUNTS)
+                },
+                onPingOneOTPClick = {
+                    navController.navigate(Route.ROUTE_PINGONE_OTP)
+                },
+                onPingOnePayloadClick = {
+                    navController.navigate(Route.ROUTE_PINGONE_PAYLOAD)
+                },
+                onPingOneQrScannerClick = {
+                    navController.navigate(Route.ROUTE_PINGONE_QR_SCANNER)
+                },
+                onPingOneDaVinciPairingClick = {
+                    navController.navigate(Route.ROUTE_PINGONE_DAVINCI_PAIRING)
+                },
                 onDeviceAuthorizationGrantClick = {
                     navController.navigate(Route.DEVICE_AUTHORIZATION_GRANT)
-                }
+                },
+                onBackchannelAuthClick = {
+                    navController.navigate(Route.BACKCHANNEL_AUTH)
+                },
             )
         }
         
@@ -554,6 +588,60 @@ fun AppNavigation(
                 onBack = { navController.popBackStack() }
             )
         }
+        composable(Route.ROUTE_PINGONE_ACCOUNTS) {
+            PingOneMFAAccountsScreen(
+                onBack = { navController.popBackStack() },
+                onScanQr = { navController.navigate(Route.ROUTE_PINGONE_QR_SCANNER) }
+            )
+        }
+
+        composable(Route.ROUTE_PINGONE_OTP) {
+            PingOneOTPScreen(
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(Route.ROUTE_PINGONE_PAYLOAD) {
+            PingOnePayloadScreen(
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(Route.ROUTE_PINGONE_QR_SCANNER) {
+            PingOneQrScannerScreen(
+                onBack = { navController.popBackStack() },
+                onPairComplete = { navController.popBackStack() }
+            )
+        }
+
+        composable(Route.ROUTE_PINGONE_DAVINCI_PAIRING) {
+            val daVinciViewModel = viewModel<DaVinciViewModel>()
+            val state by daVinciViewModel.state.collectAsState()
+            val loading by daVinciViewModel.loading.collectAsState()
+
+            // Set once the user taps Continue on the pairing card. The route then exits as
+            // soon as the submission completes — the server's response node is intentionally
+            // ignored, except SuccessNode which exits via DaVinci's own onSuccess callback.
+            var submitted by rememberSaveable { mutableStateOf(false) }
+            LaunchedEffect(state.counter, loading) {
+                if (submitted && !loading && state.error == null && state.node !is SuccessNode) {
+                    navController.popBackStack()
+                }
+            }
+
+            DaVinci(
+                state = state,
+                loading = loading,
+                onNodeUpdated = { daVinciViewModel.refresh() },
+                onNext = {
+                    submitted = true
+                    daVinciViewModel.next(it)
+                },
+                onStart = { daVinciViewModel.start() },
+                onSuccess = { navController.popBackStack() },
+                onBack = { navController.popBackStack() },
+            )
+        }
 
         composable(Route.DEVICE_AUTHORIZATION_GRANT) {
             DeviceAuthorizationGrantScreen(
@@ -571,6 +659,34 @@ fun AppNavigation(
                 onApproveWithJourney = { uri ->
                     navController.navigate(Route.journeyDeviceApproval(uri))
                 },
+            )
+        }
+
+        composable(Route.BACKCHANNEL_AUTH) {
+            BackchannelAuthScreen(
+                onStartAuth = { uri ->
+                    navController.navigate(Route.backchannelJourney(uri))
+                },
+                onBack = { navController.navigateUp() },
+            )
+        }
+
+        composable(
+            route = Route.BACKCHANNEL_JOURNEY,
+            arguments = listOf(navArgument("uri") { type = NavType.StringType }),
+        ) { backStackEntry ->
+            val uri = backStackEntry.arguments?.getString("uri") ?: ""
+            val journeyViewModel = viewModel<JourneyViewModel>(
+                factory = JourneyViewModel.factoryForBackchannel(uri)
+            )
+            JourneyScreen(
+                journeyViewModel = journeyViewModel,
+                onSuccess = {
+                    navController.navigate(Route.userProfile(UserProfileType.JOURNEY)) {
+                        popUpTo(Route.HOME) { inclusive = false }
+                    }
+                },
+                onBack = { navController.navigateUp() },
             )
         }
 

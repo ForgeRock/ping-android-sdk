@@ -22,6 +22,8 @@ import com.pingidentity.samples.pingsampleapp.authenticator.managers.OathManager
 import com.pingidentity.samples.pingsampleapp.authenticator.managers.PushManager
 import com.pingidentity.samples.pingsampleapp.authenticator.managers.TestAccountFactory
 import com.pingidentity.samples.pingsampleapp.config.initConfigs
+import com.pingidentity.pingonemfa.commons.Geo
+import com.pingidentity.pingonemfa.commons.PingOneMFA
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -97,6 +99,7 @@ class PingSampleApplication : Application() {
             initializeSdkClients()
             initializeManagers()
             initializeAuthenticatorViewModel()
+            initializePingOneMFA()
         }
     }
 
@@ -166,6 +169,20 @@ class PingSampleApplication : Application() {
             diagnosticLogger.e("Failed to initialize managers", e)
             throw e
         }
+    }
+
+    /**
+     * Initializes the PingOne MFA SDK. Must be called once at startup so that push
+     * notifications can be processed regardless of which screen the user is on.
+     */
+    private suspend fun initializePingOneMFA() {
+        PingOneMFA.initialize(Geo.NORTH_AMERICA)
+            .onSuccess {
+                diagnosticLogger.i("PingSampleApplication: PingOne MFA SDK initialized")
+            }
+            .onFailure { e ->
+                diagnosticLogger.e("PingSampleApplication: PingOne MFA SDK initialization failed: ${e.message}")
+            }
     }
 
     /**
