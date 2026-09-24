@@ -10,7 +10,7 @@ package com.pingidentity.fido
 import com.pingidentity.logger.Logger
 import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.json.JsonObject
-import java.util.concurrent.atomic.AtomicLong
+import java.util.concurrent.atomic.AtomicReference
 
 /**
  * Single-slot holder for the in-flight pending (conditional-mediation) request.
@@ -23,20 +23,24 @@ import java.util.concurrent.atomic.AtomicLong
  * itself never propagates errors). When the DaVinci collector gains pending support
  * (DV-24867), it shares this holder.
  *
- * **Concurrency — generation token.** A ceremony spans a suspension point
+ * **Concurrency — one atomic cell.** A ceremony spans a suspension point
  * (`FidoClient.pendingAuthenticate` builds the request asynchronously), so
- * cancel-then-suspend-then-register is not atomic: a concurrent ceremony can cancel the slot
- * in between, and a naive [register] would then install a request that a newer ceremony
- * already superseded — resurrecting it as current. [beginCeremony] returns a reservation
- * (a monotonically increasing generation); [register] accepts the request **only if the
- * reservation is still the latest one**, so a stale ceremony's late install is discarded
- * instead of becoming current. Combined with the ownership check in the observer (delivery
- * requires the delivering request to still occupy the slot), both halves of the lifecycle —
- * install and delivery — are generation-guarded, and `@Volatile`'s per-write visibility
- * suffices: no lock is needed.
+ * cancel-then-suspend-then-install is not atomic: a concurrent ceremony can supersede the
+ * slot in between, and a naive install would then publish a request a newer ceremony
+ * already superseded — resurrecting it as current, the exact failure this class exists to
+ * prevent. The generation and the current request therefore live in **one atomic
+ * reference** ([slot]): every state transition is a single `updateAndGet`/`getAndUpdate`,
+ * so a check-then-write (install, cancel, supersede) can never interleave with a concurrent
+ * one — there is no window and no lock. Terminal transitions (a newer ceremony, or
+ * [Reservation.cancel]) also **bump the generation**, so a cancelled reservation's late
+ * install is refused the same way a superseded one is. Requests are cancelled *outside* the
+ * atomic update — [FidoPendingAuthentication.cancel] runs the delivery observers
+ * synchronously, and it must never run while the slot is mid-update. Delivery stays
+ * lock-free: the observer re-reads the slot and drops the delivery unless its request still
+ * occupies it.
  *
  * **Threading:** written from the caller's coroutine thread(s); cancelled from app lifecycle
- * or workflow-close code on other threads — hence [Volatile].
+ * or workflow-close code on other threads.
  *
  * @param onDelivered Called on the androidx delivery/cancellation thread when the ceremony
  *   completes successfully — must be cheap and non-suspending (it stores the assertion into
@@ -52,64 +56,66 @@ internal class FidoPendingAuthenticationHolder(
     private val onError: (Throwable) -> Unit,
 ) {
 
+    /** Immutable slot state: the latest ceremony's generation and its in-flight request. */
+    private class Slot(val generation: Long, val pending: FidoPendingAuthentication?)
+
     /**
-     * Monotonically increasing ceremony generation. [beginCeremony] increments it; a
-     * [Reservation] may install its request only while it is still the latest one.
+     * The single state cell. Holding generation and occupant in one atomic reference makes
+     * every check-then-write below a single atomic update — a newer ceremony can never
+     * interleave between the check and the write.
      */
-    private val generation = AtomicLong(0)
-
-    /** The current generation — the only one a [Reservation.install] may write into. */
-    private val currentGeneration: Long get() = generation.get()
-
-    @Volatile
-    private var pending: FidoPendingAuthentication? = null
+    private val slot = AtomicReference(Slot(0, null))
 
     /**
      * A reservation obtained from [beginCeremony] before starting a ceremony. [cancel]
-     * enacts the supersede (cancels + clears the slot); [install] publishes the ceremony's
-     * eventual request if the reservation is still current.
+     * tears this ceremony down (invalidating the reservation); [install] publishes the
+     * ceremony's eventual request if the reservation is still current.
      */
     inner class Reservation internal constructor(private val claimed: Long) {
 
-        /** Whether this reservation is still the latest ceremony started. */
-        val isCurrent: Boolean get() = currentGeneration == claimed
-
         /**
-         * Cancels the in-flight request (if any) and clears the slot — the supersede step
-         * that starts this reservation's ceremony. A concurrent newer ceremony's supersede
-         * wins; enacting this reservation afterwards is a harmless no-op (nothing left to
-         * cancel for it).
+         * Tears this reservation's ceremony down: clears the in-flight request and bumps
+         * the generation, so neither a late [install] of this reservation nor a stale
+         * repeat of [cancel] can resurrect anything afterwards. No-op when a newer
+         * ceremony has already superseded this reservation.
          */
         fun cancel() {
-            pending?.cancel()
-            pending = null
+            val previous = slot.getAndUpdate { s ->
+                if (s.generation == claimed) Slot(s.generation + 1, null) else s
+            }
+            // Only when the update applied does the previous occupant belong to this
+            // ceremony — outside any lock: cancel() runs the delivery observers synchronously.
+            if (previous.generation == claimed) previous.pending?.cancel()
         }
 
         /**
          * Publishes [pending] as the in-flight request and observes its completion — but
          * only while this reservation is still current. A ceremony that suspended in
          * [com.pingidentity.fido.FidoClient.pendingAuthenticate] while a newer ceremony
-         * superseded it must **not** resurrect its superseded request as current; the
-         * stale request is cancelled and discarded instead.
+         * superseded it must **not** resurrect its superseded request as current; the stale
+         * request is cancelled and discarded instead.
          *
          * @return true if the request was installed (and is now the observed current one);
          *   false if a newer ceremony superseded this one — the caller should cancel or
          *   discard the returned request.
          */
         fun install(pending: FidoPendingAuthentication): Boolean {
-            if (!isCurrent) {
+            val updated = slot.updateAndGet { s ->
+                if (s.generation == claimed) Slot(s.generation, pending) else s
+            }
+            if (updated.pending !== pending) {
                 logger.d("FIDO2 pending authentication superseded before install; discarding")
+                // Outside any lock: cancel() runs the delivery observers synchronously.
                 pending.cancel()
                 return false
             }
-            this@FidoPendingAuthenticationHolder.pending = pending
             pending.observe { result ->
-                // Ownership gate: only the request that is *still* current may deliver into
-                // the wrapper. A superseded request's late observer callback (the androidx
-                // delivery thread can race a concurrent supersede on another thread) is
-                // dropped — otherwise a stale ceremony could update the payload or submit
-                // the Journey outcome after a newer ceremony started.
-                if (this@FidoPendingAuthenticationHolder.pending !== pending) {
+                // Ownership gate: only the request that still occupies the slot may deliver
+                // into the wrapper. A superseded request's late observer callback (the
+                // androidx delivery thread can race a concurrent supersede on another
+                // thread) is dropped — otherwise a stale ceremony could update the payload
+                // or submit the Journey outcome after a newer ceremony started.
+                if (slot.get().pending !== pending) {
                     logger.d("FIDO2 pending authentication superseded; dropping stale delivery")
                     return@observe
                 }
@@ -137,9 +143,9 @@ internal class FidoPendingAuthenticationHolder(
      * close/disposal for pure teardown.
      */
     fun beginCeremony(): Reservation {
-        val claimed = generation.incrementAndGet()
-        pending?.cancel()
-        pending = null
-        return Reservation(claimed)
+        val previous = slot.getAndUpdate { Slot(it.generation + 1, null) }
+        // Outside any lock: cancel() runs the delivery observers synchronously.
+        previous.pending?.cancel()
+        return Reservation(previous.generation + 1)
     }
 }

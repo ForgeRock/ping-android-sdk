@@ -73,6 +73,11 @@ fun FidoAuthentication(
                                 retryError
                             )
                             onPending(null)
+                            // With the button disabled there is nothing left on the node
+                            // (no button, Next hidden, no autofill) — submit the error
+                            // outcome handleError already wrote, like the unsupported-OS
+                            // branch does.
+                            if (!callback.manualButtonEnabled) currentOnCompleted()
                         }
                 }
             }

@@ -35,6 +35,7 @@ import com.pingidentity.fido.base64DefaultToUrlSafe
 import com.pingidentity.fido.base64ToIntStr
 import com.pingidentity.fido.base64ToStr
 import com.pingidentity.fido.toBase64
+import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
@@ -276,16 +277,29 @@ class FidoAuthenticationCallback : FidoCallback() {
         // stale request instead of resurrecting it as current.
         val reservation = pendingAuthentication.beginCeremony()
         logger.d("Starting FIDO2 pending authentication")
-        return FidoClient {
+        val result = FidoClient {
             logger = this@FidoAuthenticationCallback.logger
         }.pendingAuthenticate(
             publicKeyCredentialRequestOptions, block
-        ).onSuccess { pending ->
-            logger.d("FIDO2 pending authentication request created")
-            reservation.install(pending)
-        }.onFailure {
+        )
+        result.onFailure {
             // Handle setup errors (e.g. unsupported OS) and update the Journey workflow
             handleError(it)
+        }
+        if (result.isSuccess) {
+            logger.d("FIDO2 pending authentication request created")
+        }
+        return when {
+            result.isFailure -> result
+            // Installed as the current request; its eventual delivery is observed
+            // internally, and the app attaches it to a View via the returned result.
+            reservation.install(result.getOrThrow()) -> result
+            // A newer ceremony superseded this one while setup was suspended: the request
+            // was discarded, so surface cancellation rather than handing the app a request
+            // that can never deliver.
+            else -> Result.failure(
+                CancellationException("FIDO pending authentication superseded")
+            )
         }
     }
 

@@ -384,11 +384,16 @@ class FidoAuthenticationCallbackPendingTest {
             runCurrent()
 
             // A's setup returned a request whose reservation was superseded: install()
-            // refused it, so the stale request was discarded — a delivery on it must not
-            // resurrect it as current or reach the workflow. (Ceremony B's modal failure
-            // already wrote its own error outcome; snapshot it so the assertion below
-            // targets A's stale delivery specifically.)
-            val stalePending = pendingA.await().getOrNull()
+            // refused it, so pendingAuthenticate surfaces the discard as a cancellation
+            // failure — the sample never sees a request that can never deliver. (Ceremony
+            // B's modal failure already wrote its own error outcome; snapshot it so the
+            // assertions below target A's stale delivery specifically.)
+            val staleResult = pendingA.await()
+            val stalePending = staleResult.getOrNull()
+            assertTrue(
+                staleResult.isFailure,
+                "a discarded stale install must not return success"
+            )
             val outcomeBeforeStaleDelivery = valueCallback.value
             stalePending?.request?.callback(
                 responseWith("""{"id":"resurrected-id","rawId":"resurrected-raw","response":{}}""")
