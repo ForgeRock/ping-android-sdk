@@ -39,8 +39,9 @@ import java.util.concurrent.atomic.AtomicReference
  * lock-free: the observer re-reads the slot and drops the delivery unless its request still
  * occupies it.
  *
- * **Threading:** written from the caller's coroutine thread(s); cancelled from app lifecycle
- * or workflow-close code on other threads.
+ * **Threading:** written from the caller's coroutine thread(s); [Reservation.cancel] may be
+ * invoked from app lifecycle code on other threads. The atomic cell gives all visibility —
+ * no `@Volatile`, no lock.
  *
  * @param onDelivered Called on the androidx delivery/cancellation thread when the ceremony
  *   completes successfully — must be cheap and non-suspending (it stores the assertion into
@@ -139,8 +140,9 @@ internal class FidoPendingAuthenticationHolder(
     /**
      * Starts a new ceremony: supersedes (cancels + clears) any in-flight request and returns
      * a reservation that may [Reservation.install] its request while it remains the latest
-     * ceremony. Called at the start of both `authenticate` and `pendingAuthenticate`, and by
-     * close/disposal for pure teardown.
+     * ceremony. Called at the start of both `authenticate` and `pendingAuthenticate`; for
+     * pure teardown (screen disposal), the app cancels the request directly via
+     * [FidoPendingAuthentication.cancel].
      */
     fun beginCeremony(): Reservation {
         val previous = slot.getAndUpdate { Slot(it.generation + 1, null) }

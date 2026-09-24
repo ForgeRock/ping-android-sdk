@@ -244,8 +244,9 @@ class FidoAuthenticationCallback : FidoCallback() {
      * surface passkey suggestions (typically the username field):
      *
      * ```kotlin
-     * val pending = callback.pendingAuthenticate().getOrThrow()
-     * view.pendingGetCredentialRequest = pending.request
+     * callback.pendingAuthenticate().onSuccess { pending ->
+     *     view.pendingGetCredentialRequest = pending.request
+     * }
      * ```
      *
      * The callback observes the delivered assertion internally: whenever the user completes
@@ -265,8 +266,17 @@ class FidoAuthenticationCallback : FidoCallback() {
      * @param block A transformation function that converts JsonObject to GetPublicKeyCredentialOption.
      *              Allows customization of credential manager options like preferImmediatelyAvailableCredentials.
      * @return A [Result] containing the [FidoPendingAuthentication] to attach to a View on
-     *         success, or an exception on failure. A successfully completed ceremony is
-     *         automatically submitted to the Journey workflow.
+     *         success, or an exception on failure:
+     *         - a setup failure (e.g. the OS gate) — routed through [handleError], which
+     *           writes the error outcome to the workflow;
+     *         - [kotlinx.coroutines.CancellationException] carrying
+     *           "FIDO pending authentication superseded" when a newer ceremony superseded
+     *           this one while the request was being built — no error outcome is written
+     *           (the superseding ceremony owns the node); the app should simply not attach
+     *           the (absent) request. Treat this distinctly from a setup failure: nothing
+     *           failed, the ceremony is just no longer current.
+     *         A successfully completed ceremony is automatically submitted to the Journey
+     *         workflow.
      */
     suspend fun pendingAuthenticate(
         block: FidoAuthenticateCustomizer.() -> Unit = {}

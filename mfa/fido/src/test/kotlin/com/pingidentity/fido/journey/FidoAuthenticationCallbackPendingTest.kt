@@ -348,8 +348,8 @@ class FidoAuthenticationCallbackPendingTest {
         // The suspend-window race: pendingAuthenticate() reserves the slot, then suspends in
         // FidoClient while the request is built. A concurrent authenticate() supersedes it
         // during that suspension. When the pending setup resumes, install() must DISCARD the
-        // stale request instead of resurrecting it as current (a plain register() would make
-        // it current again, and its later delivery would reach valueCallback).
+        // stale request instead of resurrecting it as current (a plain slot overwrite would
+        // make it current again, and its later delivery would reach valueCallback).
         coEvery { getPublicKeyCredential(any(), any()) } throws gmsForbidden
         val callback = initCallback(supportsJsonResponse = false)
 

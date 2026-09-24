@@ -348,11 +348,12 @@ and await the result:
 
 ```kotlin
 if (isConditionalMediationSupported) {
-    val pending = client.pendingAuthenticate(publicKeyCredentialRequestOptions).getOrThrow()
-    // Attach to a View — there is no Compose equivalent; wrap with AndroidView if needed
-    usernameField.pendingGetCredentialRequest = pending.request
-    launch {
-        pending.await().onSuccess { assertion -> /* same JsonObject shape as authenticate() */ }
+    client.pendingAuthenticate(publicKeyCredentialRequestOptions).onSuccess { pending ->
+        // Attach to a View — there is no Compose equivalent; wrap with AndroidView if needed
+        usernameField.pendingGetCredentialRequest = pending.request
+        launch {
+            pending.await().onSuccess { assertion -> /* same JsonObject shape as authenticate() */ }
+        }
     }
 }
 ```
