@@ -117,9 +117,11 @@ class FidoAuthenticationCallback : FidoCallback() {
      * the modal ceremony — the fallback for users without a suitable passkey or who dismiss
      * the conditional-mediation suggestions. When false, the server intends conditional
      * mediation only, with no button affordance. Detected from the server's configuration
-     * during init().
+     * during init(); defaults to true when the field is absent — showing the button is the
+     * safe fallback, since an unintended omission then degrades to the pre-existing button
+     * flow rather than hiding the only non-autofill way to authenticate.
      */
-    var manualButtonEnabled: Boolean = false
+    var manualButtonEnabled: Boolean = true
         private set
 
     /**
@@ -163,10 +165,11 @@ class FidoAuthenticationCallback : FidoCallback() {
             supportsJsonResponse =
                 value[Constants.FIELD_SUPPORTS_JSON_RESPONSE]?.jsonPrimitive?.content?.toBoolean()
                     ?: false
-            // Whether the server's WebAuthn node shows an explicit authentication button
+            // Whether the server's WebAuthn node shows an explicit authentication button;
+            // default true when absent (see the property doc) — matches the iOS SDK.
             manualButtonEnabled =
                 value[Constants.FIELD_MANUAL_BUTTON_ENABLED]?.jsonPrimitive?.content?.toBoolean()
-                    ?: false
+                    ?: true
             publicKeyCredentialRequestOptions = transform(value)
         } else {
             throw IllegalArgumentException("Expected JsonObject for 'data', got ${value::class.simpleName}")
