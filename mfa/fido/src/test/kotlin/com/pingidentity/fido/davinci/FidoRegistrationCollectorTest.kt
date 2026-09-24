@@ -9,8 +9,8 @@ package com.pingidentity.fido.davinci
 
 import com.pingidentity.davinci.plugin.DaVinci
 import com.pingidentity.fido.Constants
-import kotlinx.coroutines.CancellationException
 import com.pingidentity.fido.FidoClient
+import com.pingidentity.fido.RestoreCredentialClient
 import com.pingidentity.logger.CONSOLE
 import com.pingidentity.logger.Logger
 import com.pingidentity.orchestrate.WorkflowConfig
@@ -19,6 +19,7 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkObject
 import io.mockk.unmockkObject
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
@@ -41,6 +42,7 @@ class FidoRegistrationCollectorTest {
 
     private lateinit var collector: FidoRegistrationCollector
     private lateinit var mockFidoClient: FidoClient
+    private lateinit var mockRestoreCredentialClient: RestoreCredentialClient
 
     @BeforeTest
     fun setup() {
@@ -56,11 +58,16 @@ class FidoRegistrationCollectorTest {
         mockFidoClient = mockk()
         mockkObject(FidoClient.Companion)
         every { FidoClient.invoke(any()) } returns mockFidoClient
+
+        mockRestoreCredentialClient = mockk()
+        mockkObject(RestoreCredentialClient.Companion)
+        every { RestoreCredentialClient.invoke(any()) } returns mockRestoreCredentialClient
     }
 
     @AfterTest
     fun tearDown() {
         unmockkObject(FidoClient.Companion)
+        unmockkObject(RestoreCredentialClient.Companion)
     }
 
 
@@ -546,4 +553,43 @@ class FidoRegistrationCollectorTest {
         assertEquals("NotAllowedError", collector.errorCode)
     }
 
+    @Test
+    fun `payload should return attestationValue after createRestoreKey`() = runTest {
+        collector.init(getRegistrationInput())
+        val attestation = buildJsonObject { put("test", JsonPrimitive("value")) }
+
+        coEvery { mockRestoreCredentialClient.create(any(), any()) } returns Result.success(attestation)
+
+        collector.createRestoreKey()
+        val payload = collector.payload()
+
+        assertNotNull(payload)
+        assertEquals(attestation, payload?.get(Constants.FIELD_ATTESTATION_VALUE)?.jsonObject)
+    }
+
+    @Test
+    fun `createRestoreKey should propagate failure`() = runTest {
+        collector.init(getRegistrationInput())
+
+        val exception = Exception("Restore key creation failed")
+        coEvery { mockRestoreCredentialClient.create(any(), any()) } returns Result.failure(exception)
+
+        val result = collector.createRestoreKey()
+
+        assertTrue(result.isFailure)
+        assertEquals(exception, result.exceptionOrNull())
+    }
+
+    @Test
+    fun `createRestoreKey should call handleError and set errorCode on failure`() = runTest {
+        collector.init(getRegistrationInput())
+        val exception = mockk<androidx.credentials.exceptions.CreateCredentialCancellationException>(relaxed = true)
+        every { exception.message } returns "User cancelled"
+        coEvery { mockRestoreCredentialClient.create(any(), any()) } returns Result.failure(exception)
+
+        val result = collector.createRestoreKey()
+
+        assertTrue(result.isFailure)
+        assertEquals("NotAllowedError", collector.errorCode)
+    }
 }

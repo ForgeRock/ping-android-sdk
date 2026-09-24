@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2025 - 2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -29,6 +29,8 @@ import com.pingidentity.fido.Constants.FIELD_USER_HANDLE
 import com.pingidentity.fido.Constants.FIELD_USER_VERIFICATION
 import com.pingidentity.fido.FidoAuthenticateCustomizer
 import com.pingidentity.fido.FidoClient
+import com.pingidentity.fido.RestoreCredentialClient
+import com.pingidentity.fido.RestoreCredentialRetrievalCustomizer
 import com.pingidentity.fido.base64DefaultToUrlSafe
 import com.pingidentity.fido.base64ToIntStr
 import com.pingidentity.fido.base64ToStr
@@ -176,47 +178,87 @@ class FidoAuthenticationCallback : FidoCallback() {
         }.authenticate(
             publicKeyCredentialRequestOptions, block
         ).onSuccess { response ->
-            // Extract the response object from the credential
-            val authResponse =
-                response[FIELD_RESPONSE]?.jsonObject ?: JsonObject(emptyMap())
-
-            // Build the response data string with components separated by "::"
-            val data = listOf(
-                // Client data JSON - contains challenge, origin, and type
-                authResponse[FIELD_CLIENT_DATA_JSON]?.jsonPrimitive?.content?.base64ToStr()
-                    ?: "",
-                // Authenticator data - cryptographic proof from the authenticator
-                authResponse[FIELD_AUTHENTICATOR_DATA]?.jsonPrimitive?.content?.base64ToIntStr()
-                    ?: "",
-                // Signature - cryptographic signature over the client data and authenticator data
-                authResponse[FIELD_SIGNATURE]?.jsonPrimitive?.content?.base64ToIntStr()
-                    ?: "",
-                // Raw credential ID - unique identifier for the credential
-                response[FIELD_RAW_ID]?.jsonPrimitive?.content ?: "",
-                // User handle - optional user identifier (may be empty)
-                authResponse[FIELD_USER_HANDLE]?.jsonPrimitive?.content?.base64ToStr() ?: ""
-            ).joinToString(Constants.DATA_SEPARATOR)
-
-            // Format the response based on server capabilities
-            val callbackValue = if (supportsJsonResponse) {
-                // New JSON format with metadata
-                Json.encodeToString(
-                    FidoJsonResponse(
-                        response[FIELD_AUTHENTICATOR_ATTACHMENT]?.jsonPrimitive?.content
-                            ?: AUTHENTICATOR_PLATFORM, data
-                    )
-                )
-            } else {
-                // Legacy string format for backward compatibility
-                data
-            }
-
-            // Submit the response to the Journey workflow
-            valueCallback(callbackValue)
+            handleAuthenticationResponse(response)
         }.onFailure {
             // Handle authentication errors and update the Journey workflow
             handleError(it)
         }
+    }
+
+    /**
+     * Silently signs the user back in using Android's Restore Credentials feature, without
+     * any user interaction.
+     *
+     * This reuses the same [publicKeyCredentialRequestOptions] parsed in [init] - the "restore"
+     * journey is expected to return the same WebAuthn authentication options shape as a normal
+     * passkey login journey, just under a different journey name. On success, the response is
+     * formatted and submitted to the Journey workflow exactly like [authenticate].
+     *
+     * @param block A customization function for the [RestoreCredentialClient.signIn] request.
+     * @return A [Result] containing the authentication response as a [JsonObject] on success,
+     *         or an exception on failure (for example if no restore credential exists on this
+     *         device). The response is automatically submitted to the Journey workflow on success.
+     */
+    suspend fun restore(
+        block: RestoreCredentialRetrievalCustomizer.() -> Unit = {}): Result<JsonObject> {
+        return RestoreCredentialClient {
+            logger = this@FidoAuthenticationCallback.logger
+        }.signIn(
+            publicKeyCredentialRequestOptions, block
+        ).onSuccess { response ->
+            handleAuthenticationResponse(response)
+        }.onFailure {
+            handleError(it)
+        }
+    }
+
+    /**
+     * Formats a WebAuthn authentication response and submits it to the Journey workflow.
+     *
+     * Shared by [authenticate] and [restore], since both `PublicKeyCredential` and
+     * `RestoreCredential` produce the same WebAuthn `AuthenticationResponseJSON` shape.
+     *
+     * @param response The authentication response as returned by either
+     *                  [FidoClient.authenticate] or [RestoreCredentialClient.signIn].
+     */
+    private fun handleAuthenticationResponse(response: JsonObject) {
+        // Extract the response object from the credential
+        val authResponse =
+            response[FIELD_RESPONSE]?.jsonObject ?: JsonObject(emptyMap())
+
+        // Build the response data string with components separated by "::"
+        val data = listOf(
+            // Client data JSON - contains challenge, origin, and type
+            authResponse[FIELD_CLIENT_DATA_JSON]?.jsonPrimitive?.content?.base64ToStr()
+                ?: "",
+            // Authenticator data - cryptographic proof from the authenticator
+            authResponse[FIELD_AUTHENTICATOR_DATA]?.jsonPrimitive?.content?.base64ToIntStr()
+                ?: "",
+            // Signature - cryptographic signature over the client data and authenticator data
+            authResponse[FIELD_SIGNATURE]?.jsonPrimitive?.content?.base64ToIntStr()
+                ?: "",
+            // Raw credential ID - unique identifier for the credential
+            response[FIELD_RAW_ID]?.jsonPrimitive?.content ?: "",
+            // User handle - optional user identifier (may be empty)
+            authResponse[FIELD_USER_HANDLE]?.jsonPrimitive?.content?.base64ToStr() ?: ""
+        ).joinToString(Constants.DATA_SEPARATOR)
+
+        // Format the response based on server capabilities
+        val callbackValue = if (supportsJsonResponse) {
+            // New JSON format with metadata
+            Json.encodeToString(
+                FidoJsonResponse(
+                    response[FIELD_AUTHENTICATOR_ATTACHMENT]?.jsonPrimitive?.content
+                        ?: AUTHENTICATOR_PLATFORM, data
+                )
+            )
+        } else {
+            // Legacy string format for backward compatibility
+            data
+        }
+
+        // Submit the response to the Journey workflow
+        valueCallback(callbackValue)
     }
 
     /**

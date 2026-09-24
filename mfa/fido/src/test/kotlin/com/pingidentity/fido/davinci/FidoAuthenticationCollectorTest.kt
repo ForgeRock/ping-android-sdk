@@ -9,8 +9,8 @@ package com.pingidentity.fido.davinci
 
 import com.pingidentity.davinci.plugin.DaVinci
 import com.pingidentity.fido.Constants
-import kotlinx.coroutines.CancellationException
 import com.pingidentity.fido.FidoClient
+import com.pingidentity.fido.RestoreCredentialClient
 import com.pingidentity.logger.CONSOLE
 import com.pingidentity.logger.Logger
 import com.pingidentity.orchestrate.WorkflowConfig
@@ -19,6 +19,7 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkObject
 import io.mockk.unmockkObject
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
@@ -42,6 +43,7 @@ class FidoAuthenticationCollectorTest {
 
     private lateinit var collector: FidoAuthenticationCollector
     private lateinit var mockFidoClient: FidoClient
+    private lateinit var mockRestoreCredentialClient: RestoreCredentialClient
 
     @BeforeTest
     fun setup() {
@@ -58,11 +60,15 @@ class FidoAuthenticationCollectorTest {
         mockkObject(FidoClient.Companion)
         every { FidoClient.invoke(any()) } returns mockFidoClient
 
+        mockRestoreCredentialClient = mockk()
+        mockkObject(RestoreCredentialClient.Companion)
+        every { RestoreCredentialClient.invoke(any()) } returns mockRestoreCredentialClient
     }
 
     @AfterTest
     fun tearDown() {
         unmockkObject(FidoClient.Companion)
+        unmockkObject(RestoreCredentialClient.Companion)
     }
 
 
@@ -283,6 +289,40 @@ class FidoAuthenticationCollectorTest {
         val payload = collector.payload()
         assertNotNull(payload)
         assertTrue(payload!!.isEmpty())
+        assertEquals("NotAllowedError", collector.errorCode)
+    }
+
+    @Test
+    fun `payload should return assertionValue after restore`() = runTest {
+        collector.init(getInput())
+        val assertion = buildJsonObject { put("test", JsonPrimitive("value")) }
+        coEvery { mockRestoreCredentialClient.signIn(any(), any()) } returns Result.success(assertion)
+        collector.restore()
+        val payload = collector.payload()
+        assertNotNull(payload)
+        assertEquals(assertion, payload?.get(Constants.FIELD_ASSERTION_VALUE)?.jsonObject)
+    }
+
+    @Test
+    fun `restore should propagate failure`() = runTest {
+        collector.init(getInput())
+        val exception = Exception("no restore credential")
+        coEvery { mockRestoreCredentialClient.signIn(any(), any()) } returns Result.failure(exception)
+        val result = collector.restore()
+        assertTrue(result.isFailure)
+        assertEquals(exception, result.exceptionOrNull())
+    }
+
+    @Test
+    fun `restore should call handleError and set errorCode on failure`() = runTest {
+        collector.init(getInput())
+        val exception = mockk<androidx.credentials.exceptions.GetCredentialCancellationException>(relaxed = true)
+        every { exception.message } returns "User cancelled"
+        coEvery { mockRestoreCredentialClient.signIn(any(), any()) } returns Result.failure(exception)
+
+        val result = collector.restore()
+
+        assertTrue(result.isFailure)
         assertEquals("NotAllowedError", collector.errorCode)
     }
 }

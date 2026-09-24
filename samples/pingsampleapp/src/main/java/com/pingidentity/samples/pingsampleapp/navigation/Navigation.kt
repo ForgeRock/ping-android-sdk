@@ -1,11 +1,13 @@
 /*
- * Copyright (c) 2026 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2026 - 2026 Ping Identity Corporation. All rights reserved.
+ *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
  */
 
 package com.pingidentity.samples.pingsampleapp.navigation
 
+import android.widget.Toast
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -25,6 +27,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -42,9 +45,6 @@ import com.pingidentity.orchestrate.SuccessNode
 import com.pingidentity.samples.pingsampleapp.PingSampleApplication
 import com.pingidentity.samples.pingsampleapp.authenticator.data.AuthenticatorViewModel
 import com.pingidentity.samples.pingsampleapp.authenticator.ui.AboutScreen
-import com.pingidentity.samples.pingsampleapp.authmigration.AuthMigrationScreen
-import com.pingidentity.samples.pingsampleapp.authmigration.AuthMigrationViewModel
-import com.pingidentity.samples.pingsampleapp.authmigration.MigrationStatus
 import com.pingidentity.samples.pingsampleapp.authenticator.ui.AccountDetailScreen
 import com.pingidentity.samples.pingsampleapp.authenticator.ui.AccountsScreen
 import com.pingidentity.samples.pingsampleapp.authenticator.ui.EditAccountsScreen
@@ -56,30 +56,36 @@ import com.pingidentity.samples.pingsampleapp.authenticator.ui.SettingsScreen
 import com.pingidentity.samples.pingsampleapp.authenticator.ui.TestScreen
 import com.pingidentity.samples.pingsampleapp.authenticator.util.NavigationAnimations
 import com.pingidentity.samples.pingsampleapp.authgrant.DeviceAuthorizationGrantScreen
+import com.pingidentity.samples.pingsampleapp.authmigration.AuthMigrationScreen
+import com.pingidentity.samples.pingsampleapp.authmigration.AuthMigrationViewModel
+import com.pingidentity.samples.pingsampleapp.authmigration.MigrationStatus
 import com.pingidentity.samples.pingsampleapp.config.Env
+import com.pingidentity.samples.pingsampleapp.config.journey
 import com.pingidentity.samples.pingsampleapp.davinci.DaVinci
 import com.pingidentity.samples.pingsampleapp.davinci.DaVinciViewModel
 import com.pingidentity.samples.pingsampleapp.devicemanagement.DeviceManagement
 import com.pingidentity.samples.pingsampleapp.devicemanagement.DeviceManagementViewModel
 import com.pingidentity.samples.pingsampleapp.devtools.DeviceInfo
 import com.pingidentity.samples.pingsampleapp.home.HomeApp
+import com.pingidentity.samples.pingsampleapp.journey.BackchannelAuthScreen
+import com.pingidentity.samples.pingsampleapp.journey.JourneyRoute
+import com.pingidentity.samples.pingsampleapp.journey.JourneyScreen
+import com.pingidentity.samples.pingsampleapp.journey.JourneyViewModel
+import com.pingidentity.samples.pingsampleapp.journey.PreferenceViewModel
+import com.pingidentity.samples.pingsampleapp.journey.attemptRestoreCredentialSignIn
+import com.pingidentity.samples.pingsampleapp.keystore.KeyStoreScreen
+import com.pingidentity.samples.pingsampleapp.logout.Logout
+import com.pingidentity.samples.pingsampleapp.oidc.Centralize
 import com.pingidentity.samples.pingsampleapp.pingonemfa.ui.PingOneMFAAccountsScreen
 import com.pingidentity.samples.pingsampleapp.pingonemfa.ui.PingOneOTPScreen
 import com.pingidentity.samples.pingsampleapp.pingonemfa.ui.PingOnePayloadScreen
 import com.pingidentity.samples.pingsampleapp.pingonemfa.ui.PingOneQrScannerScreen
-import com.pingidentity.samples.pingsampleapp.journey.BackchannelAuthScreen
-import com.pingidentity.samples.pingsampleapp.journey.JourneyScreen
-import com.pingidentity.samples.pingsampleapp.journey.JourneyRoute
-import com.pingidentity.samples.pingsampleapp.journey.JourneyViewModel
-import com.pingidentity.samples.pingsampleapp.journey.PreferenceViewModel
-import com.pingidentity.samples.pingsampleapp.keystore.KeyStoreScreen
-import com.pingidentity.samples.pingsampleapp.logout.Logout
-import com.pingidentity.samples.pingsampleapp.oidc.Centralize
 import com.pingidentity.samples.pingsampleapp.token.TokenScreen
 import com.pingidentity.samples.pingsampleapp.token.TokenViewModel
 import com.pingidentity.samples.pingsampleapp.userprofile.UserProfile
 import com.pingidentity.samples.pingsampleapp.userprofile.UserProfileType
 import com.pingidentity.samples.pingsampleapp.userprofile.UserProfileViewModel
+import kotlinx.coroutines.launch
 
 /**
  * Sealed class representing all possible navigation destinations in the app
@@ -139,6 +145,8 @@ fun AppNavigation(
     startDestination: String = Route.HOME
 ) {
     var authenticatorViewModel by remember { mutableStateOf<AuthenticatorViewModel?>(null) }
+    val coroutineScope = rememberCoroutineScope()
+    val context = LocalContext.current
 
     LaunchedEffect(Unit) {
         authenticatorViewModel = PingSampleApplication.getAuthenticatorViewModel()
@@ -224,6 +232,22 @@ fun AppNavigation(
                 },
                 onBackchannelAuthClick = {
                     navController.navigate(Route.BACKCHANNEL_AUTH)
+                },
+                onRestoreCredentialSignInClick = {
+                    coroutineScope.launch {
+                        val signedIn = journey?.attemptRestoreCredentialSignIn() == true
+                        if (signedIn) {
+                            navController.navigate(Route.userProfile(UserProfileType.JOURNEY)) {
+                                popUpTo(Route.HOME) { inclusive = false }
+                            }
+                        } else {
+                            Toast.makeText(
+                                context,
+                                "No restore credential sign-in available",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                    }
                 },
             )
         }

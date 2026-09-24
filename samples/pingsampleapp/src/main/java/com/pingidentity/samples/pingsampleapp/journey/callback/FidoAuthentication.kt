@@ -36,7 +36,9 @@ fun FidoAuthentication(
         CircularProgressIndicator()
         LaunchedEffect(true) {
             launch {
-                callback.authenticate().onSuccess {
+                callback.authenticate {
+                    useFido2ApiClient = false
+                }.onSuccess {
                     currentOnCompleted()
                 }.onFailure {
                     Log.e(

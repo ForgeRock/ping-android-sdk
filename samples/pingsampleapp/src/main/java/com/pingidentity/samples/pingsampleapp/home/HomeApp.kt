@@ -1,5 +1,6 @@
 /*
- * Copyright (c) 2026 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2026 - 2026 Ping Identity Corporation. All rights reserved.
+ *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
  */
@@ -11,8 +12,8 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -42,6 +43,7 @@ import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.Preview
 import androidx.compose.material.icons.filled.QrCodeScanner
+import androidx.compose.material.icons.filled.Restore
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.SwapHoriz
@@ -113,6 +115,7 @@ fun HomeApp(
     onPingOneDaVinciPairingClick : () -> Unit,
     onDeviceAuthorizationGrantClick : () -> Unit,
     onBackchannelAuthClick : () -> Unit,
+    onRestoreCredentialSignInClick : () -> Unit,
 ) {
     var deviceId by remember { mutableStateOf("Loading Device ID...") }
     var deviceStatus by remember { mutableStateOf("Loading device status...") }
@@ -261,6 +264,14 @@ fun HomeApp(
                     title = stringResource(R.string.text_backchannel_auth_title),
                     subtitle = stringResource(R.string.text_backchannel_auth_subtitle),
                     onClick = onBackchannelAuthClick
+                )
+
+                IconRowItem(
+                    icon = Icons.Default.Restore,
+                    title = "Restore Credential Sign-In",
+                    subtitle = "Silently sign in with a device restore credential",
+                    showNavigation = false,
+                    onClick = onRestoreCredentialSignInClick
                 )
 
                 // User Management Section
@@ -574,6 +585,7 @@ fun PreviewHomeApp() {
         onPingOneDaVinciPairingClick = {},
         onDeviceAuthorizationGrantClick = {},
         onBackchannelAuthClick = {},
+        onRestoreCredentialSignInClick = {},
     )
 }
 

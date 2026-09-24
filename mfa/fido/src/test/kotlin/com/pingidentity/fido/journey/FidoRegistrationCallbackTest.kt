@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2025 - 2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -10,6 +10,7 @@ package com.pingidentity.fido.journey
 import androidx.credentials.exceptions.CreateCredentialCancellationException
 import com.pingidentity.fido.Constants
 import com.pingidentity.fido.FidoClient
+import com.pingidentity.fido.RestoreCredentialClient
 import com.pingidentity.journey.plugin.Callback
 import com.pingidentity.journey.plugin.ValueCallback
 import com.pingidentity.logger.CONSOLE
@@ -21,6 +22,7 @@ import com.pingidentity.orchestrate.SharedContext
 import com.pingidentity.orchestrate.Workflow
 import com.pingidentity.orchestrate.WorkflowConfig
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkObject
@@ -56,6 +58,7 @@ class FidoRegistrationCallbackTest {
     private lateinit var mockWorkflowConfig: WorkflowConfig
     private lateinit var valueCallback: ValueCallback
     private lateinit var mockFidoClient: FidoClient
+    private lateinit var mockRestoreCredentialClient: RestoreCredentialClient
 
 
     @BeforeTest
@@ -94,11 +97,15 @@ class FidoRegistrationCallbackTest {
         mockkObject(FidoClient.Companion)
         every { FidoClient.invoke(any()) } returns mockFidoClient
 
+        mockRestoreCredentialClient = mockk()
+        mockkObject(RestoreCredentialClient.Companion)
+        every { RestoreCredentialClient.invoke(any()) } returns mockRestoreCredentialClient
     }
 
     @AfterTest
     fun tearDown() {
         unmockkObject(FidoClient.Companion)
+        unmockkObject(RestoreCredentialClient.Companion)
     }
 
     @Test
@@ -349,6 +356,128 @@ class FidoRegistrationCallbackTest {
         )
 
         val result = callback.register()
+        assertTrue(result.isFailure)
+        val e = result.exceptionOrNull()
+        assertTrue(e is CreateCredentialCancellationException)
+    }
+
+    @Test
+    fun `createRestoreKey should return success and call valueCallback`() = runTest {
+        val sampleJson = buildJsonObject {
+            put("type", "MetadataCallback")
+            putJsonArray("output") {
+                addJsonObject {
+                    put("name", "data")
+                    putJsonObject("value") {
+                        put("_action", "webauthn_registration")
+                        put("challenge", "Y2hhbGxlbmdl")
+                        put("timeout", "60000")
+                        put("attestationPreference", "direct")
+                        put("relyingPartyName", "Test RP")
+                        put("_relyingPartyId", "test.example.com")
+                        put("userId", "dXNlcklk")
+                        put("userName", "testuser")
+                        put("displayName", "Test User")
+                        putJsonArray("_pubKeyCredParams") {
+                            addJsonObject {
+                                put("type", "public-key")
+                                put("alg", -7)
+                            }
+                        }
+                        putJsonArray("_excludeCredentials") { }
+                        putJsonObject("_authenticatorSelection") {
+                            put("authenticatorAttachment", "platform")
+                            put("requireResidentKey", false)
+                            put("userVerification", "required")
+                        }
+                        put("supportsJsonResponse", false)
+                    }
+                }
+            }
+        }
+
+        val callback = FidoRegistrationCallback()
+        callback.continueNode = continueNode
+        callback.journey = mockWorkflow
+        callback.init(sampleJson)
+
+        // Mock RestoreCredentialClient.create to always succeed
+        val fakeResponse = buildJsonObject {
+            put("response", buildJsonObject {
+                put(
+                    "clientDataJSON",
+                    "eyJ0eXBlIjoid2ViYXV0aG4uY3JlYXRlIiwiY2hhbGxlbmdlIjoiWTJoaGJHeGxibWRsIn0"
+                )
+                put(
+                    "attestationObject",
+                    "o2NmbXRkbm9uZWdhdHRTdG10oGhhdXRoRGF0YVikN2_Q5-0Y8GIS3KdDwe8960U5Hls64HVj4KuW_PJGdQIdQQAAAAA"
+                )
+            })
+            put("rawId", "EDSe1siof-wv7zm_TeocJKml")
+        }
+
+        coEvery { mockRestoreCredentialClient.create(any(), any()) } returns Result.success(fakeResponse)
+
+        val result = callback.createRestoreKey("Test Device")
+        assertTrue(result.isSuccess)
+        val jsonResult = result.getOrThrow()
+        assertNotNull(jsonResult)
+        assertTrue(jsonResult.contains("response"))
+        val valueCallbackString = valueCallback.value
+        assertTrue(valueCallbackString.contains("Test Device"))
+        assertTrue(valueCallbackString.contains("::"))
+
+        coVerify {
+            mockRestoreCredentialClient.create(callback.publicKeyCredentialCreationOptions, any())
+        }
+    }
+
+    @Test
+    fun `createRestoreKey should return failure and call handleError`() = runTest {
+        val sampleJson = buildJsonObject {
+            put("type", "MetadataCallback")
+            putJsonArray("output") {
+                addJsonObject {
+                    put("name", "data")
+                    putJsonObject("value") {
+                        put("_action", "webauthn_registration")
+                        put("challenge", "Y2hhbGxlbmdl")
+                        put("timeout", "60000")
+                        put("attestationPreference", "direct")
+                        put("relyingPartyName", "Test RP")
+                        put("_relyingPartyId", "test.example.com")
+                        put("userId", "dXNlcklk")
+                        put("userName", "testuser")
+                        put("displayName", "Test User")
+                        putJsonArray("_pubKeyCredParams") {
+                            addJsonObject {
+                                put("type", "public-key")
+                                put("alg", -7)
+                            }
+                        }
+                        putJsonArray("_excludeCredentials") { }
+                        putJsonObject("_authenticatorSelection") {
+                            put("authenticatorAttachment", "platform")
+                            put("requireResidentKey", false)
+                            put("userVerification", "required")
+                        }
+                        put("supportsJsonResponse", false)
+                    }
+                }
+            }
+        }
+
+        val callback = FidoRegistrationCallback()
+        callback.journey = mockWorkflow
+        callback.continueNode = continueNode
+        callback.init(sampleJson)
+
+        // Mock RestoreCredentialClient.create to always fail
+        coEvery { mockRestoreCredentialClient.create(any(), any()) } returns Result.failure(
+            CreateCredentialCancellationException("restore key creation error")
+        )
+
+        val result = callback.createRestoreKey()
         assertTrue(result.isFailure)
         val e = result.exceptionOrNull()
         assertTrue(e is CreateCredentialCancellationException)

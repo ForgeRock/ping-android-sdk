@@ -13,6 +13,8 @@ import com.pingidentity.fido.Constants.FIELD_ALLOW_CREDENTIALS
 import com.pingidentity.fido.Constants.FIELD_CHALLENGE
 import com.pingidentity.fido.FidoAuthenticateCustomizer
 import com.pingidentity.fido.FidoClient
+import com.pingidentity.fido.RestoreCredentialClient
+import com.pingidentity.fido.RestoreCredentialRetrievalCustomizer
 import com.pingidentity.fido.toBase64
 import com.pingidentity.orchestrate.Closeable
 import kotlinx.serialization.json.JsonArray
@@ -107,6 +109,36 @@ class FidoAuthenticationCollector : AbstractFidoCollector(), Closeable {
             assertionValue = it
         }.onFailure { exception ->
             logger.e("FIDO2 authentication failed", exception)
+            handleError(exception)
+        }
+    }
+
+    /**
+     * Silently signs the user back in using Android's Restore Credentials feature, without
+     * any user interaction.
+     *
+     * This reuses the same [publicKeyCredentialRequestOptions] parsed in [init]. Upon success,
+     * the assertion value is stored and will be automatically included in the workflow payload,
+     * exactly like [authenticate].
+     *
+     * @param block A customization function for the [RestoreCredentialClient.signIn] request.
+     * @return A [Result] containing the assertion response as a [JsonObject] on success,
+     *         or an exception on failure (for example if no restore credential exists on this
+     *         device)
+     */
+    suspend fun restore(
+        block: RestoreCredentialRetrievalCustomizer.() -> Unit = {}
+    ): Result<JsonObject> {
+        errorCode = null
+        assertionValue = null
+        logger.d("Starting restore credential sign-in")
+        return RestoreCredentialClient { logger = this@FidoAuthenticationCollector.logger }.signIn(
+            publicKeyCredentialRequestOptions, block
+        ).onSuccess {
+            logger.d("Restore credential sign-in successful")
+            assertionValue = it
+        }.onFailure { exception ->
+            logger.e("Restore credential sign-in failed", exception)
             handleError(exception)
         }
     }

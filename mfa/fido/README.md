@@ -296,6 +296,146 @@ val result = collector.authenticate {
 there is no client-level configuration for it. The Credential Manager path requires the app to
 declare `androidx.credentials:credentials-play-services-auth` on API ≤ 33 (see the sample app).
 
+## Restore Credentials
+
+This module also provides functionality for integrating Android's
+[Restore Credentials](https://developer.android.com/identity/sign-in/restore-credentials)
+feature into your Android application. It lets a restored app silently sign a user back in
+on a new device after Android's Backup & Restore transfer completes, independent of the
+app's primary authentication method (password, passkey, federated sign-in).
+
+**This module implements the Android client-side integration only.** The server-side
+FIDO2/WebAuthn validation of the restore credential must be implemented separately - see
+[Backend Requirements](#backend-requirements) below.
+
+### Prerequisites
+
+- Android API level 28 or higher
+- Google Play services (GMS) core version 24220000 or higher
+- A FIDO2/WebAuthn-compatible server, configured the same way as for passkeys
+
+### DaVinci Collector or Journey Callback Usage
+
+`FidoRegistrationCollector`/`FidoRegistrationCallback` expose `createRestoreKey()`, and
+`FidoAuthenticationCollector`/`FidoAuthenticationCallback` expose `restore()`, reusing the same
+creation/request options already parsed for `register()`/`authenticate()`:
+
+```kotlin
+// After a normal registration flow, also create a restore credential
+val result = collector.createRestoreKey()
+
+// On a new device, silently sign in with the restore credential
+val result = collector.restore()
+```
+
+### Direct `RestoreCredentialClient` Usage
+
+If you are not using the DaVinci Collector or Journey Callback wrappers, you can use
+`RestoreCredentialClient` directly.
+
+#### Create a restore credential
+
+Call this whenever the user is signed in and does not yet have a restore credential -
+after sign-up, after sign-in, or once from your launcher `Activity.onCreate()` (guard with a
+local flag such as `has_synced_restore_credential` to avoid calling it on every launch):
+
+```kotlin
+val client = RestoreCredentialClient()
+val result = client.create(creationOptionsFromYourServer)
+result.onSuccess { attestation ->
+    // Send `attestation` to your server, the same way you would a passkey registration
+}
+```
+
+`create` always attempts the request with cloud backup enabled first, and automatically
+retries with cloud backup disabled if the device does not have backup and end-to-end
+encryption (screen lock) configured - you do not need to handle this fallback yourself.
+
+#### Sign in with a restore credential
+
+Call this from your launcher `Activity.onCreate()` on first launch, and see
+[Two-Tier Integration Guide](#two-tier-integration-guide) for background restoration:
+
+```kotlin
+val result = client.signIn(retrievalOptionsFromYourServer)
+result.onSuccess { assertion ->
+    // Send `assertion` to your server to establish a session, the same way you would a
+    // passkey authentication
+}
+```
+
+#### Clear the restore credential
+
+Call this whenever the user signs out - locally, or in response to a server-side session
+invalidation (for example an HTTP `401 Unauthorized`):
+
+```kotlin
+client.clear()
+```
+
+Credential Manager does not delete restore credentials automatically; skipping this step
+leaves the user silently signed back in on next launch.
+
+### Two-Tier Integration Guide
+
+Restore Credentials work best with a two-tier restoration strategy:
+
+1. **Tier 1 (background)** - runs during device setup via `BackupAgent.onRestoreFinished()`,
+   before the user opens the app. Only applicable if your manifest has
+   `android:allowBackup="true"`. Implement your own `BackupAgent`:
+   ```kotlin
+   class MyRestoreCredentialBackupAgent : BackupAgent() {
+
+       override fun onBackup(
+           oldState: ParcelFileDescriptor?,
+           data: BackupDataOutput?,
+           newState: ParcelFileDescriptor?
+       ) {
+           // No-op: full backup only (android:fullBackupOnly="true")
+       }
+
+       override fun onRestore(
+           data: BackupDataInput?,
+           appVersionCode: Int,
+           newState: ParcelFileDescriptor?
+       ) {
+           // No-op: full backup only (android:fullBackupOnly="true")
+       }
+
+       override fun onRestoreFinished() {
+           super.onRestoreFinished()
+           // Must run synchronously so the sign-in completes before the system considers
+           // restoration finished.
+           runBlocking {
+               RestoreCredentialClient().signIn(retrievalOptionsFromYourServer)
+                   .onSuccess { assertion ->
+                       // Send `assertion` to your server to establish a session
+                   }
+           }
+       }
+   }
+   ```
+   and declare it as your app's `android:backupAgent`:
+   ```xml
+   <application
+       android:allowBackup="true"
+       android:backupAgent=".MyRestoreCredentialBackupAgent"
+       android:fullBackupOnly="true">
+   ```
+   `android:fullBackupOnly="true"` is required if your app did not already have a
+   `BackupAgent`. Fetching `retrievalOptionsFromYourServer` here must not depend on any UI,
+   since no activity is running yet at this point in the device setup process.
+2. **Tier 2 (foreground)** - runs from your launcher `Activity.onCreate()` to catch
+   failovers (dropped network, delayed restoration, or `allowBackup="false"`). Call
+   `RestoreCredentialClient().signIn(...)` directly.
+
+### Backend Requirements
+
+See the reminder provided alongside this module's implementation for the server-side
+guidelines this feature depends on (differentiating restore credentials from user-created
+passkeys, preventing orphaned keys, restore-key TTL, multi-device support, and clearing
+credentials on server-side session invalidation).
+
 ## ⚠️ Important Migration Notice
 
 ### Deprecated Legacy ForgeRock SDK Method

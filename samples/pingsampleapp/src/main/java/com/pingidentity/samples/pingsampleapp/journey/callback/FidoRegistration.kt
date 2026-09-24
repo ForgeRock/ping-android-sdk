@@ -23,6 +23,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -33,6 +34,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.pingidentity.fido.journey.FidoRegistrationCallback
+import com.pingidentity.journey.plugin.stage
 import kotlinx.coroutines.launch
 
 @Composable
@@ -42,12 +44,29 @@ fun FidoRegistration(
 ) {
     val coroutineScope = rememberCoroutineScope()
     val currentOnCompleted by rememberUpdatedState(onNext)
+    val isRestoreCredential = callback.continueNode.stage == "RestoreCredential"
     var deviceName by remember {
         mutableStateOf(Build.MODEL)
     }
     var showProgress by remember {
-        mutableStateOf(false)
+        mutableStateOf(isRestoreCredential)
     }
+
+    if (isRestoreCredential) {
+        LaunchedEffect(Unit) {
+            callback.createRestoreKey().onSuccess {
+                currentOnCompleted()
+            }.onFailure {
+                Log.e(
+                    "Fido2Registration",
+                    "Failed to create restore key",
+                    it
+                )
+                currentOnCompleted()
+            }
+        }
+    }
+
     Box(
         modifier = Modifier
             .padding(4.dp)
@@ -63,37 +82,39 @@ fun FidoRegistration(
                 CircularProgressIndicator()
             }
         }
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-        ) {
-            OutlinedTextField(
-                modifier = Modifier,
-                value = deviceName,
-                onValueChange = { value ->
-                    deviceName = value
-                },
-                label = { Text("Device Name") },
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Button(
-                modifier = Modifier.align(Alignment.End),
-                onClick = {
-                    showProgress = true
-                    coroutineScope.launch {
-                        callback.register(deviceName).onSuccess {
-                            currentOnCompleted()
-                        }.onFailure {
-                            Log.e(
-                                "Fido2Registration",
-                                "Failed to register",
-                                it
-                            )
-                            currentOnCompleted()
+        if (!isRestoreCredential) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+            ) {
+                OutlinedTextField(
+                    modifier = Modifier,
+                    value = deviceName,
+                    onValueChange = { value ->
+                        deviceName = value
+                    },
+                    label = { Text("Device Name") },
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Button(
+                    modifier = Modifier.align(Alignment.End),
+                    onClick = {
+                        showProgress = true
+                        coroutineScope.launch {
+                            callback.register(deviceName).onSuccess {
+                                currentOnCompleted()
+                            }.onFailure {
+                                Log.e(
+                                    "Fido2Registration",
+                                    "Failed to register",
+                                    it
+                                )
+                                currentOnCompleted()
+                            }
                         }
-                    }
-                }) {
-                Text("Continue")
+                    }) {
+                    Text("Continue")
+                }
             }
         }
     }

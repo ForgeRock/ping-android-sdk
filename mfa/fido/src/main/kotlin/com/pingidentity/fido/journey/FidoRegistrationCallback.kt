@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2025 - 2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -42,6 +42,8 @@ import com.pingidentity.fido.Constants.FIELD_USER_VERIFICATION
 import com.pingidentity.fido.Constants.RESIDENT_KEY_DISCOURAGED
 import com.pingidentity.fido.FidoClient
 import com.pingidentity.fido.FidoRegistrationCustomizer
+import com.pingidentity.fido.RestoreCredentialClient
+import com.pingidentity.fido.RestoreCredentialCreationCustomizer
 import com.pingidentity.fido.base64DefaultToUrlSafe
 import com.pingidentity.fido.base64ToIntStr
 import com.pingidentity.fido.base64ToStr
@@ -144,31 +146,80 @@ class FidoRegistrationCallback : FidoCallback() {
             logger = this@FidoRegistrationCallback.logger
         }.register(publicKeyCredentialCreationOptions, block).onSuccess { response ->
             logger.d("FIDO2 registration successful")
-            val attestationResponse =
-                response[Constants.FIELD_RESPONSE]?.jsonObject ?: JsonObject(emptyMap())
-            var data = listOf(
-                attestationResponse[FIELD_CLIENT_DATA_JSON]?.jsonPrimitive?.content?.base64ToStr()
-                    ?: "",
-                attestationResponse[FIELD_ATTESTATION_OBJECT]?.jsonPrimitive?.content?.base64ToIntStr()
-                    ?: "",
-                response[FIELD_RAW_ID]?.jsonPrimitive?.content ?: ""
-            ).joinToString(DATA_SEPARATOR)
-
-            deviceName?.let {
-                data += "$DATA_SEPARATOR$it"
-            }
-
-            val callbackValue = if (supportsJsonResponse) {
-                Json.encodeToString(FidoJsonResponse(Constants.AUTHENTICATOR_PLATFORM, data))
-            } else {
-                data
-            }
-            logger.d("Setting registration callback value")
-            valueCallback(callbackValue)
+            handleRegistrationResponse(response, deviceName)
         }.onFailure { exception ->
             logger.e("FIDO2 registration failed", exception)
             handleError(exception)
         }
+    }
+
+    /**
+     * Creates a restore credential for the currently signed-in user, using the same creation
+     * options as [register] - the "restore" journey is expected to return the same WebAuthn
+     * registration options shape as a normal passkey registration journey, just under a
+     * different journey name. On success, the response is formatted and submitted to the
+     * Journey workflow exactly like [register].
+     *
+     * Always attempts the request with cloud backup enabled first, automatically retrying
+     * without cloud backup if the device has no backup or end-to-end encryption (screen lock)
+     * configured - see [RestoreCredentialClient.create].
+     *
+     * @param deviceName Optional name for the registered device/credential for easier identification
+     * @param block A customization function for the [RestoreCredentialClient.create] request.
+     * @return A [Result] containing the attestation response as a [JsonObject] on success,
+     *         or an exception on failure. The response is automatically submitted to the
+     *         Journey workflow on success.
+     */
+    suspend fun createRestoreKey(
+        deviceName: String = "RestoreCredential",
+        block: RestoreCredentialCreationCustomizer.() -> Unit = {}
+    ): Result<JsonObject> {
+        logger.d("Starting restore credential creation with device name: $deviceName")
+        return RestoreCredentialClient {
+            logger = this@FidoRegistrationCallback.logger
+        }.create(publicKeyCredentialCreationOptions, block).onSuccess { response ->
+            logger.d("Restore credential creation successful")
+            handleRegistrationResponse(response, deviceName)
+        }.onFailure { exception ->
+            logger.e("Restore credential creation failed", exception)
+            handleError(exception)
+        }
+    }
+
+    /**
+     * Formats a WebAuthn registration response and submits it to the Journey workflow.
+     *
+     * Shared by [register] and [createRestoreKey], since both `CreatePublicKeyCredentialResponse`
+     * and `CreateRestoreCredentialResponse` produce the same WebAuthn `RegistrationResponseJSON`
+     * shape.
+     *
+     * @param response The attestation response as returned by either [FidoClient.register] or
+     *                  [RestoreCredentialClient.create].
+     * @param deviceName Optional name for the registered device/credential, appended to the
+     *                    legacy string response.
+     */
+    private fun handleRegistrationResponse(response: JsonObject, deviceName: String?) {
+        val attestationResponse =
+            response[Constants.FIELD_RESPONSE]?.jsonObject ?: JsonObject(emptyMap())
+        var data = listOf(
+            attestationResponse[FIELD_CLIENT_DATA_JSON]?.jsonPrimitive?.content?.base64ToStr()
+                ?: "",
+            attestationResponse[FIELD_ATTESTATION_OBJECT]?.jsonPrimitive?.content?.base64ToIntStr()
+                ?: "",
+            response[FIELD_RAW_ID]?.jsonPrimitive?.content ?: ""
+        ).joinToString(DATA_SEPARATOR)
+
+        deviceName?.let {
+            data += "$DATA_SEPARATOR$it"
+        }
+
+        val callbackValue = if (supportsJsonResponse) {
+            Json.encodeToString(FidoJsonResponse(Constants.AUTHENTICATOR_PLATFORM, data))
+        } else {
+            data
+        }
+        logger.d("Setting registration callback value")
+        valueCallback(callbackValue)
     }
 
     /**

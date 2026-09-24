@@ -11,6 +11,8 @@ import com.pingidentity.davinci.plugin.Collector
 import com.pingidentity.fido.Constants
 import com.pingidentity.fido.FidoClient
 import com.pingidentity.fido.FidoRegistrationCustomizer
+import com.pingidentity.fido.RestoreCredentialClient
+import com.pingidentity.fido.RestoreCredentialCreationCustomizer
 import com.pingidentity.fido.toBase64
 import com.pingidentity.orchestrate.Closeable
 import kotlinx.serialization.json.JsonArray
@@ -80,6 +82,36 @@ class FidoRegistrationCollector : AbstractFidoCollector(), Closeable {
             attestationValue = it
         }.onFailure { exception ->
             logger.e("FIDO2 registration failed", exception)
+            handleError(exception)
+        }
+    }
+
+    /**
+     * Creates a restore credential for the currently signed-in user, using the same creation
+     * options as [register].
+     *
+     * Always attempts the request with cloud backup enabled first, automatically retrying
+     * without cloud backup if the device has no backup or end-to-end encryption (screen lock)
+     * configured - see [RestoreCredentialClient.create]. Upon success, the attestation value is
+     * stored and will be automatically included in the workflow payload, exactly like [register].
+     *
+     * @param block A customization function for the [RestoreCredentialClient.create] request.
+     * @return A [Result] containing the attestation value as a [JsonObject] or an error. The
+     *         attestation value will be automatically injected to the registration flow.
+     */
+    suspend fun createRestoreKey(
+        block: RestoreCredentialCreationCustomizer.() -> Unit = {}
+    ): Result<JsonObject> {
+        logger.d("Starting restore credential creation")
+        errorCode = null
+        attestationValue = null
+        return RestoreCredentialClient {
+            logger = this@FidoRegistrationCollector.logger
+        }.create(publicKeyCredentialCreationOptions, block).onSuccess {
+            logger.d("Restore credential creation successful")
+            attestationValue = it
+        }.onFailure { exception ->
+            logger.e("Restore credential creation failed", exception)
             handleError(exception)
         }
     }

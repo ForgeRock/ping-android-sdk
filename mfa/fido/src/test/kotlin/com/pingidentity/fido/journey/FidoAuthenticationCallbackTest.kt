@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2025 - 2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -10,6 +10,7 @@ package com.pingidentity.fido.journey
 import androidx.credentials.exceptions.GetCredentialCancellationException
 import com.pingidentity.fido.Constants
 import com.pingidentity.fido.FidoClient
+import com.pingidentity.fido.RestoreCredentialClient
 import com.pingidentity.journey.plugin.Callback
 import com.pingidentity.journey.plugin.ValueCallback
 import com.pingidentity.logger.CONSOLE
@@ -21,6 +22,7 @@ import com.pingidentity.orchestrate.SharedContext
 import com.pingidentity.orchestrate.Workflow
 import com.pingidentity.orchestrate.WorkflowConfig
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkObject
@@ -52,6 +54,7 @@ class FidoAuthenticationCallbackTest {
     private lateinit var mockWorkflowConfig: WorkflowConfig
     private lateinit var valueCallback: ValueCallback
     private lateinit var mockFidoClient: FidoClient
+    private lateinit var mockRestoreCredentialClient: RestoreCredentialClient
     @BeforeTest
     fun setUp() {
         mockWorkflow = mockk<Workflow>()
@@ -88,11 +91,16 @@ class FidoAuthenticationCallbackTest {
         mockFidoClient = mockk()
         mockkObject(FidoClient.Companion)
         every { FidoClient.invoke(any()) } returns mockFidoClient
+
+        mockRestoreCredentialClient = mockk()
+        mockkObject(RestoreCredentialClient.Companion)
+        every { RestoreCredentialClient.invoke(any()) } returns mockRestoreCredentialClient
     }
 
     @AfterTest
     fun tearDown() {
         unmockkObject(FidoClient.Companion)
+        unmockkObject(RestoreCredentialClient.Companion)
     }
 
     @Test
@@ -532,6 +540,108 @@ class FidoAuthenticationCallbackTest {
         )
 
         val result = callback.authenticate()
+        assertTrue(result.isFailure)
+        val e = result.exceptionOrNull()
+        assertTrue(e is GetCredentialCancellationException)
+    }
+
+    @Test
+    fun `restore should return success and call valueCallback`() = runTest {
+        val sampleJson = buildJsonObject {
+            put("type", "MetadataCallback")
+            putJsonArray("output") {
+                addJsonObject {
+                    put("name", "data")
+                    putJsonObject("value") {
+                        put("_action", "webauthn_authentication")
+                        put("challenge", "IrmRP2U3shw3plwrICzAkw/yupRI60s2dnGhfwExd/o=")
+                        put("allowCredentials", "")
+                        putJsonArray("_allowCredentials") { }
+                        put("timeout", "60000")
+                        put("userVerification", "required")
+                        put("relyingPartyId", "rpId: \"idc.petrov.ca\",")
+                        put("_relyingPartyId", "idc.petrov.ca")
+                        putJsonObject("extensions") { }
+                        put("_type", "WebAuthn")
+                        put("supportsJsonResponse", false)
+                    }
+                }
+            }
+        }
+
+        val callback = FidoAuthenticationCallback()
+        callback.continueNode = continueNode
+        callback.journey = mockWorkflow
+        callback.init(sampleJson)
+
+        // Mock RestoreCredentialClient.signIn to always succeed
+        val fakeResponse = buildJsonObject {
+            put("response", buildJsonObject {
+                put(
+                    "clientDataJSON",
+                    "eyJ0eXBlIjoid2ViYXV0aG4uZ2V0IiwiY2hhbGxlbmdlIjoiSjlDVmcxRkl6REhhd3BCLS0yeTZGc2pyX2RLTEtzTGNGcGRKanp0ZFBydyIsIm9yaWdpbiI6ImFuZHJvaWQ6YXBrLWtleS1oYXNoOlp2Rm5reUJBbTZFUHZNNTBGQUZVRDZ1MUduN3ZaaGd0OGpjcXNjb25fY28iLCJhbmRyb2lkUGFja2FnZU5hbWUiOiJjb20ucGluZ2lkZW50aXR5LnNhbXBsZXMuam91cm5leWFwcCJ9"
+                )
+                put("authenticatorData", "N2_Q5-0Y8GIS3KdDwe8960U5Hls64HVj4KuW_PJGdQIdAAAAAA")
+                put(
+                    "signature",
+                    "MEUCIES2SaVu-5e_A-PQ0caU2yd1gXR8zI-_gTMMgUSTTk2rAiEAqkHPuUcc1I1cicdWXLKwZE6bGi7uy3PjAP9U93CqesI"
+                )
+                put("userHandle", "MThhYzY4OWUtNjNlOC00ODcxLTg1ZWEtMzU4MzIzNjRiNDgx")
+            })
+            put("rawId", "rawId")
+        }
+
+        coEvery { mockRestoreCredentialClient.signIn(any(), any()) } returns Result.success(fakeResponse)
+
+        val result = callback.restore()
+        assertTrue(result.isSuccess)
+        val jsonResult = result.getOrThrow()
+        assertNotNull(jsonResult)
+        assertTrue(jsonResult.contains("response"))
+        val valueCallbackString = valueCallback.value
+        assertEquals(
+            "{\"type\":\"webauthn.get\",\"challenge\":\"J9CVg1FIzDHawpB--2y6Fsjr_dKLKsLcFpdJjztdPrw\",\"origin\":\"android:apk-key-hash:ZvFnkyBAm6EPvM50FAFUD6u1Gn7vZhgt8jcqscon_co\",\"androidPackageName\":\"com.pingidentity.samples.journeyapp\"}::55,111,-48,-25,-19,24,-16,98,18,-36,-89,67,-63,-17,61,-21,69,57,30,91,58,-32,117,99,-32,-85,-106,-4,-14,70,117,2,29,0,0,0,0::48,69,2,32,68,-74,73,-91,110,-5,-105,-65,3,-29,-48,-47,-58,-108,-37,39,117,-127,116,124,-52,-113,-65,-127,51,12,-127,68,-109,78,77,-85,2,33,0,-86,65,-49,-71,71,28,-44,-115,92,-119,-57,86,92,-78,-80,100,78,-101,26,46,-18,-53,115,-29,0,-1,84,-9,112,-86,122,-62::rawId::18ac689e-63e8-4871-85ea-35832364b481",
+            valueCallbackString
+        )
+
+        coVerify { mockRestoreCredentialClient.signIn(callback.publicKeyCredentialRequestOptions, any()) }
+    }
+
+    @Test
+    fun `restore should return failure and call handleError`() = runTest {
+        val sampleJson = buildJsonObject {
+            put("type", "MetadataCallback")
+            putJsonArray("output") {
+                addJsonObject {
+                    put("name", "data")
+                    putJsonObject("value") {
+                        put("_action", "webauthn_authentication")
+                        put("challenge", "IrmRP2U3shw3plwrICzAkw/yupRI60s2dnGhfwExd/o=")
+                        put("allowCredentials", "")
+                        putJsonArray("_allowCredentials") { }
+                        put("timeout", "60000")
+                        put("userVerification", "required")
+                        put("relyingPartyId", "rpId: \"idc.petrov.ca\",")
+                        put("_relyingPartyId", "idc.petrov.ca")
+                        putJsonObject("extensions") { }
+                        put("_type", "WebAuthn")
+                        put("supportsJsonResponse", true)
+                    }
+                }
+            }
+        }
+
+        val callback = FidoAuthenticationCallback()
+        callback.continueNode = continueNode
+        callback.journey = mockWorkflow
+        callback.init(sampleJson)
+
+        // Mock RestoreCredentialClient.signIn to always fail
+        coEvery { mockRestoreCredentialClient.signIn(any(), any()) } returns Result.failure(
+            GetCredentialCancellationException("no restore credential")
+        )
+
+        val result = callback.restore()
         assertTrue(result.isFailure)
         val e = result.exceptionOrNull()
         assertTrue(e is GetCredentialCancellationException)
