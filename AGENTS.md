@@ -239,7 +239,7 @@ The root `build.gradle.kts` contains a `resolutionStrategy { force(...) }` block
 | `com.google.protobuf:protobuf-kotlin` | `4.29.2` | CVE-2024-7254 and related CVEs |
 | `com.google.protobuf:protobuf-javalite` | `4.29.2` | CVE-2024-7254 and related CVEs |
 | `com.google.protobuf:protobuf-kotlin-lite` | `4.29.2` | CVE-2024-7254 and related CVEs |
-| `com.google.android.gms:play-services-basement` | `18.0.2` | CVE-2022-2390 |
+| `com.google.android.gms:play-services-basement` | `18.5.0` | CVE-2022-2390 (fixed in 18.0.2); 18.5.0 floor required by `play-services-identity-credentials:16.0.0-alpha08` (`ComplianceOptions`) via the `credentials-play-services-auth:1.6.0` bridge |
 | `com.nimbusds:nimbus-jose-jwt` | `10.5` | CVE-2025-53864 |
 | `org.bouncycastle:bcprov-jdk18on` | `1.85` | CVE-2026-8763 (build-toolchain classpath, `lint-gradle`) |
 | `org.bouncycastle:bcpkix-jdk18on` | `1.85` | CVE-2026-8763 (build-toolchain classpath, `lint-gradle`) |

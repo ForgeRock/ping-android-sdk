@@ -36,7 +36,7 @@ project's `repositories` block includes Maven Central or the Ping Identity Maven
 ```gradle
 dependencies {
     implementation("com.pingidentity.sdks:fido:<version>")
-    implementation("androidx.credentials:credentials-play-services-auth:1.5.0")
+    implementation("androidx.credentials:credentials-play-services-auth:1.6.0")
     // Add other necessary dependencies here
 }
 ```
@@ -180,6 +180,27 @@ if (node is ContinueNode) {
 - **FidoAuthenticationCollector**
   - `suspend fun authenticate(): Result<JsonObject>` — Authenticates using a registered FIDO
     authenticator.
+- **FidoAuthenticationCallback** (Journey)
+  - `suspend fun authenticate(): Result<JsonObject>` — Authenticates using a registered FIDO
+    authenticator.
+  - `suspend fun pendingAuthenticate(block: FidoAuthenticateCustomizer.() -> Unit = {}):
+    Result<FidoPendingAuthentication>` — Builds a pending
+    request for conditional mediation (autofill with passkeys) instead of launching the modal
+    ceremony. See "Conditional mediation (autofill with passkeys)" below.
+- **FidoPendingAuthentication**
+  - `val request: PendingGetCredentialRequest` — The request to attach to the username field:
+    `view.pendingGetCredentialRequest = pending.request`. **View-only** — the androidx extension
+    has no Compose equivalent; wrap an `EditText` with `AndroidView` in Compose apps.
+  - `suspend fun await(): Result<JsonObject>` — The assertion in the same shape `authenticate()`
+    returns. Stays suspended if the user dismisses the suggestions (the pending path propagates
+    no errors) — keep the modal fallback visible and treat non-completion as the fallback
+    trigger.
+  - `fun cancel()` — Releases a suspended `await()` with a `CancellationException`-bearing
+    failure (e.g. when the screen goes away).
+- **isConditionalMediationSupported** — `true` only where the OS can deliver pending credential
+  requests: Android 15 (API 35) or above, or an API 34 preview build. Gate the conditional
+  affordance on this value; `pendingAuthenticate` fails fast with
+  `GetCredentialUnsupportedException` below it.
 - **Result**
   - `Success` — Operation succeeded, contains the result.
   - `Failure` — Operation failed, contains the error.
@@ -258,17 +279,38 @@ You can customize the authentication request for both **Credential Manager** and
 val result = collector.authenticate {
     // Customizer for Android Credential Manager API
     onGetPublicKeyCredentialOption { originalOption ->
-        GetPublicKeyCredentialOption(
-            requestJson = originalOption.requestJson,
-            preferImmediatelyAvailableCredentials = true
-        )
+        GetPublicKeyCredentialOption(requestJson = originalOption.requestJson)
     }
 
     // Customizer for Google Play Services FIDO API
     onPublicKeyCredentialRequestOptions { originalOptions ->
-        originalOptions.toBuilder()
+      PublicKeyCredentialRequestOptions.Builder(originalOptions)
+            .setRpId(originalOptions.rpId)
+            .setChallenge(originalOptions.challenge)
+            .setAllowList(originalOptions.allowList)
             .setTimeoutSeconds(30.0) // Example: change timeout
             .build()
+    }
+}
+```
+
+#### Customizing the Credential Manager request
+
+`onGetPublicKeyCredentialOption` customizes the credential option, but some preferences live on
+the `GetCredentialRequest` that wraps it. The most notable is
+`preferImmediatelyAvailableCredentials`, which moved from `GetPublicKeyCredentialOption` to
+`GetCredentialRequest` in `androidx.credentials` 1.5.0 — it makes the ceremony return
+immediately when no locally available credential exists instead of falling back to discovering
+remote (e.g. cross-device) options. Use the `onGetCredentialRequest` hook to set it:
+
+```kotlin
+val result = collector.authenticate {
+    useFido2ApiClient = false // Credential Manager path
+    onGetCredentialRequest { originalRequest ->
+        GetCredentialRequest(
+            originalRequest.credentialOptions,
+            preferImmediatelyAvailableCredentials = true
+        )
     }
 }
 ```
@@ -295,6 +337,44 @@ val result = collector.authenticate {
 `FidoAuthenticateCustomizer.useFido2ApiClient` is the single source of truth for API selection —
 there is no client-level configuration for it. The Credential Manager path requires the app to
 declare `androidx.credentials:credentials-play-services-auth` on API ≤ 33 (see the sample app).
+
+### Conditional mediation (autofill with passkeys)
+
+On Android 15 (API 35) the SDK can attach a *pending* credential request to a View (typically
+the username field): when the user focuses the field, passkey suggestions appear in the
+keyboard without launching the modal ceremony. Use `FidoClient.pendingAuthenticate` (or the
+Journey callback's `pendingAuthenticate` variant) to obtain the request, attach it to a View,
+and await the result:
+
+```kotlin
+if (isConditionalMediationSupported) {
+    client.pendingAuthenticate(publicKeyCredentialRequestOptions).onSuccess { pending ->
+        // Attach to a View — there is no Compose equivalent; wrap with AndroidView if needed
+        usernameField.pendingGetCredentialRequest = pending.request
+        launch {
+            pending.await().onSuccess { assertion -> /* same JsonObject shape as authenticate() */ }
+        }
+    }
+}
+```
+
+Behavior notes:
+
+- `pendingAuthenticate` always routes through the Credential Manager — conditional mediation
+  has no Google Play Services surface. When the routing (`useFido2ApiClient`, auto-detected
+  GMS by default) would have selected GMS, the SDK logs a warning and forces Credential
+  Manager anyway.
+- The androidx pending-request callback delivers only final responses — no errors. If the user
+  dismisses the suggestions, `pending.await()` stays suspended: keep the modal fallback
+  ("Use a passkey" button) visible and treat non-completion as the fallback trigger, not an
+  error. `pending.cancel()` releases a suspended `await()` with a
+  `CancellationException`-bearing failure (e.g. when closing the screen).
+- `pendingAuthenticate` fails fast with a `GetCredentialUnsupportedException` on devices below
+  the OS gate (API 35, or API 34 with a preview SDK); check `isConditionalMediationSupported`
+  to hide the affordance up front.
+- On API ≤ 33 the Credential Manager path requires the `credentials-play-services-auth`
+  bridge (see the prerequisite above); when it is missing the SDK logs a warning and the
+  request never delivers suggestions.
 
 ## ⚠️ Important Migration Notice
 
