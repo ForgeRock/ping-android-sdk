@@ -76,7 +76,7 @@ class RecognizeCallbackTest {
 
     // ── Helpers ─────────────────────────────────────────────────────────────────
 
-    /** Enroll input slots: signedJwt, clientState, recognizeId, clientError, clientErrorCode */
+    /** Enroll input slots: signedJwt, clientState, recognizeId, devicePublicSigningKey, clientError, clientErrorCode */
     private fun enrollCallbackJson(): JsonObject = Json.parseToJsonElement(
         """
         {
@@ -90,11 +90,12 @@ class RecognizeCallbackTest {
             { "name": "generateClientState", "value": "" }
           ],
           "input": [
-            { "name": "IDToken1signedJwt",       "value": "" },
-            { "name": "IDToken1clientState",     "value": "" },
-            { "name": "IDToken1recognizeId",     "value": "" },
-            { "name": "IDToken1clientError",     "value": "" },
-            { "name": "IDToken1clientErrorCode", "value": "" }
+            { "name": "IDToken1signedJwt",              "value": "" },
+            { "name": "IDToken1clientState",            "value": "" },
+            { "name": "IDToken1recognizeId",            "value": "" },
+            { "name": "IDToken1devicePublicSigningKey", "value": "" },
+            { "name": "IDToken1clientError",            "value": "" },
+            { "name": "IDToken1clientErrorCode",        "value": "" }
           ]
         }
         """
@@ -172,11 +173,12 @@ class RecognizeCallbackTest {
                 { "name": "generateClientState", "value": "true" }
               ],
               "input": [
-                { "name": "IDToken1signedJwt",       "value": "" },
-                { "name": "IDToken1clientState",     "value": "" },
-                { "name": "IDToken1recognizeId",     "value": "" },
-                { "name": "IDToken1clientError",     "value": "" },
-                { "name": "IDToken1clientErrorCode", "value": "" }
+                { "name": "IDToken1signedJwt",              "value": "" },
+                { "name": "IDToken1clientState",            "value": "" },
+                { "name": "IDToken1recognizeId",            "value": "" },
+                { "name": "IDToken1devicePublicSigningKey", "value": "" },
+                { "name": "IDToken1clientError",            "value": "" },
+                { "name": "IDToken1clientErrorCode",        "value": "" }
               ]
             }
             """
@@ -226,11 +228,26 @@ class RecognizeCallbackTest {
         assertEquals("signed-jwt",  inputs[0].jsonObject["value"]!!.jsonPrimitive.content)
         assertEquals("client-state",inputs[1].jsonObject["value"]!!.jsonPrimitive.content)
         assertEquals("keyless-id",  inputs[2].jsonObject["value"]!!.jsonPrimitive.content)
-        assertEquals("",            inputs[3].jsonObject["value"]!!.jsonPrimitive.content)
+        assertEquals("device-public-key", inputs[3].jsonObject["value"]!!.jsonPrimitive.content)
         assertEquals("",            inputs[4].jsonObject["value"]!!.jsonPrimitive.content)
+        assertEquals("",            inputs[5].jsonObject["value"]!!.jsonPrimitive.content)
     }
 
     // ── Enroll — failure path ────────────────────────────────────────────────────
+
+    @Test
+    fun `enroll failure from getDevicePublicSigningKey writes error to input`() = runTest {
+        val error = RecognizeException(code = 30, message = "key retrieval failed", debuggingInfo = emptyMap())
+        every { Recognize.getDevicePublicSigningKey() } returns Result.failure(error)
+
+        val callback = RecognizeCallback().init(enrollCallbackJson()) as PingOneRecognizeEnrollCallback
+        val result = callback.enroll()
+        assertTrue(result.isFailure)
+
+        val inputs = callback.payload()["input"]!!.jsonArray
+        assertEquals("key retrieval failed", inputs[4].jsonObject["value"]!!.jsonPrimitive.content)
+        assertEquals("30", inputs[5].jsonObject["value"]!!.jsonPrimitive.content)
+    }
 
     @Test
     fun `enroll failure from Recognize_enroll writes error to input`() = runTest {
@@ -246,8 +263,9 @@ class RecognizeCallbackTest {
         assertEquals("", inputs[0].jsonObject["value"]!!.jsonPrimitive.content)
         assertEquals("", inputs[1].jsonObject["value"]!!.jsonPrimitive.content)
         assertEquals("", inputs[2].jsonObject["value"]!!.jsonPrimitive.content)
-        assertEquals("enroll failed", inputs[3].jsonObject["value"]!!.jsonPrimitive.content)
-        assertEquals("21", inputs[4].jsonObject["value"]!!.jsonPrimitive.content)
+        assertEquals("", inputs[3].jsonObject["value"]!!.jsonPrimitive.content)
+        assertEquals("enroll failed", inputs[4].jsonObject["value"]!!.jsonPrimitive.content)
+        assertEquals("21", inputs[5].jsonObject["value"]!!.jsonPrimitive.content)
     }
 
     @Test
@@ -261,8 +279,8 @@ class RecognizeCallbackTest {
         assertIs<RecognizeException>(result.exceptionOrNull())
 
         val inputs = callback.payload()["input"]!!.jsonArray
-        assertEquals("setup failed", inputs[3].jsonObject["value"]!!.jsonPrimitive.content)
-        assertEquals("11", inputs[4].jsonObject["value"]!!.jsonPrimitive.content)
+        assertEquals("setup failed", inputs[4].jsonObject["value"]!!.jsonPrimitive.content)
+        assertEquals("11", inputs[5].jsonObject["value"]!!.jsonPrimitive.content)
     }
 
     @Test
@@ -277,8 +295,8 @@ class RecognizeCallbackTest {
         assertEquals(21, ex.code)
 
         val inputs = callback.payload()["input"]!!.jsonArray
-        assertEquals("user cancelled", inputs[3].jsonObject["value"]!!.jsonPrimitive.content)
-        assertEquals("21", inputs[4].jsonObject["value"]!!.jsonPrimitive.content)
+        assertEquals("user cancelled", inputs[4].jsonObject["value"]!!.jsonPrimitive.content)
+        assertEquals("21", inputs[5].jsonObject["value"]!!.jsonPrimitive.content)
     }
 
     // ── Authenticate — success path ──────────────────────────────────────────────
@@ -493,11 +511,12 @@ class RecognizeCallbackTest {
                 { "name": "mobileSDKOptions", "value": { "numberOfEnrollmentCircuits": "3" } }
               ],
               "input": [
-                { "name": "IDToken1signedJwt",       "value": "" },
-                { "name": "IDToken1clientState",     "value": "" },
-                { "name": "IDToken1recognizeId",     "value": "" },
-                { "name": "IDToken1clientError",     "value": "" },
-                { "name": "IDToken1clientErrorCode", "value": "" }
+                { "name": "IDToken1signedJwt",              "value": "" },
+                { "name": "IDToken1clientState",            "value": "" },
+                { "name": "IDToken1recognizeId",            "value": "" },
+                { "name": "IDToken1devicePublicSigningKey", "value": "" },
+                { "name": "IDToken1clientError",            "value": "" },
+                { "name": "IDToken1clientErrorCode",        "value": "" }
               ]
             }
             """
@@ -522,11 +541,12 @@ class RecognizeCallbackTest {
                 { "name": "audience",      "value": "my-audience" }
               ],
               "input": [
-                { "name": "IDToken1signedJwt",       "value": "" },
-                { "name": "IDToken1clientState",     "value": "" },
-                { "name": "IDToken1recognizeId",     "value": "" },
-                { "name": "IDToken1clientError",     "value": "" },
-                { "name": "IDToken1clientErrorCode", "value": "" }
+                { "name": "IDToken1signedJwt",              "value": "" },
+                { "name": "IDToken1clientState",            "value": "" },
+                { "name": "IDToken1recognizeId",            "value": "" },
+                { "name": "IDToken1devicePublicSigningKey", "value": "" },
+                { "name": "IDToken1clientError",            "value": "" },
+                { "name": "IDToken1clientErrorCode",        "value": "" }
               ]
             }
             """
@@ -583,11 +603,12 @@ class RecognizeCallbackTest {
                 { "name": "clientState",   "value": "" }
               ],
               "input": [
-                { "name": "IDToken1signedJwt",       "value": "" },
-                { "name": "IDToken1clientState",     "value": "" },
-                { "name": "IDToken1recognizeId",     "value": "" },
-                { "name": "IDToken1clientError",     "value": "" },
-                { "name": "IDToken1clientErrorCode", "value": "" }
+                { "name": "IDToken1signedJwt",              "value": "" },
+                { "name": "IDToken1clientState",            "value": "" },
+                { "name": "IDToken1recognizeId",            "value": "" },
+                { "name": "IDToken1devicePublicSigningKey", "value": "" },
+                { "name": "IDToken1clientError",            "value": "" },
+                { "name": "IDToken1clientErrorCode",        "value": "" }
               ]
             }
             """
@@ -621,11 +642,12 @@ class RecognizeCallbackTest {
                 { "name": "mobileSDKOptions", "value": { "livenessEnvironmentAware": "true" } }
               ],
               "input": [
-                { "name": "IDToken1signedJwt",       "value": "" },
-                { "name": "IDToken1clientState",     "value": "" },
-                { "name": "IDToken1recognizeId",     "value": "" },
-                { "name": "IDToken1clientError",     "value": "" },
-                { "name": "IDToken1clientErrorCode", "value": "" }
+                { "name": "IDToken1signedJwt",              "value": "" },
+                { "name": "IDToken1clientState",            "value": "" },
+                { "name": "IDToken1recognizeId",            "value": "" },
+                { "name": "IDToken1devicePublicSigningKey", "value": "" },
+                { "name": "IDToken1clientError",            "value": "" },
+                { "name": "IDToken1clientErrorCode",        "value": "" }
               ]
             }
             """
@@ -650,11 +672,12 @@ class RecognizeCallbackTest {
                 { "name": "mobileSDKOptions", "value": { "cameraDelaySeconds": "5" } }
               ],
               "input": [
-                { "name": "IDToken1signedJwt",       "value": "" },
-                { "name": "IDToken1clientState",     "value": "" },
-                { "name": "IDToken1recognizeId",     "value": "" },
-                { "name": "IDToken1clientError",     "value": "" },
-                { "name": "IDToken1clientErrorCode", "value": "" }
+                { "name": "IDToken1signedJwt",              "value": "" },
+                { "name": "IDToken1clientState",            "value": "" },
+                { "name": "IDToken1recognizeId",            "value": "" },
+                { "name": "IDToken1devicePublicSigningKey", "value": "" },
+                { "name": "IDToken1clientError",            "value": "" },
+                { "name": "IDToken1clientErrorCode",        "value": "" }
               ]
             }
             """
@@ -679,11 +702,12 @@ class RecognizeCallbackTest {
                 { "name": "mobileSDKOptions", "value": { "showSuccessFeedback": "false" } }
               ],
               "input": [
-                { "name": "IDToken1signedJwt",       "value": "" },
-                { "name": "IDToken1clientState",     "value": "" },
-                { "name": "IDToken1recognizeId",     "value": "" },
-                { "name": "IDToken1clientError",     "value": "" },
-                { "name": "IDToken1clientErrorCode", "value": "" }
+                { "name": "IDToken1signedJwt",              "value": "" },
+                { "name": "IDToken1clientState",            "value": "" },
+                { "name": "IDToken1recognizeId",            "value": "" },
+                { "name": "IDToken1devicePublicSigningKey", "value": "" },
+                { "name": "IDToken1clientError",            "value": "" },
+                { "name": "IDToken1clientErrorCode",        "value": "" }
               ]
             }
             """
@@ -708,11 +732,12 @@ class RecognizeCallbackTest {
                 { "name": "mobileSDKOptions", "value": { "showFailureFeedback": "false" } }
               ],
               "input": [
-                { "name": "IDToken1signedJwt",       "value": "" },
-                { "name": "IDToken1clientState",     "value": "" },
-                { "name": "IDToken1recognizeId",     "value": "" },
-                { "name": "IDToken1clientError",     "value": "" },
-                { "name": "IDToken1clientErrorCode", "value": "" }
+                { "name": "IDToken1signedJwt",              "value": "" },
+                { "name": "IDToken1clientState",            "value": "" },
+                { "name": "IDToken1recognizeId",            "value": "" },
+                { "name": "IDToken1devicePublicSigningKey", "value": "" },
+                { "name": "IDToken1clientError",            "value": "" },
+                { "name": "IDToken1clientErrorCode",        "value": "" }
               ]
             }
             """
@@ -737,11 +762,12 @@ class RecognizeCallbackTest {
                 { "name": "mobileSDKOptions", "value": { "showInstructionsScreen": "false" } }
               ],
               "input": [
-                { "name": "IDToken1signedJwt",       "value": "" },
-                { "name": "IDToken1clientState",     "value": "" },
-                { "name": "IDToken1recognizeId",     "value": "" },
-                { "name": "IDToken1clientError",     "value": "" },
-                { "name": "IDToken1clientErrorCode", "value": "" }
+                { "name": "IDToken1signedJwt",              "value": "" },
+                { "name": "IDToken1clientState",            "value": "" },
+                { "name": "IDToken1recognizeId",            "value": "" },
+                { "name": "IDToken1devicePublicSigningKey", "value": "" },
+                { "name": "IDToken1clientError",            "value": "" },
+                { "name": "IDToken1clientErrorCode",        "value": "" }
               ]
             }
             """
@@ -799,11 +825,12 @@ class RecognizeCallbackTest {
                 { "name": "mobileSDKOptions", "value": { "presentation": "OVERLAY" } }
               ],
               "input": [
-                { "name": "IDToken1signedJwt",       "value": "" },
-                { "name": "IDToken1clientState",     "value": "" },
-                { "name": "IDToken1recognizeId",     "value": "" },
-                { "name": "IDToken1clientError",     "value": "" },
-                { "name": "IDToken1clientErrorCode", "value": "" }
+                { "name": "IDToken1signedJwt",              "value": "" },
+                { "name": "IDToken1clientState",            "value": "" },
+                { "name": "IDToken1recognizeId",            "value": "" },
+                { "name": "IDToken1devicePublicSigningKey", "value": "" },
+                { "name": "IDToken1clientError",            "value": "" },
+                { "name": "IDToken1clientErrorCode",        "value": "" }
               ]
             }
             """
