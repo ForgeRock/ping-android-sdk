@@ -218,7 +218,7 @@ class FidoAuthenticationCallback : FidoCallback() {
     suspend fun authenticate(
         block: FidoAuthenticateCustomizer.() -> Unit = {}): Result<JsonObject> {
         // A superseded pending request must not deliver an outcome into the new ceremony
-        pendingAuthentication.cancel()
+        pendingAuthentication.beginCeremony()
         return FidoClient {
             logger = this@FidoAuthenticationCallback.logger
         }.authenticate(
@@ -267,8 +267,11 @@ class FidoAuthenticationCallback : FidoCallback() {
     suspend fun pendingAuthenticate(
         block: FidoAuthenticateCustomizer.() -> Unit = {}
     ): Result<FidoPendingAuthentication> {
-        // A superseded pending request must not deliver an assertion into the new ceremony
-        pendingAuthentication.cancel()
+        // A superseded pending request must not deliver an assertion into the new ceremony.
+        // The reservation is held across the suspension below: if a concurrent ceremony
+        // supersedes this one while FidoClient builds the request, install() discards the
+        // stale request instead of resurrecting it as current.
+        val reservation = pendingAuthentication.beginCeremony()
         logger.d("Starting FIDO2 pending authentication")
         return FidoClient {
             logger = this@FidoAuthenticationCallback.logger
@@ -276,7 +279,7 @@ class FidoAuthenticationCallback : FidoCallback() {
             publicKeyCredentialRequestOptions, block
         ).onSuccess { pending ->
             logger.d("FIDO2 pending authentication request created")
-            pendingAuthentication.register(pending)
+            reservation.install(pending)
         }.onFailure {
             // Handle setup errors (e.g. unsupported OS) and update the Journey workflow
             handleError(it)

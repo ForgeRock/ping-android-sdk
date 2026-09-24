@@ -10,11 +10,15 @@ import android.app.Activity
 import android.content.Context
 import androidx.credentials.CredentialManager
 import androidx.credentials.GetCredentialRequest
+import androidx.credentials.GetPublicKeyCredentialOption
 import androidx.credentials.GetCredentialResponse
 import androidx.credentials.PublicKeyCredential
 import androidx.credentials.exceptions.GetCredentialUnsupportedException
 import com.pingidentity.android.ContextProvider
 import com.pingidentity.fido.Constants
+import com.pingidentity.fido.FidoAuthenticateCustomizer
+import com.pingidentity.fido.FidoClient
+import com.pingidentity.fido.FidoPendingAuthentication
 import com.pingidentity.fido.getPublicKeyCredential
 import com.pingidentity.journey.plugin.Callback
 import com.pingidentity.journey.plugin.ValueCallback
@@ -31,9 +35,12 @@ import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkObject
+import io.mockk.unmockkObject
+import kotlinx.coroutines.CompletableDeferred
 import io.mockk.mockkStatic
 import io.mockk.unmockkAll
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
@@ -333,6 +340,66 @@ class FidoAuthenticationCallbackPendingTest {
             valueCallback.value.endsWith("::current-raw::"),
             "outcome must come from the current request, got: ${valueCallback.value}"
         )
+    }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    @Test
+    fun `stale pending request cannot install after a newer ceremony began`() = runTest {
+        // The suspend-window race: pendingAuthenticate() reserves the slot, then suspends in
+        // FidoClient while the request is built. A concurrent authenticate() supersedes it
+        // during that suspension. When the pending setup resumes, install() must DISCARD the
+        // stale request instead of resurrecting it as current (a plain register() would make
+        // it current again, and its later delivery would reach valueCallback).
+        coEvery { getPublicKeyCredential(any(), any()) } throws gmsForbidden
+        val callback = initCallback(supportsJsonResponse = false)
+
+        // Hold ceremony A's client-level setup mid-flight: mock the client's
+        // pendingAuthenticate so it suspends until the gate is released.
+        val mockClient = mockk<FidoClient>()
+        mockkObject(FidoClient.Companion)
+        every { FidoClient.invoke(any()) } returns mockClient
+        val setupGate = CompletableDeferred<Unit>()
+        coEvery { mockClient.pendingAuthenticate(any(), any()) } coAnswers {
+            setupGate.await()
+            Result.success(
+                FidoPendingAuthentication(
+                    GetCredentialRequest(listOf(GetPublicKeyCredentialOption("{}")))
+                )
+            )
+        }
+        // Ceremony B's modal call on the same mocked client: immediate failure (its outcome
+        // path is exercised elsewhere) — this test is about A's stale install
+        coEvery {
+            mockClient.authenticate(any<JsonObject>(), any<FidoAuthenticateCustomizer.() -> Unit>())
+        } returns Result.failure(gmsForbidden)
+        try {
+            val pendingA = backgroundScope.async { callback.pendingAuthenticate() }
+            runCurrent()                            // A: beginCeremony done, now suspended
+
+            // Concurrent ceremony B supersedes A while A's setup is suspended
+            callback.authenticate { useFido2ApiClient = false }
+            runCurrent()
+
+            setupGate.complete(Unit)                // release A's setup
+            runCurrent()
+
+            // A's setup returned a request whose reservation was superseded: install()
+            // refused it, so the stale request was discarded — a delivery on it must not
+            // resurrect it as current or reach the workflow. (Ceremony B's modal failure
+            // already wrote its own error outcome; snapshot it so the assertion below
+            // targets A's stale delivery specifically.)
+            val stalePending = pendingA.await().getOrNull()
+            val outcomeBeforeStaleDelivery = valueCallback.value
+            stalePending?.request?.callback(
+                responseWith("""{"id":"resurrected-id","rawId":"resurrected-raw","response":{}}""")
+            )
+            assertEquals(
+                outcomeBeforeStaleDelivery, valueCallback.value,
+                "discarded request must not deliver"
+            )
+        } finally {
+            unmockkObject(FidoClient.Companion)
+        }
     }
 
     @Test

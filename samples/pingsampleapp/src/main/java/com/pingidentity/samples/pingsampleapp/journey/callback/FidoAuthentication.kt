@@ -50,10 +50,42 @@ fun FidoAuthentication(
     val currentOnCompleted by rememberUpdatedState(onNext)
     val coroutineScope = rememberCoroutineScope()
 
+    // Modal ceremony (Credential Manager routing — see the routing note at the button) with
+    // post-failure recovery: on failure the user stays on the page and, when a conditional
+    // target exists, a fresh pending request replaces the one the modal superseded, so
+    // passkey autofill on the username field keeps working after a failed attempt.
+    val performModalAuthentication: suspend () -> Unit = {
+        callback.authenticate { useFido2ApiClient = false }
+            .onSuccess { currentOnCompleted() }
+            .onFailure {
+                Log.e(
+                    "Fido2Authentication",
+                    "Failed to Authenticate",
+                    it
+                )
+                if (hasConditionalTarget) {
+                    callback.pendingAuthenticate { useFido2ApiClient = false }
+                        .onSuccess { onPending(it) }
+                        .onFailure { retryError ->
+                            Log.e(
+                                "Fido2Authentication",
+                                "Failed to re-create pending request",
+                                retryError
+                            )
+                            onPending(null)
+                        }
+                }
+            }
+    }
+
     if (isConditionalMediationSupported && (hasConditionalTarget || callback.manualButtonEnabled)) {
         if (hasConditionalTarget) {
             // Build the pending request up front; the username field's composable attaches it
-            // to the regular field, so suggestions appear when the user focuses it.
+            // to the regular field, so suggestions appear when the user focuses it. If setup
+            // fails, fall back to the modal flow below (createPending nulls `pending` via
+            // onPending(null)) — otherwise a node without manualButtonEnabled would have no
+            // authentication action at all, since JourneyContinueNode hides Next for this
+            // callback.
             LaunchedEffect(callback) {
                 callback.pendingAuthenticate { useFido2ApiClient = false }
                     .onSuccess { onPending(it) }
@@ -64,6 +96,9 @@ fun FidoAuthentication(
                             it
                         )
                         onPending(null)
+                        if (!callback.manualButtonEnabled) {
+                            performModalAuthentication()
+                        }
                     }
             }
 
@@ -84,12 +119,14 @@ fun FidoAuthentication(
             }
         }
 
-        // Modal fallback: the conditional path delivers no errors, so this stays visible to
-        // cover dismissed suggestions. Shown only when the server's WebAuthn node has
+        // Modal fallback: covers dismissed suggestions and failed/pending-setup-failed
+        // conditional starts. Shown only when the server's WebAuthn node has
         // "Authentication Button" enabled (manualButtonEnabled). A failed modal attempt (e.g.
-        // a transient Google Play services disconnection) keeps the user on the page — the
-        // password fields remain usable and the button can be pressed again — rather than
-        // submitting an error outcome and forcing a server round-trip.
+        // a transient Google Play services disconnection) keeps the user on the page — but
+        // authenticate() superseded the attached pending request (the SDK cancels it before
+        // the modal ceremony), so a fresh pending request is published on failure: without
+        // it the EditText would hold a cancelled request whose ceremony response is dropped,
+        // and passkey autofill on the field would silently stop working.
         //
         // Routing: this journey is the conditional-UI one — the payload carries no rpId
         // (_relyingPartyId is empty) and no allowCredentials, which the Google Play Services
@@ -101,15 +138,7 @@ fun FidoAuthentication(
                 modifier = Modifier.padding(4.dp),
                 onClick = {
                     coroutineScope.launch {
-                        callback.authenticate { useFido2ApiClient = false }
-                            .onSuccess { currentOnCompleted() }
-                            .onFailure {
-                                Log.e(
-                                    "Fido2Authentication",
-                                    "Failed to Authenticate",
-                                    it
-                                )
-                            }
+                        performModalAuthentication()
                     }
                 }
             ) {
