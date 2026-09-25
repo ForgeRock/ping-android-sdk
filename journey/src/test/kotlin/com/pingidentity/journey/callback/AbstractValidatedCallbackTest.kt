@@ -18,6 +18,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
 class AbstractValidatedCallbackTest {
 
@@ -160,6 +161,133 @@ class AbstractValidatedCallbackTest {
             "REQUIRED",
             firstPolicy["policyRequirements"]?.jsonArray?.first()?.jsonPrimitive?.content
         )
+    }
+
+    // Regression: `policies` is a JsonObject → parses exactly as before (no-regression guard).
+    @Test
+    fun `policies as JsonObject parses correctly`() {
+        val json = Json.parseToJsonElement(
+            """
+            {
+              "type": "BooleanAttributeInputCallback",
+              "output": [
+                { "name": "prompt", "value": "Dummy" },
+                {
+                  "name": "policies",
+                  "value": {
+                    "policyRequirements": [ "VALID_TYPE" ],
+                    "fallbackPolicies": null,
+                    "name": "custom_dummy",
+                    "policies": [
+                      {
+                        "policyRequirements": [ "VALID_TYPE" ],
+                        "policyId": "valid-type",
+                        "params": { "types": [ "boolean" ] }
+                      }
+                    ],
+                    "conditionalPolicies": null
+                  }
+                },
+                { "name": "failedPolicies", "value": [] },
+                { "name": "validateOnly", "value": false }
+              ],
+              "input": [
+                { "name": "IDToken4", "value": true },
+                { "name": "IDToken4validateOnly", "value": false }
+              ]
+            }
+            """.trimIndent()
+        ) as JsonObject
+
+        val callback = object : AbstractValidatedCallback() {}
+        callback.init(json)
+
+        val policyRequirements = callback.policies["policyRequirements"]?.jsonArray
+        assertNotNull(policyRequirements)
+        assertEquals(1, policyRequirements.size)
+        assertEquals("VALID_TYPE", policyRequirements[0].jsonPrimitive.content)
+
+        val policiesArray = callback.policies["policies"]?.jsonArray
+        assertNotNull(policiesArray)
+        assertEquals(1, policiesArray.size)
+        val firstPolicy = policiesArray[0].jsonObject
+        assertEquals("valid-type", firstPolicy["policyId"]?.jsonPrimitive?.content)
+
+        assertTrue(callback.failedPolicies.isEmpty())
+        assertFalse(callback.validateOnly)
+        assertEquals("Dummy", callback.prompt)
+    }
+
+    // Regression: `policies` is a JsonArray (`[]`) → degrades to empty JsonObject, no throw.
+    @Test
+    fun `policies as empty JsonArray degrades to empty JsonObject without throwing`() {
+        val json = Json.parseToJsonElement(
+            """
+            {
+              "type": "BooleanAttributeInputCallback",
+              "output": [
+                { "name": "prompt", "value": "Dummy" },
+                { "name": "policies", "value": [] },
+                {
+                  "name": "failedPolicies",
+                  "value": [ "{ \"params\": { \"minLength\": 3 }, \"policyRequirement\": \"MIN_LENGTH\" }" ]
+                },
+                { "name": "validateOnly", "value": false }
+              ],
+              "input": [
+                { "name": "IDToken4", "value": true },
+                { "name": "IDToken4validateOnly", "value": false }
+              ]
+            }
+            """.trimIndent()
+        ) as JsonObject
+
+        val callback = object : AbstractValidatedCallback() {}
+        callback.init(json)
+
+        // policies must resolve to an empty JsonObject — not throw
+        assertNotNull(callback.policies)
+        assertTrue(callback.policies.isEmpty())
+
+        // other fields must still populate correctly
+        assertEquals("Dummy", callback.prompt)
+        assertFalse(callback.validateOnly)
+        assertEquals(1, callback.failedPolicies.size)
+        assertEquals("MIN_LENGTH", callback.failedPolicies[0].policyRequirement)
+    }
+
+    // Regression: `policies` is a non-object primitive → degrades to empty JsonObject, no throw.
+    @Test
+    fun `policies as primitive string degrades to empty JsonObject without throwing`() {
+        val json = Json.parseToJsonElement(
+            """
+            {
+              "type": "BooleanAttributeInputCallback",
+              "output": [
+                { "name": "prompt", "value": "Dummy" },
+                { "name": "policies", "value": "n/a" },
+                { "name": "failedPolicies", "value": [] },
+                { "name": "validateOnly", "value": true }
+              ],
+              "input": [
+                { "name": "IDToken4", "value": true },
+                { "name": "IDToken4validateOnly", "value": true }
+              ]
+            }
+            """.trimIndent()
+        ) as JsonObject
+
+        val callback = object : AbstractValidatedCallback() {}
+        callback.init(json)
+
+        // policies must resolve to an empty JsonObject — not throw
+        assertNotNull(callback.policies)
+        assertTrue(callback.policies.isEmpty())
+
+        // other fields must still populate correctly
+        assertEquals("Dummy", callback.prompt)
+        assertTrue(callback.validateOnly)
+        assertTrue(callback.failedPolicies.isEmpty())
     }
 
 }

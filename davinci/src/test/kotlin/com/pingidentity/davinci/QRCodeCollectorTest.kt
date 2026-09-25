@@ -8,6 +8,7 @@
 package com.pingidentity.davinci
 
 import com.pingidentity.davinci.collector.QRCodeCollector
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -147,6 +148,64 @@ class QRCodeCollectorTest {
 
         val bitmap = collector.bitmap()
         assertNull(bitmap)
+    }
+
+    @Test
+    fun keyIsExtractedFromInputAndIdReturnsKey() {
+        val input = buildJsonObject {
+            put("key", "qrField1")
+            put("content", "data:image/png;base64,abc")
+            put("fallbackText", "Scan me")
+        }
+        val collector = QRCodeCollector()
+        collector.init(input)
+
+        assertEquals("qrField1", collector.key)
+        assertEquals("qrField1", collector.id())
+    }
+
+    @Test
+    fun keyDefaultsToEmptyStringWhenAbsentAndIdNeverReturnsRandomUuid() {
+        val input = buildJsonObject {
+            put("content", "data:image/png;base64,abc")
+            put("fallbackText", "No key field")
+        }
+        val collector = QRCodeCollector()
+        collector.init(input)
+
+        assertEquals("", collector.key)
+        assertEquals("", collector.id())
+    }
+
+    @Test
+    fun keyDefaultsToEmptyStringWhenJsonNullAndIdNeverReturnsRandomUuid() {
+        val input = buildJsonObject {
+            put("key", JsonNull)
+            put("content", "data:image/png;base64,abc")
+            put("fallbackText", "Null key field")
+        }
+        val collector = QRCodeCollector()
+        collector.init(input)
+
+        assertEquals("", collector.key)
+        assertEquals("", collector.id())
+    }
+
+    @Test
+    fun idReturnsSameValueOnRepeatedCallsMatchingKey() {
+        val input = buildJsonObject {
+            put("key", "qrField1")
+            put("content", "data:image/png;base64,abc")
+            put("fallbackText", "Stable id")
+        }
+        val collector = QRCodeCollector()
+        collector.init(input)
+
+        val firstCall = collector.id()
+        val secondCall = collector.id()
+
+        assertEquals("qrField1", firstCall)
+        assertEquals(firstCall, secondCall)
     }
 
     @Test

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2025 - 2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -9,6 +9,7 @@ package com.pingidentity.fido.davinci
 
 import com.pingidentity.davinci.plugin.DaVinci
 import com.pingidentity.fido.Constants
+import kotlinx.coroutines.CancellationException
 import com.pingidentity.fido.FidoClient
 import com.pingidentity.logger.CONSOLE
 import com.pingidentity.logger.Logger
@@ -30,10 +31,13 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 
+@RunWith(RobolectricTestRunner::class)
 class FidoAuthenticationCollectorTest {
 
     private lateinit var collector: FidoAuthenticationCollector
@@ -171,6 +175,115 @@ class FidoAuthenticationCollectorTest {
         val payload2 = collector.payload()
         assertNotNull(payload2)
         assertEquals(assertion2, payload2?.get(Constants.FIELD_ASSERTION_VALUE)?.jsonObject)
+    }
+
+    @Test
+    fun `authenticate should call handleError and set errorCode on failure`() = runTest {
+        collector.init(getInput())
+        val exception = mockk<androidx.credentials.exceptions.GetCredentialCancellationException>(relaxed = true)
+        every { exception.message } returns "User cancelled"
+        coEvery { mockFidoClient.authenticate(any(), any()) } returns Result.failure(exception)
+
+        val result = collector.authenticate()
+
+        assertTrue(result.isFailure)
+        assertEquals("NotAllowedError", collector.errorCode)
+    }
+
+    @Test
+    fun `payload should be non-null empty object on failure so actionKey fires`() = runTest {
+        collector.init(getInput())
+        val exception = mockk<androidx.credentials.exceptions.GetCredentialCancellationException>(relaxed = true)
+        every { exception.message } returns "User cancelled"
+        coEvery { mockFidoClient.authenticate(any(), any()) } returns Result.failure(exception)
+
+        collector.authenticate()
+
+        val payload = collector.payload()
+        assertNotNull(payload)
+        assertTrue(payload!!.isEmpty())
+    }
+
+    @Test
+    fun `actionKey should match errorCode after failure`() = runTest {
+        collector.init(getInput())
+        val exception = mockk<androidx.credentials.exceptions.GetCredentialCancellationException>(relaxed = true)
+        every { exception.message } returns "User cancelled"
+        coEvery { mockFidoClient.authenticate(any(), any()) } returns Result.failure(exception)
+
+        collector.authenticate()
+
+        assertEquals("NotAllowedError", collector.actionKey)
+    }
+
+    @Test
+    fun `close should reset errorCode latch`() = runTest {
+        collector.init(getInput())
+        val exception = mockk<androidx.credentials.exceptions.GetCredentialCancellationException>(relaxed = true)
+        every { exception.message } returns "User cancelled"
+        coEvery { mockFidoClient.authenticate(any(), any()) } returns Result.failure(exception)
+
+        collector.authenticate()
+        assertEquals("NotAllowedError", collector.errorCode)
+        assertEquals("action", collector.eventType())
+
+        collector.close()
+
+        assertNull(collector.errorCode)
+        assertEquals("submit", collector.eventType())
+    }
+
+    @Test
+    fun `init should reset errorCode latch after failure`() = runTest {
+        collector.init(getInput())
+        val exception = mockk<androidx.credentials.exceptions.GetCredentialCancellationException>(relaxed = true)
+        every { exception.message } returns "User cancelled"
+        coEvery { mockFidoClient.authenticate(any(), any()) } returns Result.failure(exception)
+
+        collector.authenticate()
+        assertEquals("NotAllowedError", collector.errorCode)
+
+        collector.init(getInput())
+
+        assertNull(collector.errorCode)
+        assertEquals("submit", collector.eventType())
+    }
+
+    @Test
+    fun `authenticate should rethrow CancellationException without setting errorCode`() = runTest {
+        collector.init(getInput())
+        coEvery { mockFidoClient.authenticate(any(), any()) } returns Result.failure(CancellationException("cancelled"))
+
+        var threw = false
+        try {
+            collector.authenticate()
+        } catch (e: CancellationException) {
+            threw = true
+        }
+
+        assertTrue(threw)
+        assertNull(collector.errorCode)
+    }
+
+    @Test
+    fun `authenticate should clear stale assertion before retry`() = runTest {
+        collector.init(getInput())
+        val assertion = buildJsonObject { put("test", JsonPrimitive("value")) }
+        coEvery { mockFidoClient.authenticate(any(), any()) } returns Result.success(assertion)
+        collector.authenticate()
+        assertNotNull(collector.payload())
+
+        // Second call fails — stale assertion must not survive
+        val exception = mockk<androidx.credentials.exceptions.GetCredentialCancellationException>(relaxed = true)
+        every { exception.message } returns "User cancelled"
+        coEvery { mockFidoClient.authenticate(any(), any()) } returns Result.failure(exception)
+        collector.authenticate()
+
+        // payload() returns empty sentinel (errorCode set), not the stale success payload
+        val payload = collector.payload()
+        assertNotNull(payload)
+        assertTrue(payload!!.isEmpty())
+        assertEquals("NotAllowedError", collector.errorCode)
     }
 }
 

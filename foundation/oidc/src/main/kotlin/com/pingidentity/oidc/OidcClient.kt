@@ -188,20 +188,13 @@ open class OidcClient(private val config: OidcClientConfig) {
             config.init()
             logger.i("Refreshing access token")
             val cached = config.tokenStorage.get()
-            config.tokenStorage.delete()
-            cached?.let {
-                if (!it.isExpired(config.refreshThreshold)) {
-                    logger.i("Token is not expired. Revoke the AccessToken.")
-                    revoke(cached.accessToken)
-                }
-                it.refreshToken?.let { refreshToken ->
-                    return@catch refreshToken(refreshToken)
-                } ?: throw IllegalStateException(
-                    "No Refresh token. Cannot refresh the access token."
-                )
-            } ?: throw IllegalStateException(
+            val token = cached ?: throw IllegalStateException(
                 "No Access token. Cannot refresh the access token."
             )
+            val refreshToken = token.refreshToken ?: throw IllegalStateException(
+                "No Refresh token. Cannot refresh the access token."
+            )
+            return@catch refreshToken(refreshToken)
         }
     }
 
@@ -221,7 +214,6 @@ open class OidcClient(private val config: OidcClientConfig) {
                 put(GRANT_TYPE, REFRESH_TOKEN)
                 put(REFRESH_TOKEN, refreshToken)
                 put(CLIENT_ID, config.clientId)
-                put(RESPONSE_TYPE, CODE)
             }
         }
         if (response.status.isSuccess()) {

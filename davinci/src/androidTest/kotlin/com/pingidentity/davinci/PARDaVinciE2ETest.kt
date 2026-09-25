@@ -45,14 +45,6 @@ class PARDaVinciE2ETest {
 
     private val recordedRequests = mutableListOf<RecordedRequest>()
 
-    companion object {
-        private const val CLIENT_ID = "a6859a12-5e6e-4f64-96bb-cc8577706bee"
-        private const val DISCOVERY_ENDPOINT =
-            "https://auth.pingone.ca/300c4f2a-39d4-4ba9-a18a-f6de246006f4/as/.well-known/openid-configuration"
-        private const val REDIRECT_URI = "org.forgerock.demo://oauth2redirect"
-        private const val ACR_VALUES = "4ada23c8f9ae6201ec8116ffbf004595"
-    }
-
     @Before
     fun setup() {
         recordedRequests.clear()
@@ -230,8 +222,8 @@ class PARDaVinciE2ETest {
      */
     private fun buildDaVinci(
         par: Boolean,
-        clientId: String = CLIENT_ID,
-        redirectUri: String = REDIRECT_URI,
+        clientId: String = DaVinciTestConfig.parClientId,
+        redirectUri: String = DaVinciTestConfig.parRedirectUri,
     ): DaVinciFlow {
         val sharedHttpClient = HttpClient {
             logger = Logger.STANDARD
@@ -247,8 +239,8 @@ class PARDaVinciE2ETest {
                 this.clientId = clientId
                 this.redirectUri = redirectUri
                 scopes = mutableSetOf("openid", "profile", "email")
-                discoveryEndpoint = DISCOVERY_ENDPOINT
-                acrValues = ACR_VALUES
+                discoveryEndpoint = DaVinciTestConfig.parDiscoveryEndpoint
+                acrValues = DaVinciTestConfig.parAcrValues
                 this.par = par
             }
         }

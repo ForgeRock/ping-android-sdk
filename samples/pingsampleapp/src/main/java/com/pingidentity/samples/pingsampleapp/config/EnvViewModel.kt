@@ -136,6 +136,7 @@ internal fun loadAssetConfigs(): AssetConfigs {
             val root = Json.parseToJsonElement(
                 context.assets.open(fileName).bufferedReader().use { it.readText() }
             ).jsonObject
+
             val isDaVinci = root.contains("journey").not()
             val oidc = root["oidc"]?.jsonObject ?: return@runCatching
             val journeyObj = root["journey"]?.jsonObject
@@ -298,6 +299,7 @@ internal fun buildWeb(config: OidcConfigState) {
 internal fun buildDeviceAuthClient(config: DeviceAuthConfigState) {
     OidcDeviceClient(
         buildJsonObject {
+            put(JsonConfigKey.LOG, "STANDARD")
             put(JsonConfigKey.OIDC, buildJsonObject {
                 put(JsonConfigKey.CLIENT_ID, config.clientId)
                 put(JsonConfigKey.DISCOVERY_ENDPOINT, config.discoveryEndpoint)

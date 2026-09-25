@@ -20,7 +20,7 @@ jobs:
   check-stale-prs:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/stale@v9
+      - uses: actions/stale@v11
         with:
           stale-pr-message: >
             This PR has not been updated in the last 90 days and is being marked as

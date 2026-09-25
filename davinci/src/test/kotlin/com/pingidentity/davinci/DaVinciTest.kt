@@ -10,6 +10,7 @@ package com.pingidentity.davinci
 import android.net.Uri
 import com.pingidentity.davinci.collector.FlowCollector
 import com.pingidentity.davinci.collector.LabelCollector
+import com.pingidentity.davinci.collector.MetadataCollector
 import com.pingidentity.davinci.collector.MultiSelectCollector
 import com.pingidentity.davinci.collector.PasswordCollector
 import com.pingidentity.davinci.collector.SingleSelectCollector
@@ -945,5 +946,95 @@ class DaVinciTest {
         assertNotSame(firstNode, rewindNode)
         assertEquals(firstNode.id, rewindNode.id)
         assertEquals(firstNode.name, rewindNode.name)
+    }
+
+    // -------------------------------------------------------------------------
+    // MetadataCollector — resume envelope (actionKey + eventType)
+    // -------------------------------------------------------------------------
+
+    private fun metadataEngine(successResponse: () -> ByteReadChannel) = MockEngine { request ->
+        when (request.url.encodedPath) {
+            "/.well-known/openid-configuration" ->
+                respond(openIdConfigurationResponse(), HttpStatusCode.OK, headers)
+            "/authorize" ->
+                respond(metadataNodeResponse(), HttpStatusCode.OK, authorizeResponseHeaders)
+            "/sdkIntegrator" ->
+                respond(successResponse(), HttpStatusCode.OK, customHTMLTemplateHeaders)
+            else ->
+                respond(ByteReadChannel(""), HttpStatusCode.InternalServerError)
+        }
+    }
+
+    private fun buildMetadataDaVinci(engine: MockEngine) = DaVinci {
+        httpClient = KtorHttpClient(HttpClient(engine))
+        module(Oidc) {
+            clientId = "test"
+            discoveryEndpoint = "http://localhost/.well-known/openid-configuration"
+            scopes = mutableSetOf("openid", "email", "address")
+            redirectUri = "http://localhost:8080"
+            storage = { MemoryStorage() }
+        }
+        module(Cookie) {
+            storage = { MemoryStorage() }
+            persist = mutableListOf("ST")
+        }
+    }
+
+    @Test
+    fun `MetadataCollector setResult sends correct actionKey eventType and formData`() = runTest {
+        val engine = metadataEngine { customHTMLTemplate() }
+        val daVinci = buildMetadataDaVinci(engine)
+
+        val node = daVinci.start()
+        assertTrue(node is ContinueNode)
+
+        val collector = node.collectors.filterIsInstance<MetadataCollector>().first()
+        assertEquals("sdkMetadata", collector.key)
+        assertEquals("PROTECT", collector.metadata["sdk"]?.jsonPrimitive?.content)
+
+        collector.setResult(buildJsonObject { put("score", 98) })
+        node.next()
+
+        val resumeRequest = engine.requestHistory.last { it.url.encodedPath == "/sdkIntegrator" }
+        val body = Json.parseToJsonElement((resumeRequest.body as TextContent).text).jsonObject
+        val parameters = body["parameters"]?.jsonObject
+        val data = parameters?.get("data")?.jsonObject
+
+        assertEquals("continue", body["eventName"]?.jsonPrimitive?.content)
+        assertEquals("4r92vx2x9u", body["id"]?.jsonPrimitive?.content)
+        assertEquals("action", parameters?.get("eventType")?.jsonPrimitive?.content)
+        assertEquals("sdkMetadata", data?.get("actionKey")?.jsonPrimitive?.content)
+        val sdkMetadata = data?.get("formData")?.jsonObject?.get("sdkMetadata")?.jsonObject
+        assertEquals(98, sdkMetadata?.get("score")?.jsonPrimitive?.content?.toInt())
+
+        engine.close()
+    }
+
+    @Test
+    fun `MetadataCollector setError sends error envelope with correct actionKey and eventType`() = runTest {
+        val engine = metadataEngine { customHTMLTemplate() }
+        val daVinci = buildMetadataDaVinci(engine)
+
+        val node = daVinci.start()
+        assertTrue(node is ContinueNode)
+
+        val collector = node.collectors.filterIsInstance<MetadataCollector>().first()
+        collector.setError(errorCode = "USER_CANCELLED", message = "User cancelled")
+        node.next()
+
+        val resumeRequest = engine.requestHistory.last { it.url.encodedPath == "/sdkIntegrator" }
+        val body = Json.parseToJsonElement((resumeRequest.body as TextContent).text).jsonObject
+        val parameters = body["parameters"]?.jsonObject
+        val data = parameters?.get("data")?.jsonObject
+
+        assertEquals("action", parameters?.get("eventType")?.jsonPrimitive?.content)
+        assertEquals("sdkMetadata", data?.get("actionKey")?.jsonPrimitive?.content)
+        val sdkMetadata = data?.get("formData")?.jsonObject?.get("sdkMetadata")?.jsonObject
+        val error = sdkMetadata?.get("error")?.jsonObject
+        assertNotNull(error)
+        assertEquals("USER_CANCELLED", error["code"]?.jsonPrimitive?.content)
+        assertEquals("User cancelled", error["message"]?.jsonPrimitive?.content)
+
+        engine.close()
     }
 }

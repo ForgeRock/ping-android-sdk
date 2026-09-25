@@ -65,8 +65,8 @@ class FormFieldsTest {
         logger = Logger.STANDARD
 
         module(Oidc) {
-            clientId = DaVinciTestConfig.davinciFormClientId
-            discoveryEndpoint = DaVinciTestConfig.davinciFormDiscoveryEndpoint
+            clientId = DaVinciTestConfig.davinciClientId
+            discoveryEndpoint = DaVinciTestConfig.davinciDiscoveryEndpoint
             scopes = mutableSetOf("openid", "email", "address", "phone", "profile")
             redirectUri = DaVinciTestConfig.davinciRedirectUri
             acrValues = DaVinciTestConfig.davinciFormFieldsAcrValues

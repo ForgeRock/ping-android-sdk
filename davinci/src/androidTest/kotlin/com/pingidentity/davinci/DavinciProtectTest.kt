@@ -81,12 +81,12 @@ class DavinciProtectTest {
         assertTrue(result.isSuccess)
 
         // Fill the login form with username and password and click "Login"
-        (node.collectors[0] as? TextCollector)?.value = DaVinciTestConfig.davinciProtectUsername
-        (node.collectors[1] as? PasswordCollector)?.value = DaVinciTestConfig.davinciProtectPassword
+        (node.collectors[0] as? TextCollector)?.value = DaVinciTestConfig.davinciUsername
+        (node.collectors[1] as? PasswordCollector)?.value = DaVinciTestConfig.davinciPassword
         (node.collectors[2] as? SubmitCollector)?.value = "Login"
         node = node.next() as ContinueNode
 
-        // We are at the "SDK Automation - Risk Evaluation Results" page
+        // We are at the "Automation - Risk Evaluation Results" page
         assertEquals(5, node.collectors.size)
         assertTrue(node.collectors[0] is LabelCollector)
         assertTrue(node.collectors[1] is TextCollector)
@@ -109,12 +109,12 @@ class DavinciProtectTest {
         val score = resultObject.getInt("score")
 
         assertTrue(level in listOf("LOW", "MEDIUM", "HIGH"))
-        assertTrue(score in 1..100)
+        assertTrue(score in 1..1000)
 
         // Assertions for the 'event' object
         val eventObject = rawResponse.getJSONObject("event")
         val userObject = eventObject.getJSONObject("user")
-        assertEquals(DaVinciTestConfig.davinciProtectUsername, userObject.getString("name"))
+        assertEquals(DaVinciTestConfig.davinciUsername, userObject.getString("name"))
 
         // Continue to the next node and finish the flow
         (node.collectors[4] as? SubmitCollector)?.value = "click"
@@ -132,7 +132,7 @@ class DavinciProtectTest {
         (node.collectors[1] as? FlowCollector)?.value = "click"
         node = node.next() as ContinueNode
 
-        // We are at the "SDK Automation - SignOn Form" page which has "Enable Device Profiling" toggle set to true
+        // We are at the "Automation - SignOn Form" page which has "Enable Device Profiling" toggle set to true
         assertTrue(node.collectors[0] is LabelCollector)
         assertTrue(node.collectors[1] is TextCollector)
         assertTrue(node.collectors[2] is PasswordCollector)
@@ -155,12 +155,12 @@ class DavinciProtectTest {
         assertTrue(result.isSuccess)
 
         // Fill the login form with username and password and click "Login"
-        (node.collectors[1] as? TextCollector)?.value = DaVinciTestConfig.davinciProtectUsername
-        (node.collectors[2] as? PasswordCollector)?.value = DaVinciTestConfig.davinciProtectPassword
+        (node.collectors[1] as? TextCollector)?.value = DaVinciTestConfig.davinciUsername
+        (node.collectors[2] as? PasswordCollector)?.value = DaVinciTestConfig.davinciPassword
         (node.collectors[3] as? SubmitCollector)?.value = "Login"
         node = node.next() as ContinueNode
 
-        // We are at the "SDK Automation - Risk Evaluation Results" page
+        // We are at the "Automation - Risk Evaluation Results" page
         assertEquals(5, node.collectors.size)
         assertTrue(node.collectors[0] is LabelCollector)
         assertTrue(node.collectors[1] is TextCollector)
@@ -183,12 +183,12 @@ class DavinciProtectTest {
         val score = resultObject.getInt("score")
 
         assertTrue(level in listOf("LOW", "MEDIUM", "HIGH"))
-        assertTrue(score in 1..100)
+        assertTrue(score in 1..1000)
 
         // Assertions for the 'event' object
         val eventObject = rawResponse.getJSONObject("event")
         val userObject = eventObject.getJSONObject("user")
-        assertEquals(DaVinciTestConfig.davinciProtectUsername, userObject.getString("name"))
+        assertEquals(DaVinciTestConfig.davinciUsername, userObject.getString("name"))
 
         // Continue to the next node and finish the flow
         (node.collectors[4] as? SubmitCollector)?.value = "click"

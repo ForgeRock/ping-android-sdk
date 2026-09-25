@@ -11,6 +11,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import com.pingidentity.davinci.plugin.Collector
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonPrimitive
 import kotlin.io.encoding.Base64
 
@@ -37,6 +38,9 @@ import kotlin.io.encoding.Base64
  * @see bitmap
  */
 class QRCodeCollector : Collector<Nothing> {
+
+    var key = ""
+        private set
 
     /**
      * The QR code content as a Base64-encoded data URI string.
@@ -77,10 +81,13 @@ class QRCodeCollector : Collector<Nothing> {
      */
     override fun init(input: JsonObject): QRCodeCollector {
         super.init(input)
+        key = input["key"]?.jsonPrimitive?.contentOrNull ?: ""
         content = input["content"]?.jsonPrimitive?.content ?: ""
         fallbackText = input["fallbackText"]?.jsonPrimitive?.content ?: ""
         return this
     }
+
+    override fun id(): String = key
 
     /**
      * Converts the Base64-encoded QR code content to a displayable Bitmap.

@@ -20,10 +20,11 @@ sealed class DeviceFlowStatus {
     data class Started(val response: DeviceAuthorizationResponse) : DeviceFlowStatus()
 
     /**
-     * The client is polling the token endpoint waiting for the user to authorize.
+     * The client is waiting for the next token-endpoint poll, either for user authorization or
+     * after a transient transport failure.
      *
      * @property pollCount The number of polling attempts made so far.
-     * @property pollInterval The current polling interval in seconds.
+     * @property pollInterval The delay before the next poll, in seconds.
      * @property nextPollAt The wall-clock time (epoch millis) of the next scheduled poll.
      */
     data class Polling(

@@ -1,0 +1,16 @@
+{
+  "timeout": 30000,
+  "log": "DEBUG",
+  "oidc": {
+    "clientId": "e8e0aa7f-11d4-4722-98ab-4659ecdf20d6",
+    "discoveryEndpoint": "https://pingone.petrov.ca/as/.well-known/openid-configuration",
+    "scopes": [
+      "openid",
+      "profile",
+      "email"
+    ],
+    "redirectUri": "org.forgerock.demo://oauth2redirect",
+    "acrValues": "a3eaa9cab8c8263658cc21cf911fed26",
+    "par": true
+  }
+}

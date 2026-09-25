@@ -1,3 +1,26 @@
+## [2.2.0]
+
+#### Added
+- Added AM/AIC transactional backchannel authentication support to the Journey module [SDKS-5157]
+- Added new `pingonemfa` module for PingOne MFA integration [P14C-86660]
+- Added DaVinci `MOBILE_PAIRING` collector support for pairing PingOne MFA accounts directly within a DaVinci flow [P14C-82522]
+- Added new `recognize` module for biometric face recognition (enrollment/authentication), with Journey and DaVinci integration [P1RECMOB-3476]
+- Added `MetadataCollector` for DaVinci flows to support exchanging custom SDK metadata [SDKS-5168]
+- Added `ImageCollector` for DaVinci forms to display images [SDKS-5169]
+- Added an optional HTTP status code to `ErrorNode` [SDKS-5202]
+
+#### Fixed
+- Fixed the browser redirect URI scheme manifest placeholder to apply only to debug builds, allowing release consumers to provide their own value [SDKS-5296]
+- Fixed Journey `submitButtonText`/`pageFooter` to resolve against the device's ordered preferred-locale list [SDKS-5310]
+- Fixed OIDC `refresh()` to no longer delete the cached token from storage or revoke a non-expired access token before refreshing [SDKS-5414]
+- Fixed OAuth 2.0 Device Authorization Grant polling to retry on transient network/transport failures instead of terminating the flow [SDKS-5124]
+- Fixed `AbstractValidatedCallback` throwing when AM returns an empty `policies` array instead of an object [SDKS-5260]
+- Fixed `QRCodeCollector.id()` to return a stable key from the collector configuration instead of a random value [SDKS-5293]
+- Fixed FIDO2 collectors to report WebAuthn/credential errors as actionable events instead of generic submit failures [SDKS-4477]
+- Fixed FIDO2 authentication to support per-request API selection via `useFido2ApiClient` [SDKS-5411]
+- Fixed Jackson dependency versions to address security vulnerabilities (CVE-2026-54512, CVE-2026-54513, CVE-2026-54514, CVE-2026-54515) [SDKS-5199]
+- Fixed missing blank-secret validation on `OathCredential` and `OathType` serialized as lowercase [SDKS-5075]
+
 ## [2.1.0]
 
 #### Added
