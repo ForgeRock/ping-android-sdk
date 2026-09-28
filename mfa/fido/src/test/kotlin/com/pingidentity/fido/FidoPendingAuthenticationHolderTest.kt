@@ -15,7 +15,6 @@ import com.pingidentity.logger.Logger
 import com.pingidentity.logger.NONE
 import io.mockk.every
 import io.mockk.mockk
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.JsonObject
 import org.junit.Assert.assertEquals
@@ -76,7 +75,7 @@ class FidoPendingAuthenticationHolderTest {
 
         assertFalse(stale.install(pending))
         // The discarded request is cancelled, not left live
-        assertTrue(pending.await().exceptionOrNull() is CancellationException)
+        assertTrue(pending.await().exceptionOrNull() is FidoPendingAuthenticationCancelledException)
         assertEquals(0, deliveries.size)
     }
 
@@ -90,13 +89,13 @@ class FidoPendingAuthenticationHolderTest {
         reservation.cancel()
 
         // The installed request was released
-        assertTrue(pending.await().exceptionOrNull() is CancellationException)
+        assertTrue(pending.await().exceptionOrNull() is FidoPendingAuthenticationCancelledException)
         assertEquals(0, deliveries.size)
 
         // A late install of the cancelled reservation cannot resurrect its request
         val lateRequest = pendingRequest()
         assertFalse(reservation.install(lateRequest))
-        assertTrue(lateRequest.await().exceptionOrNull() is CancellationException)
+        assertTrue(lateRequest.await().exceptionOrNull() is FidoPendingAuthenticationCancelledException)
         assertEquals(0, deliveries.size)
     }
 

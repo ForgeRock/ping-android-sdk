@@ -16,7 +16,6 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicBoolean
-import kotlin.coroutines.cancellation.CancellationException
 
 /**
  * A pending (View-attachable) FIDO authentication request produced by
@@ -103,7 +102,7 @@ class FidoPendingAuthentication internal constructor(
      *
      * @return The assertion as a [JsonObject] (same shape as the modal `authenticate` result)
      * on success, or a `Result.failure` carrying a
-     * [kotlin.coroutines.cancellation.CancellationException] once [cancel] has been called
+     * [FidoPendingAuthenticationCancelledException] once [cancel] has been called
      * (re-await after cancel is a no-op returning that same failure), or the conversion
      * failure if the delivered credential was not a public-key credential.
      */
@@ -133,18 +132,25 @@ class FidoPendingAuthentication internal constructor(
     }
 
     /**
-     * Completes [await] with a `CancellationException`-bearing failure for callers still
-     * suspended on an abandoned request (e.g. a collector being closed).
+     * Completes [await] with a [FidoPendingAuthenticationCancelledException]-bearing failure
+     * for callers still suspended on an abandoned request (e.g. when the screen goes away).
      *
      * If the response has already been delivered, this is a no-op — the delivered response
-     * wins. Repeated calls are also no-ops, and a subsequent [await] returns the cancellation
-     * failure instead of hanging.
+     * wins. Repeated calls are also no-ops, and a subsequent [await] returns the failure
+     * instead of hanging.
      *
      * This does not detach the request from its View; clear it with
      * `view.pendingGetCredentialRequest = null` if needed.
      */
     fun cancel() {
-        complete(Result.failure(CancellationException("FIDO pending authentication cancelled")))
+        complete(
+            Result.failure(
+                FidoPendingAuthenticationCancelledException(
+                    FidoPendingAuthenticationCancelledException.Reason.CANCELLED,
+                    "FIDO pending authentication cancelled"
+                )
+            )
+        )
     }
 
     /**

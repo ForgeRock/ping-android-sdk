@@ -183,7 +183,7 @@ if (node is ContinueNode) {
 - **FidoAuthenticationCallback** (Journey)
   - `suspend fun authenticate(): Result<JsonObject>` — Authenticates using a registered FIDO
     authenticator.
-  - `suspend fun pendingAuthenticate(block: FidoAuthenticateCustomizer.() -> Unit = {}):
+  - `fun pendingAuthenticate(block: FidoAuthenticateCustomizer.() -> Unit = {}):
     Result<FidoPendingAuthentication>` — Builds a pending
     request for conditional mediation (autofill with passkeys) instead of launching the modal
     ceremony. See "Conditional mediation (autofill with passkeys)" below.
@@ -195,8 +195,10 @@ if (node is ContinueNode) {
     returns. Stays suspended if the user dismisses the suggestions (the pending path propagates
     no errors) — keep the modal fallback visible and treat non-completion as the fallback
     trigger.
-  - `fun cancel()` — Releases a suspended `await()` with a `CancellationException`-bearing
-    failure (e.g. when the screen goes away).
+  - `fun cancel()` — Releases a suspended `await()` with a
+    [FidoPendingAuthenticationCancelledException]-bearing failure (e.g. when the screen goes
+    away). A dedicated type, not `CancellationException`, so unwrapping with `getOrThrow()`
+    fails plainly instead of being mistaken for coroutine cancellation.
 - **isConditionalMediationSupported** — `true` only where the OS can deliver pending credential
   requests: Android 15 (API 35) or above, or an API 34 preview build. Gate the conditional
   affordance on this value; `pendingAuthenticate` fails fast with
@@ -358,6 +360,30 @@ if (isConditionalMediationSupported) {
 }
 ```
 
+In a Journey flow, use the `FidoAuthenticationCallback` the workflow hands you — the callback
+builds the request from the server's options, observes the delivered assertion internally (the
+outcome is submitted to the Journey workflow even if you never call `await()`), and exposes the
+server's conditional-UI configuration:
+
+```kotlin
+// In your Journey node renderer, for a FidoAuthenticationCallback on the node:
+if (isConditionalMediationSupported &&
+    (hasConditionalTarget || callback.manualButtonEnabled)
+) {
+    // hasConditionalTarget: a sibling NameCallback carries "webauthn" in autocompleteValues —
+    // the server's marker for the field that should surface passkey suggestions.
+    // manualButtonEnabled: the server's "Authentication Button" setting (defaults to true when
+    // absent) — show a fallback button that starts the modal ceremony when true.
+    callback.pendingAuthenticate { useFido2ApiClient = false }.onSuccess { pending ->
+        // Attach to the regular username field marked with autocompleteValues
+        // ["username","webauthn"]; suggestions appear when the user focuses it.
+        usernameField.pendingGetCredentialRequest = pending.request
+    }
+    // Modal fallback button, when the server enables it:
+    // button.onClick { scope.launch { callback.authenticate { useFido2ApiClient = false } } }
+}
+```
+
 Behavior notes:
 
 - `pendingAuthenticate` always routes through the Credential Manager — conditional mediation
@@ -368,10 +394,23 @@ Behavior notes:
   dismisses the suggestions, `pending.await()` stays suspended: keep the modal fallback
   ("Use a passkey" button) visible and treat non-completion as the fallback trigger, not an
   error. `pending.cancel()` releases a suspended `await()` with a
-  `CancellationException`-bearing failure (e.g. when closing the screen).
+  [FidoPendingAuthenticationCancelledException]-bearing failure (e.g. when closing the screen).
 - `pendingAuthenticate` fails fast with a `GetCredentialUnsupportedException` on devices below
   the OS gate (API 35, or API 34 with a preview SDK); check `isConditionalMediationSupported`
   to hide the affordance up front.
+- The platform delivers the pending request through an autofill session, and a session
+  **ends** when the user backs out of the biometric prompt (or dismisses the suggestions). A
+  plain re-focus of an already-entered field is then ignored by `AutofillManager`, so the
+  suggestion would never come back. Re-arm on focus with a manual autofill request — it
+  starts a fresh autofill context that re-delivers the pending request still attached to the
+  view:
+  ```kotlin
+  field.setOnFocusChangeListener { v, hasFocus ->
+      if (hasFocus) {
+          v.context.getSystemService(AutofillManager::class.java)?.requestAutofill(v)
+      }
+  }
+  ```
 - On API ≤ 33 the Credential Manager path requires the `credentials-play-services-auth`
   bridge (see the prerequisite above); when it is missing the SDK logs a warning and the
   request never delivers suggestions.

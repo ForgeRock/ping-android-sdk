@@ -8,7 +8,6 @@ package com.pingidentity.fido
 
 import android.app.Activity
 import android.content.Context
-import android.os.Build
 import androidx.credentials.CredentialManager
 import androidx.credentials.GetCredentialRequest
 import androidx.credentials.GetCredentialResponse
@@ -36,7 +35,6 @@ import kotlinx.serialization.json.put
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
-import kotlin.coroutines.cancellation.CancellationException
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -160,7 +158,7 @@ class FidoPendingAuthenticationTest {
     }
 
     @Test
-    fun `cancel completes await with CancellationException and re-await is a no-op failure`() =
+    fun `cancel completes await with a cancelled failure and re-await is a no-op`() =
         runTest {
             // Given - a pending request with a suspended awaiter
             val pending = client().pendingAuthenticate(inputJson()).getOrThrow()
@@ -173,18 +171,18 @@ class FidoPendingAuthenticationTest {
             pending.cancel()
             runCurrent()
 
-            // Then - the awaiter completes with a CancellationException-bearing failure
+            // Then - the awaiter completes with a cancelled-teardown failure
             assertTrue(awaited!!.isFailure)
-            assertTrue(awaited!!.exceptionOrNull() is CancellationException)
+            assertTrue(awaited!!.exceptionOrNull() is FidoPendingAuthenticationCancelledException)
 
             // And re-await after cancel is a no-op returning the same failure
             val again = pending.await()
             assertTrue(again.isFailure)
-            assertTrue(again.exceptionOrNull() is CancellationException)
+            assertTrue(again.exceptionOrNull() is FidoPendingAuthenticationCancelledException)
         }
 
     @Test
-    fun `cancel before await completes a later await with CancellationException`() = runTest {
+    fun `cancel before await completes a later await with the cancelled failure`() = runTest {
         // Given - cancel is called before any awaiter registers (abandoned request)
         val pending = client().pendingAuthenticate(inputJson()).getOrThrow()
         pending.cancel()
@@ -192,7 +190,7 @@ class FidoPendingAuthenticationTest {
         // Then - a later await does not hang; it returns the cancellation failure
         val result = pending.await()
         assertTrue(result.isFailure)
-        assertTrue(result.exceptionOrNull() is CancellationException)
+        assertTrue(result.exceptionOrNull() is FidoPendingAuthenticationCancelledException)
     }
 
     @Test

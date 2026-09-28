@@ -39,9 +39,12 @@ import io.mockk.unmockkObject
 import kotlinx.coroutines.CompletableDeferred
 import io.mockk.mockkStatic
 import io.mockk.unmockkAll
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.JsonObject
@@ -53,12 +56,13 @@ import kotlinx.serialization.json.putJsonObject
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
-import kotlin.coroutines.cancellation.CancellationException
+import com.pingidentity.fido.FidoPendingAuthenticationCancelledException
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
+import kotlin.time.Duration.Companion.milliseconds
 import com.pingidentity.network.HttpRequest as Request
 
 /**
@@ -298,7 +302,7 @@ class FidoAuthenticationCallbackPendingTest {
         // suspended (both paths completing would submit the callback twice)
         val awaited = pending.await()
         assertTrue(awaited.isFailure)
-        assertTrue(awaited.exceptionOrNull() is CancellationException)
+        assertTrue(awaited.exceptionOrNull() is FidoPendingAuthenticationCancelledException)
 
         // And a late delivery from the cancelled request is ignored — the modal outcome wins.
         // The late assertion carries a distinct rawId: if the cancelled request incorrectly
@@ -345,16 +349,17 @@ class FidoAuthenticationCallbackPendingTest {
     @OptIn(ExperimentalCoroutinesApi::class)
     @Test
     fun `stale pending request cannot install after a newer ceremony began`() = runTest {
-        // The suspend-window race: pendingAuthenticate() reserves the slot, then suspends in
-        // FidoClient while the request is built. A concurrent authenticate() supersedes it
-        // during that suspension. When the pending setup resumes, install() must DISCARD the
-        // stale request instead of resurrecting it as current (a plain slot overwrite would
-        // make it current again, and its later delivery would reach valueCallback).
+        // The stale-install race: pendingAuthenticate() reserves the slot, then builds the
+        // request. A concurrent ceremony supersedes it in that window; when the stale setup
+        // finally returns its request, install() must DISCARD it instead of resurrecting it
+        // as current (a plain slot overwrite would make it current again, and its later
+        // delivery would reach valueCallback). The window is simulated with a gate inside
+        // the mocked client answer, released only after ceremony B has begun.
         coEvery { getPublicKeyCredential(any(), any()) } throws gmsForbidden
         val callback = initCallback(supportsJsonResponse = false)
 
         // Hold ceremony A's client-level setup mid-flight: mock the client's
-        // pendingAuthenticate so it suspends until the gate is released.
+        // pendingAuthenticate so it blocks until the gate is released.
         val mockClient = mockk<FidoClient>()
         mockkObject(FidoClient.Companion)
         every { FidoClient.invoke(any()) } returns mockClient
@@ -373,18 +378,20 @@ class FidoAuthenticationCallbackPendingTest {
             mockClient.authenticate(any<JsonObject>(), any<FidoAuthenticateCustomizer.() -> Unit>())
         } returns Result.failure(gmsForbidden)
         try {
-            val pendingA = backgroundScope.async { callback.pendingAuthenticate() }
-            runCurrent()                            // A: beginCeremony done, now suspended
-
-            // Concurrent ceremony B supersedes A while A's setup is suspended
-            callback.authenticate { useFido2ApiClient = false }
-            runCurrent()
-
-            setupGate.complete(Unit)                // release A's setup
-            runCurrent()
+            // Ceremony A runs in a real worker thread (runTest's dispatcher is single-threaded
+            // and cannot interleave with the blocking test body): the coAnswer blocks that
+            // thread on the gate until this test releases it.
+            val pendingA = async(Dispatchers.IO) { callback.pendingAuthenticate() }
+            // Give A's setup time to reach the gate, then supersede it with ceremony B
+            withContext(Dispatchers.Default.limitedParallelism(1)) {
+                delay(200.milliseconds)
+                callback.authenticate { useFido2ApiClient = false }
+                delay(100.milliseconds)
+                setupGate.complete(Unit)            // release A's setup
+            }
 
             // A's setup returned a request whose reservation was superseded: install()
-            // refused it, so pendingAuthenticate surfaces the discard as a cancellation
+            // refused it, so pendingAuthenticate surfaces the discard as a cancelled-teardown
             // failure — the sample never sees a request that can never deliver. (Ceremony
             // B's modal failure already wrote its own error outcome; snapshot it so the
             // assertions below target A's stale delivery specifically.)
@@ -393,6 +400,10 @@ class FidoAuthenticationCallbackPendingTest {
             assertTrue(
                 staleResult.isFailure,
                 "a discarded stale install must not return success"
+            )
+            assertEquals(
+                FidoPendingAuthenticationCancelledException.Reason.SUPERSEDED,
+                (staleResult.exceptionOrNull() as? FidoPendingAuthenticationCancelledException)?.reason
             )
             val outcomeBeforeStaleDelivery = valueCallback.value
             stalePending?.request?.callback(
@@ -447,6 +458,6 @@ class FidoAuthenticationCallbackPendingTest {
         // And the abandoned awaiter is released, not left suspended forever
         val awaited = pending.await()
         assertTrue(awaited.isFailure)
-        assertTrue(awaited.exceptionOrNull() is CancellationException)
+        assertTrue(awaited.exceptionOrNull() is FidoPendingAuthenticationCancelledException)
     }
 }

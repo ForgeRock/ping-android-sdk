@@ -396,7 +396,7 @@ class FidoClient(private val config: FidoClientConfig) {
      *         `Result.failure` with a [GetCredentialUnsupportedException] when the OS gate is
      *         unmet (before any request object exists)
      */
-    suspend fun pendingAuthenticate(
+    fun pendingAuthenticate(
         input: JsonObject,
         block: FidoAuthenticateCustomizer.() -> Unit = {}
     ): Result<FidoPendingAuthentication> {
@@ -454,7 +454,6 @@ class FidoClient(private val config: FidoClientConfig) {
 
             return Result.success(FidoPendingAuthentication(credentialRequest))
         } catch (e: Exception) {
-            currentCoroutineContext().ensureActive()
             return Result.failure(e)
         }
     }

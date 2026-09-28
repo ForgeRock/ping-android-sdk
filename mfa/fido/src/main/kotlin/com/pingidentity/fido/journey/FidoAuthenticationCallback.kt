@@ -30,12 +30,12 @@ import com.pingidentity.fido.Constants.FIELD_USER_VERIFICATION
 import com.pingidentity.fido.FidoAuthenticateCustomizer
 import com.pingidentity.fido.FidoClient
 import com.pingidentity.fido.FidoPendingAuthentication
+import com.pingidentity.fido.FidoPendingAuthenticationCancelledException
 import com.pingidentity.fido.FidoPendingAuthenticationHolder
 import com.pingidentity.fido.base64DefaultToUrlSafe
 import com.pingidentity.fido.base64ToIntStr
 import com.pingidentity.fido.base64ToStr
 import com.pingidentity.fido.toBase64
-import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
@@ -269,22 +269,22 @@ class FidoAuthenticationCallback : FidoCallback() {
      *         success, or an exception on failure:
      *         - a setup failure (e.g. the OS gate) — routed through [handleError], which
      *           writes the error outcome to the workflow;
-     *         - [kotlinx.coroutines.CancellationException] carrying
-     *           "FIDO pending authentication superseded" when a newer ceremony superseded
-     *           this one while the request was being built — no error outcome is written
-     *           (the superseding ceremony owns the node); the app should simply not attach
-     *           the (absent) request. Treat this distinctly from a setup failure: nothing
-     *           failed, the ceremony is just no longer current.
+     *         - [FidoPendingAuthenticationCancelledException] with
+     *           [FidoPendingAuthenticationCancelledException.Reason.SUPERSEDED] when a newer
+     *           ceremony superseded this one while the request was being built — no error
+     *           outcome is written (the superseding ceremony owns the node); the app should
+     *           simply not attach the (absent) request. Treat this distinctly from a setup
+     *           failure: nothing failed, the ceremony is just no longer current.
      *         A successfully completed ceremony is automatically submitted to the Journey
      *         workflow.
      */
-    suspend fun pendingAuthenticate(
+    fun pendingAuthenticate(
         block: FidoAuthenticateCustomizer.() -> Unit = {}
     ): Result<FidoPendingAuthentication> {
         // A superseded pending request must not deliver an assertion into the new ceremony.
-        // The reservation is held across the suspension below: if a concurrent ceremony
-        // supersedes this one while FidoClient builds the request, install() discards the
-        // stale request instead of resurrecting it as current.
+        // The reservation is held until install() below: if a concurrent ceremony supersedes
+        // this one first, install() discards the stale request instead of resurrecting it as
+        // current.
         val reservation = pendingAuthentication.beginCeremony()
         logger.d("Starting FIDO2 pending authentication")
         val result = FidoClient {
@@ -304,11 +304,14 @@ class FidoAuthenticationCallback : FidoCallback() {
             // Installed as the current request; its eventual delivery is observed
             // internally, and the app attaches it to a View via the returned result.
             reservation.install(result.getOrThrow()) -> result
-            // A newer ceremony superseded this one while setup was suspended: the request
-            // was discarded, so surface cancellation rather than handing the app a request
-            // that can never deliver.
+            // A newer ceremony superseded this one before the request was installed: the
+            // request was discarded, so surface the teardown rather than handing the app a
+            // request that can never deliver.
             else -> Result.failure(
-                CancellationException("FIDO pending authentication superseded")
+                FidoPendingAuthenticationCancelledException(
+                    FidoPendingAuthenticationCancelledException.Reason.SUPERSEDED,
+                    "FIDO pending authentication superseded"
+                )
             )
         }
     }

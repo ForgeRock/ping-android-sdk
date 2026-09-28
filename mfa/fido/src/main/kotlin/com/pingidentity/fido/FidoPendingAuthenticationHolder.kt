@@ -8,7 +8,6 @@
 package com.pingidentity.fido
 
 import com.pingidentity.logger.Logger
-import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.json.JsonObject
 import java.util.concurrent.atomic.AtomicReference
 
@@ -23,13 +22,13 @@ import java.util.concurrent.atomic.AtomicReference
  * itself never propagates errors). When the DaVinci collector gains pending support
  * (DV-24867), it shares this holder.
  *
- * **Concurrency — one atomic cell.** A ceremony spans a suspension point
- * (`FidoClient.pendingAuthenticate` builds the request asynchronously), so
- * cancel-then-suspend-then-install is not atomic: a concurrent ceremony can supersede the
- * slot in between, and a naive install would then publish a request a newer ceremony
- * already superseded — resurrecting it as current, the exact failure this class exists to
- * prevent. The generation and the current request therefore live in **one atomic
- * reference** ([slot]): every state transition is a single `updateAndGet`/`getAndUpdate`,
+ * **Concurrency — one atomic cell.** A ceremony is not atomic end-to-end: the caller
+ * reserves in [beginCeremony], then builds the request (work that can take time), then
+ * installs it — and a concurrent ceremony can supersede the slot in between, so a naive
+ * install would publish a request a newer ceremony already superseded — resurrecting it as
+ * current, the exact failure this class exists to prevent. The generation and the current
+ * request therefore live in **one atomic reference** ([slot]): every state transition is a
+ * single `updateAndGet`/`getAndUpdate`,
  * so a check-then-write (install, cancel, supersede) can never interleave with a concurrent
  * one — there is no window and no lock. Terminal transitions (a newer ceremony, or
  * [Reservation.cancel]) also **bump the generation**, so a cancelled reservation's late
@@ -91,14 +90,13 @@ internal class FidoPendingAuthenticationHolder(
 
         /**
          * Publishes [pending] as the in-flight request and observes its completion — but
-         * only while this reservation is still current. A ceremony that suspended in
-         * [com.pingidentity.fido.FidoClient.pendingAuthenticate] while a newer ceremony
-         * superseded it must **not** resurrect its superseded request as current; the stale
-         * request is cancelled and discarded instead.
+         * only while this reservation is still current. A ceremony whose request was built
+         * after a newer ceremony superseded it must **not** resurrect its superseded request
+         * as current; the stale request is cancelled and discarded instead.
          *
          * @return true if the request was installed (and is now the observed current one);
-         *   false if a newer ceremony superseded this one — the caller should cancel or
-         *   discard the returned request.
+         *   false if a newer ceremony superseded this one — the request has already been
+         *   cancelled and discarded; the caller should not use it.
          */
         fun install(pending: FidoPendingAuthentication): Boolean {
             val updated = slot.updateAndGet { s ->
@@ -124,10 +122,10 @@ internal class FidoPendingAuthenticationHolder(
                     logger.d("FIDO2 pending authentication successful")
                     onDelivered(assertion)
                 }.onFailure { exception ->
-                    // Cancellation is teardown, not a ceremony failure — the androidx
+                    // Teardown (cancelled/superseded) is not a ceremony failure — the androidx
                     // pending path itself never propagates errors.
-                    if (exception is CancellationException) {
-                        logger.d("FIDO2 pending authentication cancelled")
+                    if (exception is FidoPendingAuthenticationCancelledException) {
+                        logger.d("FIDO2 pending authentication ${exception.reason.name.lowercase()}")
                     } else {
                         onError(exception)
                     }

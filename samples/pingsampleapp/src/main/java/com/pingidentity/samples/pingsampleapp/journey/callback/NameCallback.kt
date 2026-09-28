@@ -7,7 +7,10 @@
 
 package com.pingidentity.samples.pingsampleapp.journey.callback
 
+import android.util.Log
 import android.view.LayoutInflater
+import android.view.ViewTreeObserver
+import android.view.autofill.AutofillManager
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -84,6 +87,39 @@ fun NameCallback(
                                         field.name = text
                                         onNodeUpdated()
                                     }
+                                    viewTreeObserver.addOnWindowFocusChangeListener(
+                                        object :
+                                            ViewTreeObserver.OnWindowFocusChangeListener {
+                                            override fun onWindowFocusChanged(
+                                                hasFocus: Boolean,
+                                            ) {
+                                                // Only when the app window gains focus back AND
+                                                // this field is (still) the focused view.
+                                                if (!hasFocus || !isFocused) return
+                                                postDelayed(
+                                                    {
+                                                        Log.d(
+                                                            "FidoRearm",
+                                                            "re-arm: clear+set request, " +
+                                                                "requestAutofill",
+                                                        )
+                                                        context.getSystemService(
+                                                            AutofillManager::class.java
+                                                        )?.let { afm ->
+                                                            afm.cancel()
+                                                            (pending?.request
+                                                                ?.let { req ->
+                                                                    pendingGetCredentialRequest =
+                                                                        req
+                                                                })
+                                                            afm.requestAutofill(this@apply)
+                                                        }
+                                                    },
+                                                    300,
+                                                )
+                                            }
+                                        }
+                                    )
                                 }
                                 layout.findViewById<TextInputLayout>(
                                     R.id.webauthn_username_layout
