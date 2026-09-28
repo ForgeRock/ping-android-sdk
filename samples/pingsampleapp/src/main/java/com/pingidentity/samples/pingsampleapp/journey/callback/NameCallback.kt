@@ -107,11 +107,6 @@ fun NameCallback(
                                                             AutofillManager::class.java
                                                         )?.let { afm ->
                                                             afm.cancel()
-                                                            (pending?.request
-                                                                ?.let { req ->
-                                                                    pendingGetCredentialRequest =
-                                                                        req
-                                                                })
                                                             afm.requestAutofill(this@apply)
                                                         }
                                                     },
