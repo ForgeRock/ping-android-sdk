@@ -53,6 +53,7 @@ object Constants {
     const val FIELD_REQUIRE_RESIDENT_KEY = "requireResidentKey"
     const val FIELD_RESIDENT_KEY = "residentKey"
     const val FIELD_SUPPORTS_JSON_RESPONSE = "supportsJsonResponse"
+    const val FIELD_MANUAL_BUTTON_ENABLED = "manualButtonEnabled"
     const val FIELD_ASSERTION_VALUE = "assertionValue"
     const val FIELD_ATTESTATION_VALUE = "attestationValue"
 

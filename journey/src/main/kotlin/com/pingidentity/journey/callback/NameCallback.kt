@@ -8,7 +8,9 @@
 package com.pingidentity.journey.callback
 
 import com.pingidentity.journey.plugin.AbstractCallback
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonPrimitive
 
 /**
@@ -16,9 +18,15 @@ import kotlinx.serialization.json.jsonPrimitive
  *
  * @property prompt The prompt for the name.
  * @property name The name input by the user.
+ * @property autocompleteValues The autocomplete hints for the field, e.g.
+ * `["username", "webauthn"]` when the server marks this field as the target for
+ * conditional-mediation passkey suggestions (autofill with passkeys).
  */
 class NameCallback : AbstractCallback() {
     var prompt: String = ""
+        private set
+
+    var autocompleteValues: List<String> = emptyList()
         private set
 
     //Input
@@ -27,6 +35,10 @@ class NameCallback : AbstractCallback() {
     override fun init(name: String, value: JsonElement) {
         when (name) {
             "prompt" -> this.prompt = value.jsonPrimitive.content
+            "autocompleteValues" ->
+                this.autocompleteValues = (value as? JsonArray)
+                    ?.map { it.jsonPrimitive.content }
+                    .orEmpty()
         }
     }
 

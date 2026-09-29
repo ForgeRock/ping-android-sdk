@@ -70,7 +70,8 @@ allprojects {
             force(libs.bcpkix.jdk18on)
             force(libs.bcutil.jdk18on)
 
-            // Updated to 2.22.2 per Mend SCA vulnerability [CVE-2026-68494], [CVE-2026-54512], [CVE-2026-54513] from dokka project.
+            // Updated to 2.22.3 per Mend SCA vulnerability [CVE-2026-89407],
+            // [CVE-2026-89425], [CVE-2026-91776], [CVE-2026-91777] from dokka project.
             force(libs.jackson.module.kotlin)
             force(libs.jackson.dataformat.xml)
             force(libs.jackson.databind)
