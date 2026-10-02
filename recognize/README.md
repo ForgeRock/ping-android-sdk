@@ -136,7 +136,7 @@ result.onSuccess { success ->
 | `mobileSDKOptions.presentation`                 | `presentationStyle`                     |
 | `mobileSDKOptions.numberOfEnrollmentCircuits`   | `setupConfig.numberOfEnrollmentCircuits`|
 
-On success, `IDToken1signedJwt`, `IDToken1clientState`, and `IDToken1recognizeId` are submitted to the server automatically.
+On success, `IDToken1signedJwt`, `IDToken1clientState`, `IDToken1recognizeId`, and `IDToken1devicePublicSigningKey` are submitted to the server automatically.
 
 ### Authentication — server field mapping
 
@@ -158,7 +158,7 @@ On success, `IDToken1signedJwt`, `IDToken1clientState`, and `IDToken1recognizeId
 
 > **Note:** `shouldRetriveAuthenticationFrame` preserves the server-side typo (missing `e` in `Retrieve`) — this is the exact JSON key the server sends.
 
-On success, `IDToken1signedJwt`, `IDToken1clientState`, `IDToken1recognizeId`, and `IDToken1devicePublicSigningKey` are submitted automatically. For pure authentication, `IDToken1recognizeId` is freshly retrieved from `Keyless.getUserId()`; the client-state enrollment fallback uses `EnrollmentSuccess.keylessId`. The signing key is freshly retrieved from the Keyless SDK for each successful authentication. Journey enrollment retains its existing five-input contract, so its key is available through `RecognizeSuccess.devicePublicSigningKey` rather than a Journey input field.
+On success, `IDToken1signedJwt`, `IDToken1clientState`, `IDToken1recognizeId`, and `IDToken1devicePublicSigningKey` are submitted automatically. For pure authentication, `IDToken1recognizeId` is freshly retrieved from `Keyless.getUserId()`; the client-state enrollment fallback uses `EnrollmentSuccess.keylessId`. The signing key is freshly retrieved from the Keyless SDK for each successful authentication. Journey enrollment submits the same six-input contract, with `EnrollmentSuccess.keylessId` as the recognize ID and the signing key freshly retrieved after each successful enrollment.
 
 #### Enroll-from-clientState (auth flow)
 

@@ -18,11 +18,11 @@ import com.pingidentity.recognize.RecognizeSuccess
  * `operationType = "ENROLL"`. All output fields are parsed by [AbstractRecognizeCallback];
  * this class only adds the [enroll] operation.
  *
- * On success, the signed JWT, client state, and recognize ID are submitted to the Journey
- * via the existing five input fields: `IDToken1signedJwt`, `IDToken1clientState`,
- * `IDToken1recognizeId`, `IDToken1clientError`, `IDToken1clientErrorCode`. The freshly retrieved
- * device public signing key is exposed through [RecognizeSuccess], but Journey enrollment has no
- * corresponding input slot. Key retrieval failure is returned as a failed operation.
+ * On success, the signed JWT, client state, recognize ID, and freshly retrieved device public
+ * signing key are submitted to the Journey via the six input fields: `IDToken1signedJwt`,
+ * `IDToken1clientState`, `IDToken1recognizeId`, `IDToken1devicePublicSigningKey`,
+ * `IDToken1clientError`, `IDToken1clientErrorCode`. Key retrieval failure is returned as a
+ * failed operation, mirroring the authentication callback.
  *
  * @see RecognizeCallback
  * @see PingOneRecognizeAuthenticateCallback
@@ -78,6 +78,7 @@ class PingOneRecognizeEnrollCallback : AbstractRecognizeCallback() {
                 signedJwt = success.signedJwt ?: "",
                 clientState = success.clientState ?: "",
                 recognizeId = success.recognizeId,
+                devicePublicSigningKey = success.devicePublicSigningKey,
                 clientError = "",
                 clientErrorCode = "",
             )
@@ -87,6 +88,7 @@ class PingOneRecognizeEnrollCallback : AbstractRecognizeCallback() {
                 signedJwt = "",
                 clientState = "",
                 recognizeId = "",
+                devicePublicSigningKey = "",
                 clientError = ex.message,
                 clientErrorCode = ex.code.toString(),
             )
@@ -98,6 +100,7 @@ class PingOneRecognizeEnrollCallback : AbstractRecognizeCallback() {
         signedJwt: String,
         clientState: String,
         recognizeId: String,
+        devicePublicSigningKey: String,
         clientError: String,
         clientErrorCode: String,
     ) {
@@ -105,6 +108,7 @@ class PingOneRecognizeEnrollCallback : AbstractRecognizeCallback() {
             signedJwt,
             clientState,
             recognizeId,
+            devicePublicSigningKey,
             clientError,
             clientErrorCode
         )
