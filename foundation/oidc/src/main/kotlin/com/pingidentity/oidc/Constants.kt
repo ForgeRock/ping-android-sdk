@@ -33,6 +33,7 @@ object Constants {
     const val STATE = "state"
     const val UI_LOCATES = "ui_locales"
     const val ACR_VALUES = "acr_values"
+    const val AUTHORIZATION_DETAILS = "authorization_details"
     const val REQUEST_URI = "request_uri"
     const val RESPONSE_MODE = "response_mode"
     const val USER_CODE = "user_code"

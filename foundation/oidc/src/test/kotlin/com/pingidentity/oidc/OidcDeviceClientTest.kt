@@ -64,6 +64,24 @@ class OidcDeviceClientTest {
         }
     """.trimIndent()
 
+    // Live AIC ground-truth echo shape (RFC 9396 §7.4): the granted authorization_details
+    // array as observed in the token response of an AIC-rapid-23604.0 device flow.
+    private val tokenResponseWithAuthorizationDetailsJson = """
+        {
+          "access_token": "test-access-token",
+          "token_type": "Bearer",
+          "scope": "openid",
+          "expires_in": 3600,
+          "authorization_details": [
+            {
+              "type": "account_information",
+              "actions": ["list_accounts", "read_balances", "read_transactions"],
+              "locations": ["https://example.com/accounts"]
+            }
+          ]
+        }
+    """.trimIndent()
+
     private fun pendingResponse() =
         ByteReadChannel("""{"error":"authorization_pending","error_description":"The user has not yet approved the request."}""")
 
@@ -264,6 +282,60 @@ class OidcDeviceClientTest {
         // user() should return the stored user
         val user = client.user()
         assertNotNull(user)
+    }
+
+    @Test
+    fun `deviceAuthorization preserves authorization_details echoed by token endpoint`() = runTest {
+        var tokenCallCount = 0
+        val echoEngine = MockEngine { request ->
+            when (request.url.encodedPath) {
+                "/openid-configuration" -> respond(openIdConfigurationWithDeviceEndpointResponse(), HttpStatusCode.OK, headers)
+                "/device_authorization" -> respond(ByteReadChannel(deviceAuthResponseJson), HttpStatusCode.OK, headers)
+                "/token" -> {
+                    tokenCallCount++
+                    respond(ByteReadChannel(tokenResponseWithAuthorizationDetailsJson), HttpStatusCode.OK, headers)
+                }
+                else -> respond(ByteReadChannel(""), HttpStatusCode.InternalServerError)
+            }
+        }
+
+        val storage = MemoryStorage<Token>()
+        val client = OidcDeviceClient {
+            discoveryEndpoint = "http://localhost/openid-configuration"
+            clientId = "test-client"
+            scopes = mutableSetOf("openid")
+            httpClient = KtorHttpClient(HttpClient(echoEngine))
+            this.storage = { storage }
+        }
+
+        val statuses = client.deviceAuthorization().toList()
+
+        assertIs<DeviceFlowStatus.Started>(statuses.first())
+        assertIs<DeviceFlowStatus.Success>(statuses.last())
+        assertEquals(1, tokenCallCount)
+
+        // The poll reached the token endpoint as a device-code grant.
+        val tokenRequest = echoEngine.requestHistory.first { it.url.encodedPath == "/token" }
+        val formData = (tokenRequest.body as FormDataContent).formData
+        assertEquals("urn:ietf:params:oauth:grant-type:device_code", formData["grant_type"])
+        assertEquals("test-device-code", formData["device_code"])
+        assertEquals("test-client", formData["client_id"])
+
+        // The granted details the AS echoed back are on the stored Token (AC 4). RAR initiation
+        // is out of scope (SDKS-5431) — this only proves the poll echo decodes and persists.
+        val stored = assertNotNull(storage.get())
+        assertEquals("test-access-token", stored.accessToken)
+        assertEquals(
+            listOf(
+                AuthorizationDetail(
+                    type = "account_information",
+                    actions = listOf("list_accounts", "read_balances", "read_transactions"),
+                    locations = listOf("https://example.com/accounts"),
+                ),
+            ),
+            stored.authorizationDetails,
+        )
+        echoEngine.close()
     }
 
     // ------------------------------------------------------------------

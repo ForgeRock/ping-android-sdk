@@ -49,6 +49,7 @@ object JsonConfigKey {
     const val UI_LOCALES = "uiLocales"
     const val ACR_VALUES = "acrValues"
     const val ADDITIONAL_PARAMETERS = "additionalParameters"
+    const val AUTHORIZATION_DETAILS = "authorizationDetails"
 
     // OPEN ID
     const val OPEN_ID = "openId"

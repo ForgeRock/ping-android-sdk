@@ -16,7 +16,6 @@ import com.pingidentity.oidc.Constants.CODE_VERIFIER
 import com.pingidentity.oidc.Constants.GRANT_TYPE
 import com.pingidentity.oidc.Constants.REDIRECT_URI
 import com.pingidentity.oidc.Constants.REFRESH_TOKEN
-import com.pingidentity.oidc.Constants.RESPONSE_TYPE
 import com.pingidentity.oidc.Constants.TOKEN
 import com.pingidentity.utils.Result
 import kotlinx.coroutines.coroutineScope
@@ -63,6 +62,13 @@ inline fun OidcClient(block: OidcClientConfig.() -> Unit = {}): OidcClient {
  *     "acrValues": "Level3",
  *     "par": true,
  *     "additionalParameters": { "max_age": "3600" },
+ *     "authorizationDetails": [
+ *       {
+ *         "type": "payment_initiation",
+ *         "actions": ["initiate", "status"],
+ *         "locations": ["https://example.com/payments"]
+ *       }
+ *     ],
  *     "openId": {
  *       "authorizationEndpoint": "https://auth.example.com/authorize",
  *       "tokenEndpoint": "https://auth.example.com/token",
@@ -98,7 +104,7 @@ fun OidcClient(json: JsonObject): kotlin.Result<OidcClient> {
  * Mandatory fields (`clientId`, `discoveryEndpoint`, `scopes`, `redirectUri`) are set by each
  * JSON factory independently. This function handles every optional field:
  * `display`, `par`, `loginHint`, `state`, `nonce`, `prompt`, `uiLocales`, `acrValues`,
- * `signOutRedirectUri`, `refreshThreshold`, `additionalParameters`,
+ * `signOutRedirectUri`, `refreshThreshold`, `additionalParameters`, `authorizationDetails`,
  * and the `openId` endpoint-override sub-object.
  *
  * @param oidcJsonConfig Parser wrapping the `oidc` sub-object of the top-level JSON config.
@@ -118,6 +124,8 @@ fun OidcClientConfig.update(oidcJsonConfig: JsonConfigParser) {
     if (additionalParams != null) {
         additionalParameters = additionalParams
     }
+    oidcJsonConfig.optional<List<AuthorizationDetail>?>(JsonConfigKey.AUTHORIZATION_DETAILS, null)
+        ?.let { authorizationDetails = it }
     val openIdJson = oidcJsonConfig.optional<JsonObject?>(JsonConfigKey.OPEN_ID, null)
     if (openIdJson != null) {
         val openIdParser = JsonConfigParser(openIdJson)

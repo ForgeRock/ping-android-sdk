@@ -156,6 +156,7 @@ class OidcClientConfigTest {
                 uiLocales = "uiLocales"
                 acrValues = "acrValues"
                 additionalParameters = mapOf("param" to "value")
+                authorizationDetails = listOf(AuthorizationDetail(type = "account_information"))
                 httpClient = mockk()
             }
 
@@ -179,6 +180,7 @@ class OidcClientConfigTest {
         assertEquals(otherConfig.uiLocales, oidcClientConfig.uiLocales)
         assertEquals(otherConfig.acrValues, oidcClientConfig.acrValues)
         assertEquals(otherConfig.additionalParameters, oidcClientConfig.additionalParameters)
+        assertEquals(otherConfig.authorizationDetails, oidcClientConfig.authorizationDetails)
         assertEquals(otherConfig.httpClient, oidcClientConfig.httpClient)
     }
 
@@ -206,12 +208,13 @@ class OidcClientConfigTest {
                 uiLocales = "uiLocales"
                 acrValues = "acrValues"
                 additionalParameters = mapOf("param" to "value")
+                authorizationDetails = listOf(AuthorizationDetail(type = "account_information"))
                 httpClient = mockk()
             }
 
-        //Ensure there are 23 properties in the class for now.
+        //Ensure there are 24 properties in the class for now.
         val clazz: KClass<OidcClientConfig> = OidcClientConfig::class
-        assertEquals(clazz.memberProperties.size, 23)
+        assertEquals(clazz.memberProperties.size, 24)
 
         val clonedConfig = oidcClientConfig.clone()
 
@@ -235,6 +238,7 @@ class OidcClientConfigTest {
         assertEquals(oidcClientConfig.uiLocales, clonedConfig.uiLocales)
         assertEquals(oidcClientConfig.acrValues, clonedConfig.acrValues)
         assertEquals(oidcClientConfig.additionalParameters, clonedConfig.additionalParameters)
+        assertEquals(oidcClientConfig.authorizationDetails, clonedConfig.authorizationDetails)
         assertEquals(oidcClientConfig.httpClient, clonedConfig.httpClient)
     }
 
@@ -261,6 +265,7 @@ class OidcClientConfigTest {
                 uiLocales = "uiLocales"
                 acrValues = "acrValues"
                 additionalParameters = mapOf("param" to "value")
+                authorizationDetails = listOf(AuthorizationDetail(type = "account_information"))
                 httpClient = mockk()
             }
         oidcClientConfig.init()
@@ -286,6 +291,7 @@ class OidcClientConfigTest {
         assertEquals(oidcClientConfig.uiLocales, clonedConfig.uiLocales)
         assertEquals(oidcClientConfig.acrValues, clonedConfig.acrValues)
         assertEquals(oidcClientConfig.additionalParameters, clonedConfig.additionalParameters)
+        assertEquals(oidcClientConfig.authorizationDetails, clonedConfig.authorizationDetails)
         assertEquals(oidcClientConfig.httpClient, clonedConfig.httpClient)
     }
 

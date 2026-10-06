@@ -209,6 +209,49 @@ web.authorize(
   }
 ```
 
+### Rich Authorization Requests (RFC 9396)
+
+Use `authorizationDetails` to request granular authorization instead of hand-serializing RAR JSON
+into `additionalParameters`.
+
+Configure it on the OIDC module:
+
+```kotlin
+module(com.pingidentity.oidc.module.Oidc) {
+    discoveryEndpoint = "https://example.com/envId/as/.well-known/openid-configuration"
+    clientId = "client-id"
+    redirectUri = "org.pingidentity.demo://callback"
+    authorizationDetails = listOf(
+        AuthorizationDetail(
+            type = "payment_initiation",
+            actions = listOf("initiate", "status"),
+            locations = listOf("https://example.com/payments"),
+        )
+    )
+}
+```
+
+Or provide it per call, which replaces the configured value for that request:
+
+```kotlin
+web.authorize {
+    authorizationDetails(
+        AuthorizationDetail(type = "account_information", actions = listOf("balance"))
+    )
+}
+```
+
+The `authorization_details` parameter is emitted exactly once, chosen as: per-call
+`authorizationDetails` > a hand-serialized `authorization_details` entry in `additionalParameters` >
+the configured list. When `par = true`, the parameter is pushed in the PAR form body. Type-specific
+members beyond the common fields (`type`, `locations`, `actions`, `datatypes`, `privileges`) are
+carried through `AuthorizationDetail.additionalFields`. With JSON configuration, use the
+`authorizationDetails` key (an array of detail objects).
+
+A Journey-configured client applies the module-level `authorizationDetails` to its session agent's
+authorize request. `authorization_details` scoped to an individual Journey run is not currently
+exposed.
+
 ## License
 
 This software may be modified and distributed under the terms of the MIT license. See the LICENSE file for details.

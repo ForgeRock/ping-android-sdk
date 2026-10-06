@@ -9,7 +9,9 @@ package com.pingidentity.oidc.module
 
 import androidx.core.net.toUri
 import com.pingidentity.network.isSuccess
+import com.pingidentity.oidc.AuthorizationDetail
 import com.pingidentity.oidc.Constants.ACR_VALUES
+import com.pingidentity.oidc.Constants.AUTHORIZATION_DETAILS
 import com.pingidentity.oidc.Constants.CLIENT_ID
 import com.pingidentity.oidc.Constants.CODE
 import com.pingidentity.oidc.Constants.CODE_CHALLENGE
@@ -30,6 +32,10 @@ import com.pingidentity.oidc.OidcClientConfig
 import com.pingidentity.oidc.Pkce
 import com.pingidentity.oidc.exception.AuthorizeException
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.encodeToJsonElement
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import com.pingidentity.network.HttpRequest as Request
@@ -40,8 +46,14 @@ import com.pingidentity.network.HttpRequest as Request
  * This function populates all required and optional OAuth2/OIDC parameters for an authorization request:
  * - Required parameters: client_id, response_type, scope, redirect_uri, PKCE parameters
  * - Optional parameters: state, nonce, login_hint, prompt, display, UI locales, ACR values
+ * - Rich Authorization Request: authorization_details (RFC 9396 §2), emitted at most once
  * - Additional custom parameters from configuration
  * - Extra parameters passed to this specific request
+ *
+ * `authorization_details` is emitted at most once, chosen as: per-call `extraParameters`
+ * (raw string or typed via `Parameters.authorizationDetails`) > a hand-serialized
+ * `authorization_details` in [OidcClientConfig.additionalParameters] > the typed
+ * [OidcClientConfig.authorizationDetails] list (the string maps are the low-level escape hatch).
  *
  * @param pkce PKCE (Proof Key for Code Exchange) parameters for enhanced security
  * @param extraParameters Additional parameters specific to this authorization request
@@ -61,11 +73,21 @@ internal fun OidcClientConfig.buildAuthorizeParams(
     acrValues?.let {
         onParam(ACR_VALUES, it)
     }
+    if (authorizationDetails.isNotEmpty() && AUTHORIZATION_DETAILS !in additionalParameters && AUTHORIZATION_DETAILS !in extraParameters) {
+        onParam(AUTHORIZATION_DETAILS, authorizationDetails.toAuthorizationDetailsParam())
+    }
     display?.let {
         onParam(DISPLAY, it)
     }
     additionalParameters.forEach { (key, value) ->
-        onParam(key, value)
+        // A per-call extraParameter of the same name wins (see the precedence note in the KDoc):
+        // skip the hand-serialized authorization_details in that case, since a duplicate key
+        // would leave server-side merge semantics undefined. Other keys keep the existing
+        // accumulate-both behavior.
+        val suppressedByPerCall = key == AUTHORIZATION_DETAILS && key in extraParameters
+        if (!suppressedByPerCall) {
+            onParam(key, value)
+        }
     }
     loginHint?.let {
         onParam(LOGIN_HINT, it)
@@ -87,6 +109,41 @@ internal fun OidcClientConfig.buildAuthorizeParams(
     }
 }
 
+/**
+ * `Json` instance used to serialize [AuthorizationDetail] lists onto the wire. Unlike the module
+ * `Json` (`com.pingidentity.oidc.json`, which has `encodeDefaults = true`) it leaves
+ * `encodeDefaults` off, so absent optional members of an authorization detail object are omitted
+ * from the serialized `authorization_details` value instead of emitted as `"locations":null`
+ * (RFC 9396 §2.2 makes every member but `type` optional, and omitting absent members is the
+ * canonical wire form).
+ */
+internal val authorizeJson: Json = Json { encodeDefaults = false }
+
+/**
+ * Serializes authorization details into the value of the `authorization_details` request
+ * parameter (RFC 9396 §2): a JSON array of detail objects.
+ *
+ * Object members are emitted in deterministic, sorted key order so that the serialized value
+ * is stable across invocations. Absent optional members are omitted from the output.
+ *
+ * @param json The `Json` instance to serialize with.
+ * @return The serialized JSON array as a string.
+ */
+internal fun List<AuthorizationDetail>.toAuthorizationDetailsParam(json: Json = authorizeJson): String =
+    json.encodeToJsonElement(this).sortedKeys().toString()
+
+/**
+ * Recursively sorts the members of every JSON object by key so that the encoded form matches the
+ * deterministic `.sortedKeys` output of the iOS SDK's `AuthorizationDetail.wireValue`.
+ */
+private fun JsonElement.sortedKeys(): JsonElement =
+    when (this) {
+        is JsonObject -> JsonObject(
+            entries.sortedBy { it.key }.associate { it.key to it.value.sortedKeys() },
+        )
+        is JsonArray -> JsonArray(map { it.sortedKeys() })
+        else -> this
+    }
 
 /**
  * Internal function to populate an OIDC authorization request with the necessary parameters.

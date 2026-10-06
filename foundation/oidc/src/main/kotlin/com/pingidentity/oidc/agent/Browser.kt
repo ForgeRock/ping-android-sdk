@@ -15,6 +15,7 @@ import com.pingidentity.network.isSuccess
 import com.pingidentity.oidc.Agent
 import com.pingidentity.oidc.AuthCode
 import com.pingidentity.oidc.Constants.ACR_VALUES
+import com.pingidentity.oidc.Constants.AUTHORIZATION_DETAILS
 import com.pingidentity.oidc.Constants.CLIENT_ID
 import com.pingidentity.oidc.Constants.CODE
 import com.pingidentity.oidc.Constants.CODE_CHALLENGE
@@ -32,6 +33,7 @@ import com.pingidentity.oidc.Constants.STATE
 import com.pingidentity.oidc.Constants.UI_LOCATES
 import com.pingidentity.oidc.OidcConfig
 import com.pingidentity.oidc.Pkce
+import com.pingidentity.oidc.module.toAuthorizationDetailsParam
 import com.pingidentity.utils.PingDsl
 import java.net.URL
 
@@ -137,6 +139,18 @@ var browser =
             }
             oidcConfig.oidcClientConfig.acrValues?.let {
                 builder.appendQueryParameter(ACR_VALUES, it)
+            }
+            // The browser agent builds the authorization URL independently of
+            // buildAuthorizeParams, so the typed config-level list is emitted here to keep
+            // updateAgent(browser) at parity. The agent never receives per-call parameters; a
+            // hand-serialized authorization_details entry in additionalParameters is appended
+            // earlier in this builder, so a collision there would duplicate the key — user
+            // error, matching today's behavior for any duplicated additional parameter.
+            if (oidcConfig.oidcClientConfig.authorizationDetails.isNotEmpty()) {
+                builder.appendQueryParameter(
+                    AUTHORIZATION_DETAILS,
+                    oidcConfig.oidcClientConfig.authorizationDetails.toAuthorizationDetailsParam(),
+                )
             }
 
             val pkce = Pkce.generate()

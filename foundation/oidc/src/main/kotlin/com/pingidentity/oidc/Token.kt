@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 - 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2024 - 2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -7,8 +7,10 @@
 
 package com.pingidentity.oidc
 
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonIgnoreUnknownKeys
 import java.util.Calendar
 
 /**
@@ -21,8 +23,12 @@ import java.util.Calendar
  * @property refreshToken The refresh token.
  * @property idToken The ID token.
  * @property expireAt The timestamp when the token expires.
+ * @property authorizationDetails The authorization details granted for the access token
+ * (RFC 9396 §7), or null when the token response carries no `authorization_details`.
  */
+@OptIn(ExperimentalSerializationApi::class)
 @Serializable
+@JsonIgnoreUnknownKeys
 data class Token(
     @SerialName("access_token")
     val accessToken: String = "",
@@ -38,6 +44,8 @@ data class Token(
     val idToken: String? = null,
     @SerialName("expireAt")
     internal val expireAt: Long =  now() + expiresIn,
+    @SerialName("authorization_details")
+    val authorizationDetails: List<AuthorizationDetail>? = null
 ) {
     /**
      * Checks if the token is expired.
