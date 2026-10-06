@@ -73,7 +73,9 @@ internal fun OidcClientConfig.buildAuthorizeParams(
     acrValues?.let {
         onParam(ACR_VALUES, it)
     }
-    if (authorizationDetails.isNotEmpty() && AUTHORIZATION_DETAILS !in additionalParameters && AUTHORIZATION_DETAILS !in extraParameters) {
+    if (authorizationDetails.isNotEmpty() &&
+        AUTHORIZATION_DETAILS !in additionalParameters &&
+        AUTHORIZATION_DETAILS !in extraParameters) {
         onParam(AUTHORIZATION_DETAILS, authorizationDetails.toAuthorizationDetailsParam())
     }
     display?.let {

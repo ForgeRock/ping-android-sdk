@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 - 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2024 - 2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -142,11 +142,9 @@ var browser =
             }
             // The browser agent builds the authorization URL independently of
             // buildAuthorizeParams, so the typed config-level list is emitted here to keep
-            // updateAgent(browser) at parity. The agent never receives per-call parameters; a
-            // hand-serialized authorization_details entry in additionalParameters is appended
-            // earlier in this builder, so a collision there would duplicate the key — user
-            // error, matching today's behavior for any duplicated additional parameter.
-            if (oidcConfig.oidcClientConfig.authorizationDetails.isNotEmpty()) {
+            // updateAgent(browser) at parity.
+            if (oidcConfig.oidcClientConfig.authorizationDetails.isNotEmpty()
+                && AUTHORIZATION_DETAILS !in oidcConfig.oidcClientConfig.additionalParameters) {
                 builder.appendQueryParameter(
                     AUTHORIZATION_DETAILS,
                     oidcConfig.oidcClientConfig.authorizationDetails.toAuthorizationDetailsParam(),
