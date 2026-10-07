@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2024 - 2025 Ping Identity Corporation. All rights reserved.
+# Copyright (c) 2024 - 2026 Ping Identity Corporation. All rights reserved.
 #
 # This software may be modified and distributed under the terms
 # of the MIT license. See the LICENSE file for details.
@@ -47,6 +47,8 @@ jobs:
     outputs:
       head_sha: ${{ steps.ctx.outputs.head_sha }}
       head_repo: ${{ steps.ctx.outputs.head_repo }}
+      base_sha: ${{ steps.ctx.outputs.base_sha }}
+      base_repo: ${{ steps.ctx.outputs.base_repo }}
     steps:
       - name: React to /run-ci comment with 👀
         if: github.event_name == 'issue_comment'
@@ -72,23 +74,44 @@ jobs:
             if (context.eventName === 'push') {
               core.setOutput('head_sha', context.sha);
               core.setOutput('head_repo', `${context.repo.owner}/${context.repo.repo}`);
+              core.setOutput('base_sha', context.payload.before);
+              core.setOutput('base_repo', `${context.repo.owner}/${context.repo.repo}`);
             } else if (context.eventName === 'pull_request') {
               core.setOutput('head_sha', context.payload.pull_request.head.sha);
               core.setOutput('head_repo', context.payload.pull_request.head.repo.full_name);
+              core.setOutput('base_sha', context.payload.pull_request.base.sha);
+              core.setOutput('base_repo', context.payload.pull_request.base.repo.full_name);
             } else {
               const pr = await github.rest.pulls.get({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 pull_number: context.issue.number,
               });
+
               core.setOutput('head_sha', pr.data.head.sha);
               core.setOutput('head_repo', pr.data.head.repo.full_name);
+              core.setOutput('base_sha', pr.data.base.sha);
+              core.setOutput('base_repo', pr.data.base.repo.full_name);
             }
+
+  # Validates Ping Identity copyright headers of the source files changed by the PR / push.
+  # Fails fast: every other job depends on it (directly or transitively).
+  copyright-check:
+    name: Copyright Check
+    needs: resolve-context
+    uses: ./.github/workflows/copyright-check.yml
+    with:
+      head_sha: ${{ needs.resolve-context.outputs.head_sha }}
+      head_repo: ${{ needs.resolve-context.outputs.head_repo }}
+      base_sha: ${{ needs.resolve-context.outputs.base_sha }}
+      base_repo: ${{ needs.resolve-context.outputs.base_repo }}
 
   # Build and run unit tests
   build-and-test:
     name: Build and test
-    needs: resolve-context
+    needs:
+      - resolve-context
+      - copyright-check
     uses: ./.github/workflows/build-and-test.yaml
     with:
       head_sha: ${{ needs.resolve-context.outputs.head_sha }}
@@ -101,7 +124,9 @@ jobs:
   integration-tests:
     name: Integration tests
     if: ${{ vars.ENABLE_INTEGRATION_TESTS == 'true' }}
-    needs: resolve-context
+    needs:
+      - resolve-context
+      - copyright-check
     uses: ./.github/workflows/integration-tests.yaml
     with:
       head_sha: ${{ needs.resolve-context.outputs.head_sha }}
@@ -229,7 +254,9 @@ jobs:
   mend-sca-scan:
     name: Mend SCA Scan
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
-    needs: resolve-context
+    needs:
+      - resolve-context
+      - copyright-check
     uses: ./.github/workflows/mend-sca-scan.yaml
     with:
       head_sha: ${{ needs.resolve-context.outputs.head_sha }}
@@ -243,7 +270,9 @@ jobs:
   mend-sast-scan:
     name: Mend SAST Scan
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
-    needs: resolve-context
+    needs:
+      - resolve-context
+      - copyright-check
     uses: ./.github/workflows/mend-sast-scan.yaml
     with:
       head_sha: ${{ needs.resolve-context.outputs.head_sha }}
@@ -257,12 +286,14 @@ jobs:
   docs:
     name: Docs
     if: github.event_name == 'push'
+    needs: copyright-check
     uses: ./.github/workflows/docs.yaml
 
   # Calculate package sizes — not applicable for issue_comment (no PR merge ref available)
   package-sizes:
     name: Package Sizes
     if: github.event_name != 'issue_comment'
+    needs: copyright-check
     uses: ./.github/workflows/package-sizes.yml
 
   # Post /run-ci result back to the PR as a comment and update the reaction
@@ -271,6 +302,7 @@ jobs:
     if: always() && github.event_name == 'issue_comment' && needs.resolve-context.result != 'skipped'
     needs:
       - resolve-context
+      - copyright-check
       - build-and-test
       - integration-tests
       - browserstack-oath-results
@@ -284,6 +316,7 @@ jobs:
         with:
           script: |
             const results = [
+              '${{ needs.copyright-check.result }}',
               '${{ needs.build-and-test.result }}',
               '${{ needs.integration-tests.result }}',
               '${{ needs.browserstack-oath-results.result }}',
