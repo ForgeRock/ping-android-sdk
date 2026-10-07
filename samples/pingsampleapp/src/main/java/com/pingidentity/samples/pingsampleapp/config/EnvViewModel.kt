@@ -33,6 +33,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonArray
@@ -66,6 +67,7 @@ data class OidcConfigState(
     val display: String = "",
     val arcValue: String = "",
     val par: Boolean = false,
+    val authorizationDetails: JsonElement? = null,
 )
 
 data class DeviceAuthConfigState(
@@ -191,6 +193,7 @@ internal fun loadAssetConfigs(): AssetConfigs {
                 display = displayName,
                 arcValue = oidc.str("acrValues"),
                 par = oidc["par"]?.jsonPrimitive?.content?.toBooleanStrictOrNull() ?: false,
+                authorizationDetails = oidc["authorizationDetails"],
             ))
         }
     }
@@ -287,6 +290,9 @@ internal fun buildWeb(config: OidcConfigState) {
                 put(JsonConfigKey.DISPLAY, config.display)
                 if (config.arcValue.isNotBlank()) put(JsonConfigKey.ACR_VALUES, config.arcValue)
                 put(JsonConfigKey.PAR, config.par)
+                // Pass the asset's authorizationDetails array through verbatim so the SDK's
+                // JSON-config parser (SDKS-5426) parses it, rather than re-serializing here.
+                config.authorizationDetails?.let { put(JsonConfigKey.AUTHORIZATION_DETAILS, it) }
             })
         }
     ).onSuccess { web = it }

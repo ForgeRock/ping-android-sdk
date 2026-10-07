@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.RemoveCircleOutline
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -50,7 +51,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.pingidentity.oidc.AuthorizationDetail
 import com.pingidentity.oidc.Token
+import kotlinx.serialization.json.Json
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -192,6 +195,64 @@ private fun TokenCard(token: Token) {
     token.tokenType?.let { TokenFieldCard(label = "Token Type", value = it, truncate = false, copyable = false) }
     token.scope?.let { TokenFieldCard(label = "Scope", value = it, truncate = false, copyable = false) }
     ExpiryCountdownCard(token = token)
+    token.authorizationDetails?.let { AuthorizationDetailsCard(it) }
+}
+
+/**
+ * RFC 9396: renders the granted [Token.authorizationDetails], one row-set per object.
+ * Hidden entirely when the server granted none (non-RAR apps see no change).
+ */
+@Composable
+private fun AuthorizationDetailsCard(details: List<AuthorizationDetail>) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            text = "Granted Authorization Details",
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onBackground,
+            modifier = Modifier.padding(bottom = 6.dp),
+        )
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                details.forEachIndexed { index, detail ->
+                    AuthorizationDetailRow(detail)
+                    if (details.size > 1 && index < details.size - 1) {
+                        HorizontalDivider()
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AuthorizationDetailRow(detail: AuthorizationDetail) {
+    TokenFieldCard(label = "Type", value = detail.type, truncate = false, copyable = false)
+    detail.locations?.let { TokenFieldCard(label = "Locations", value = it.joinToString(", "), truncate = false, copyable = false) }
+    detail.actions?.let { TokenFieldCard(label = "Actions", value = it.joinToString(", "), truncate = false, copyable = false) }
+    detail.datatypes?.let { TokenFieldCard(label = "Datatypes", value = it.joinToString(", "), truncate = false, copyable = false) }
+    detail.privileges?.let { TokenFieldCard(label = "Privileges", value = it.joinToString(", "), truncate = false, copyable = false) }
+    if (detail.additionalFields.isNotEmpty()) {
+        TokenFieldCard(
+            label = "Additional fields",
+            value = Json { prettyPrint = true }.encodeToString(
+                kotlinx.serialization.json.JsonObject.serializer(),
+                kotlinx.serialization.json.buildJsonObject {
+                    detail.additionalFields.forEach { (key, value) -> put(key, value) }
+                },
+            ),
+            truncate = false,
+            copyable = false,
+        )
+    }
 }
 
 @Composable
