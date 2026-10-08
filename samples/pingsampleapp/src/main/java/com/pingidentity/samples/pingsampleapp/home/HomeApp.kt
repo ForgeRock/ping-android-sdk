@@ -47,6 +47,7 @@ import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material.icons.filled.Tag
 import androidx.compose.material.icons.filled.Token
+import androidx.compose.material.icons.filled.VerifiedUser
 import androidx.compose.material.icons.filled.VpnKey
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -91,6 +92,7 @@ fun HomeApp(
     onDaVinciFlowClick : () -> Unit,
     onJourneyFlowClick : () -> Unit,
     onOIDCLoginClick : () -> Unit,
+    onOidcRarLoginClick : () -> Unit,
     onAccessTokenClick : () -> Unit,
     onUserProfileClick : () -> Unit,
     onDeviceManagementClick : () -> Unit,
@@ -247,6 +249,13 @@ fun HomeApp(
                     title = stringResource(R.string.text_oidc_title),
                     subtitle = stringResource(R.string.text_oidc_subtitle),
                     onClick = onOIDCLoginClick
+                )
+
+                IconRowItem(
+                    icon = Icons.Default.VerifiedUser,
+                    title = stringResource(R.string.text_oidc_rar_title),
+                    subtitle = stringResource(R.string.text_oidc_rar_subtitle),
+                    onClick = onOidcRarLoginClick
                 )
 
                 IconRowItem(
@@ -552,6 +561,7 @@ fun PreviewHomeApp() {
         onDaVinciFlowClick = {},
         onJourneyFlowClick = {},
         onOIDCLoginClick = {},
+        onOidcRarLoginClick = {},
         onAccessTokenClick = {},
         onUserProfileClick = {},
         onDeviceManagementClick = {},

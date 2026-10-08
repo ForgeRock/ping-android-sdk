@@ -105,7 +105,7 @@ fun OidcClient(json: JsonObject): kotlin.Result<OidcClient> {
  * JSON factory independently. This function handles every optional field:
  * `display`, `par`, `loginHint`, `state`, `nonce`, `prompt`, `uiLocales`, `acrValues`,
  * `signOutRedirectUri`, `refreshThreshold`, `additionalParameters`, `authorizationDetails`,
- * and the `openId` endpoint-override sub-object.
+ * the `storage.fileName` token-storage override, and the `openId` endpoint-override sub-object.
  *
  * @param oidcJsonConfig Parser wrapping the `oidc` sub-object of the top-level JSON config.
  */
@@ -126,6 +126,14 @@ fun OidcClientConfig.update(oidcJsonConfig: JsonConfigParser) {
     }
     oidcJsonConfig.optional<List<AuthorizationDetail>?>(JsonConfigKey.AUTHORIZATION_DETAILS, null)
         ?.let { authorizationDetails = it }
+    // Token storage isolation: an optional nested `storage` object lets each JSON-configured
+    // client persist its token in its own encrypted DataStore file. Omitted (the default)
+    // keeps the shared token file, matching pre-JSON-config behavior.
+    oidcJsonConfig.optional<JsonObject?>(JsonConfigKey.STORAGE, null)?.let { storageJson ->
+        JsonConfigParser(storageJson).optional<String?>(JsonConfigKey.FILE_NAME, null)?.let { name ->
+            storage { fileName = name }
+        }
+    }
     val openIdJson = oidcJsonConfig.optional<JsonObject?>(JsonConfigKey.OPEN_ID, null)
     if (openIdJson != null) {
         val openIdParser = JsonConfigParser(openIdJson)

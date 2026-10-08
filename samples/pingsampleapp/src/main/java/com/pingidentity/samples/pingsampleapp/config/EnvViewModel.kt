@@ -35,6 +35,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
@@ -209,6 +210,16 @@ var oidcClient: OidcClient? = null
 var daVinci: DaVinci? = null
 var web: OidcWebClient? = null
 var oidcDeviceClient: OidcDeviceClient? = null
+
+/**
+ * Dedicated RAR login client (RFC 9396), built from the applied Web config but with its own
+ * token storage file. Mirrors the iOS sample's `rarLogin` workflow: starting an authorization
+ * revokes and replaces the token held by *that workflow's* storage, so this separate client
+ * keeps the Web client's token (A) valid while the RAR login issues token (B).
+ */
+var rarWeb: OidcWebClient? = null
+/** The applied Web config, exposed for the RAR login screen's status card. */
+var webConfig: OidcConfigState? = null
 /** Used by Journey's IdP (social identity provider) callback. Set only by [buildJourney]. */
 var redirectUri: Uri = Uri.EMPTY
 /** Used by DaVinci's Social Login button. Set only by [buildDaVinci]. Never overwritten by Journey. */
@@ -300,7 +311,37 @@ internal fun buildWeb(config: OidcConfigState) {
             Logger.STANDARD.d("Failed to create OIDC Web client instance: ${it.message}")
             web = null
         }
+    // The dedicated RAR client mirrors the Web client but persists its token under a distinct
+    // storage file, so a RAR login (token B) never clobbers the plain Web login's token (A).
+    // Config-level authorizationDetails are carried too; the RAR screen can override them
+    // per transaction (per-call wins over config-level in the SDK's precedence chain).
+    OidcWebClient(
+        buildJsonObject {
+            put(JsonConfigKey.LOG, "STANDARD")
+            put(JsonConfigKey.OIDC, buildJsonObject {
+                put(JsonConfigKey.CLIENT_ID, config.clientId)
+                put(JsonConfigKey.DISCOVERY_ENDPOINT, config.discoveryEndpoint)
+                put(JsonConfigKey.SCOPES, config.scopes.toScopesJsonArray())
+                put(JsonConfigKey.REDIRECT_URI, config.redirectUri)
+                put(JsonConfigKey.DISPLAY, config.display)
+                if (config.arcValue.isNotBlank()) put(JsonConfigKey.ACR_VALUES, config.arcValue)
+                put(JsonConfigKey.PAR, config.par)
+                config.authorizationDetails?.let { put(JsonConfigKey.AUTHORIZATION_DETAILS, it) }
+                put(JsonConfigKey.STORAGE, buildJsonObject {
+                    put(JsonConfigKey.FILE_NAME, JsonPrimitive(RAR_STORAGE_FILE_NAME))
+                })
+            })
+        }
+    ).onSuccess { rarWeb = it }
+        .onFailure {
+            Logger.STANDARD.d("Failed to create RAR Web client instance: ${it.message}")
+            rarWeb = null
+        }
+    webConfig = config
 }
+
+/** Storage file for the dedicated RAR client's token (B). Must differ from every other flow's. */
+internal const val RAR_STORAGE_FILE_NAME = "com.pingidentity.sdk.v1.tokens.rar"
 
 internal fun buildDeviceAuthClient(config: DeviceAuthConfigState) {
     OidcDeviceClient(

@@ -75,6 +75,7 @@ import com.pingidentity.samples.pingsampleapp.journey.PreferenceViewModel
 import com.pingidentity.samples.pingsampleapp.keystore.KeyStoreScreen
 import com.pingidentity.samples.pingsampleapp.logout.Logout
 import com.pingidentity.samples.pingsampleapp.oidc.Centralize
+import com.pingidentity.samples.pingsampleapp.rar.RarLoginScreen
 import com.pingidentity.samples.pingsampleapp.token.TokenScreen
 import com.pingidentity.samples.pingsampleapp.token.TokenViewModel
 import com.pingidentity.samples.pingsampleapp.userprofile.UserProfile
@@ -90,6 +91,7 @@ object Route {
     const val JOURNEY_ROUTE = "journey_route"
     const val JOURNEY = "journey"
     const val OIDC = "oidc"
+    const val OIDC_RAR = "oidc_rar"
     const val ACCESS_TOKEN = "access_token"
     internal const val USER_PROFILE_ROUTE = "user_profile?type={type}"
     fun userProfile(type: UserProfileType? = null) =
@@ -158,6 +160,9 @@ fun AppNavigation(
                 },
                 onOIDCLoginClick = {
                     navController.navigate(Route.OIDC)
+                },
+                onOidcRarLoginClick = {
+                    navController.navigate(Route.OIDC_RAR)
                 },
                 onAccessTokenClick = {
                     navController.navigate(Route.ACCESS_TOKEN)
@@ -302,7 +307,18 @@ fun AppNavigation(
                 }
             )
         }
-        
+
+        composable(Route.OIDC_RAR) {
+            RarLoginScreen(
+                onSuccess = {
+                    navController.navigate(Route.ACCESS_TOKEN)
+                },
+                onBack = {
+                    navController.navigateUp()
+                }
+            )
+        }
+
         composable(Route.ACCESS_TOKEN) {
             val tokenViewModel = viewModel<TokenViewModel>(
                 factory = TokenViewModel.factory()
@@ -347,6 +363,9 @@ fun AppNavigation(
                         }
                         UserProfileType.OIDC -> {
                             navController.navigate(Route.OIDC)
+                        }
+                        UserProfileType.OIDC_RAR -> {
+                            navController.navigate(Route.OIDC_RAR)
                         }
                         UserProfileType.AUTH_GRANT -> {
                             navController.navigate(Route.DEVICE_AUTHORIZATION_GRANT)

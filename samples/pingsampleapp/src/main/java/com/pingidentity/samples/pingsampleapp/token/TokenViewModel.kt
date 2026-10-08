@@ -17,6 +17,7 @@ import com.pingidentity.davinci.user as davinciUser
 import com.pingidentity.samples.pingsampleapp.config.daVinci
 import com.pingidentity.samples.pingsampleapp.config.journey
 import com.pingidentity.samples.pingsampleapp.config.oidcDeviceClient
+import com.pingidentity.samples.pingsampleapp.config.rarWeb
 import com.pingidentity.samples.pingsampleapp.config.web
 import com.pingidentity.utils.Result.Failure
 import com.pingidentity.utils.Result.Success
@@ -46,6 +47,12 @@ class TokenViewModel : ViewModel() {
                     json.encodeToString(Token.serializer(), it)
                 } ?: tokenState.oidcError?.toString() ?: "No OIDC token information is available"
             }
+            TokenType.OIDC_RAR -> {
+                tokenState.oidcRarToken?.let {
+                    json.encodeToString(Token.serializer(), it)
+                } ?: tokenState.oidcRarError?.toString()
+                    ?: "No OIDC RAR token information is available"
+            }
             TokenType.AUTH_GRANT -> {
                 tokenState.authGrantToken?.let {
                     json.encodeToString(Token.serializer(), it)
@@ -63,6 +70,7 @@ class TokenViewModel : ViewModel() {
             TokenType.JOURNEY -> journeyAccessToken()
             TokenType.DAVINCI -> daVinciAccessToken()
             TokenType.OIDC -> oidcAccessToken()
+            TokenType.OIDC_RAR -> oidcRarAccessToken()
             TokenType.AUTH_GRANT -> authGrantAccessToken()
         }
     }
@@ -75,6 +83,7 @@ class TokenViewModel : ViewModel() {
         journeyAccessToken()
         daVinciAccessToken()
         oidcAccessToken()
+        oidcRarAccessToken()
         authGrantAccessToken()
     }
 
@@ -83,6 +92,7 @@ class TokenViewModel : ViewModel() {
             TokenType.JOURNEY -> journeyRefresh()
             TokenType.DAVINCI -> daVinciRefresh()
             TokenType.OIDC -> oidcRefresh()
+            TokenType.OIDC_RAR -> oidcRarRefresh()
             TokenType.AUTH_GRANT -> authGrantRefresh()
         }
     }
@@ -92,6 +102,7 @@ class TokenViewModel : ViewModel() {
             TokenType.JOURNEY -> journeyRevoke()
             TokenType.DAVINCI -> daVinciRevoke()
             TokenType.OIDC -> oidcRevoke()
+            TokenType.OIDC_RAR -> oidcRarRevoke()
             TokenType.AUTH_GRANT -> authGrantRevoke()
         }
     }
@@ -101,6 +112,7 @@ class TokenViewModel : ViewModel() {
             TokenType.JOURNEY -> state.update { it.copy(journeyToken = null, journeyError = null) }
             TokenType.DAVINCI -> state.update { it.copy(daVinciToken = null, daVinciError = null) }
             TokenType.OIDC -> state.update { it.copy(oidcToken = null, oidcError = null) }
+            TokenType.OIDC_RAR -> state.update { it.copy(oidcRarToken = null, oidcRarError = null) }
             TokenType.AUTH_GRANT -> state.update { it.copy(authGrantToken = null, authGrantError = null) }
         }
     }
@@ -251,6 +263,56 @@ class TokenViewModel : ViewModel() {
                 } ?: state.update { it.copy(oidcToken = null, oidcError = null) }
             } catch (e: Exception) {
                 state.update { it.copy(oidcToken = null, oidcError = null) }
+            }
+        }
+    }
+
+    // OIDC RAR Token Operations (dedicated RAR client, own storage — token B)
+    private fun oidcRarAccessToken() {
+        viewModelScope.launch {
+            try {
+                rarWeb?.user()?.let {
+                    when (val result = it.token()) {
+                        is Failure -> state.update { state ->
+                            state.copy(oidcRarToken = null, oidcRarError = result.value)
+                        }
+                        is Success -> state.update { state ->
+                            state.copy(oidcRarToken = result.value, oidcRarError = null)
+                        }
+                    }
+                } ?: state.update { it.copy(oidcRarToken = null, oidcRarError = null) }
+            } catch (e: Exception) {
+                state.update { it.copy(oidcRarToken = null, oidcRarError = null) }
+            }
+        }
+    }
+
+    private fun oidcRarRevoke() {
+        viewModelScope.launch {
+            try {
+                rarWeb?.user()?.revoke()
+            } catch (e: Exception) {
+                // ignore revoke errors
+            }
+            state.update { it.copy(oidcRarToken = null, oidcRarError = null) }
+        }
+    }
+
+    private fun oidcRarRefresh() {
+        viewModelScope.launch {
+            try {
+                rarWeb?.user()?.let {
+                    when (val result = it.refresh()) {
+                        is Failure -> state.update { state ->
+                            state.copy(oidcRarToken = null, oidcRarError = result.value)
+                        }
+                        is Success -> state.update { state ->
+                            state.copy(oidcRarToken = result.value, oidcRarError = null)
+                        }
+                    }
+                } ?: state.update { it.copy(oidcRarToken = null, oidcRarError = null) }
+            } catch (e: Exception) {
+                state.update { it.copy(oidcRarToken = null, oidcRarError = null) }
             }
         }
     }

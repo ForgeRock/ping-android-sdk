@@ -252,6 +252,114 @@ A Journey-configured client applies the module-level `authorizationDetails` to i
 authorize request. `authorization_details` scoped to an individual Journey run is not currently
 exposed.
 
+### Using RAR alongside an existing login (multiple tokens)
+
+A RAR login typically happens *after* the user has already signed in, and the app then holds two
+tokens: the token from the original login (**Token A**) and the token issued for the RAR transaction
+(**Token B**). The app can use either one, revoke only B, or revoke both on logout.
+
+Every workflow (`Journey`, `DaVinci`, `OidcWebClient`, `OidcDeviceClient`) keeps **one token in its
+own `storage`**. The browser-based, DaVinci, and device workflows **revoke the token currently in
+their storage and replace it** when a new authorization starts — so running the RAR login on the same
+workflow (or on a client sharing its storage) revokes Token A. (Journey does not revoke or replace its
+stored token on a new login: the previous token remains stored and `token()` keeps serving it until it
+expires.) To keep both tokens, give the RAR login **its own workflow with its own storage**:
+
+```kotlin
+// Token A: the original login. Scenario 1 uses a native Journey login,
+// scenario 2 a browser login with an OidcWebClient, each with its own storage account.
+val journey = Journey {
+    serverUrl = "https://example.com/am"
+    realm = "alpha"
+    module(Oidc) {
+        clientId = "ClientID"
+        discoveryEndpoint = "https://example.com/am/oauth2/alpha/.well-known/openid-configuration"
+        scopes = mutableSetOf("openid", "profile")
+        redirectUri = "org.forgerock.demo://oauth2redirect"
+        storage {
+            fileName = "ACCESS_TOKEN_STORAGE_JOURNEY"
+        }
+    }
+}
+
+// Token B: the browser-based RAR login, a separate workflow with a separate storage account.
+// It can use the same OAuth client as the original login, or a different one.
+val rarLogin = OidcWebClient {
+    module(Oidc) {
+        clientId = "ClientID"
+        discoveryEndpoint = "https://example.com/am/oauth2/alpha/.well-known/openid-configuration"
+        scopes = mutableSetOf("openid", "profile")
+        redirectUri = "org.forgerock.demo://oauth2redirect"
+        storage {
+            fileName = "ACCESS_TOKEN_STORAGE_RAR"
+        }
+    }
+}
+
+// Sign in once (Token A), then run the RAR login (Token B). Token A stays valid.
+val journeyUser = journey.user()
+val rarResult = rarLogin.authorize {
+    authorizationDetails(
+        AuthorizationDetail(type = "account_information", actions = listOf("list_accounts"))
+    )
+}
+
+// Use either token, whenever you need it
+val tokenA = journeyUser?.token()
+val tokenB = rarLogin.user()?.token()
+
+// Revoke only Token B. Token A is untouched.
+rarLogin.user()?.revoke()
+
+// Log out of everything: each workflow only knows its own storage, so this is one call per workflow.
+journeyUser?.logout()
+rarLogin.user()?.logout()
+```
+
+With JSON configuration, use the `storage.fileName` key instead of the DSL:
+
+```json
+{
+  "oidc": {
+    "clientId": "ClientID",
+    "discoveryEndpoint": "https://example.com/am/oauth2/alpha/.well-known/openid-configuration",
+    "scopes": ["openid", "profile"],
+    "redirectUri": "org.forgerock.demo://oauth2redirect",
+    "storage": { "fileName": "ACCESS_TOKEN_STORAGE_RAR" }
+  }
+}
+```
+
+| Scenario | Token A | Token B (RAR) |
+|---|---|---|
+| **1. Native login, then browser RAR** | `Journey` workflow, storage `fileName` `A` | `OidcWebClient`, storage `fileName` `B` |
+| **2. Browser login, then browser RAR** | `OidcWebClient`, storage `fileName` `A` | A second `OidcWebClient`, storage `fileName` `B` |
+
+> **Important: the storage file is what separates the tokens.** Encrypted DataStore files are
+> identified by their `fileName`, so two configurations with the same name share one slot. The
+> default file name is `com.pingidentity.sdk.v1.tokens`, so clients that do not set `storage` all
+> share it. Clients created from JSON configuration use the default file unless the config sets
+> `storage.fileName`. Sharing a slot has these effects:
+> - **Same OAuth client:** on the browser-based, DaVinci, and device workflows, the RAR login revokes
+>   Token A and replaces it with Token B.
+> - **Different OAuth clients:** the RAR login deletes Token A from the device, but its revocation
+>   request is sent with the RAR client's `client_id`. The authorization server is expected to refuse
+>   it ([RFC 7009 §2.1](https://datatracker.ietf.org/doc/html/rfc7009#section-2.1)), so Token A stays
+>   valid at the server yet can no longer be used or revoked by the app. Token B is then returned by
+>   the original workflow's `token()` too, although it was issued to a different client.
+
+**Things to be aware of:**
+- **One token per workflow.** On the browser-based, DaVinci, and device workflows, signing in again —
+  including running a second RAR login on `rarLogin` — revokes and replaces that workflow's previous
+  token. Journey does not revoke on re-login: the previously stored token remains until it expires.
+  To hold several RAR tokens at once, use one workflow and storage file for each.
+- **Logging out of both takes two calls.** `logout()` revokes the token of the workflow it is called
+  on and signs that workflow out. Nothing links the two workflows, so the app calls `logout()` on each.
+- **The browser session is shared separately from the tokens.** All workflows on the same tenant share
+  the Custom Tab cookie jar, so a second authorization for the same user may complete silently through
+  the existing browser session (SSO) without a login prompt. Storage separation isolates the *tokens*,
+  not the browser session.
+
 ## License
 
 This software may be modified and distributed under the terms of the MIT license. See the LICENSE file for details.

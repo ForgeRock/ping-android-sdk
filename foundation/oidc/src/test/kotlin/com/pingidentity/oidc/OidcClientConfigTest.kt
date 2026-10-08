@@ -29,6 +29,8 @@ import io.ktor.http.headersOf
 import io.ktor.utils.io.ByteReadChannel
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonObject
 import org.junit.Assert
 import org.junit.Assert.assertFalse
 import org.junit.Rule
@@ -361,6 +363,45 @@ class OidcClientConfigTest {
         Assert.assertEquals("custom_key_alias", config.keyAlias)
         assertFalse(config.strongBoxPreferred)
         Assert.assertEquals(128, config.symmetricKeySize)
+    }
+
+    @Test
+    fun `update should apply storage fileName from JSON config`() {
+        val oidcClientConfig = OidcClientConfig()
+        oidcClientConfig.update(JsonConfigParser(buildJsonObject {
+            put(JsonConfigKey.STORAGE, buildJsonObject {
+                put(JsonConfigKey.FILE_NAME, JsonPrimitive("my_token_file"))
+            })
+        }))
+
+        val config = EncryptedDataStoreStorageConfig().apply(oidcClientConfig.storageOption)
+        Assert.assertEquals("my_token_file", config.fileName)
+        //Non-name defaults are untouched
+        Assert.assertEquals("com.pingidentity.sdk.v1.tokens", config.keyAlias)
+    }
+
+    @Test
+    fun `update should keep default storage when JSON has no storage object`() {
+        val oidcClientConfig = OidcClientConfig()
+        oidcClientConfig.update(JsonConfigParser(buildJsonObject {
+            put(JsonConfigKey.DISPLAY, JsonPrimitive("display"))
+        }))
+
+        val config = EncryptedDataStoreStorageConfig().apply(oidcClientConfig.storageOption)
+        Assert.assertEquals("com.pingidentity.sdk.v1.tokens", config.fileName)
+    }
+
+    @Test
+    fun `update should keep default storage when storage object has no fileName`() {
+        val oidcClientConfig = OidcClientConfig()
+        oidcClientConfig.update(JsonConfigParser(buildJsonObject {
+            put(JsonConfigKey.STORAGE, buildJsonObject {
+                put(JsonConfigKey.DISPLAY, JsonPrimitive("unrelated"))
+            })
+        }))
+
+        val config = EncryptedDataStoreStorageConfig().apply(oidcClientConfig.storageOption)
+        Assert.assertEquals("com.pingidentity.sdk.v1.tokens", config.fileName)
     }
 
 }

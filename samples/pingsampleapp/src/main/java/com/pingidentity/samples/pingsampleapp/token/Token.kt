@@ -34,8 +34,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -119,9 +119,11 @@ fun TokenScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            TabRow(
+            // Scrollable so five labels never wrap mid-word; each tab keeps its natural width.
+            ScrollableTabRow(
                 selectedTabIndex = tokenState.selectedTab.ordinal,
                 modifier = Modifier.fillMaxWidth(),
+                edgePadding = 0.dp,
             ) {
                 Tab(
                     selected = tokenState.selectedTab == TokenType.JOURNEY,
@@ -148,6 +150,14 @@ fun TokenScreen(
                     text = { Text("OIDC") },
                 )
                 Tab(
+                    selected = tokenState.selectedTab == TokenType.OIDC_RAR,
+                    onClick = {
+                        tokenViewModel.selectTab(TokenType.OIDC_RAR)
+                        tokenViewModel.loadAllTokens()
+                    },
+                    text = { Text("RAR") },
+                )
+                Tab(
                     selected = tokenState.selectedTab == TokenType.AUTH_GRANT,
                     onClick = {
                         tokenViewModel.selectTab(TokenType.AUTH_GRANT)
@@ -161,12 +171,14 @@ fun TokenScreen(
                 TokenType.JOURNEY -> tokenState.journeyToken
                 TokenType.DAVINCI -> tokenState.daVinciToken
                 TokenType.OIDC -> tokenState.oidcToken
+                TokenType.OIDC_RAR -> tokenState.oidcRarToken
                 TokenType.AUTH_GRANT -> tokenState.authGrantToken
             }
             val error = when (tokenState.selectedTab) {
                 TokenType.JOURNEY -> tokenState.journeyError
                 TokenType.DAVINCI -> tokenState.daVinciError
                 TokenType.OIDC -> tokenState.oidcError
+                TokenType.OIDC_RAR -> tokenState.oidcRarError
                 TokenType.AUTH_GRANT -> tokenState.authGrantError
             }
 
