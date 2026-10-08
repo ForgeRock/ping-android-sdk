@@ -101,29 +101,14 @@ internal val authorizeJson: Json = Json { encodeDefaults = false }
 
 /**
  * Serializes authorization details into the value of the `authorization_details` request
- * parameter (RFC 9396 §2): a JSON array of detail objects.
- *
- * Object members are emitted in deterministic, sorted key order so that the serialized value
- * is stable across invocations. Absent optional members are omitted from the output.
+ * parameter (RFC 9396 §2): a JSON array of detail objects. Absent optional members are omitted
+ * from the output (see [authorizeJson]).
  *
  * @param json The `Json` instance to serialize with.
  * @return The serialized JSON array as a string.
  */
 internal fun List<AuthorizationDetail>.toAuthorizationDetailsParam(json: Json = authorizeJson): String =
-    json.encodeToJsonElement(this).sortedKeys().toString()
-
-/**
- * Recursively sorts the members of every JSON object by key so that the encoded form matches the
- * deterministic `.sortedKeys` output of the iOS SDK's `AuthorizationDetail.wireValue`.
- */
-private fun JsonElement.sortedKeys(): JsonElement =
-    when (this) {
-        is JsonObject -> JsonObject(
-            entries.sortedBy { it.key }.associate { it.key to it.value.sortedKeys() },
-        )
-        is JsonArray -> JsonArray(map { it.sortedKeys() })
-        else -> this
-    }
+    json.encodeToJsonElement(this).toString()
 
 /**
  * Internal function to populate an OIDC authorization request with the necessary parameters.

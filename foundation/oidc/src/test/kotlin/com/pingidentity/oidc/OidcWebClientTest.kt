@@ -445,9 +445,6 @@ class OidcWebClientTest {
         }
         assertEquals(expected, Json.parseToJsonElement(wireValue))
 
-        // Object members are sorted for deterministic output (matches the iOS SDK's .sortedKeys)
-        assertTrue(wireValue.startsWith("""[{"actions":"""))
-
         // Verify the browser was launched with request_uri and client_id only (PAR flow)
         val launchedUrl = urlSlot.captured
         val urlQuery = launchedUrl.query ?: ""

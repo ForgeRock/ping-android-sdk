@@ -7,6 +7,7 @@
 
 package com.pingidentity.samples.pingsampleapp.rar
 
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -69,7 +70,7 @@ private enum class RarPreset(val label: String, val json: String) {
   }
 ]""",
     ),
-    CUSTOM("Custom", "[\n  {\n    \"type\": \"\"\n  }\n]"),
+    CUSTOM("Custom", "[\n  {\n    \"type\": \"custom\"\n  }\n]"),
 }
 
 /**
@@ -162,7 +163,13 @@ fun RarLoginScreen(
                 }
             }
 
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            // Horizontally scrollable so narrow screens don't crush the last chip's label
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
                 RarPreset.entries.forEach { preset ->
                     FilterChip(
                         selected = selectedPreset == preset,
@@ -185,12 +192,28 @@ fun RarLoginScreen(
                 textStyle = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
             )
 
-            val parseError = parseRarJson(jsonText) == null && jsonText.isNotBlank()
+            val parsed = parseRarJson(jsonText)
+            val parseError = parsed == null && jsonText.isNotBlank()
             if (parseError) {
                 Text(
                     text = "Invalid authorization_details JSON",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error,
+                )
+            }
+
+            // Non-blocking: type-only details are legal (RFC 9396 §2.2) but give the server
+            // nothing to act on — e.g. the Custom preset ships `[{"type": "custom"}]`.
+            val typeOnly = parsed != null && parsed.all {
+                it.locations == null && it.actions == null && it.datatypes == null &&
+                    it.privileges == null && it.additionalFields.isEmpty()
+            }
+            if (typeOnly) {
+                Text(
+                    text = "Details carry only a \"type\" and no other fields — the server " +
+                        "may not be able to act on them.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.tertiary,
                 )
             }
 

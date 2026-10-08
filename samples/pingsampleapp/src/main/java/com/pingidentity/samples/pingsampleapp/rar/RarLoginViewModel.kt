@@ -39,7 +39,8 @@ internal fun parseRarJson(jsonText: String): List<AuthorizationDetail>? {
         array.map { entry ->
             val obj = entry as? JsonObject ?: return null
             AuthorizationDetail(
-                type = (obj["type"] as? kotlinx.serialization.json.JsonPrimitive)?.content ?: return null,
+                type = (obj["type"] as? kotlinx.serialization.json.JsonPrimitive)?.content
+                    ?.takeIf { it.isNotBlank() } ?: return null,
                 locations = obj["locations"]?.jsonArray?.mapNotNull {
                     (it as? kotlinx.serialization.json.JsonPrimitive)?.content
                 },
