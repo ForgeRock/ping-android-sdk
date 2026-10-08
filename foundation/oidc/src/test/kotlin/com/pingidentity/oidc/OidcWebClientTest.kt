@@ -251,6 +251,50 @@ class OidcWebClientTest {
     }
 
     @Test
+    fun `duplicate parameter across sources is emitted once with per-call winning over config`() = runTest {
+        val mockUri = mockk<Uri>()
+        val urlSlot = slot<URL>()
+        coEvery { BrowserLauncher.launch(capture(urlSlot), any()) } returns Result.success(mockUri)
+        every { mockUri.getQueryParameter(Constants.CODE) } returns "test-code"
+
+        val web = OidcWebClient {
+            httpClient = KtorHttpClient(HttpClient(mockEngine))
+            logger = Logger.CONSOLE
+            module(Oidc) {
+                clientId = "test-client"
+                discoveryEndpoint = "http://localhost/.well-known/openid-configuration"
+                scopes = mutableSetOf("openid", "profile")
+                redirectUri = "https://example.com/callback"
+                storage = { MemoryStorage() }
+                state = "config-state"
+                nonce = "config-nonce"
+                additionalParameters = mapOf(
+                    // state also set per-call below; login_hint overridden at config level
+                    "login_hint" to "config-hint",
+                )
+            }
+        }
+
+        val result = web.authorize {
+            "state" to "per-call-state"
+            "nonce" to "per-call-nonce"
+        }
+        assertTrue(result.isSuccess)
+
+        val url = urlSlot.captured
+        val urlQuery = url.query ?: ""
+        // Each duplicated key reaches the wire exactly once (structural dedup, no key special cases)
+        assertEquals(1, Regex("state=").findAll(urlQuery).count())
+        assertEquals(1, Regex("nonce=").findAll(urlQuery).count())
+        assertEquals(1, Regex("login_hint=").findAll(urlQuery).count())
+        // Per-call wins over config for keys set in both
+        assertTrue(urlQuery.contains("state=per-call-state"))
+        assertTrue(urlQuery.contains("nonce=per-call-nonce"))
+        // Config-level (additionalParameters) wins over typed config members; nothing else overrode it
+        assertTrue(urlQuery.contains("login_hint=config-hint"))
+    }
+
+    @Test
     fun `authorize with PAR pushes params to PAR endpoint and uses request_uri in authorization URL`() = runTest {
         val parMockEngine = MockEngine { request ->
             when (request.url.encodedPath) {

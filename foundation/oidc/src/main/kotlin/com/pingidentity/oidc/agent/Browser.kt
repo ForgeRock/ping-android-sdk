@@ -8,34 +8,21 @@
 package com.pingidentity.oidc.agent
 
 import android.content.Intent
-import android.net.Uri
 import androidx.browser.customtabs.CustomTabsIntent
 import com.pingidentity.browser.BrowserLauncher
 import com.pingidentity.network.isSuccess
 import com.pingidentity.oidc.Agent
 import com.pingidentity.oidc.AuthCode
-import com.pingidentity.oidc.Constants.ACR_VALUES
-import com.pingidentity.oidc.Constants.AUTHORIZATION_DETAILS
 import com.pingidentity.oidc.Constants.CLIENT_ID
 import com.pingidentity.oidc.Constants.CODE
-import com.pingidentity.oidc.Constants.CODE_CHALLENGE
-import com.pingidentity.oidc.Constants.CODE_CHALLENGE_METHOD
-import com.pingidentity.oidc.Constants.DISPLAY
 import com.pingidentity.oidc.Constants.ID_TOKEN_HINT
-import com.pingidentity.oidc.Constants.LOGIN_HINT
-import com.pingidentity.oidc.Constants.NONCE
 import com.pingidentity.oidc.Constants.POST_LOGOUT_REDIRECT_URI
-import com.pingidentity.oidc.Constants.PROMPT
-import com.pingidentity.oidc.Constants.REDIRECT_URI
-import com.pingidentity.oidc.Constants.RESPONSE_TYPE
-import com.pingidentity.oidc.Constants.SCOPE
-import com.pingidentity.oidc.Constants.STATE
-import com.pingidentity.oidc.Constants.UI_LOCATES
 import com.pingidentity.oidc.OidcConfig
+import com.pingidentity.oidc.module.buildAuthorizeParams
 import com.pingidentity.oidc.Pkce
-import com.pingidentity.oidc.module.toAuthorizationDetailsParam
 import com.pingidentity.utils.PingDsl
 import java.net.URL
+import androidx.core.net.toUri
 
 /**
  * This class is used to configure the browser for OpenID Connect operations.
@@ -69,7 +56,7 @@ var browser =
         ): Boolean {
             return if (oidcConfig.oidcClientConfig.signOutRedirectUri != null) {
                 val builder =
-                    Uri.parse(oidcConfig.oidcClientConfig.openId.endSessionEndpoint).buildUpon()
+                    oidcConfig.oidcClientConfig.openId.endSessionEndpoint.toUri().buildUpon()
                         .appendQueryParameter(ID_TOKEN_HINT, idToken)
                         .appendQueryParameter(
                             POST_LOGOUT_REDIRECT_URI,
@@ -90,7 +77,7 @@ var browser =
                     parameter(ID_TOKEN_HINT, idToken)
                     parameter(CLIENT_ID, oidcConfig.oidcClientConfig.clientId)
                 }
-                return response.status.isSuccess()
+                response.status.isSuccess()
             }
         }
 
@@ -105,56 +92,13 @@ var browser =
             BrowserLauncher.intentCustomizer = oidcConfig.config.intentCustomizer
             BrowserLauncher.logger = oidcConfig.oidcClientConfig.logger
 
-            val builder =
-                Uri.parse(oidcConfig.oidcClientConfig.openId.authorizationEndpoint).buildUpon()
-                    .appendQueryParameter(CLIENT_ID, oidcConfig.oidcClientConfig.clientId)
-                    .appendQueryParameter(RESPONSE_TYPE, CODE)
-                    .appendQueryParameter(REDIRECT_URI, oidcConfig.oidcClientConfig.redirectUri)
-
-            oidcConfig.oidcClientConfig.scopes.let {
-                builder.appendQueryParameter(SCOPE, it.joinToString(" "))
-            }
-            oidcConfig.oidcClientConfig.state?.let {
-                builder.appendQueryParameter(STATE, it)
-            }
-            oidcConfig.oidcClientConfig.nonce?.let {
-                builder.appendQueryParameter(NONCE, it)
-            }
-            oidcConfig.oidcClientConfig.display?.let {
-                builder.appendQueryParameter(DISPLAY, it)
-            }
-            oidcConfig.oidcClientConfig.prompt?.let {
-                builder.appendQueryParameter(PROMPT, it)
-            }
-            oidcConfig.oidcClientConfig.uiLocales?.let {
-                builder.appendQueryParameter(UI_LOCATES, it)
-            }
-            oidcConfig.oidcClientConfig.loginHint?.let {
-                builder.appendQueryParameter(LOGIN_HINT, it)
-            }
-            oidcConfig.oidcClientConfig.additionalParameters.let {
-                it.forEach { (key, value) ->
-                    builder.appendQueryParameter(key, value)
-                }
-            }
-            oidcConfig.oidcClientConfig.acrValues?.let {
-                builder.appendQueryParameter(ACR_VALUES, it)
-            }
-            // The browser agent builds the authorization URL independently of
-            // buildAuthorizeParams, so the typed config-level list is emitted here to keep
-            // updateAgent(browser) at parity.
-            if (oidcConfig.oidcClientConfig.authorizationDetails.isNotEmpty()
-                && AUTHORIZATION_DETAILS !in oidcConfig.oidcClientConfig.additionalParameters) {
-                builder.appendQueryParameter(
-                    AUTHORIZATION_DETAILS,
-                    oidcConfig.oidcClientConfig.authorizationDetails.toAuthorizationDetailsParam(),
-                )
-            }
-
             val pkce = Pkce.generate()
-
-            builder.appendQueryParameter(CODE_CHALLENGE, pkce.codeChallenge)
-                .appendQueryParameter(CODE_CHALLENGE_METHOD, pkce.codeChallengeMethod);
+            val params = with(oidcConfig.oidcClientConfig) {
+                buildAuthorizeParams(pkce)
+            }
+            val builder =
+                oidcConfig.oidcClientConfig.openId.authorizationEndpoint.toUri().buildUpon()
+            params.forEach { (key, value) -> builder.appendQueryParameter(key, value) }
 
             val result = BrowserLauncher.launch(URL(builder.build().toString()))
             val uri = result.getOrThrow()

@@ -41,74 +41,52 @@ import kotlinx.serialization.json.jsonPrimitive
 import com.pingidentity.network.HttpRequest as Request
 
 /**
- * Builds OIDC authorization request parameters using the provided configuration.
+ * Builds the OIDC authorization request parameters using the provided configuration.
  *
  * This function populates all required and optional OAuth2/OIDC parameters for an authorization request:
  * - Required parameters: client_id, response_type, scope, redirect_uri, PKCE parameters
  * - Optional parameters: state, nonce, login_hint, prompt, display, UI locales, ACR values
- * - Rich Authorization Request: authorization_details (RFC 9396 §2), emitted at most once
+ * - Rich Authorization Request: authorization_details (RFC 9396 §2)
  * - Additional custom parameters from configuration
  * - Extra parameters passed to this specific request
  *
- * `authorization_details` is emitted at most once, chosen as: per-call `extraParameters`
- * (raw string or typed via `Parameters.authorizationDetails`) > a hand-serialized
- * `authorization_details` in [OidcClientConfig.additionalParameters] > the typed
- * [OidcClientConfig.authorizationDetails] list (the string maps are the low-level escape hatch).
+ * Every parameter is emitted **exactly once**. All sources are collected into a single map where
+ * a later source overwrites an earlier one, giving the precedence (RFC 6749: the request is the
+ * last word): per-call `extraParameters` > [OidcClientConfig.additionalParameters] > typed
+ * config members (including the `authorization_details` serialization of
+ * [OidcClientConfig.authorizationDetails]). Duplicate keys across sources therefore resolve
+ * structurally — no key-name special cases — so the same rule covers `authorization_details`,
+ * `state`, and any other parameter a caller sets twice.
  *
  * @param pkce PKCE (Proof Key for Code Exchange) parameters for enhanced security
  * @param extraParameters Additional parameters specific to this authorization request
- * @param onParam Callback function to handle each parameter (name, value) pair
+ * @return The parameters in emission order (required params first, then config/extra values),
+ * keyed by parameter name.
  */
 internal fun OidcClientConfig.buildAuthorizeParams(
     pkce: Pkce,
     extraParameters: Map<String, String> = emptyMap(),
-    onParam: (String, String) -> Unit,
-) {
-    onParam(CLIENT_ID, clientId)
-    onParam(RESPONSE_TYPE, CODE)
-    onParam(SCOPE, scopes.joinToString(" "))
-    onParam(REDIRECT_URI, redirectUri)
-    onParam(CODE_CHALLENGE, pkce.codeChallenge)
-    onParam(CODE_CHALLENGE_METHOD, pkce.codeChallengeMethod)
-    acrValues?.let {
-        onParam(ACR_VALUES, it)
+): LinkedHashMap<String, String> {
+    val params = LinkedHashMap<String, String>()
+    params[CLIENT_ID] = clientId
+    params[RESPONSE_TYPE] = CODE
+    params[SCOPE] = scopes.joinToString(" ")
+    params[REDIRECT_URI] = redirectUri
+    params[CODE_CHALLENGE] = pkce.codeChallenge
+    params[CODE_CHALLENGE_METHOD] = pkce.codeChallengeMethod
+    acrValues?.let { params[ACR_VALUES] = it }
+    if (authorizationDetails.isNotEmpty()) {
+        params[AUTHORIZATION_DETAILS] = authorizationDetails.toAuthorizationDetailsParam()
     }
-    if (authorizationDetails.isNotEmpty() &&
-        AUTHORIZATION_DETAILS !in additionalParameters &&
-        AUTHORIZATION_DETAILS !in extraParameters) {
-        onParam(AUTHORIZATION_DETAILS, authorizationDetails.toAuthorizationDetailsParam())
-    }
-    display?.let {
-        onParam(DISPLAY, it)
-    }
-    additionalParameters.forEach { (key, value) ->
-        // A per-call extraParameter of the same name wins (see the precedence note in the KDoc):
-        // skip the hand-serialized authorization_details in that case, since a duplicate key
-        // would leave server-side merge semantics undefined. Other keys keep the existing
-        // accumulate-both behavior.
-        val suppressedByPerCall = key == AUTHORIZATION_DETAILS && key in extraParameters
-        if (!suppressedByPerCall) {
-            onParam(key, value)
-        }
-    }
-    loginHint?.let {
-        onParam(LOGIN_HINT, it)
-    }
-    state?.let {
-        onParam(STATE, it)
-    }
-    nonce?.let {
-        onParam(NONCE, it)
-    }
-    prompt?.let {
-        onParam(PROMPT, it)
-    }
-    uiLocales?.let {
-        onParam(UI_LOCATES, it)
-    }
-    extraParameters.forEach { (key, value) ->
-        onParam(key, value)
-    }
+    display?.let { params[DISPLAY] = it }
+    additionalParameters.forEach { (key, value) -> params[key] = value }
+    loginHint?.let { params[LOGIN_HINT] = it }
+    state?.let { params[STATE] = it }
+    nonce?.let { params[NONCE] = it }
+    prompt?.let { params[PROMPT] = it }
+    uiLocales?.let { params[UI_LOCATES] = it }
+    extraParameters.forEach { (key, value) -> params[key] = value }
+    return params
 }
 
 /**
@@ -173,7 +151,7 @@ val populateRequest: suspend OidcClientConfig.(Request, Map<String, String>, Pkc
                 form {
                     request.url.toUri().getQueryParameter(RESPONSE_MODE)
                         ?.let { put(RESPONSE_MODE, it) }
-                    buildAuthorizeParams(pkce, parameters) { k, v -> put(k, v) }
+                    buildAuthorizeParams(pkce, parameters).forEach { (k, v) -> put(k, v) }
                 }
             }
             if (response.status.isSuccess()) {
@@ -190,7 +168,7 @@ val populateRequest: suspend OidcClientConfig.(Request, Map<String, String>, Pkc
             }
         } else {
             request.url = openId.authorizationEndpoint
-            buildAuthorizeParams(pkce, parameters) { k, v -> request.parameter(k, v) }
+            buildAuthorizeParams(pkce, parameters).forEach { (k, v) -> request.parameter(k, v) }
         }
         request
     }
