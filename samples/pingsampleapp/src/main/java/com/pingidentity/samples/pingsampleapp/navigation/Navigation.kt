@@ -94,8 +94,7 @@ object Route {
     const val OIDC = "oidc"
     const val OIDC_RAR = "oidc_rar"
     const val ACCESS_TOKEN = "access_token?tab={tab}"
-    fun accessToken(tab: TokenType? = null) =
-        if (tab != null) "access_token?tab=${tab.name}" else "access_token?tab=${TokenType.JOURNEY.name}"
+    fun accessToken(tab: TokenType? = null) = "access_token?tab=${tab?.name ?: TokenType.JOURNEY.name}"
     internal const val USER_PROFILE_ROUTE = "user_profile?type={type}"
     fun userProfile(type: UserProfileType? = null) =
         if (type != null) "user_profile?type=${type.name}" else "user_profile?type=${UserProfileType.JOURNEY.name}"
@@ -337,7 +336,7 @@ fun AppNavigation(
             // RAR login); defaults to Journey.
             backStackEntry.arguments?.getString("tab")
                 ?.let { runCatching { TokenType.valueOf(it) }.getOrNull() }
-                ?.let { tokenViewModel.selectTab(it) }
+                ?.let { tokenViewModel.selectTabFromRoute(it) }
             TokenScreen(tokenViewModel) {
                 navController.navigateUp()
             }

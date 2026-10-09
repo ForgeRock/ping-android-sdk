@@ -10,8 +10,6 @@ package com.pingidentity.samples.pingsampleapp.token
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.pingidentity.mfa.commons.json
-import com.pingidentity.oidc.Token
 import com.pingidentity.journey.user as journeyUser
 import com.pingidentity.davinci.user as davinciUser
 import com.pingidentity.samples.pingsampleapp.config.daVinci
@@ -22,7 +20,6 @@ import com.pingidentity.samples.pingsampleapp.config.web
 import com.pingidentity.utils.Result.Failure
 import com.pingidentity.utils.Result.Success
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -30,39 +27,20 @@ class TokenViewModel : ViewModel() {
     var state = MutableStateFlow(TokenState())
         private set
 
-    val formattedToken = state.map { tokenState ->
-        when (tokenState.selectedTab) {
-            TokenType.JOURNEY -> {
-                tokenState.journeyToken?.let {
-                    json.encodeToString(Token.serializer(), it)
-                } ?: tokenState.journeyError?.toString() ?: "No Journey token information is available"
-            }
-            TokenType.DAVINCI -> {
-                tokenState.daVinciToken?.let {
-                    json.encodeToString(Token.serializer(), it)
-                } ?: tokenState.daVinciError?.toString() ?: "No DaVinci token information is available"
-            }
-            TokenType.OIDC -> {
-                tokenState.oidcToken?.let {
-                    json.encodeToString(Token.serializer(), it)
-                } ?: tokenState.oidcError?.toString() ?: "No OIDC token information is available"
-            }
-            TokenType.OIDC_RAR -> {
-                tokenState.oidcRarToken?.let {
-                    json.encodeToString(Token.serializer(), it)
-                } ?: tokenState.oidcRarError?.toString()
-                    ?: "No OIDC RAR token information is available"
-            }
-            TokenType.AUTH_GRANT -> {
-                tokenState.authGrantToken?.let {
-                    json.encodeToString(Token.serializer(), it)
-                } ?: tokenState.authGrantError?.toString() ?: "No Auth Grant token information is available"
-            }
-        }
-    }
+    private var routeTabApplied = false
 
     fun selectTab(tabType: TokenType) {
+        routeTabApplied = true
         state.update { it.copy(selectedTab = tabType) }
+    }
+
+    /**
+     * Applies the route argument's tab only for a fresh destination: a new back-stack entry
+     * gets a new ViewModel, so its `tab` argument still wins; on configuration changes the
+     * retained ViewModel has already applied a tab and the user's selection is preserved.
+     */
+    fun selectTabFromRoute(tabType: TokenType) {
+        if (!routeTabApplied) selectTab(tabType)
     }
 
     fun accessToken() {
@@ -131,7 +109,7 @@ class TokenViewModel : ViewModel() {
                         }
                     }
                 } ?: state.update { it.copy(journeyToken = null, journeyError = null) }
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 state.update { it.copy(journeyToken = null, journeyError = null) }
             }
         }
@@ -141,7 +119,7 @@ class TokenViewModel : ViewModel() {
         viewModelScope.launch {
             try {
                 journey?.journeyUser()?.revoke()
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 // ignore revoke errors
             }
             state.update { it.copy(journeyToken = null, journeyError = null) }
@@ -161,7 +139,7 @@ class TokenViewModel : ViewModel() {
                         }
                     }
                 } ?: state.update { it.copy(journeyToken = null, journeyError = null) }
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 state.update { it.copy(journeyToken = null, journeyError = null) }
             }
         }
@@ -181,7 +159,7 @@ class TokenViewModel : ViewModel() {
                         }
                     }
                 } ?: state.update { it.copy(daVinciToken = null, daVinciError = null) }
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 state.update { it.copy(daVinciToken = null, daVinciError = null) }
             }
         }
@@ -191,7 +169,7 @@ class TokenViewModel : ViewModel() {
         viewModelScope.launch {
             try {
                 daVinci?.davinciUser()?.revoke()
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 // ignore revoke errors
             }
             state.update { it.copy(daVinciToken = null, daVinciError = null) }
@@ -211,7 +189,7 @@ class TokenViewModel : ViewModel() {
                         }
                     }
                 } ?: state.update { it.copy(daVinciToken = null, daVinciError = null) }
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 state.update { it.copy(daVinciToken = null, daVinciError = null) }
             }
         }
@@ -231,7 +209,7 @@ class TokenViewModel : ViewModel() {
                         }
                     }
                 } ?: state.update { it.copy(oidcToken = null, oidcError = null) }
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 state.update { it.copy(oidcToken = null, oidcError = null) }
             }
         }
@@ -241,7 +219,7 @@ class TokenViewModel : ViewModel() {
         viewModelScope.launch {
             try {
                 web?.user()?.revoke()
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 // ignore revoke errors
             }
             state.update { it.copy(oidcToken = null, oidcError = null) }
@@ -261,7 +239,7 @@ class TokenViewModel : ViewModel() {
                         }
                     }
                 } ?: state.update { it.copy(oidcToken = null, oidcError = null) }
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 state.update { it.copy(oidcToken = null, oidcError = null) }
             }
         }
@@ -281,7 +259,7 @@ class TokenViewModel : ViewModel() {
                         }
                     }
                 } ?: state.update { it.copy(oidcRarToken = null, oidcRarError = null) }
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 state.update { it.copy(oidcRarToken = null, oidcRarError = null) }
             }
         }
@@ -291,7 +269,7 @@ class TokenViewModel : ViewModel() {
         viewModelScope.launch {
             try {
                 rarWeb?.user()?.revoke()
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 // ignore revoke errors
             }
             state.update { it.copy(oidcRarToken = null, oidcRarError = null) }
@@ -311,7 +289,7 @@ class TokenViewModel : ViewModel() {
                         }
                     }
                 } ?: state.update { it.copy(oidcRarToken = null, oidcRarError = null) }
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 state.update { it.copy(oidcRarToken = null, oidcRarError = null) }
             }
         }
@@ -331,7 +309,7 @@ class TokenViewModel : ViewModel() {
                         }
                     }
                 } ?: state.update { it.copy(authGrantToken = null, authGrantError = null) }
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 state.update { it.copy(authGrantToken = null, authGrantError = null) }
             }
         }
@@ -341,7 +319,7 @@ class TokenViewModel : ViewModel() {
         viewModelScope.launch {
             try {
                 oidcDeviceClient?.user()?.revoke()
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 // ignore revoke errors
             }
             state.update { it.copy(authGrantToken = null, authGrantError = null) }
@@ -361,7 +339,7 @@ class TokenViewModel : ViewModel() {
                         }
                     }
                 } ?: state.update { it.copy(authGrantToken = null, authGrantError = null) }
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 state.update { it.copy(authGrantToken = null, authGrantError = null) }
             }
         }

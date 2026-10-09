@@ -192,7 +192,7 @@ fun RarLoginScreen(
                 textStyle = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
             )
 
-            val parsed = parseRarJson(jsonText)
+            val parsed = remember(jsonText) { parseRarJson(jsonText) }
             val parseError = parsed == null && jsonText.isNotBlank()
             if (parseError) {
                 Text(
@@ -203,15 +203,16 @@ fun RarLoginScreen(
             }
 
             // Non-blocking: type-only details are legal (RFC 9396 §2.2) but give the server
-            // nothing to act on — e.g. the Custom preset ships `[{"type": "custom"}]`.
-            val typeOnly = parsed != null && parsed.all {
+            // nothing to act on — e.g. the Custom preset ships `[{"type": "custom"}]`. Flags
+            // any entry carrying only a type, so a mixed array still warns on its bare entries.
+            val hasTypeOnlyEntry = parsed?.any {
                 it.locations == null && it.actions == null && it.datatypes == null &&
                     it.privileges == null && it.additionalFields.isEmpty()
-            }
-            if (typeOnly) {
+            } == true
+            if (hasTypeOnlyEntry) {
                 Text(
-                    text = "Details carry only a \"type\" and no other fields — the server " +
-                        "may not be able to act on them.",
+                    text = "Some details carry only a \"type\" and no other fields — the " +
+                        "server may not be able to act on them.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.tertiary,
                 )

@@ -32,9 +32,6 @@ import com.pingidentity.oidc.OidcClientConfig
 import com.pingidentity.oidc.Pkce
 import com.pingidentity.oidc.exception.AuthorizeException
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonArray
-import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.encodeToJsonElement
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -79,12 +76,12 @@ internal fun OidcClientConfig.buildAuthorizeParams(
         params[AUTHORIZATION_DETAILS] = authorizationDetails.toAuthorizationDetailsParam()
     }
     display?.let { params[DISPLAY] = it }
-    additionalParameters.forEach { (key, value) -> params[key] = value }
     loginHint?.let { params[LOGIN_HINT] = it }
     state?.let { params[STATE] = it }
     nonce?.let { params[NONCE] = it }
     prompt?.let { params[PROMPT] = it }
     uiLocales?.let { params[UI_LOCATES] = it }
+    additionalParameters.forEach { (key, value) -> params[key] = value }
     extraParameters.forEach { (key, value) -> params[key] = value }
     return params
 }

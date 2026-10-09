@@ -268,8 +268,9 @@ class OidcWebClientTest {
                 storage = { MemoryStorage() }
                 state = "config-state"
                 nonce = "config-nonce"
+                loginHint = "typed-hint"
                 additionalParameters = mapOf(
-                    // state also set per-call below; login_hint overridden at config level
+                    // login_hint also set as typed loginHint above; additionalParameters must win
                     "login_hint" to "config-hint",
                 )
             }
@@ -290,7 +291,7 @@ class OidcWebClientTest {
         // Per-call wins over config for keys set in both
         assertTrue(urlQuery.contains("state=per-call-state"))
         assertTrue(urlQuery.contains("nonce=per-call-nonce"))
-        // Config-level (additionalParameters) wins over typed config members; nothing else overrode it
+        // additionalParameters wins over the typed loginHint member set at the same config level
         assertTrue(urlQuery.contains("login_hint=config-hint"))
     }
 

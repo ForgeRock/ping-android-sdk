@@ -12,19 +12,21 @@ import androidx.lifecycle.viewModelScope
 import com.pingidentity.oidc.AuthorizationDetail
 import com.pingidentity.samples.pingsampleapp.config.OidcConfigState
 import com.pingidentity.samples.pingsampleapp.config.rarWeb
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.JsonPrimitive
 
 /**
  * Parses the user-edited [jsonText] as an `authorization_details` array (RFC 9396 §2):
  * a JSON array of objects each carrying a non-blank `type`. Returns null when blank
- * (meaning "no per-transaction details — use config-level"), or when invalid.
+ * (meaning "no per-transaction details — use config-level"), empty, or invalid.
  */
 internal fun parseRarJson(jsonText: String): List<AuthorizationDetail>? {
     val trimmed = jsonText.trim()
@@ -38,26 +40,19 @@ internal fun parseRarJson(jsonText: String): List<AuthorizationDetail>? {
         }
         array.map { entry ->
             val obj = entry as? JsonObject ?: return null
+            fun strings(key: String): List<String>? =
+                (obj[key] as? JsonArray)?.mapNotNull { (it as? JsonPrimitive)?.takeIf { p -> p !== JsonNull }?.content }
             AuthorizationDetail(
-                type = (obj["type"] as? kotlinx.serialization.json.JsonPrimitive)?.content
-                    ?.takeIf { it.isNotBlank() } ?: return null,
-                locations = obj["locations"]?.jsonArray?.mapNotNull {
-                    (it as? kotlinx.serialization.json.JsonPrimitive)?.content
-                },
-                actions = obj["actions"]?.jsonArray?.mapNotNull {
-                    (it as? kotlinx.serialization.json.JsonPrimitive)?.content
-                },
-                datatypes = obj["datatypes"]?.jsonArray?.mapNotNull {
-                    (it as? kotlinx.serialization.json.JsonPrimitive)?.content
-                },
-                privileges = obj["privileges"]?.jsonArray?.mapNotNull {
-                    (it as? kotlinx.serialization.json.JsonPrimitive)?.content
-                },
-                additionalFields = obj.toMap().filterKeys {
-                    it !in setOf("type", "locations", "actions", "datatypes", "privileges")
-                },
+                // JsonNull is a JsonPrimitive whose content is "null" — exclude it explicitly
+                type = (obj["type"] as? JsonPrimitive)?.takeIf { it !== JsonNull }
+                    ?.content?.takeIf { it.isNotBlank() } ?: return null,
+                locations = strings("locations"),
+                actions = strings("actions"),
+                datatypes = strings("datatypes"),
+                privileges = strings("privileges"),
+                additionalFields = obj.toMap().filterKeys { it !in setOf("type", "locations", "actions", "datatypes", "privileges") },
             )
-        }.takeIf { it.isNotEmpty() }
+        }.takeIf { it.isNotEmpty() } // [] parses to null; callers reject non-blank unparseable input
     }.getOrNull()
 }
 
@@ -77,7 +72,7 @@ class RarLoginViewModel : ViewModel() {
         get() = com.pingidentity.samples.pingsampleapp.config.webConfig
 
     fun login(jsonText: String) {
-        val config = webConfig ?: run {
+        if (webConfig == null) {
             state.update { it.copy(error = "Select a Web config from Configuration first") }
             return
         }
@@ -86,6 +81,10 @@ class RarLoginViewModel : ViewModel() {
             state.update { it.copy(error = "Invalid authorization_details JSON") }
             return
         }
+        // parseRarJson maps blank text to null: "use config-level details"
+        // (the per-call authorizationDetails() call is skipped, so config wins).
+        // An empty array [] also parses to null but is rejected above like any
+        // other non-blank unparseable input — the screen treats it as invalid.
         viewModelScope.launch {
             state.update { it.copy(running = true, error = null) }
             try {
@@ -102,6 +101,8 @@ class RarLoginViewModel : ViewModel() {
                         s.copy(running = false, error = throwable.message ?: "Login failed")
                     }
                 }
+            } catch (e: CancellationException) {
+                throw e // scope cancelled (e.g. user left the screen): propagate, don't surface as error
             } catch (e: Exception) {
                 state.update { s -> s.copy(running = false, error = e.message ?: "Login failed") }
             }

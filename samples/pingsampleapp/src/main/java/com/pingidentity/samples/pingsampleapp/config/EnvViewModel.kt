@@ -58,6 +58,9 @@ data class JourneyConfigState(
     val redirectUri: String = "",
     val display: String = "",
     val par: Boolean = false,
+    // Token storage isolation: forwarded to the SDK's `storage.fileName` JSON key so each
+    // config's tokens live in their own DataStore file instead of one shared default file.
+    val storageFileName: String? = null,
 )
 
 data class OidcConfigState(
@@ -69,6 +72,9 @@ data class OidcConfigState(
     val arcValue: String = "",
     val par: Boolean = false,
     val authorizationDetails: JsonElement? = null,
+    // Token storage isolation: forwarded to the SDK's `storage.fileName` JSON key so each
+    // config's tokens live in their own DataStore file instead of one shared default file.
+    val storageFileName: String? = null,
 )
 
 data class DeviceAuthConfigState(
@@ -152,6 +158,7 @@ internal fun loadAssetConfigs(): AssetConfigs {
             val clientId = oidc.str("clientId")
             val discoveryEndpoint = oidc.str("discoveryEndpoint")
             val redirectUri = oidc.str("redirectUri")
+            val storageFileName = oidc["storage"]?.jsonObject?.get("fileName")?.jsonPrimitive?.content
 
             if (journeyObj != null) journey.add(JourneyConfigState(
                 serverUrl = journeyObj.str("serverUrl"),
@@ -163,6 +170,7 @@ internal fun loadAssetConfigs(): AssetConfigs {
                 redirectUri = redirectUri,
                 display = displayName,
                 par = oidc["par"]?.jsonPrimitive?.content?.toBooleanStrictOrNull() ?: false,
+                storageFileName = storageFileName,
             ))
             if (openIdObj != null || isDaVinci) deviceAuth.add(DeviceAuthConfigState(
                 clientId = clientId,
@@ -195,6 +203,7 @@ internal fun loadAssetConfigs(): AssetConfigs {
                 arcValue = oidc.str("acrValues"),
                 par = oidc["par"]?.jsonPrimitive?.content?.toBooleanStrictOrNull() ?: false,
                 authorizationDetails = oidc["authorizationDetails"],
+                storageFileName = storageFileName,
             ))
         }
     }
@@ -245,6 +254,11 @@ internal fun buildJourney(config: JourneyConfigState) {
                 put(JsonConfigKey.REDIRECT_URI, config.redirectUri)
                 put(JsonConfigKey.DISPLAY, config.display)
                 put(JsonConfigKey.PAR, config.par)
+                config.storageFileName?.let { fileName ->
+                    put(JsonConfigKey.STORAGE, buildJsonObject {
+                        put(JsonConfigKey.FILE_NAME, fileName)
+                    })
+                }
             })
         }
     ).onSuccess { journey = it }
@@ -260,6 +274,11 @@ internal fun buildJourney(config: JourneyConfigState) {
                 put(JsonConfigKey.SCOPES, config.scopes.toScopesJsonArray())
                 put(JsonConfigKey.REDIRECT_URI, config.redirectUri)
                 put(JsonConfigKey.DISPLAY, config.display)
+                config.storageFileName?.let { fileName ->
+                    put(JsonConfigKey.STORAGE, buildJsonObject {
+                        put(JsonConfigKey.FILE_NAME, fileName)
+                    })
+                }
             })
         }
     ).onSuccess { oidcClient = it }
@@ -304,6 +323,11 @@ internal fun buildWeb(config: OidcConfigState) {
                 // Pass the asset's authorizationDetails array through verbatim so the SDK's
                 // JSON-config parser (SDKS-5426) parses it, rather than re-serializing here.
                 config.authorizationDetails?.let { put(JsonConfigKey.AUTHORIZATION_DETAILS, it) }
+                config.storageFileName?.let { fileName ->
+                    put(JsonConfigKey.STORAGE, buildJsonObject {
+                        put(JsonConfigKey.FILE_NAME, fileName)
+                    })
+                }
             })
         }
     ).onSuccess { web = it }
@@ -315,28 +339,34 @@ internal fun buildWeb(config: OidcConfigState) {
     // storage file, so a RAR login (token B) never clobbers the plain Web login's token (A).
     // Config-level authorizationDetails are carried too; the RAR screen can override them
     // per transaction (per-call wins over config-level in the SDK's precedence chain).
-    OidcWebClient(
-        buildJsonObject {
-            put(JsonConfigKey.LOG, "STANDARD")
-            put(JsonConfigKey.OIDC, buildJsonObject {
-                put(JsonConfigKey.CLIENT_ID, config.clientId)
-                put(JsonConfigKey.DISCOVERY_ENDPOINT, config.discoveryEndpoint)
-                put(JsonConfigKey.SCOPES, config.scopes.toScopesJsonArray())
-                put(JsonConfigKey.REDIRECT_URI, config.redirectUri)
-                put(JsonConfigKey.DISPLAY, config.display)
-                if (config.arcValue.isNotBlank()) put(JsonConfigKey.ACR_VALUES, config.arcValue)
-                put(JsonConfigKey.PAR, config.par)
-                config.authorizationDetails?.let { put(JsonConfigKey.AUTHORIZATION_DETAILS, it) }
-                put(JsonConfigKey.STORAGE, buildJsonObject {
-                    put(JsonConfigKey.FILE_NAME, JsonPrimitive(RAR_STORAGE_FILE_NAME))
+    // Built only when the config actually declares authorizationDetails — a plain client
+    // (no details) would send doomed RAR requests the server rejects; the RAR login screen
+    // then shows its "RAR client not built" guard instead.
+    val details = config.authorizationDetails
+    rarWeb = if (details != null) {
+        OidcWebClient(
+            buildJsonObject {
+                put(JsonConfigKey.LOG, "STANDARD")
+                put(JsonConfigKey.OIDC, buildJsonObject {
+                    put(JsonConfigKey.CLIENT_ID, config.clientId)
+                    put(JsonConfigKey.DISCOVERY_ENDPOINT, config.discoveryEndpoint)
+                    put(JsonConfigKey.SCOPES, config.scopes.toScopesJsonArray())
+                    put(JsonConfigKey.REDIRECT_URI, config.redirectUri)
+                    put(JsonConfigKey.DISPLAY, config.display)
+                    if (config.arcValue.isNotBlank()) put(JsonConfigKey.ACR_VALUES, config.arcValue)
+                    put(JsonConfigKey.PAR, config.par)
+                    put(JsonConfigKey.AUTHORIZATION_DETAILS, details)
+                    put(JsonConfigKey.STORAGE, buildJsonObject {
+                        put(JsonConfigKey.FILE_NAME, JsonPrimitive(RAR_STORAGE_FILE_NAME))
+                    })
                 })
-            })
-        }
-    ).onSuccess { rarWeb = it }
-        .onFailure {
+            }
+        ).onFailure {
             Logger.STANDARD.d("Failed to create RAR Web client instance: ${it.message}")
-            rarWeb = null
-        }
+        }.getOrNull()
+    } else {
+        null
+    }
     webConfig = config
 }
 
@@ -412,6 +442,7 @@ suspend fun initConfigs() {
             redirectUri = prefs[stringPreferencesKey("j_redirectUri")] ?: "",
             display = prefs[stringPreferencesKey("j_display")] ?: "",
             par = prefs[stringPreferencesKey("j_par")]?.toBooleanStrictOrNull() ?: false,
+            storageFileName = prefs[stringPreferencesKey("j_storageFileName")],
         )
     }
 
@@ -435,6 +466,10 @@ suspend fun initConfigs() {
             display = prefs[stringPreferencesKey("w_display")] ?: "",
             arcValue = prefs[stringPreferencesKey("w_arcValue")] ?: "",
             par = prefs[stringPreferencesKey("w_par")]?.toBooleanStrictOrNull() ?: false,
+            authorizationDetails = prefs[stringPreferencesKey("w_authorizationDetails")]?.let {
+                runCatching { Json.parseToJsonElement(it) }.getOrNull()
+            },
+            storageFileName = prefs[stringPreferencesKey("w_storageFileName")],
         )
     }
 
@@ -696,6 +731,7 @@ class EnvViewModel : ViewModel() {
             redirectUri = prefs[stringPreferencesKey("j_redirectUri")] ?: "",
             display = prefs[stringPreferencesKey("j_display")] ?: "",
             par = prefs[stringPreferencesKey("j_par")]?.toBooleanStrictOrNull() ?: false,
+            storageFileName = prefs[stringPreferencesKey("j_storageFileName")],
         )
     }
 
@@ -723,6 +759,10 @@ class EnvViewModel : ViewModel() {
             display = prefs[stringPreferencesKey("w_display")] ?: "",
             arcValue = prefs[stringPreferencesKey("w_arcValue")] ?: "",
             par = prefs[stringPreferencesKey("w_par")]?.toBooleanStrictOrNull() ?: false,
+            authorizationDetails = prefs[stringPreferencesKey("w_authorizationDetails")]?.let {
+                runCatching { Json.parseToJsonElement(it) }.getOrNull()
+            },
+            storageFileName = prefs[stringPreferencesKey("w_storageFileName")],
         )
     }
 
@@ -783,6 +823,8 @@ class EnvViewModel : ViewModel() {
             prefs[stringPreferencesKey("j_redirectUri")] = config.redirectUri
             prefs[stringPreferencesKey("j_display")] = config.display
             prefs[stringPreferencesKey("j_par")] = config.par.toString()
+            config.storageFileName?.let { prefs[stringPreferencesKey("j_storageFileName")] = it }
+                ?: prefs.remove(stringPreferencesKey("j_storageFileName"))
         }
     }
 
@@ -806,6 +848,11 @@ class EnvViewModel : ViewModel() {
             prefs[stringPreferencesKey("w_display")] = config.display
             prefs[stringPreferencesKey("w_arcValue")] = config.arcValue
             prefs[stringPreferencesKey("w_par")] = config.par.toString()
+            config.authorizationDetails?.let {
+                prefs[stringPreferencesKey("w_authorizationDetails")] = it.toString()
+            } ?: prefs.remove(stringPreferencesKey("w_authorizationDetails"))
+            config.storageFileName?.let { prefs[stringPreferencesKey("w_storageFileName")] = it }
+                ?: prefs.remove(stringPreferencesKey("w_storageFileName"))
         }
     }
 
@@ -861,6 +908,7 @@ class EnvViewModel : ViewModel() {
                     put("clientId", c.clientId); put("discoveryEndpoint", c.discoveryEndpoint)
                     put("scopes", c.scopes); put("redirectUri", c.redirectUri); put("display", c.display)
                     put("par", c.par)
+                    c.storageFileName?.let { put("storageFileName", it) }
                 })
             }
         }.toString()
@@ -874,6 +922,7 @@ class EnvViewModel : ViewModel() {
                 clientId = str("clientId"), discoveryEndpoint = str("discoveryEndpoint"),
                 scopes = str("scopes"), redirectUri = str("redirectUri"), display = str("display"),
                 par = o["par"]?.jsonPrimitive?.content?.toBooleanStrictOrNull() ?: false,
+                storageFileName = o["storageFileName"]?.jsonPrimitive?.content,
             )
         }
     }.getOrDefault(emptyList())
@@ -886,6 +935,7 @@ class EnvViewModel : ViewModel() {
                     put("scopes", c.scopes); put("redirectUri", c.redirectUri)
                     put("display", c.display); put("arcValue", c.arcValue)
                     put("par", c.par)
+                    c.storageFileName?.let { put("storageFileName", it) }
                 })
             }
         }.toString()
@@ -899,6 +949,7 @@ class EnvViewModel : ViewModel() {
                 scopes = str("scopes"), redirectUri = str("redirectUri"),
                 display = str("display"), arcValue = str("arcValue"),
                 par = o["par"]?.jsonPrimitive?.content?.toBooleanStrictOrNull() ?: false,
+                storageFileName = o["storageFileName"]?.jsonPrimitive?.content,
             )
         }
     }.getOrDefault(emptyList())
