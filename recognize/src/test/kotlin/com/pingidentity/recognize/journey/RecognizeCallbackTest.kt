@@ -233,6 +233,120 @@ class RecognizeCallbackTest {
         assertEquals("",            inputs[5].jsonObject["value"]!!.jsonPrimitive.content)
     }
 
+    // ── Input matching by name suffix ────────────────────────────────────────────
+
+    /**
+     * Enroll callback JSON with the legacy five input slots (no `devicePublicSigningKey`)
+     * in non-standard order — exercising suffix matching rather than positional matching.
+     */
+    private fun legacyFiveSlotEnrollCallbackJson(): JsonObject = Json.parseToJsonElement(
+        """
+        {
+          "type": "PingOneRecognizeCallback",
+          "output": [
+            { "name": "operationType",       "value": "ENROLL" },
+            { "name": "host",                "value": "https://recognize.example.com" },
+            { "name": "apiKey",              "value": "test-api-key" },
+            { "name": "transactionData",     "value": "tx-data" },
+            { "name": "clientState",         "value": "cs" },
+            { "name": "generateClientState", "value": "" }
+          ],
+          "input": [
+            { "name": "IDToken1clientError",     "value": "" },
+            { "name": "IDToken1recognizeId",     "value": "" },
+            { "name": "IDToken1clientErrorCode", "value": "" },
+            { "name": "IDToken1signedJwt",       "value": "" },
+            { "name": "IDToken1clientState",     "value": "" }
+          ]
+        }
+        """
+    ) as JsonObject
+
+    /** Reads the value of the input slot whose name ends with [suffix]. */
+    private fun JsonObject.inputValueBySuffix(suffix: String): String =
+        this["input"]!!.jsonArray
+            .first { it.jsonObject["name"]!!.jsonPrimitive.content.endsWith(suffix) }
+            .jsonObject["value"]!!.jsonPrimitive.content
+
+    @Test
+    fun `enroll on legacy five-slot journey submits without devicePublicSigningKey and does not throw`() = runTest {
+        val callback =
+            RecognizeCallback().init(legacyFiveSlotEnrollCallbackJson()) as PingOneRecognizeEnrollCallback
+        val result = callback.enroll()
+        assertTrue(result.isSuccess)
+
+        val payload = callback.payload()
+        val inputs = payload["input"]!!.jsonArray
+        // No slot invented for the missing devicePublicSigningKey input
+        assertEquals(5, inputs.size)
+        assertEquals("signed-jwt", payload.inputValueBySuffix("signedJwt"))
+        assertEquals("client-state", payload.inputValueBySuffix("clientState"))
+        assertEquals("keyless-id", payload.inputValueBySuffix("recognizeId"))
+        assertEquals("", payload.inputValueBySuffix("clientError"))
+        assertEquals("", payload.inputValueBySuffix("clientErrorCode"))
+    }
+
+    @Test
+    fun `enroll failure on legacy five-slot journey writes error to correct slots`() = runTest {
+        val error = RecognizeException(code = 21, message = "enroll failed", debuggingInfo = emptyMap())
+        coEvery { Recognize.enroll(any()) } returns Result.failure(error)
+
+        val callback =
+            RecognizeCallback().init(legacyFiveSlotEnrollCallbackJson()) as PingOneRecognizeEnrollCallback
+        val result = callback.enroll()
+        assertTrue(result.isFailure)
+
+        val payload = callback.payload()
+        assertEquals("enroll failed", payload.inputValueBySuffix("clientError"))
+        assertEquals("21", payload.inputValueBySuffix("clientErrorCode"))
+        assertEquals("", payload.inputValueBySuffix("signedJwt"))
+    }
+
+    @Test
+    fun `enroll fills inputs correctly when slots are reordered`() = runTest {
+        val callback = RecognizeCallback().init(legacyFiveSlotEnrollCallbackJson()) as PingOneRecognizeEnrollCallback
+        assertTrue(callback.enroll().isSuccess)
+
+        val payload = callback.payload()
+        assertEquals("signed-jwt", payload.inputValueBySuffix("signedJwt"))
+        assertEquals("keyless-id", payload.inputValueBySuffix("recognizeId"))
+    }
+
+    @Test
+    fun `enroll echoes declared input names and maps every submitted value to its slot`() = runTest {
+        val callback = RecognizeCallback().init(enrollCallbackJson()) as PingOneRecognizeEnrollCallback
+        assertTrue(callback.enroll().isSuccess)
+
+        // Contract: the input array is echoed back unchanged in names, values filled in.
+        val expectedNames = listOf(
+            "IDToken1signedJwt",
+            "IDToken1clientState",
+            "IDToken1recognizeId",
+            "IDToken1devicePublicSigningKey",
+            "IDToken1clientError",
+            "IDToken1clientErrorCode",
+        )
+        val inputs = callback.payload()["input"]!!.jsonArray
+        assertEquals(
+            expectedNames,
+            inputs.map { it.jsonObject["name"]!!.jsonPrimitive.content },
+        )
+        assertEquals(
+            mapOf(
+                "IDToken1signedJwt" to "signed-jwt",
+                "IDToken1clientState" to "client-state",
+                "IDToken1recognizeId" to "keyless-id",
+                "IDToken1devicePublicSigningKey" to "device-public-key",
+                "IDToken1clientError" to "",
+                "IDToken1clientErrorCode" to "",
+            ),
+            expectedNames.associateWith { name ->
+                inputs.first { it.jsonObject["name"]!!.jsonPrimitive.content == name }
+                    .jsonObject["value"]!!.jsonPrimitive.content
+            },
+        )
+    }
+
     // ── Enroll — failure path ────────────────────────────────────────────────────
 
     @Test

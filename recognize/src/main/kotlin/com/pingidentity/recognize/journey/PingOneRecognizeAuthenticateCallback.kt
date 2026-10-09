@@ -171,13 +171,15 @@ class PingOneRecognizeAuthenticateCallback : AbstractRecognizeCallback() {
         clientError: String,
         clientErrorCode: String,
     ) {
-        input(
-            signedJwt,
-            clientState,
-            recognizeId,
-            devicePublicSigningKey,
-            clientError,
-            clientErrorCode
+        inputBySuffix(
+            mapOf(
+                "signedJwt" to signedJwt,
+                "clientState" to clientState,
+                "recognizeId" to recognizeId,
+                "devicePublicSigningKey" to devicePublicSigningKey,
+                "clientError" to clientError,
+                "clientErrorCode" to clientErrorCode,
+            )
         )
     }
 }
