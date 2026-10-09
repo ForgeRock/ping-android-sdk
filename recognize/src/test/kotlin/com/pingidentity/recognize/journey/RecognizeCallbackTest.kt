@@ -218,19 +218,19 @@ class RecognizeCallbackTest {
     // ── Enroll — success path ────────────────────────────────────────────────────
 
     @Test
-    fun `enroll success writes signedJwt and recognizeId to input`() = runTest {
+    fun `enroll success writes signedJwt, clientState, recognizeId and devicePublicSigningKey to input`() = runTest {
         val callback = RecognizeCallback().init(enrollCallbackJson()) as PingOneRecognizeEnrollCallback
         val result = callback.enroll()
         assertTrue(result.isSuccess)
         assertEquals("device-public-key", result.getOrThrow().devicePublicSigningKey)
 
-        val inputs = callback.payload()["input"]!!.jsonArray
-        assertEquals("signed-jwt",  inputs[0].jsonObject["value"]!!.jsonPrimitive.content)
-        assertEquals("client-state",inputs[1].jsonObject["value"]!!.jsonPrimitive.content)
-        assertEquals("keyless-id",  inputs[2].jsonObject["value"]!!.jsonPrimitive.content)
-        assertEquals("device-public-key", inputs[3].jsonObject["value"]!!.jsonPrimitive.content)
-        assertEquals("",            inputs[4].jsonObject["value"]!!.jsonPrimitive.content)
-        assertEquals("",            inputs[5].jsonObject["value"]!!.jsonPrimitive.content)
+        val payload = callback.payload()
+        assertEquals("signed-jwt", payload.inputValueBySuffix("signedJwt"))
+        assertEquals("client-state", payload.inputValueBySuffix("clientState"))
+        assertEquals("keyless-id", payload.inputValueBySuffix("recognizeId"))
+        assertEquals("device-public-key", payload.inputValueBySuffix("devicePublicSigningKey"))
+        assertEquals("", payload.inputValueBySuffix("clientError"))
+        assertEquals("", payload.inputValueBySuffix("clientErrorCode"))
     }
 
     // ── Input matching by name suffix ────────────────────────────────────────────
@@ -358,9 +358,13 @@ class RecognizeCallbackTest {
         val result = callback.enroll()
         assertTrue(result.isFailure)
 
-        val inputs = callback.payload()["input"]!!.jsonArray
-        assertEquals("key retrieval failed", inputs[4].jsonObject["value"]!!.jsonPrimitive.content)
-        assertEquals("30", inputs[5].jsonObject["value"]!!.jsonPrimitive.content)
+        val payload = callback.payload()
+        assertEquals("", payload.inputValueBySuffix("signedJwt"))
+        assertEquals("", payload.inputValueBySuffix("clientState"))
+        assertEquals("", payload.inputValueBySuffix("recognizeId"))
+        assertEquals("", payload.inputValueBySuffix("devicePublicSigningKey"))
+        assertEquals("key retrieval failed", payload.inputValueBySuffix("clientError"))
+        assertEquals("30", payload.inputValueBySuffix("clientErrorCode"))
     }
 
     @Test
@@ -373,13 +377,13 @@ class RecognizeCallbackTest {
         assertTrue(result.isFailure)
         assertIs<RecognizeException>(result.exceptionOrNull())
 
-        val inputs = callback.payload()["input"]!!.jsonArray
-        assertEquals("", inputs[0].jsonObject["value"]!!.jsonPrimitive.content)
-        assertEquals("", inputs[1].jsonObject["value"]!!.jsonPrimitive.content)
-        assertEquals("", inputs[2].jsonObject["value"]!!.jsonPrimitive.content)
-        assertEquals("", inputs[3].jsonObject["value"]!!.jsonPrimitive.content)
-        assertEquals("enroll failed", inputs[4].jsonObject["value"]!!.jsonPrimitive.content)
-        assertEquals("21", inputs[5].jsonObject["value"]!!.jsonPrimitive.content)
+        val payload = callback.payload()
+        assertEquals("", payload.inputValueBySuffix("signedJwt"))
+        assertEquals("", payload.inputValueBySuffix("clientState"))
+        assertEquals("", payload.inputValueBySuffix("recognizeId"))
+        assertEquals("", payload.inputValueBySuffix("devicePublicSigningKey"))
+        assertEquals("enroll failed", payload.inputValueBySuffix("clientError"))
+        assertEquals("21", payload.inputValueBySuffix("clientErrorCode"))
     }
 
     @Test
@@ -392,9 +396,13 @@ class RecognizeCallbackTest {
         assertTrue(result.isFailure)
         assertIs<RecognizeException>(result.exceptionOrNull())
 
-        val inputs = callback.payload()["input"]!!.jsonArray
-        assertEquals("setup failed", inputs[4].jsonObject["value"]!!.jsonPrimitive.content)
-        assertEquals("11", inputs[5].jsonObject["value"]!!.jsonPrimitive.content)
+        val payload = callback.payload()
+        assertEquals("", payload.inputValueBySuffix("signedJwt"))
+        assertEquals("", payload.inputValueBySuffix("clientState"))
+        assertEquals("", payload.inputValueBySuffix("recognizeId"))
+        assertEquals("", payload.inputValueBySuffix("devicePublicSigningKey"))
+        assertEquals("setup failed", payload.inputValueBySuffix("clientError"))
+        assertEquals("11", payload.inputValueBySuffix("clientErrorCode"))
     }
 
     @Test
@@ -408,27 +416,31 @@ class RecognizeCallbackTest {
         val ex = assertIs<RecognizeException>(result.exceptionOrNull())
         assertEquals(21, ex.code)
 
-        val inputs = callback.payload()["input"]!!.jsonArray
-        assertEquals("user cancelled", inputs[4].jsonObject["value"]!!.jsonPrimitive.content)
-        assertEquals("21", inputs[5].jsonObject["value"]!!.jsonPrimitive.content)
+        val payload = callback.payload()
+        assertEquals("", payload.inputValueBySuffix("signedJwt"))
+        assertEquals("", payload.inputValueBySuffix("clientState"))
+        assertEquals("", payload.inputValueBySuffix("recognizeId"))
+        assertEquals("", payload.inputValueBySuffix("devicePublicSigningKey"))
+        assertEquals("user cancelled", payload.inputValueBySuffix("clientError"))
+        assertEquals("21", payload.inputValueBySuffix("clientErrorCode"))
     }
 
     // ── Authenticate — success path ──────────────────────────────────────────────
 
     @Test
-    fun `authenticate success writes signedJwt and clientState to input`() = runTest {
+    fun `authenticate success writes signedJwt, clientState, recognizeId and devicePublicSigningKey to input`() = runTest {
         val callback = RecognizeCallback().init(authCallbackJson()) as PingOneRecognizeAuthenticateCallback
         val result = callback.authenticate()
         assertTrue(result.isSuccess)
         assertEquals("user-id", result.getOrThrow().recognizeId)
 
-        val inputs = callback.payload()["input"]!!.jsonArray
-        assertEquals("signed-jwt",   inputs[0].jsonObject["value"]!!.jsonPrimitive.content)
-        assertEquals("client-state", inputs[1].jsonObject["value"]!!.jsonPrimitive.content)
-        assertEquals("user-id",       inputs[2].jsonObject["value"]!!.jsonPrimitive.content) // recognizeId
-        assertEquals("device-public-key", inputs[3].jsonObject["value"]!!.jsonPrimitive.content) // devicePublicSigningKey
-        assertEquals("",             inputs[4].jsonObject["value"]!!.jsonPrimitive.content)
-        assertEquals("",             inputs[5].jsonObject["value"]!!.jsonPrimitive.content)
+        val payload = callback.payload()
+        assertEquals("signed-jwt", payload.inputValueBySuffix("signedJwt"))
+        assertEquals("client-state", payload.inputValueBySuffix("clientState"))
+        assertEquals("user-id", payload.inputValueBySuffix("recognizeId"))
+        assertEquals("device-public-key", payload.inputValueBySuffix("devicePublicSigningKey"))
+        assertEquals("", payload.inputValueBySuffix("clientError"))
+        assertEquals("", payload.inputValueBySuffix("clientErrorCode"))
     }
 
     // ── Authenticate — failure path ──────────────────────────────────────────────
@@ -443,13 +455,13 @@ class RecognizeCallbackTest {
         assertTrue(result.isFailure)
         assertIs<RecognizeException>(result.exceptionOrNull())
 
-        val inputs = callback.payload()["input"]!!.jsonArray
-        assertEquals("", inputs[0].jsonObject["value"]!!.jsonPrimitive.content)
-        assertEquals("", inputs[1].jsonObject["value"]!!.jsonPrimitive.content)
-        assertEquals("", inputs[2].jsonObject["value"]!!.jsonPrimitive.content)
-        assertEquals("", inputs[3].jsonObject["value"]!!.jsonPrimitive.content)
-        assertEquals("auth failed", inputs[4].jsonObject["value"]!!.jsonPrimitive.content)
-        assertEquals("21", inputs[5].jsonObject["value"]!!.jsonPrimitive.content)
+        val payload = callback.payload()
+        assertEquals("", payload.inputValueBySuffix("signedJwt"))
+        assertEquals("", payload.inputValueBySuffix("clientState"))
+        assertEquals("", payload.inputValueBySuffix("recognizeId"))
+        assertEquals("", payload.inputValueBySuffix("devicePublicSigningKey"))
+        assertEquals("auth failed", payload.inputValueBySuffix("clientError"))
+        assertEquals("21", payload.inputValueBySuffix("clientErrorCode"))
     }
 
     @Test
@@ -462,9 +474,13 @@ class RecognizeCallbackTest {
         assertTrue(result.isFailure)
         assertIs<RecognizeException>(result.exceptionOrNull())
 
-        val inputs = callback.payload()["input"]!!.jsonArray
-        assertEquals("setup failed", inputs[4].jsonObject["value"]!!.jsonPrimitive.content)
-        assertEquals("11", inputs[5].jsonObject["value"]!!.jsonPrimitive.content)
+        val payload = callback.payload()
+        assertEquals("", payload.inputValueBySuffix("signedJwt"))
+        assertEquals("", payload.inputValueBySuffix("clientState"))
+        assertEquals("", payload.inputValueBySuffix("recognizeId"))
+        assertEquals("", payload.inputValueBySuffix("devicePublicSigningKey"))
+        assertEquals("setup failed", payload.inputValueBySuffix("clientError"))
+        assertEquals("11", payload.inputValueBySuffix("clientErrorCode"))
     }
 
     @Test
@@ -478,9 +494,13 @@ class RecognizeCallbackTest {
         val ex = assertIs<RecognizeException>(result.exceptionOrNull())
         assertEquals(42, ex.code)
 
-        val inputs = callback.payload()["input"]!!.jsonArray
-        assertEquals("liveness failed", inputs[4].jsonObject["value"]!!.jsonPrimitive.content)
-        assertEquals("42", inputs[5].jsonObject["value"]!!.jsonPrimitive.content)
+        val payload = callback.payload()
+        assertEquals("", payload.inputValueBySuffix("signedJwt"))
+        assertEquals("", payload.inputValueBySuffix("clientState"))
+        assertEquals("", payload.inputValueBySuffix("recognizeId"))
+        assertEquals("", payload.inputValueBySuffix("devicePublicSigningKey"))
+        assertEquals("liveness failed", payload.inputValueBySuffix("clientError"))
+        assertEquals("42", payload.inputValueBySuffix("clientErrorCode"))
     }
 
     // ── clientState enrollment-check branch ─────────────────────────────────
@@ -518,8 +538,7 @@ class RecognizeCallbackTest {
         val result = callback.authenticate()
         assertTrue(result.isSuccess)
         assertEquals("user-id", result.getOrThrow().recognizeId)
-        val inputs = callback.payload()["input"]!!.jsonArray
-        assertEquals("user-id", inputs[2].jsonObject["value"]!!.jsonPrimitive.content)
+        assertEquals("user-id", callback.payload().inputValueBySuffix("recognizeId"))
 
         coVerify(exactly = 1) { Recognize.authenticate(any()) }
         coVerify(exactly = 0) { Recognize.enroll(any()) }
@@ -537,8 +556,7 @@ class RecognizeCallbackTest {
         assertEquals("keyless-id", result.getOrThrow().recognizeId)
         assertEquals("device-public-key", result.getOrThrow().devicePublicSigningKey)
 
-        val inputs = callback.payload()["input"]!!.jsonArray
-        assertEquals("keyless-id", inputs[2].jsonObject["value"]!!.jsonPrimitive.content)
+        assertEquals("keyless-id", callback.payload().inputValueBySuffix("recognizeId"))
 
         coVerify(exactly = 0) { Recognize.authenticate(any()) }
         coVerify(exactly = 1) { Recognize.enroll(any()) }
@@ -564,8 +582,7 @@ class RecognizeCallbackTest {
         val result = callback.authenticate()
         assertTrue(result.isFailure)
 
-        val inputs = callback.payload()["input"]!!.jsonArray
-        assertEquals("enroll from client state failed", inputs[4].jsonObject["value"]!!.jsonPrimitive.content)
+        assertEquals("enroll from client state failed", callback.payload().inputValueBySuffix("clientError"))
     }
 
     // ── Common fields parsed by AbstractRecognizeCallback ───────────────────────
