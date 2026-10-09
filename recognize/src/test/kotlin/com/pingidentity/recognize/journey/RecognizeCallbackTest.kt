@@ -76,7 +76,7 @@ class RecognizeCallbackTest {
 
     // ── Helpers ─────────────────────────────────────────────────────────────────
 
-    /** Enroll input slots: signedJwt, clientState, recognizeId, clientError, clientErrorCode */
+    /** Enroll input slots: signedJwt, clientState, recognizeId, devicePublicSigningKey, clientError, clientErrorCode */
     private fun enrollCallbackJson(): JsonObject = Json.parseToJsonElement(
         """
         {
@@ -90,11 +90,12 @@ class RecognizeCallbackTest {
             { "name": "generateClientState", "value": "" }
           ],
           "input": [
-            { "name": "IDToken1signedJwt",       "value": "" },
-            { "name": "IDToken1clientState",     "value": "" },
-            { "name": "IDToken1recognizeId",     "value": "" },
-            { "name": "IDToken1clientError",     "value": "" },
-            { "name": "IDToken1clientErrorCode", "value": "" }
+            { "name": "IDToken1signedJwt",              "value": "" },
+            { "name": "IDToken1clientState",            "value": "" },
+            { "name": "IDToken1recognizeId",            "value": "" },
+            { "name": "IDToken1devicePublicSigningKey", "value": "" },
+            { "name": "IDToken1clientError",            "value": "" },
+            { "name": "IDToken1clientErrorCode",        "value": "" }
           ]
         }
         """
@@ -172,11 +173,12 @@ class RecognizeCallbackTest {
                 { "name": "generateClientState", "value": "true" }
               ],
               "input": [
-                { "name": "IDToken1signedJwt",       "value": "" },
-                { "name": "IDToken1clientState",     "value": "" },
-                { "name": "IDToken1recognizeId",     "value": "" },
-                { "name": "IDToken1clientError",     "value": "" },
-                { "name": "IDToken1clientErrorCode", "value": "" }
+                { "name": "IDToken1signedJwt",              "value": "" },
+                { "name": "IDToken1clientState",            "value": "" },
+                { "name": "IDToken1recognizeId",            "value": "" },
+                { "name": "IDToken1devicePublicSigningKey", "value": "" },
+                { "name": "IDToken1clientError",            "value": "" },
+                { "name": "IDToken1clientErrorCode",        "value": "" }
               ]
             }
             """
@@ -216,21 +218,157 @@ class RecognizeCallbackTest {
     // ── Enroll — success path ────────────────────────────────────────────────────
 
     @Test
-    fun `enroll success writes signedJwt and recognizeId to input`() = runTest {
+    fun `enroll success writes signedJwt, clientState, recognizeId and devicePublicSigningKey to input`() = runTest {
         val callback = RecognizeCallback().init(enrollCallbackJson()) as PingOneRecognizeEnrollCallback
         val result = callback.enroll()
         assertTrue(result.isSuccess)
         assertEquals("device-public-key", result.getOrThrow().devicePublicSigningKey)
 
+        val payload = callback.payload()
+        assertEquals("signed-jwt", payload.inputValueBySuffix("signedJwt"))
+        assertEquals("client-state", payload.inputValueBySuffix("clientState"))
+        assertEquals("keyless-id", payload.inputValueBySuffix("recognizeId"))
+        assertEquals("device-public-key", payload.inputValueBySuffix("devicePublicSigningKey"))
+        assertEquals("", payload.inputValueBySuffix("clientError"))
+        assertEquals("", payload.inputValueBySuffix("clientErrorCode"))
+    }
+
+    // ── Input matching by name suffix ────────────────────────────────────────────
+
+    /**
+     * Enroll callback JSON with the legacy five input slots (no `devicePublicSigningKey`)
+     * in non-standard order — exercising suffix matching rather than positional matching.
+     */
+    private fun legacyFiveSlotEnrollCallbackJson(): JsonObject = Json.parseToJsonElement(
+        """
+        {
+          "type": "PingOneRecognizeCallback",
+          "output": [
+            { "name": "operationType",       "value": "ENROLL" },
+            { "name": "host",                "value": "https://recognize.example.com" },
+            { "name": "apiKey",              "value": "test-api-key" },
+            { "name": "transactionData",     "value": "tx-data" },
+            { "name": "clientState",         "value": "cs" },
+            { "name": "generateClientState", "value": "" }
+          ],
+          "input": [
+            { "name": "IDToken1clientError",     "value": "" },
+            { "name": "IDToken1recognizeId",     "value": "" },
+            { "name": "IDToken1clientErrorCode", "value": "" },
+            { "name": "IDToken1signedJwt",       "value": "" },
+            { "name": "IDToken1clientState",     "value": "" }
+          ]
+        }
+        """
+    ) as JsonObject
+
+    /** Reads the value of the input slot whose name ends with [suffix]. */
+    private fun JsonObject.inputValueBySuffix(suffix: String): String =
+        this["input"]!!.jsonArray
+            .first { it.jsonObject["name"]!!.jsonPrimitive.content.endsWith(suffix) }
+            .jsonObject["value"]!!.jsonPrimitive.content
+
+    @Test
+    fun `enroll on legacy five-slot journey submits without devicePublicSigningKey and does not throw`() = runTest {
+        val callback =
+            RecognizeCallback().init(legacyFiveSlotEnrollCallbackJson()) as PingOneRecognizeEnrollCallback
+        val result = callback.enroll()
+        assertTrue(result.isSuccess)
+
+        val payload = callback.payload()
+        val inputs = payload["input"]!!.jsonArray
+        // No slot invented for the missing devicePublicSigningKey input
+        assertEquals(5, inputs.size)
+        assertEquals("signed-jwt", payload.inputValueBySuffix("signedJwt"))
+        assertEquals("client-state", payload.inputValueBySuffix("clientState"))
+        assertEquals("keyless-id", payload.inputValueBySuffix("recognizeId"))
+        assertEquals("", payload.inputValueBySuffix("clientError"))
+        assertEquals("", payload.inputValueBySuffix("clientErrorCode"))
+    }
+
+    @Test
+    fun `enroll failure on legacy five-slot journey writes error to correct slots`() = runTest {
+        val error = RecognizeException(code = 21, message = "enroll failed", debuggingInfo = emptyMap())
+        coEvery { Recognize.enroll(any()) } returns Result.failure(error)
+
+        val callback =
+            RecognizeCallback().init(legacyFiveSlotEnrollCallbackJson()) as PingOneRecognizeEnrollCallback
+        val result = callback.enroll()
+        assertTrue(result.isFailure)
+
+        val payload = callback.payload()
+        assertEquals("enroll failed", payload.inputValueBySuffix("clientError"))
+        assertEquals("21", payload.inputValueBySuffix("clientErrorCode"))
+        assertEquals("", payload.inputValueBySuffix("signedJwt"))
+    }
+
+    @Test
+    fun `enroll fills inputs correctly when slots are reordered`() = runTest {
+        val callback = RecognizeCallback().init(legacyFiveSlotEnrollCallbackJson()) as PingOneRecognizeEnrollCallback
+        assertTrue(callback.enroll().isSuccess)
+
+        val payload = callback.payload()
+        assertEquals("signed-jwt", payload.inputValueBySuffix("signedJwt"))
+        assertEquals("keyless-id", payload.inputValueBySuffix("recognizeId"))
+    }
+
+    @Test
+    fun `enroll echoes declared input names and maps every submitted value to its slot`() = runTest {
+        val callback = RecognizeCallback().init(enrollCallbackJson()) as PingOneRecognizeEnrollCallback
+        assertTrue(callback.enroll().isSuccess)
+
+        // Contract: the input array is echoed back unchanged in names, values filled in.
+        val expectedNames = listOf(
+            "IDToken1signedJwt",
+            "IDToken1clientState",
+            "IDToken1recognizeId",
+            "IDToken1devicePublicSigningKey",
+            "IDToken1clientError",
+            "IDToken1clientErrorCode",
+        )
         val inputs = callback.payload()["input"]!!.jsonArray
-        assertEquals("signed-jwt",  inputs[0].jsonObject["value"]!!.jsonPrimitive.content)
-        assertEquals("client-state",inputs[1].jsonObject["value"]!!.jsonPrimitive.content)
-        assertEquals("keyless-id",  inputs[2].jsonObject["value"]!!.jsonPrimitive.content)
-        assertEquals("",            inputs[3].jsonObject["value"]!!.jsonPrimitive.content)
-        assertEquals("",            inputs[4].jsonObject["value"]!!.jsonPrimitive.content)
+        assertEquals(
+            expectedNames,
+            inputs.map { it.jsonObject["name"]!!.jsonPrimitive.content },
+        )
+        assertEquals(
+            mapOf(
+                "IDToken1signedJwt" to "signed-jwt",
+                "IDToken1clientState" to "client-state",
+                "IDToken1recognizeId" to "keyless-id",
+                "IDToken1devicePublicSigningKey" to "device-public-key",
+                "IDToken1clientError" to "",
+                "IDToken1clientErrorCode" to "",
+            ),
+            expectedNames.associateWith { name ->
+                inputs.first { it.jsonObject["name"]!!.jsonPrimitive.content == name }
+                    .jsonObject["value"]!!.jsonPrimitive.content
+            },
+        )
     }
 
     // ── Enroll — failure path ────────────────────────────────────────────────────
+
+    @Test
+    fun `enroll succeeds and leaves key slot untouched when getDevicePublicSigningKey fails`() = runTest {
+        val error = RecognizeException(code = 30, message = "key retrieval failed", debuggingInfo = emptyMap())
+        every { Recognize.getDevicePublicSigningKey() } returns Result.failure(error)
+
+        val callback = RecognizeCallback().init(enrollCallbackJson()) as PingOneRecognizeEnrollCallback
+        val result = callback.enroll()
+        assertTrue(result.isSuccess)
+        assertEquals(null, result.getOrThrow().devicePublicSigningKey)
+
+        val payload = callback.payload()
+        assertEquals("signed-jwt", payload.inputValueBySuffix("signedJwt"))
+        assertEquals("client-state", payload.inputValueBySuffix("clientState"))
+        assertEquals("keyless-id", payload.inputValueBySuffix("recognizeId"))
+        // Best-effort key retrieval: the enrollment completes and the failed lookup leaves
+        // the slot untouched (its original empty value), mirroring iOS.
+        assertEquals("", payload.inputValueBySuffix("devicePublicSigningKey"))
+        assertEquals("", payload.inputValueBySuffix("clientError"))
+        assertEquals("", payload.inputValueBySuffix("clientErrorCode"))
+    }
 
     @Test
     fun `enroll failure from Recognize_enroll writes error to input`() = runTest {
@@ -242,12 +380,13 @@ class RecognizeCallbackTest {
         assertTrue(result.isFailure)
         assertIs<RecognizeException>(result.exceptionOrNull())
 
-        val inputs = callback.payload()["input"]!!.jsonArray
-        assertEquals("", inputs[0].jsonObject["value"]!!.jsonPrimitive.content)
-        assertEquals("", inputs[1].jsonObject["value"]!!.jsonPrimitive.content)
-        assertEquals("", inputs[2].jsonObject["value"]!!.jsonPrimitive.content)
-        assertEquals("enroll failed", inputs[3].jsonObject["value"]!!.jsonPrimitive.content)
-        assertEquals("21", inputs[4].jsonObject["value"]!!.jsonPrimitive.content)
+        val payload = callback.payload()
+        assertEquals("", payload.inputValueBySuffix("signedJwt"))
+        assertEquals("", payload.inputValueBySuffix("clientState"))
+        assertEquals("", payload.inputValueBySuffix("recognizeId"))
+        assertEquals("", payload.inputValueBySuffix("devicePublicSigningKey"))
+        assertEquals("enroll failed", payload.inputValueBySuffix("clientError"))
+        assertEquals("21", payload.inputValueBySuffix("clientErrorCode"))
     }
 
     @Test
@@ -260,9 +399,13 @@ class RecognizeCallbackTest {
         assertTrue(result.isFailure)
         assertIs<RecognizeException>(result.exceptionOrNull())
 
-        val inputs = callback.payload()["input"]!!.jsonArray
-        assertEquals("setup failed", inputs[3].jsonObject["value"]!!.jsonPrimitive.content)
-        assertEquals("11", inputs[4].jsonObject["value"]!!.jsonPrimitive.content)
+        val payload = callback.payload()
+        assertEquals("", payload.inputValueBySuffix("signedJwt"))
+        assertEquals("", payload.inputValueBySuffix("clientState"))
+        assertEquals("", payload.inputValueBySuffix("recognizeId"))
+        assertEquals("", payload.inputValueBySuffix("devicePublicSigningKey"))
+        assertEquals("setup failed", payload.inputValueBySuffix("clientError"))
+        assertEquals("11", payload.inputValueBySuffix("clientErrorCode"))
     }
 
     @Test
@@ -276,27 +419,115 @@ class RecognizeCallbackTest {
         val ex = assertIs<RecognizeException>(result.exceptionOrNull())
         assertEquals(21, ex.code)
 
-        val inputs = callback.payload()["input"]!!.jsonArray
-        assertEquals("user cancelled", inputs[3].jsonObject["value"]!!.jsonPrimitive.content)
-        assertEquals("21", inputs[4].jsonObject["value"]!!.jsonPrimitive.content)
+        val payload = callback.payload()
+        assertEquals("", payload.inputValueBySuffix("signedJwt"))
+        assertEquals("", payload.inputValueBySuffix("clientState"))
+        assertEquals("", payload.inputValueBySuffix("recognizeId"))
+        assertEquals("", payload.inputValueBySuffix("devicePublicSigningKey"))
+        assertEquals("user cancelled", payload.inputValueBySuffix("clientError"))
+        assertEquals("21", payload.inputValueBySuffix("clientErrorCode"))
     }
 
     // ── Authenticate — success path ──────────────────────────────────────────────
 
     @Test
-    fun `authenticate success writes signedJwt and clientState to input`() = runTest {
+    fun `authenticate success writes signedJwt, clientState, recognizeId and devicePublicSigningKey to input`() = runTest {
         val callback = RecognizeCallback().init(authCallbackJson()) as PingOneRecognizeAuthenticateCallback
         val result = callback.authenticate()
         assertTrue(result.isSuccess)
         assertEquals("user-id", result.getOrThrow().recognizeId)
 
-        val inputs = callback.payload()["input"]!!.jsonArray
-        assertEquals("signed-jwt",   inputs[0].jsonObject["value"]!!.jsonPrimitive.content)
-        assertEquals("client-state", inputs[1].jsonObject["value"]!!.jsonPrimitive.content)
-        assertEquals("user-id",       inputs[2].jsonObject["value"]!!.jsonPrimitive.content) // recognizeId
-        assertEquals("device-public-key", inputs[3].jsonObject["value"]!!.jsonPrimitive.content) // devicePublicSigningKey
-        assertEquals("",             inputs[4].jsonObject["value"]!!.jsonPrimitive.content)
-        assertEquals("",             inputs[5].jsonObject["value"]!!.jsonPrimitive.content)
+        val payload = callback.payload()
+        assertEquals("signed-jwt", payload.inputValueBySuffix("signedJwt"))
+        assertEquals("client-state", payload.inputValueBySuffix("clientState"))
+        assertEquals("user-id", payload.inputValueBySuffix("recognizeId"))
+        assertEquals("device-public-key", payload.inputValueBySuffix("devicePublicSigningKey"))
+        assertEquals("", payload.inputValueBySuffix("clientError"))
+        assertEquals("", payload.inputValueBySuffix("clientErrorCode"))
+    }
+
+    // ── Authenticate — best-effort lookup failures after a successful ceremony ──
+
+    @Test
+    fun `authenticate succeeds and leaves recognizeId slot untouched when getUserId fails`() = runTest {
+        val error = RecognizeException(code = 31, message = "user id retrieval failed", debuggingInfo = emptyMap())
+        every { Recognize.getUserId() } returns Result.failure(error)
+
+        val callback = RecognizeCallback().init(authCallbackJson()) as PingOneRecognizeAuthenticateCallback
+        val result = callback.authenticate()
+        assertTrue(result.isSuccess)
+        assertEquals(null, result.getOrThrow().recognizeId)
+        assertEquals("device-public-key", result.getOrThrow().devicePublicSigningKey)
+
+        val payload = callback.payload()
+        assertEquals("signed-jwt", payload.inputValueBySuffix("signedJwt"))
+        assertEquals("client-state", payload.inputValueBySuffix("clientState"))
+        // Best-effort user-ID retrieval: the authentication completes and the failed lookup
+        // leaves the slot untouched (its original empty value), mirroring iOS.
+        assertEquals("", payload.inputValueBySuffix("recognizeId"))
+        assertEquals("device-public-key", payload.inputValueBySuffix("devicePublicSigningKey"))
+        assertEquals("", payload.inputValueBySuffix("clientError"))
+        assertEquals("", payload.inputValueBySuffix("clientErrorCode"))
+    }
+
+    @Test
+    fun `authenticate succeeds and leaves key slot untouched when getDevicePublicSigningKey fails`() = runTest {
+        val error = RecognizeException(code = 30, message = "key retrieval failed", debuggingInfo = emptyMap())
+        every { Recognize.getDevicePublicSigningKey() } returns Result.failure(error)
+
+        val callback = RecognizeCallback().init(authCallbackJson()) as PingOneRecognizeAuthenticateCallback
+        val result = callback.authenticate()
+        assertTrue(result.isSuccess)
+        assertEquals("user-id", result.getOrThrow().recognizeId)
+        assertEquals(null, result.getOrThrow().devicePublicSigningKey)
+
+        val payload = callback.payload()
+        assertEquals("signed-jwt", payload.inputValueBySuffix("signedJwt"))
+        assertEquals("client-state", payload.inputValueBySuffix("clientState"))
+        assertEquals("user-id", payload.inputValueBySuffix("recognizeId"))
+        // Best-effort key retrieval: the authentication completes and the failed lookup leaves
+        // the slot untouched (its original empty value), mirroring iOS.
+        assertEquals("", payload.inputValueBySuffix("devicePublicSigningKey"))
+        assertEquals("", payload.inputValueBySuffix("clientError"))
+        assertEquals("", payload.inputValueBySuffix("clientErrorCode"))
+    }
+
+    @Test
+    fun `authenticate succeeds and leaves both slots untouched when both lookups fail`() = runTest {
+        val error = RecognizeException(code = 32, message = "lookups failed", debuggingInfo = emptyMap())
+        every { Recognize.getUserId() } returns Result.failure(error)
+        every { Recognize.getDevicePublicSigningKey() } returns Result.failure(error)
+
+        val callback = RecognizeCallback().init(authCallbackJson()) as PingOneRecognizeAuthenticateCallback
+        val result = callback.authenticate()
+        assertTrue(result.isSuccess)
+        assertEquals(null, result.getOrThrow().recognizeId)
+        assertEquals(null, result.getOrThrow().devicePublicSigningKey)
+
+        val payload = callback.payload()
+        assertEquals("signed-jwt", payload.inputValueBySuffix("signedJwt"))
+        assertEquals("client-state", payload.inputValueBySuffix("clientState"))
+        assertEquals("", payload.inputValueBySuffix("recognizeId"))
+        assertEquals("", payload.inputValueBySuffix("devicePublicSigningKey"))
+        assertEquals("", payload.inputValueBySuffix("clientError"))
+        assertEquals("", payload.inputValueBySuffix("clientErrorCode"))
+    }
+
+    @Test
+    fun `enroll from clientState succeeds and leaves key slot untouched when getDevicePublicSigningKey fails`() = runTest {
+        val error = RecognizeException(code = 30, message = "key retrieval failed", debuggingInfo = emptyMap())
+        coEvery { Recognize.validateUserAndDeviceActive() } returns Result.failure(IOException("not enrolled"))
+        every { Recognize.getDevicePublicSigningKey() } returns Result.failure(error)
+
+        val callback = RecognizeCallback().init(authWithClientStateJson()) as PingOneRecognizeAuthenticateCallback
+        val result = callback.authenticate()
+        assertTrue(result.isSuccess)
+        assertEquals("keyless-id", result.getOrThrow().recognizeId)
+        assertEquals(null, result.getOrThrow().devicePublicSigningKey)
+
+        assertEquals("keyless-id", callback.payload().inputValueBySuffix("recognizeId"))
+        assertEquals("", callback.payload().inputValueBySuffix("devicePublicSigningKey"))
+        assertEquals("", callback.payload().inputValueBySuffix("clientError"))
     }
 
     // ── Authenticate — failure path ──────────────────────────────────────────────
@@ -311,13 +542,13 @@ class RecognizeCallbackTest {
         assertTrue(result.isFailure)
         assertIs<RecognizeException>(result.exceptionOrNull())
 
-        val inputs = callback.payload()["input"]!!.jsonArray
-        assertEquals("", inputs[0].jsonObject["value"]!!.jsonPrimitive.content)
-        assertEquals("", inputs[1].jsonObject["value"]!!.jsonPrimitive.content)
-        assertEquals("", inputs[2].jsonObject["value"]!!.jsonPrimitive.content)
-        assertEquals("", inputs[3].jsonObject["value"]!!.jsonPrimitive.content)
-        assertEquals("auth failed", inputs[4].jsonObject["value"]!!.jsonPrimitive.content)
-        assertEquals("21", inputs[5].jsonObject["value"]!!.jsonPrimitive.content)
+        val payload = callback.payload()
+        assertEquals("", payload.inputValueBySuffix("signedJwt"))
+        assertEquals("", payload.inputValueBySuffix("clientState"))
+        assertEquals("", payload.inputValueBySuffix("recognizeId"))
+        assertEquals("", payload.inputValueBySuffix("devicePublicSigningKey"))
+        assertEquals("auth failed", payload.inputValueBySuffix("clientError"))
+        assertEquals("21", payload.inputValueBySuffix("clientErrorCode"))
     }
 
     @Test
@@ -330,9 +561,13 @@ class RecognizeCallbackTest {
         assertTrue(result.isFailure)
         assertIs<RecognizeException>(result.exceptionOrNull())
 
-        val inputs = callback.payload()["input"]!!.jsonArray
-        assertEquals("setup failed", inputs[4].jsonObject["value"]!!.jsonPrimitive.content)
-        assertEquals("11", inputs[5].jsonObject["value"]!!.jsonPrimitive.content)
+        val payload = callback.payload()
+        assertEquals("", payload.inputValueBySuffix("signedJwt"))
+        assertEquals("", payload.inputValueBySuffix("clientState"))
+        assertEquals("", payload.inputValueBySuffix("recognizeId"))
+        assertEquals("", payload.inputValueBySuffix("devicePublicSigningKey"))
+        assertEquals("setup failed", payload.inputValueBySuffix("clientError"))
+        assertEquals("11", payload.inputValueBySuffix("clientErrorCode"))
     }
 
     @Test
@@ -346,9 +581,13 @@ class RecognizeCallbackTest {
         val ex = assertIs<RecognizeException>(result.exceptionOrNull())
         assertEquals(42, ex.code)
 
-        val inputs = callback.payload()["input"]!!.jsonArray
-        assertEquals("liveness failed", inputs[4].jsonObject["value"]!!.jsonPrimitive.content)
-        assertEquals("42", inputs[5].jsonObject["value"]!!.jsonPrimitive.content)
+        val payload = callback.payload()
+        assertEquals("", payload.inputValueBySuffix("signedJwt"))
+        assertEquals("", payload.inputValueBySuffix("clientState"))
+        assertEquals("", payload.inputValueBySuffix("recognizeId"))
+        assertEquals("", payload.inputValueBySuffix("devicePublicSigningKey"))
+        assertEquals("liveness failed", payload.inputValueBySuffix("clientError"))
+        assertEquals("42", payload.inputValueBySuffix("clientErrorCode"))
     }
 
     // ── clientState enrollment-check branch ─────────────────────────────────
@@ -386,8 +625,7 @@ class RecognizeCallbackTest {
         val result = callback.authenticate()
         assertTrue(result.isSuccess)
         assertEquals("user-id", result.getOrThrow().recognizeId)
-        val inputs = callback.payload()["input"]!!.jsonArray
-        assertEquals("user-id", inputs[2].jsonObject["value"]!!.jsonPrimitive.content)
+        assertEquals("user-id", callback.payload().inputValueBySuffix("recognizeId"))
 
         coVerify(exactly = 1) { Recognize.authenticate(any()) }
         coVerify(exactly = 0) { Recognize.enroll(any()) }
@@ -405,8 +643,7 @@ class RecognizeCallbackTest {
         assertEquals("keyless-id", result.getOrThrow().recognizeId)
         assertEquals("device-public-key", result.getOrThrow().devicePublicSigningKey)
 
-        val inputs = callback.payload()["input"]!!.jsonArray
-        assertEquals("keyless-id", inputs[2].jsonObject["value"]!!.jsonPrimitive.content)
+        assertEquals("keyless-id", callback.payload().inputValueBySuffix("recognizeId"))
 
         coVerify(exactly = 0) { Recognize.authenticate(any()) }
         coVerify(exactly = 1) { Recognize.enroll(any()) }
@@ -432,8 +669,7 @@ class RecognizeCallbackTest {
         val result = callback.authenticate()
         assertTrue(result.isFailure)
 
-        val inputs = callback.payload()["input"]!!.jsonArray
-        assertEquals("enroll from client state failed", inputs[4].jsonObject["value"]!!.jsonPrimitive.content)
+        assertEquals("enroll from client state failed", callback.payload().inputValueBySuffix("clientError"))
     }
 
     // ── Common fields parsed by AbstractRecognizeCallback ───────────────────────
@@ -493,11 +729,12 @@ class RecognizeCallbackTest {
                 { "name": "mobileSDKOptions", "value": { "numberOfEnrollmentCircuits": "3" } }
               ],
               "input": [
-                { "name": "IDToken1signedJwt",       "value": "" },
-                { "name": "IDToken1clientState",     "value": "" },
-                { "name": "IDToken1recognizeId",     "value": "" },
-                { "name": "IDToken1clientError",     "value": "" },
-                { "name": "IDToken1clientErrorCode", "value": "" }
+                { "name": "IDToken1signedJwt",              "value": "" },
+                { "name": "IDToken1clientState",            "value": "" },
+                { "name": "IDToken1recognizeId",            "value": "" },
+                { "name": "IDToken1devicePublicSigningKey", "value": "" },
+                { "name": "IDToken1clientError",            "value": "" },
+                { "name": "IDToken1clientErrorCode",        "value": "" }
               ]
             }
             """
@@ -522,11 +759,12 @@ class RecognizeCallbackTest {
                 { "name": "audience",      "value": "my-audience" }
               ],
               "input": [
-                { "name": "IDToken1signedJwt",       "value": "" },
-                { "name": "IDToken1clientState",     "value": "" },
-                { "name": "IDToken1recognizeId",     "value": "" },
-                { "name": "IDToken1clientError",     "value": "" },
-                { "name": "IDToken1clientErrorCode", "value": "" }
+                { "name": "IDToken1signedJwt",              "value": "" },
+                { "name": "IDToken1clientState",            "value": "" },
+                { "name": "IDToken1recognizeId",            "value": "" },
+                { "name": "IDToken1devicePublicSigningKey", "value": "" },
+                { "name": "IDToken1clientError",            "value": "" },
+                { "name": "IDToken1clientErrorCode",        "value": "" }
               ]
             }
             """
@@ -583,11 +821,12 @@ class RecognizeCallbackTest {
                 { "name": "clientState",   "value": "" }
               ],
               "input": [
-                { "name": "IDToken1signedJwt",       "value": "" },
-                { "name": "IDToken1clientState",     "value": "" },
-                { "name": "IDToken1recognizeId",     "value": "" },
-                { "name": "IDToken1clientError",     "value": "" },
-                { "name": "IDToken1clientErrorCode", "value": "" }
+                { "name": "IDToken1signedJwt",              "value": "" },
+                { "name": "IDToken1clientState",            "value": "" },
+                { "name": "IDToken1recognizeId",            "value": "" },
+                { "name": "IDToken1devicePublicSigningKey", "value": "" },
+                { "name": "IDToken1clientError",            "value": "" },
+                { "name": "IDToken1clientErrorCode",        "value": "" }
               ]
             }
             """
@@ -621,11 +860,12 @@ class RecognizeCallbackTest {
                 { "name": "mobileSDKOptions", "value": { "livenessEnvironmentAware": "true" } }
               ],
               "input": [
-                { "name": "IDToken1signedJwt",       "value": "" },
-                { "name": "IDToken1clientState",     "value": "" },
-                { "name": "IDToken1recognizeId",     "value": "" },
-                { "name": "IDToken1clientError",     "value": "" },
-                { "name": "IDToken1clientErrorCode", "value": "" }
+                { "name": "IDToken1signedJwt",              "value": "" },
+                { "name": "IDToken1clientState",            "value": "" },
+                { "name": "IDToken1recognizeId",            "value": "" },
+                { "name": "IDToken1devicePublicSigningKey", "value": "" },
+                { "name": "IDToken1clientError",            "value": "" },
+                { "name": "IDToken1clientErrorCode",        "value": "" }
               ]
             }
             """
@@ -650,11 +890,12 @@ class RecognizeCallbackTest {
                 { "name": "mobileSDKOptions", "value": { "cameraDelaySeconds": "5" } }
               ],
               "input": [
-                { "name": "IDToken1signedJwt",       "value": "" },
-                { "name": "IDToken1clientState",     "value": "" },
-                { "name": "IDToken1recognizeId",     "value": "" },
-                { "name": "IDToken1clientError",     "value": "" },
-                { "name": "IDToken1clientErrorCode", "value": "" }
+                { "name": "IDToken1signedJwt",              "value": "" },
+                { "name": "IDToken1clientState",            "value": "" },
+                { "name": "IDToken1recognizeId",            "value": "" },
+                { "name": "IDToken1devicePublicSigningKey", "value": "" },
+                { "name": "IDToken1clientError",            "value": "" },
+                { "name": "IDToken1clientErrorCode",        "value": "" }
               ]
             }
             """
@@ -679,11 +920,12 @@ class RecognizeCallbackTest {
                 { "name": "mobileSDKOptions", "value": { "showSuccessFeedback": "false" } }
               ],
               "input": [
-                { "name": "IDToken1signedJwt",       "value": "" },
-                { "name": "IDToken1clientState",     "value": "" },
-                { "name": "IDToken1recognizeId",     "value": "" },
-                { "name": "IDToken1clientError",     "value": "" },
-                { "name": "IDToken1clientErrorCode", "value": "" }
+                { "name": "IDToken1signedJwt",              "value": "" },
+                { "name": "IDToken1clientState",            "value": "" },
+                { "name": "IDToken1recognizeId",            "value": "" },
+                { "name": "IDToken1devicePublicSigningKey", "value": "" },
+                { "name": "IDToken1clientError",            "value": "" },
+                { "name": "IDToken1clientErrorCode",        "value": "" }
               ]
             }
             """
@@ -708,11 +950,12 @@ class RecognizeCallbackTest {
                 { "name": "mobileSDKOptions", "value": { "showFailureFeedback": "false" } }
               ],
               "input": [
-                { "name": "IDToken1signedJwt",       "value": "" },
-                { "name": "IDToken1clientState",     "value": "" },
-                { "name": "IDToken1recognizeId",     "value": "" },
-                { "name": "IDToken1clientError",     "value": "" },
-                { "name": "IDToken1clientErrorCode", "value": "" }
+                { "name": "IDToken1signedJwt",              "value": "" },
+                { "name": "IDToken1clientState",            "value": "" },
+                { "name": "IDToken1recognizeId",            "value": "" },
+                { "name": "IDToken1devicePublicSigningKey", "value": "" },
+                { "name": "IDToken1clientError",            "value": "" },
+                { "name": "IDToken1clientErrorCode",        "value": "" }
               ]
             }
             """
@@ -737,11 +980,12 @@ class RecognizeCallbackTest {
                 { "name": "mobileSDKOptions", "value": { "showInstructionsScreen": "false" } }
               ],
               "input": [
-                { "name": "IDToken1signedJwt",       "value": "" },
-                { "name": "IDToken1clientState",     "value": "" },
-                { "name": "IDToken1recognizeId",     "value": "" },
-                { "name": "IDToken1clientError",     "value": "" },
-                { "name": "IDToken1clientErrorCode", "value": "" }
+                { "name": "IDToken1signedJwt",              "value": "" },
+                { "name": "IDToken1clientState",            "value": "" },
+                { "name": "IDToken1recognizeId",            "value": "" },
+                { "name": "IDToken1devicePublicSigningKey", "value": "" },
+                { "name": "IDToken1clientError",            "value": "" },
+                { "name": "IDToken1clientErrorCode",        "value": "" }
               ]
             }
             """
@@ -799,11 +1043,12 @@ class RecognizeCallbackTest {
                 { "name": "mobileSDKOptions", "value": { "presentation": "OVERLAY" } }
               ],
               "input": [
-                { "name": "IDToken1signedJwt",       "value": "" },
-                { "name": "IDToken1clientState",     "value": "" },
-                { "name": "IDToken1recognizeId",     "value": "" },
-                { "name": "IDToken1clientError",     "value": "" },
-                { "name": "IDToken1clientErrorCode", "value": "" }
+                { "name": "IDToken1signedJwt",              "value": "" },
+                { "name": "IDToken1clientState",            "value": "" },
+                { "name": "IDToken1recognizeId",            "value": "" },
+                { "name": "IDToken1devicePublicSigningKey", "value": "" },
+                { "name": "IDToken1clientError",            "value": "" },
+                { "name": "IDToken1clientErrorCode",        "value": "" }
               ]
             }
             """
