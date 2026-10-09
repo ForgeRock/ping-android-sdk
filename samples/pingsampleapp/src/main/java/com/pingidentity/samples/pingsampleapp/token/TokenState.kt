@@ -14,6 +14,7 @@ enum class TokenType {
     JOURNEY,
     DAVINCI,
     OIDC,
+    OIDC_RAR,
     AUTH_GRANT
 }
 
@@ -25,6 +26,8 @@ data class TokenState(
     var daVinciError: OidcError? = null,
     var oidcToken: Token? = null,
     var oidcError: OidcError? = null,
+    var oidcRarToken: Token? = null,
+    var oidcRarError: OidcError? = null,
     var authGrantToken: Token? = null,
     var authGrantError: OidcError? = null,
 )

@@ -24,7 +24,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
+import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -78,9 +78,11 @@ fun UserProfile(
                 .fillMaxWidth()
                 .padding(paddingValues)
         ) {
-            TabRow(
+            // Scrollable so five labels never wrap mid-word; each tab keeps its natural width.
+            ScrollableTabRow(
                 selectedTabIndex = state.selectedTab.ordinal,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                edgePadding = 0.dp,
             ) {
                 Tab(
                     selected = state.selectedTab == UserProfileType.JOURNEY,
@@ -105,6 +107,14 @@ fun UserProfile(
                         userProfileViewModel.userinfo()
                     },
                     text = { Text("OIDC") }
+                )
+                Tab(
+                    selected = state.selectedTab == UserProfileType.OIDC_RAR,
+                    onClick = {
+                        userProfileViewModel.selectTab(UserProfileType.OIDC_RAR)
+                        userProfileViewModel.userinfo()
+                    },
+                    text = { Text("RAR") }
                 )
                 Tab(
                     selected = state.selectedTab == UserProfileType.AUTH_GRANT,
@@ -190,6 +200,30 @@ fun UserProfile(
                                 message = "Please authenticate using OIDC to view user profile information.",
                                 actionLabel = "Start OIDC",
                                 onAction = { onAction?.invoke(UserProfileType.OIDC) }
+                            )
+                        }
+                    }
+
+                    UserProfileType.OIDC_RAR -> {
+                        if (state.oidcRarUser != null) {
+                            UserInfoCard(
+                                title = "OIDC RAR User Info",
+                                user = state.oidcRarUser,
+                                showRawInfo = state.showRawOidcRarUserInfo,
+                                formattedInfo = userProfileViewModel.formattedOidcRarUserInfo,
+                                onToggle = { userProfileViewModel.toggleUserInfo() }
+                            )
+                        } else if (state.oidcRarError != null) {
+                            ErrorCard(
+                                title = "OIDC RAR Error",
+                                error = state.oidcRarError.toString()
+                            )
+                        } else {
+                            EmptyStateCard(
+                                title = "No OIDC RAR User",
+                                message = "Please authenticate using OIDC RAR Login to view user profile information.",
+                                actionLabel = "Start OIDC RAR",
+                                onAction = { onAction?.invoke(UserProfileType.OIDC_RAR) }
                             )
                         }
                     }

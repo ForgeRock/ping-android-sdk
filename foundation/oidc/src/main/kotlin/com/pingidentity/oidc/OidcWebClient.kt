@@ -7,8 +7,6 @@
 
 package com.pingidentity.oidc
 
-import com.pingidentity.browser.BrowserLauncher.authTabCustomizer
-import com.pingidentity.browser.BrowserLauncher.customTabsCustomizer
 import com.pingidentity.oidc.module.Oidc
 import com.pingidentity.oidc.module.OidcFlow
 import com.pingidentity.oidc.module.PARAMETERS
@@ -16,6 +14,7 @@ import com.pingidentity.oidc.module.Web
 import com.pingidentity.oidc.module.oidcClientConfig
 import com.pingidentity.oidc.module.oidcUser
 import com.pingidentity.oidc.module.prepareUser
+import com.pingidentity.oidc.module.toAuthorizationDetailsParam
 import com.pingidentity.oidc.module.user
 import com.pingidentity.orchestrate.FailureNode
 import com.pingidentity.orchestrate.SuccessNode
@@ -108,6 +107,13 @@ fun OidcWebClient(block: OidcWebClientConfig.() -> Unit = {}): OidcWebClient {
  *     "acrValues": "Level3",
  *     "par": true,
  *     "additionalParameters": { "max_age": "3600" },
+ *     "authorizationDetails": [
+ *       {
+ *         "type": "payment_initiation",
+ *         "actions": ["initiate", "status"],
+ *         "locations": ["https://example.com/payments"]
+ *       }
+ *     ],
  *     "openId": {
  *       "authorizationEndpoint": "https://auth.example.com/authorize",
  *       "tokenEndpoint": "https://auth.example.com/token",
@@ -144,5 +150,52 @@ fun OidcWebClient(json: JsonObject): Result<OidcWebClient> {
 class Parameters(val map: MutableMap<String, String>) : MutableMap<String, String> by map {
     infix fun String.to(value: String) {
         map[this] = value
+    }
+
+    /**
+     * Adds Rich Authorization Request details (RFC 9396 §2) to this specific authorization
+     * request. The list is serialized eagerly into the `authorization_details` request
+     * parameter (and into the PAR form body when PAR is enabled).
+     *
+     * Each entry models one authorization detail object (RFC 9396 §2.2); type-specific members
+     * beyond the common data fields are carried through [AuthorizationDetail.additionalFields].
+     *
+     * Example:
+     * ```kotlin
+     * web.authorize {
+     *     authorizationDetails(
+     *         AuthorizationDetail(
+     *             type = "payment_initiation",
+     *             actions = listOf("initiate", "status"),
+     *             locations = listOf("https://example.com/payments"),
+     *         )
+     *     )
+     * }
+     * ```
+     *
+     * A per-call value replaces every configuration-level value for this request: the typed
+     * [OidcClientConfig.authorizationDetails] list and a hand-serialized `authorization_details`
+     * in [OidcClientConfig.additionalParameters] are both suppressed, so the parameter is emitted
+     * exactly once. An empty list is a no-op: the configuration-level value still applies. This
+     * function and a raw-string `"authorization_details" to value` entry in the per-call
+     * parameters share the same parameter namespace — the last write within the block wins — so
+     * the raw string remains the low-level escape hatch for shapes this API does not model.
+     *
+     * @param details The authorization detail entries for this request.
+     */
+    fun authorizationDetails(details: List<AuthorizationDetail>) {
+        if (details.isNotEmpty()) {
+            map[Constants.AUTHORIZATION_DETAILS] = details.toAuthorizationDetailsParam()
+        }
+    }
+
+    /**
+     * Adds Rich Authorization Request details (RFC 9396 §2) to this specific authorization
+     * request. Convenience overload of [authorizationDetails] taking the entries directly.
+     *
+     * @param details The authorization detail entries for this request.
+     */
+    fun authorizationDetails(vararg details: AuthorizationDetail) {
+        authorizationDetails(details.toList())
     }
 }

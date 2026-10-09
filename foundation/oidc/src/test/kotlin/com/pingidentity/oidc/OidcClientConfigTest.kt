@@ -29,6 +29,8 @@ import io.ktor.http.headersOf
 import io.ktor.utils.io.ByteReadChannel
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonObject
 import org.junit.Assert
 import org.junit.Assert.assertFalse
 import org.junit.Rule
@@ -156,6 +158,7 @@ class OidcClientConfigTest {
                 uiLocales = "uiLocales"
                 acrValues = "acrValues"
                 additionalParameters = mapOf("param" to "value")
+                authorizationDetails = listOf(AuthorizationDetail(type = "account_information"))
                 httpClient = mockk()
             }
 
@@ -179,6 +182,7 @@ class OidcClientConfigTest {
         assertEquals(otherConfig.uiLocales, oidcClientConfig.uiLocales)
         assertEquals(otherConfig.acrValues, oidcClientConfig.acrValues)
         assertEquals(otherConfig.additionalParameters, oidcClientConfig.additionalParameters)
+        assertEquals(otherConfig.authorizationDetails, oidcClientConfig.authorizationDetails)
         assertEquals(otherConfig.httpClient, oidcClientConfig.httpClient)
     }
 
@@ -206,12 +210,13 @@ class OidcClientConfigTest {
                 uiLocales = "uiLocales"
                 acrValues = "acrValues"
                 additionalParameters = mapOf("param" to "value")
+                authorizationDetails = listOf(AuthorizationDetail(type = "account_information"))
                 httpClient = mockk()
             }
 
-        //Ensure there are 23 properties in the class for now.
+        //Ensure there are 24 properties in the class for now.
         val clazz: KClass<OidcClientConfig> = OidcClientConfig::class
-        assertEquals(clazz.memberProperties.size, 23)
+        assertEquals(clazz.memberProperties.size, 24)
 
         val clonedConfig = oidcClientConfig.clone()
 
@@ -235,6 +240,7 @@ class OidcClientConfigTest {
         assertEquals(oidcClientConfig.uiLocales, clonedConfig.uiLocales)
         assertEquals(oidcClientConfig.acrValues, clonedConfig.acrValues)
         assertEquals(oidcClientConfig.additionalParameters, clonedConfig.additionalParameters)
+        assertEquals(oidcClientConfig.authorizationDetails, clonedConfig.authorizationDetails)
         assertEquals(oidcClientConfig.httpClient, clonedConfig.httpClient)
     }
 
@@ -261,6 +267,7 @@ class OidcClientConfigTest {
                 uiLocales = "uiLocales"
                 acrValues = "acrValues"
                 additionalParameters = mapOf("param" to "value")
+                authorizationDetails = listOf(AuthorizationDetail(type = "account_information"))
                 httpClient = mockk()
             }
         oidcClientConfig.init()
@@ -286,6 +293,7 @@ class OidcClientConfigTest {
         assertEquals(oidcClientConfig.uiLocales, clonedConfig.uiLocales)
         assertEquals(oidcClientConfig.acrValues, clonedConfig.acrValues)
         assertEquals(oidcClientConfig.additionalParameters, clonedConfig.additionalParameters)
+        assertEquals(oidcClientConfig.authorizationDetails, clonedConfig.authorizationDetails)
         assertEquals(oidcClientConfig.httpClient, clonedConfig.httpClient)
     }
 
@@ -355,6 +363,45 @@ class OidcClientConfigTest {
         Assert.assertEquals("custom_key_alias", config.keyAlias)
         assertFalse(config.strongBoxPreferred)
         Assert.assertEquals(128, config.symmetricKeySize)
+    }
+
+    @Test
+    fun `update should apply storage fileName from JSON config`() {
+        val oidcClientConfig = OidcClientConfig()
+        oidcClientConfig.update(JsonConfigParser(buildJsonObject {
+            put(JsonConfigKey.STORAGE, buildJsonObject {
+                put(JsonConfigKey.FILE_NAME, JsonPrimitive("my_token_file"))
+            })
+        }))
+
+        val config = EncryptedDataStoreStorageConfig().apply(oidcClientConfig.storageOption)
+        Assert.assertEquals("my_token_file", config.fileName)
+        //Non-name defaults are untouched
+        Assert.assertEquals("com.pingidentity.sdk.v1.tokens", config.keyAlias)
+    }
+
+    @Test
+    fun `update should keep default storage when JSON has no storage object`() {
+        val oidcClientConfig = OidcClientConfig()
+        oidcClientConfig.update(JsonConfigParser(buildJsonObject {
+            put(JsonConfigKey.DISPLAY, JsonPrimitive("display"))
+        }))
+
+        val config = EncryptedDataStoreStorageConfig().apply(oidcClientConfig.storageOption)
+        Assert.assertEquals("com.pingidentity.sdk.v1.tokens", config.fileName)
+    }
+
+    @Test
+    fun `update should keep default storage when storage object has no fileName`() {
+        val oidcClientConfig = OidcClientConfig()
+        oidcClientConfig.update(JsonConfigParser(buildJsonObject {
+            put(JsonConfigKey.STORAGE, buildJsonObject {
+                put(JsonConfigKey.DISPLAY, JsonPrimitive("unrelated"))
+            })
+        }))
+
+        val config = EncryptedDataStoreStorageConfig().apply(oidcClientConfig.storageOption)
+        Assert.assertEquals("com.pingidentity.sdk.v1.tokens", config.fileName)
     }
 
 }
