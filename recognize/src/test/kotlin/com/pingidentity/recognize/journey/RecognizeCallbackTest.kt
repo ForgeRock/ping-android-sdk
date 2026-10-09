@@ -350,21 +350,24 @@ class RecognizeCallbackTest {
     // ── Enroll — failure path ────────────────────────────────────────────────────
 
     @Test
-    fun `enroll failure from getDevicePublicSigningKey writes error to input`() = runTest {
+    fun `enroll succeeds and leaves key slot untouched when getDevicePublicSigningKey fails`() = runTest {
         val error = RecognizeException(code = 30, message = "key retrieval failed", debuggingInfo = emptyMap())
         every { Recognize.getDevicePublicSigningKey() } returns Result.failure(error)
 
         val callback = RecognizeCallback().init(enrollCallbackJson()) as PingOneRecognizeEnrollCallback
         val result = callback.enroll()
-        assertTrue(result.isFailure)
+        assertTrue(result.isSuccess)
+        assertEquals(null, result.getOrThrow().devicePublicSigningKey)
 
         val payload = callback.payload()
-        assertEquals("", payload.inputValueBySuffix("signedJwt"))
-        assertEquals("", payload.inputValueBySuffix("clientState"))
-        assertEquals("", payload.inputValueBySuffix("recognizeId"))
+        assertEquals("signed-jwt", payload.inputValueBySuffix("signedJwt"))
+        assertEquals("client-state", payload.inputValueBySuffix("clientState"))
+        assertEquals("keyless-id", payload.inputValueBySuffix("recognizeId"))
+        // Best-effort key retrieval: the enrollment completes and the failed lookup leaves
+        // the slot untouched (its original empty value), mirroring iOS.
         assertEquals("", payload.inputValueBySuffix("devicePublicSigningKey"))
-        assertEquals("key retrieval failed", payload.inputValueBySuffix("clientError"))
-        assertEquals("30", payload.inputValueBySuffix("clientErrorCode"))
+        assertEquals("", payload.inputValueBySuffix("clientError"))
+        assertEquals("", payload.inputValueBySuffix("clientErrorCode"))
     }
 
     @Test
@@ -441,6 +444,90 @@ class RecognizeCallbackTest {
         assertEquals("device-public-key", payload.inputValueBySuffix("devicePublicSigningKey"))
         assertEquals("", payload.inputValueBySuffix("clientError"))
         assertEquals("", payload.inputValueBySuffix("clientErrorCode"))
+    }
+
+    // ── Authenticate — best-effort lookup failures after a successful ceremony ──
+
+    @Test
+    fun `authenticate succeeds and leaves recognizeId slot untouched when getUserId fails`() = runTest {
+        val error = RecognizeException(code = 31, message = "user id retrieval failed", debuggingInfo = emptyMap())
+        every { Recognize.getUserId() } returns Result.failure(error)
+
+        val callback = RecognizeCallback().init(authCallbackJson()) as PingOneRecognizeAuthenticateCallback
+        val result = callback.authenticate()
+        assertTrue(result.isSuccess)
+        assertEquals(null, result.getOrThrow().recognizeId)
+        assertEquals("device-public-key", result.getOrThrow().devicePublicSigningKey)
+
+        val payload = callback.payload()
+        assertEquals("signed-jwt", payload.inputValueBySuffix("signedJwt"))
+        assertEquals("client-state", payload.inputValueBySuffix("clientState"))
+        // Best-effort user-ID retrieval: the authentication completes and the failed lookup
+        // leaves the slot untouched (its original empty value), mirroring iOS.
+        assertEquals("", payload.inputValueBySuffix("recognizeId"))
+        assertEquals("device-public-key", payload.inputValueBySuffix("devicePublicSigningKey"))
+        assertEquals("", payload.inputValueBySuffix("clientError"))
+        assertEquals("", payload.inputValueBySuffix("clientErrorCode"))
+    }
+
+    @Test
+    fun `authenticate succeeds and leaves key slot untouched when getDevicePublicSigningKey fails`() = runTest {
+        val error = RecognizeException(code = 30, message = "key retrieval failed", debuggingInfo = emptyMap())
+        every { Recognize.getDevicePublicSigningKey() } returns Result.failure(error)
+
+        val callback = RecognizeCallback().init(authCallbackJson()) as PingOneRecognizeAuthenticateCallback
+        val result = callback.authenticate()
+        assertTrue(result.isSuccess)
+        assertEquals("user-id", result.getOrThrow().recognizeId)
+        assertEquals(null, result.getOrThrow().devicePublicSigningKey)
+
+        val payload = callback.payload()
+        assertEquals("signed-jwt", payload.inputValueBySuffix("signedJwt"))
+        assertEquals("client-state", payload.inputValueBySuffix("clientState"))
+        assertEquals("user-id", payload.inputValueBySuffix("recognizeId"))
+        // Best-effort key retrieval: the authentication completes and the failed lookup leaves
+        // the slot untouched (its original empty value), mirroring iOS.
+        assertEquals("", payload.inputValueBySuffix("devicePublicSigningKey"))
+        assertEquals("", payload.inputValueBySuffix("clientError"))
+        assertEquals("", payload.inputValueBySuffix("clientErrorCode"))
+    }
+
+    @Test
+    fun `authenticate succeeds and leaves both slots untouched when both lookups fail`() = runTest {
+        val error = RecognizeException(code = 32, message = "lookups failed", debuggingInfo = emptyMap())
+        every { Recognize.getUserId() } returns Result.failure(error)
+        every { Recognize.getDevicePublicSigningKey() } returns Result.failure(error)
+
+        val callback = RecognizeCallback().init(authCallbackJson()) as PingOneRecognizeAuthenticateCallback
+        val result = callback.authenticate()
+        assertTrue(result.isSuccess)
+        assertEquals(null, result.getOrThrow().recognizeId)
+        assertEquals(null, result.getOrThrow().devicePublicSigningKey)
+
+        val payload = callback.payload()
+        assertEquals("signed-jwt", payload.inputValueBySuffix("signedJwt"))
+        assertEquals("client-state", payload.inputValueBySuffix("clientState"))
+        assertEquals("", payload.inputValueBySuffix("recognizeId"))
+        assertEquals("", payload.inputValueBySuffix("devicePublicSigningKey"))
+        assertEquals("", payload.inputValueBySuffix("clientError"))
+        assertEquals("", payload.inputValueBySuffix("clientErrorCode"))
+    }
+
+    @Test
+    fun `enroll from clientState succeeds and leaves key slot untouched when getDevicePublicSigningKey fails`() = runTest {
+        val error = RecognizeException(code = 30, message = "key retrieval failed", debuggingInfo = emptyMap())
+        coEvery { Recognize.validateUserAndDeviceActive() } returns Result.failure(IOException("not enrolled"))
+        every { Recognize.getDevicePublicSigningKey() } returns Result.failure(error)
+
+        val callback = RecognizeCallback().init(authWithClientStateJson()) as PingOneRecognizeAuthenticateCallback
+        val result = callback.authenticate()
+        assertTrue(result.isSuccess)
+        assertEquals("keyless-id", result.getOrThrow().recognizeId)
+        assertEquals(null, result.getOrThrow().devicePublicSigningKey)
+
+        assertEquals("keyless-id", callback.payload().inputValueBySuffix("recognizeId"))
+        assertEquals("", callback.payload().inputValueBySuffix("devicePublicSigningKey"))
+        assertEquals("", callback.payload().inputValueBySuffix("clientError"))
     }
 
     // ── Authenticate — failure path ──────────────────────────────────────────────

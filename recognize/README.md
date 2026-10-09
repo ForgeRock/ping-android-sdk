@@ -107,7 +107,7 @@ for await node in journey.start() {
 
 #### Retrieving the selfie frame (optional)
 
-Both callbacks accept a `retrieveSelfie: Boolean` parameter. When `true`, the captured face frame is returned in `RecognizeSuccess.selfie` as a `Bitmap`. Every successful enroll or authenticate operation also retrieves the current device public signing key from the Keyless SDK and exposes it as `RecognizeSuccess.devicePublicSigningKey`. If key retrieval fails, the operation returns a failure rather than a successful result with an empty key.
+Both callbacks accept a `retrieveSelfie: Boolean` parameter. When `true`, the captured face frame is returned in `RecognizeSuccess.selfie` as a `Bitmap`. Every successful enroll or authenticate operation also retrieves the current device public signing key from the Keyless SDK and exposes it as `RecognizeSuccess.devicePublicSigningKey`. Key and user-ID retrieval are best-effort, mirroring the iOS SDK: if a lookup fails after the ceremony has succeeded, the operation still succeeds, the affected `RecognizeSuccess` property is `null`, and the corresponding input field is left untouched on the Journey callback.
 
 ```kotlin
 val result = callback.enroll(retrieveSelfie = true)
@@ -158,7 +158,7 @@ On success, `IDToken1signedJwt`, `IDToken1clientState`, `IDToken1recognizeId`, a
 
 > **Note:** `shouldRetriveAuthenticationFrame` preserves the server-side typo (missing `e` in `Retrieve`) — this is the exact JSON key the server sends.
 
-On success, `IDToken1signedJwt`, `IDToken1clientState`, `IDToken1recognizeId`, and `IDToken1devicePublicSigningKey` are submitted automatically. For pure authentication, `IDToken1recognizeId` is freshly retrieved from `Keyless.getUserId()`; the client-state enrollment fallback uses `EnrollmentSuccess.keylessId`. The signing key is freshly retrieved from the Keyless SDK for each successful authentication. Journey enrollment submits the same six-input contract, with `EnrollmentSuccess.keylessId` as the recognize ID and the signing key freshly retrieved after each successful enrollment.
+On success, `IDToken1signedJwt`, `IDToken1clientState`, `IDToken1recognizeId`, and `IDToken1devicePublicSigningKey` are submitted automatically. For pure authentication, `IDToken1recognizeId` is freshly retrieved from `Keyless.getUserId()`; the client-state enrollment fallback uses `EnrollmentSuccess.keylessId`. The signing key is freshly retrieved from the Keyless SDK for each successful authentication. The user-ID and signing-key lookups are best-effort: if a lookup fails after the ceremony has succeeded, the operation still succeeds and the corresponding input field is left untouched. Journey enrollment submits the same six-input contract, with `EnrollmentSuccess.keylessId` as the recognize ID and the signing key freshly retrieved after each successful enrollment (also best-effort).
 
 #### Enroll-from-clientState (auth flow)
 

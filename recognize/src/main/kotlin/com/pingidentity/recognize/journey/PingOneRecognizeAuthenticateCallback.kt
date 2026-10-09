@@ -26,8 +26,9 @@ import kotlinx.serialization.json.jsonPrimitive
  * On success, the signed JWT, current user ID, client state, and freshly retrieved device public
  * signing key are submitted to the Journey via the six input fields: `IDToken1signedJwt`,
  * `IDToken1clientState`, `IDToken1recognizeId`, `IDToken1devicePublicSigningKey`,
- * `IDToken1clientError`, `IDToken1clientErrorCode`. User ID or key retrieval failure is returned
- * as a failed operation.
+ * `IDToken1clientError`, `IDToken1clientErrorCode`. The user ID and signing key are retrieved
+ * best-effort after a successful operation: if retrieval fails, the operation still succeeds
+ * and the corresponding input is left untouched, mirroring the iOS SDK.
  *
  * @see RecognizeCallback
  * @see PingOneRecognizeEnrollCallback
@@ -77,34 +78,34 @@ class PingOneRecognizeAuthenticateCallback : AbstractRecognizeCallback() {
                         )
                     ).fold(
                         onSuccess = { success ->
-                            Recognize.getDevicePublicSigningKey().map { devicePublicSigningKey ->
+                            // Best-effort key retrieval (mirrors iOS `try?`): a failed lookup
+                            // succeeds the operation and leaves the input slot untouched.
+                            Result.success(
                                 RecognizeSuccess(
                                     selfie = success.enrollmentFrame,
                                     signedJwt = success.signedJwt,
                                     clientState = success.clientState,
                                     recognizeId = success.keylessId,
-                                    devicePublicSigningKey = devicePublicSigningKey,
+                                    devicePublicSigningKey = Recognize.getDevicePublicSigningKey().getOrNull(),
                                 )
-                            }
+                            )
                         },
                         onFailure = { Result.failure(it) },
                     )
                 } else {
                     Recognize.authenticate(buildAuthConfig(resolvedConfig.retrieveSelfie)).fold(
                         onSuccess = { success ->
-                            Recognize.getUserId().fold(
-                                onSuccess = { recognizeId ->
-                                    Recognize.getDevicePublicSigningKey().map { devicePublicSigningKey ->
-                                        RecognizeSuccess(
-                                            selfie = success.authenticationFrame,
-                                            signedJwt = success.signedJwt,
-                                            clientState = success.clientState,
-                                            recognizeId = recognizeId,
-                                            devicePublicSigningKey = devicePublicSigningKey,
-                                        )
-                                    }
-                                },
-                                onFailure = { Result.failure(it) },
+                            // Best-effort user-ID and key retrieval (mirrors iOS `try?`): a
+                            // failed lookup succeeds the operation and leaves its input slot
+                            // untouched.
+                            Result.success(
+                                RecognizeSuccess(
+                                    selfie = success.authenticationFrame,
+                                    signedJwt = success.signedJwt,
+                                    clientState = success.clientState,
+                                    recognizeId = Recognize.getUserId().getOrNull(),
+                                    devicePublicSigningKey = Recognize.getDevicePublicSigningKey().getOrNull(),
+                                )
                             )
                         },
                         onFailure = { Result.failure(it) },
@@ -116,8 +117,8 @@ class PingOneRecognizeAuthenticateCallback : AbstractRecognizeCallback() {
 
         result.onSuccess { success ->
             submitResult(
-                signedJwt = success.signedJwt ?: "",
-                clientState = success.clientState ?: "",
+                signedJwt = success.signedJwt,
+                clientState = success.clientState,
                 recognizeId = success.recognizeId,
                 devicePublicSigningKey = success.devicePublicSigningKey,
                 clientError = "",
@@ -163,23 +164,29 @@ class PingOneRecognizeAuthenticateCallback : AbstractRecognizeCallback() {
         )
     }
 
+    /**
+     * Writes a completed operation's values into the input slots matched by suffix.
+     *
+     * Mirrors iOS `populateResultInputs`: a `null` result value leaves its input slot
+     * untouched, while `clientError` and `clientErrorCode` are always submitted.
+     */
     private fun submitResult(
-        signedJwt: String,
-        clientState: String,
-        recognizeId: String,
-        devicePublicSigningKey: String,
+        signedJwt: String?,
+        clientState: String?,
+        recognizeId: String?,
+        devicePublicSigningKey: String?,
         clientError: String,
         clientErrorCode: String,
     ) {
         inputBySuffix(
-            mapOf(
-                "signedJwt" to signedJwt,
-                "clientState" to clientState,
-                "recognizeId" to recognizeId,
-                "devicePublicSigningKey" to devicePublicSigningKey,
-                "clientError" to clientError,
-                "clientErrorCode" to clientErrorCode,
-            )
+            buildMap {
+                signedJwt?.let { put("signedJwt", it) }
+                clientState?.let { put("clientState", it) }
+                recognizeId?.let { put("recognizeId", it) }
+                devicePublicSigningKey?.let { put("devicePublicSigningKey", it) }
+                put("clientError", clientError)
+                put("clientErrorCode", clientErrorCode)
+            }
         )
     }
 }
