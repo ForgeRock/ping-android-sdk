@@ -18,11 +18,12 @@ import com.pingidentity.recognize.RecognizeSuccess
  * `operationType = "ENROLL"`. All output fields are parsed by [AbstractRecognizeCallback];
  * this class only adds the [enroll] operation.
  *
- * On success, the signed JWT, client state, and recognize ID are submitted to the Journey
- * via the existing five input fields: `IDToken1signedJwt`, `IDToken1clientState`,
- * `IDToken1recognizeId`, `IDToken1clientError`, `IDToken1clientErrorCode`. The freshly retrieved
- * device public signing key is exposed through [RecognizeSuccess], but Journey enrollment has no
- * corresponding input slot. Key retrieval failure is returned as a failed operation.
+ * On success, the signed JWT, client state, recognize ID, and freshly retrieved device public
+ * signing key are submitted to the Journey via the six input fields: `IDToken1signedJwt`,
+ * `IDToken1clientState`, `IDToken1recognizeId`, `IDToken1devicePublicSigningKey`,
+ * `IDToken1clientError`, `IDToken1clientErrorCode`. The signing key is retrieved best-effort
+ * after a successful enrollment: if retrieval fails, the enrollment still succeeds and the
+ * `devicePublicSigningKey` input is left untouched, mirroring the authentication callback.
  *
  * @see RecognizeCallback
  * @see PingOneRecognizeAuthenticateCallback
@@ -57,15 +58,17 @@ class PingOneRecognizeEnrollCallback : AbstractRecognizeCallback() {
             onSuccess = {
                 Recognize.enroll(buildEnrollConfig(retrieveSelfie = resolvedConfig.retrieveSelfie)).fold(
                     onSuccess = { success ->
-                        Recognize.getDevicePublicSigningKey().map { devicePublicSigningKey ->
+                        // Best-effort key retrieval (mirrors iOS `try?`): a failed lookup
+                        // succeeds the operation and leaves the input slot untouched.
+                        Result.success(
                             RecognizeSuccess(
                                 selfie = success.enrollmentFrame,
                                 signedJwt = success.signedJwt,
                                 clientState = success.clientState,
                                 recognizeId = success.keylessId,
-                                devicePublicSigningKey = devicePublicSigningKey,
+                                devicePublicSigningKey = Recognize.getDevicePublicSigningKey().getOrNull(),
                             )
-                        }
+                        )
                     },
                     onFailure = { Result.failure(it) },
                 )
@@ -75,9 +78,10 @@ class PingOneRecognizeEnrollCallback : AbstractRecognizeCallback() {
 
         result.onSuccess { success ->
             submitResult(
-                signedJwt = success.signedJwt ?: "",
-                clientState = success.clientState ?: "",
+                signedJwt = success.signedJwt,
+                clientState = success.clientState,
                 recognizeId = success.recognizeId,
+                devicePublicSigningKey = success.devicePublicSigningKey,
                 clientError = "",
                 clientErrorCode = "",
             )
@@ -87,6 +91,7 @@ class PingOneRecognizeEnrollCallback : AbstractRecognizeCallback() {
                 signedJwt = "",
                 clientState = "",
                 recognizeId = "",
+                devicePublicSigningKey = "",
                 clientError = ex.message,
                 clientErrorCode = ex.code.toString(),
             )
@@ -94,19 +99,29 @@ class PingOneRecognizeEnrollCallback : AbstractRecognizeCallback() {
         return result
     }
 
+    /**
+     * Writes a completed operation's values into the input slots matched by suffix.
+     *
+     * Mirrors iOS `populateResultInputs`: a `null` result value leaves its input slot
+     * untouched, while `clientError` and `clientErrorCode` are always submitted.
+     */
     private fun submitResult(
-        signedJwt: String,
-        clientState: String,
-        recognizeId: String,
+        signedJwt: String?,
+        clientState: String?,
+        recognizeId: String?,
+        devicePublicSigningKey: String?,
         clientError: String,
         clientErrorCode: String,
     ) {
-        input(
-            signedJwt,
-            clientState,
-            recognizeId,
-            clientError,
-            clientErrorCode
+        inputBySuffix(
+            buildMap {
+                signedJwt?.let { put("signedJwt", it) }
+                clientState?.let { put("clientState", it) }
+                recognizeId?.let { put("recognizeId", it) }
+                devicePublicSigningKey?.let { put("devicePublicSigningKey", it) }
+                put("clientError", clientError)
+                put("clientErrorCode", clientErrorCode)
+            }
         )
     }
 }
