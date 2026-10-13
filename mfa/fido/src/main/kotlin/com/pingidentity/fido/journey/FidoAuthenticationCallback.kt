@@ -41,6 +41,7 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.addJsonObject
+import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.int
 import kotlinx.serialization.json.jsonArray
@@ -126,6 +127,15 @@ class FidoAuthenticationCallback : FidoCallback() {
         private set
 
     /**
+     * Whether the server requested WebAuthn Conditional UI (autofill-assisted) mediation for
+     * this ceremony. Parsed from the `mediation`/`conditional` fields on the payload; `false`
+     * when both are absent. Callers use this to decide whether to invoke [pendingAuthenticate]
+     * instead of [authenticate].
+     */
+    var isConditionalMediationRequested: Boolean = false
+        private set
+
+    /**
      * Holds the in-flight pending request from the most recent [pendingAuthenticate] call.
      * A superseded request is cancelled when [pendingAuthenticate] or [authenticate] is
      * called again, so an abandoned conditional ceremony cannot deliver an assertion into
@@ -171,6 +181,10 @@ class FidoAuthenticationCallback : FidoCallback() {
             manualButtonEnabled =
                 value[Constants.FIELD_MANUAL_BUTTON_ENABLED]?.jsonPrimitive?.content?.toBoolean()
                     ?: true
+            // Either field alone signals conditional mediation; false when both are absent.
+            isConditionalMediationRequested =
+                value[Constants.FIELD_MEDIATION]?.jsonPrimitive?.content == Constants.MEDIATION_CONDITIONAL ||
+                    (value[Constants.FIELD_CONDITIONAL]?.jsonPrimitive?.booleanOrNull ?: false)
             publicKeyCredentialRequestOptions = transform(value)
         } else {
             throw IllegalArgumentException("Expected JsonObject for 'data', got ${value::class.simpleName}")
