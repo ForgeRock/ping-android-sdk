@@ -64,7 +64,7 @@ class OidcDeviceClientTest {
         }
     """.trimIndent()
 
-    // Live AIC ground-truth echo shape (RFC 9396 §7.4): the granted authorization_details
+    // Live AIC ground-truth echo shape (RFC 9396 §7): the granted authorization_details
     // array as observed in the token response of an AIC-rapid-23604.0 device flow.
     private val tokenResponseWithAuthorizationDetailsJson = """
         {

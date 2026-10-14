@@ -23,9 +23,11 @@ import com.pingidentity.journey.Journey
 import com.pingidentity.logger.Logger
 import com.pingidentity.logger.STANDARD
 import com.pingidentity.oidc.JsonConfigKey
+import com.pingidentity.oidc.JsonConfigParser
 import com.pingidentity.oidc.OidcClient
 import com.pingidentity.oidc.OidcWebClient
 import com.pingidentity.oidc.OidcDeviceClient
+import com.pingidentity.oidc.module.Oidc
 import com.pingidentity.oidc.toScopesJsonArray
 import com.pingidentity.samples.pingsampleapp.settingDataStore
 import kotlinx.coroutines.Dispatchers
@@ -35,7 +37,6 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
@@ -110,7 +111,7 @@ internal data class AssetConfigs(
  * ```json
  * {
  *   "journey": { "serverUrl": "...", "realm": "...", "cookieName": "..." },
- *   "oidc":    { "clientId": "...", "discoveryEndpoint": "...", ... }
+ *   "oidc":    { "clientId": "...", "discoveryEndpoint": "..." }
  * }
  * ```
  *
@@ -254,11 +255,6 @@ internal fun buildJourney(config: JourneyConfigState) {
                 put(JsonConfigKey.REDIRECT_URI, config.redirectUri)
                 put(JsonConfigKey.DISPLAY, config.display)
                 put(JsonConfigKey.PAR, config.par)
-                config.storageFileName?.let { fileName ->
-                    put(JsonConfigKey.STORAGE, buildJsonObject {
-                        put(JsonConfigKey.FILE_NAME, fileName)
-                    })
-                }
             })
         }
     ).onSuccess { journey = it }
@@ -266,26 +262,21 @@ internal fun buildJourney(config: JourneyConfigState) {
             Logger.STANDARD.d("Failed to create Journey instance: ${it.message}")
             journey = null
         }
-    OidcClient(
-        buildJsonObject {
-            put(JsonConfigKey.OIDC, buildJsonObject {
-                put(JsonConfigKey.CLIENT_ID, config.clientId)
-                put(JsonConfigKey.DISCOVERY_ENDPOINT, config.discoveryEndpoint)
-                put(JsonConfigKey.SCOPES, config.scopes.toScopesJsonArray())
-                put(JsonConfigKey.REDIRECT_URI, config.redirectUri)
-                put(JsonConfigKey.DISPLAY, config.display)
-                config.storageFileName?.let { fileName ->
-                    put(JsonConfigKey.STORAGE, buildJsonObject {
-                        put(JsonConfigKey.FILE_NAME, fileName)
-                    })
-                }
-            })
+    // The DSL constructor throws on invalid config instead of returning Result, so wrap it.
+    oidcClient = runCatching {
+        OidcClient {
+            clientId = config.clientId
+            discoveryEndpoint = config.discoveryEndpoint
+            scopes = config.scopes.split(",").map { it.trim() }.filter { it.isNotEmpty() }.toMutableSet()
+            redirectUri = config.redirectUri
+            display = config.display
+            // Per-client token isolation is DSL-only (JSON config stays platform-neutral —
+            // see the storage.fileName PR discussion), so the file name is set here.
+            config.storageFileName?.let { fileName -> storage { this.fileName = fileName } }
         }
-    ).onSuccess { oidcClient = it }
-        .onFailure {
-            Logger.STANDARD.d("Failed to create OIDC client instance: ${it.message}")
-            oidcClient = null
-        }
+    }.onFailure {
+        Logger.STANDARD.d("Failed to create OIDC client instance: ${it.message}")
+    }.getOrNull()
     redirectUri = config.redirectUri.toUri()
 }
 
@@ -309,32 +300,28 @@ internal fun buildDaVinci(config: OidcConfigState) {
 }
 
 internal fun buildWeb(config: OidcConfigState) {
-    OidcWebClient(
-        buildJsonObject {
-            put(JsonConfigKey.LOG, "STANDARD")
-            put(JsonConfigKey.OIDC, buildJsonObject {
-                put(JsonConfigKey.CLIENT_ID, config.clientId)
-                put(JsonConfigKey.DISCOVERY_ENDPOINT, config.discoveryEndpoint)
-                put(JsonConfigKey.SCOPES, config.scopes.toScopesJsonArray())
-                put(JsonConfigKey.REDIRECT_URI, config.redirectUri)
-                put(JsonConfigKey.DISPLAY, config.display)
-                if (config.arcValue.isNotBlank()) put(JsonConfigKey.ACR_VALUES, config.arcValue)
-                put(JsonConfigKey.PAR, config.par)
-                // Pass the asset's authorizationDetails array through verbatim so the SDK's
-                // JSON-config parser (SDKS-5426) parses it, rather than re-serializing here.
-                config.authorizationDetails?.let { put(JsonConfigKey.AUTHORIZATION_DETAILS, it) }
-                config.storageFileName?.let { fileName ->
-                    put(JsonConfigKey.STORAGE, buildJsonObject {
-                        put(JsonConfigKey.FILE_NAME, fileName)
-                    })
-                }
-            })
+    // The plain Web client and the RAR client below are built through the DSL (not the JSON
+    // factory) so each can carry its own `storage { fileName }`: per-client token isolation
+    // is DSL-only — JSON configuration stays platform-neutral (no storage key).
+    // The DSL constructor throws on invalid config instead of returning Result, so wrap both.
+    web = runCatching {
+        OidcWebClient {
+            logger = Logger.STANDARD
+            module(Oidc) {
+                clientId = config.clientId
+                discoveryEndpoint = config.discoveryEndpoint
+                scopes = config.scopes.split(",").map { it.trim() }.filter { it.isNotEmpty() }.toMutableSet()
+                redirectUri = config.redirectUri
+                display = config.display
+                if (config.arcValue.isNotBlank()) acrValues = config.arcValue
+                par = config.par
+                config.authorizationDetails?.let { authorizationDetails = it.toAuthorizationDetails() }
+                config.storageFileName?.let { fileName -> storage { this.fileName = fileName } }
+            }
         }
-    ).onSuccess { web = it }
-        .onFailure {
-            Logger.STANDARD.d("Failed to create OIDC Web client instance: ${it.message}")
-            web = null
-        }
+    }.onFailure {
+        Logger.STANDARD.d("Failed to create OIDC Web client instance: ${it.message}")
+    }.getOrNull()
     // The dedicated RAR client mirrors the Web client but persists its token under a distinct
     // storage file, so a RAR login (token B) never clobbers the plain Web login's token (A).
     // Config-level authorizationDetails are carried too; the RAR screen can override them
@@ -344,24 +331,22 @@ internal fun buildWeb(config: OidcConfigState) {
     // then shows its "RAR client not built" guard instead.
     val details = config.authorizationDetails
     rarWeb = if (details != null) {
-        OidcWebClient(
-            buildJsonObject {
-                put(JsonConfigKey.LOG, "STANDARD")
-                put(JsonConfigKey.OIDC, buildJsonObject {
-                    put(JsonConfigKey.CLIENT_ID, config.clientId)
-                    put(JsonConfigKey.DISCOVERY_ENDPOINT, config.discoveryEndpoint)
-                    put(JsonConfigKey.SCOPES, config.scopes.toScopesJsonArray())
-                    put(JsonConfigKey.REDIRECT_URI, config.redirectUri)
-                    put(JsonConfigKey.DISPLAY, config.display)
-                    if (config.arcValue.isNotBlank()) put(JsonConfigKey.ACR_VALUES, config.arcValue)
-                    put(JsonConfigKey.PAR, config.par)
-                    put(JsonConfigKey.AUTHORIZATION_DETAILS, details)
-                    put(JsonConfigKey.STORAGE, buildJsonObject {
-                        put(JsonConfigKey.FILE_NAME, JsonPrimitive(RAR_STORAGE_FILE_NAME))
-                    })
-                })
+        runCatching {
+            OidcWebClient {
+                logger = Logger.STANDARD
+                module(Oidc) {
+                    clientId = config.clientId
+                    discoveryEndpoint = config.discoveryEndpoint
+                    scopes = config.scopes.split(",").map { it.trim() }.filter { it.isNotEmpty() }.toMutableSet()
+                    redirectUri = config.redirectUri
+                    display = config.display
+                    if (config.arcValue.isNotBlank()) acrValues = config.arcValue
+                    par = config.par
+                    authorizationDetails = details.toAuthorizationDetails()
+                    storage { fileName = RAR_STORAGE_FILE_NAME }
+                }
             }
-        ).onFailure {
+        }.onFailure {
             Logger.STANDARD.d("Failed to create RAR Web client instance: ${it.message}")
         }.getOrNull()
     } else {
@@ -369,6 +354,15 @@ internal fun buildWeb(config: OidcConfigState) {
     }
     webConfig = config
 }
+
+/**
+ * Decodes the config's raw `authorizationDetails` JSON (parsed verbatim from the asset) into the
+ * SDK's typed [com.pingidentity.oidc.AuthorizationDetail] list for the DSL `authorizationDetails`
+ * field. Reuses the SDK's own decoder so both paths agree on the wire shape.
+ */
+internal fun JsonElement.toAuthorizationDetails(): List<com.pingidentity.oidc.AuthorizationDetail> =
+    JsonConfigParser(buildJsonObject { put("details", this@toAuthorizationDetails) })
+        .required("details")
 
 /** Storage file for the dedicated RAR client's token (B). Must differ from every other flow's. */
 internal const val RAR_STORAGE_FILE_NAME = "com.pingidentity.sdk.v1.tokens.rar"

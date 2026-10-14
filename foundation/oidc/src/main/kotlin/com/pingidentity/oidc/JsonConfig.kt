@@ -50,8 +50,6 @@ object JsonConfigKey {
     const val ACR_VALUES = "acrValues"
     const val ADDITIONAL_PARAMETERS = "additionalParameters"
     const val AUTHORIZATION_DETAILS = "authorizationDetails"
-    const val STORAGE = "storage"
-    const val FILE_NAME = "fileName"
 
     // OPEN ID
     const val OPEN_ID = "openId"

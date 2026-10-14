@@ -366,21 +366,6 @@ class OidcClientConfigTest {
     }
 
     @Test
-    fun `update should apply storage fileName from JSON config`() {
-        val oidcClientConfig = OidcClientConfig()
-        oidcClientConfig.update(JsonConfigParser(buildJsonObject {
-            put(JsonConfigKey.STORAGE, buildJsonObject {
-                put(JsonConfigKey.FILE_NAME, JsonPrimitive("my_token_file"))
-            })
-        }))
-
-        val config = EncryptedDataStoreStorageConfig().apply(oidcClientConfig.storageOption)
-        Assert.assertEquals("my_token_file", config.fileName)
-        //Non-name defaults are untouched
-        Assert.assertEquals("com.pingidentity.sdk.v1.tokens", config.keyAlias)
-    }
-
-    @Test
     fun `update should keep default storage when JSON has no storage object`() {
         val oidcClientConfig = OidcClientConfig()
         oidcClientConfig.update(JsonConfigParser(buildJsonObject {
@@ -392,11 +377,14 @@ class OidcClientConfigTest {
     }
 
     @Test
-    fun `update should keep default storage when storage object has no fileName`() {
+    fun `update should ignore storage when JSON config carries a storage object`() {
+        // JSON configuration is shared across platforms, so storage is deliberately not
+        // configurable from JSON; per-client isolation goes through the storage {} DSL.
         val oidcClientConfig = OidcClientConfig()
         oidcClientConfig.update(JsonConfigParser(buildJsonObject {
-            put(JsonConfigKey.STORAGE, buildJsonObject {
-                put(JsonConfigKey.DISPLAY, JsonPrimitive("unrelated"))
+            put(JsonConfigKey.DISPLAY, JsonPrimitive("display"))
+            put("storage", buildJsonObject {
+                put("fileName", JsonPrimitive("ignored"))
             })
         }))
 

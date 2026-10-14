@@ -259,7 +259,7 @@ tokens: the token from the original login (**Token A**) and the token issued for
 (**Token B**). The app can use either one, revoke only B, or revoke both on logout.
 
 Every workflow (`Journey`, `DaVinci`, `OidcWebClient`, `OidcDeviceClient`) keeps **one token in its
-own `storage`**. The browser-based, DaVinci, and device workflows **revoke the token currently in
+own `storage`**. The browser-based and DaVinci workflows **revoke the token currently in
 their storage and replace it** when a new authorization starts — so running the RAR login on the same
 workflow (or on a client sharing its storage) revokes Token A. (Journey does not revoke or replace its
 stored token on a new login: the previous token remains stored and `token()` keeps serving it until it
@@ -316,19 +316,9 @@ journeyUser?.logout()
 rarLogin.user()?.logout()
 ```
 
-With JSON configuration, use the `storage.fileName` key instead of the DSL:
-
-```json
-{
-  "oidc": {
-    "clientId": "ClientID",
-    "discoveryEndpoint": "https://example.com/am/oauth2/alpha/.well-known/openid-configuration",
-    "scopes": ["openid", "profile"],
-    "redirectUri": "org.forgerock.demo://oauth2redirect",
-    "storage": { "fileName": "ACCESS_TOKEN_STORAGE_RAR" }
-  }
-}
-```
+Clients created from JSON configuration (`OidcClient(json)`, `OidcWebClient(json)`, `Journey(json)`)
+have no `storage` setting and always use the default file — matching iOS, JSON configuration stays
+platform-neutral and per-client token isolation is configured through the DSL only.
 
 | Scenario | Token A | Token B (RAR) |
 |---|---|---|
@@ -338,10 +328,10 @@ With JSON configuration, use the `storage.fileName` key instead of the DSL:
 > **Important: the storage file is what separates the tokens.** Encrypted DataStore files are
 > identified by their `fileName`, so two configurations with the same name share one slot. The
 > default file name is `com.pingidentity.sdk.v1.tokens`, so clients that do not set `storage` all
-> share it. Clients created from JSON configuration use the default file unless the config sets
-> `storage.fileName`. Sharing a slot has these effects:
-> - **Same OAuth client:** on the browser-based, DaVinci, and device workflows, the RAR login revokes
->   Token A and replaces it with Token B.
+> share it. Sharing a slot has these effects:
+> - **Same OAuth client:** on the browser-based and DaVinci workflows, the RAR login revokes
+>   Token A and replaces it with Token B. The device workflow **overwrites the stored token without
+>   revoking it** — Token A stays valid at the server but is no longer reachable from the app.
 > - **Different OAuth clients:** the RAR login deletes Token A from the device, but its revocation
 >   request is sent with the RAR client's `client_id`. The authorization server is expected to refuse
 >   it ([RFC 7009 §2.1](https://datatracker.ietf.org/doc/html/rfc7009#section-2.1)), so Token A stays
@@ -349,9 +339,10 @@ With JSON configuration, use the `storage.fileName` key instead of the DSL:
 >   the original workflow's `token()` too, although it was issued to a different client.
 
 **Things to be aware of:**
-- **One token per workflow.** On the browser-based, DaVinci, and device workflows, signing in again —
+- **One token per workflow.** On the browser-based and DaVinci workflows, signing in again —
   including running a second RAR login on `rarLogin` — revokes and replaces that workflow's previous
-  token. Journey does not revoke on re-login: the previously stored token remains until it expires.
+  token; the device workflow overwrites its stored token without revoking it. Journey does not
+  revoke on re-login: the previously stored token remains until it expires.
   To hold several RAR tokens at once, use one workflow and storage file for each.
 - **Logging out of both takes two calls.** `logout()` revokes the token of the workflow it is called
   on and signs that workflow out. Nothing links the two workflows, so the app calls `logout()` on each.
