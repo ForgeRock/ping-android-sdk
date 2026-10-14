@@ -140,6 +140,8 @@ class FidoAuthenticationCallbackPendingTest {
     private fun initCallback(
         supportsJsonResponse: Boolean = false,
         manualButtonEnabled: Boolean? = null,
+        mediation: String? = null,
+        conditional: Boolean? = null,
     ): FidoAuthenticationCallback {
         val sampleJson = buildJsonObject {
             put("type", "MetadataCallback")
@@ -158,6 +160,8 @@ class FidoAuthenticationCallbackPendingTest {
                         put("_type", "WebAuthn")
                         put("supportsJsonResponse", supportsJsonResponse)
                         manualButtonEnabled?.let { put("manualButtonEnabled", it) }
+                        mediation?.let { put("mediation", it) }
+                        conditional?.let { put("conditional", it) }
                     }
                 }
             }
@@ -425,6 +429,19 @@ class FidoAuthenticationCallbackPendingTest {
         assertTrue(initCallback(manualButtonEnabled = true).manualButtonEnabled)
         assertEquals(false, initCallback(manualButtonEnabled = false).manualButtonEnabled)
         assertEquals(true, initCallback().manualButtonEnabled)
+    }
+
+    @Test
+    fun `isConditionalMediationRequested parses from the server payload`() = runTest {
+        // Either field alone is sufficient; absent fields default to false.
+        assertTrue(initCallback(mediation = "conditional").isConditionalMediationRequested)
+        assertTrue(initCallback(conditional = true).isConditionalMediationRequested)
+        assertTrue(
+            initCallback(mediation = "conditional", conditional = true).isConditionalMediationRequested
+        )
+        // Any other mediation value means no conditional request; absent fields default to false
+        assertEquals(false, initCallback(mediation = "optional").isConditionalMediationRequested)
+        assertEquals(false, initCallback().isConditionalMediationRequested)
     }
 
     @Test
