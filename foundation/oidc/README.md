@@ -248,6 +248,12 @@ members beyond the common fields (`type`, `locations`, `actions`, `datatypes`, `
 carried through `AuthorizationDetail.additionalFields`. With JSON configuration, use the
 `authorizationDetails` key (an array of detail objects).
 
+The granted `authorization_details` the server echoes in the token response (RFC 9396 §7) is
+decoded leniently: a malformed value — a non-array, or an entry that does not conform to the
+model — does not fail the token decode. The token is returned with `authorizationDetails` set to
+`null` (or with the non-conforming entries dropped) and a warning is logged, since the access
+token itself is valid; only the granted-details display degrades.
+
 A Journey-configured client applies the module-level `authorizationDetails` to its session agent's
 authorize request. `authorization_details` scoped to an individual Journey run is not currently
 exposed.

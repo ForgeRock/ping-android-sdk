@@ -10,7 +10,8 @@ package com.pingidentity.oidc
 import com.pingidentity.oidc.Token.Companion.now
 import com.pingidentity.testrail.TestRailCase
 import com.pingidentity.testrail.TestRailWatcher
-import kotlinx.serialization.SerializationException
+import com.pingidentity.logger.CONSOLE
+import com.pingidentity.logger.Logger
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonNull
@@ -28,7 +29,6 @@ import kotlinx.serialization.json.put
 import org.junit.Rule
 import org.junit.rules.TestWatcher
 import kotlin.test.Test
-import kotlin.test.assertFailsWith
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
@@ -412,23 +412,28 @@ class TokenTest {
     }
 
     @Test
-    fun `Token should reject scalar authorization_details and scalar actions loudly`() {
-        // decisions.md (Error model): decode failures fail loudly — no lenient scalar-or-array
-        // coercion. A future regression toward leniency must be caught here.
+    fun `Token should survive malformed authorization_details with null details and valid token fields`() {
+        // A malformed `authorization_details` value must not fail the token decode: the access
+        // token itself is valid. The field degrades to null (non-array value) or drops the
+        // non-conforming entries; the remaining token fields are intact.
+        Logger.logger = Logger.CONSOLE
         val scalarDetails = """
             {"access_token":"accessToken","expires_in":3600,"authorization_details":{"type":"account_information"}}
         """.trimIndent()
-        assertFailsWith<SerializationException> {
-            Json.decodeFromString<Token>(scalarDetails)
-        }
+        val scalarToken = Json.decodeFromString<Token>(scalarDetails)
+        assertEquals("accessToken", scalarToken.accessToken)
+        assertNull(scalarToken.authorizationDetails)
 
+        // One non-conforming entry degrades the list to the conforming entries only.
         val scalarActions = """
             {"access_token":"accessToken","expires_in":3600,
-             "authorization_details":[{"type":"account_information","actions":"read_balances"}]}
+             "authorization_details":[{"type":"account_information","actions":"read_balances"},{"type":"payment_initiation"}]}
         """.trimIndent()
-        assertFailsWith<SerializationException> {
-            Json.decodeFromString<Token>(scalarActions)
-        }
+        val mixedToken = Json.decodeFromString<Token>(scalarActions)
+        assertEquals(
+            listOf(AuthorizationDetail(type = "payment_initiation")),
+            mixedToken.authorizationDetails,
+        )
     }
 
 }
