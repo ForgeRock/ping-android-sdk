@@ -3,6 +3,8 @@
 #### Added
 - Added AM/AIC transactional backchannel authentication support to the Journey module via `Journey.start(backchannelUri)` [SDKS-5157]
 - Added conditional UI (autofill with passkeys) support to FIDO authentication on Android 15+ [SDKS-4574]
+- Added RFC 9396 `authorization_details` preservation on OIDC `Token` responses, exposed as `Token.authorizationDetails` and preserved through storage round-trips [SDKS-5424]
+- Added RFC 9396 `authorization_details` support on OIDC config and per-call authorize parameters [SDKS-5426]
 
 ## [2.2.0]
 

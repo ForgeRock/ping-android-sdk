@@ -75,7 +75,9 @@ import com.pingidentity.samples.pingsampleapp.journey.PreferenceViewModel
 import com.pingidentity.samples.pingsampleapp.keystore.KeyStoreScreen
 import com.pingidentity.samples.pingsampleapp.logout.Logout
 import com.pingidentity.samples.pingsampleapp.oidc.Centralize
+import com.pingidentity.samples.pingsampleapp.rar.RarLoginScreen
 import com.pingidentity.samples.pingsampleapp.token.TokenScreen
+import com.pingidentity.samples.pingsampleapp.token.TokenType
 import com.pingidentity.samples.pingsampleapp.token.TokenViewModel
 import com.pingidentity.samples.pingsampleapp.userprofile.UserProfile
 import com.pingidentity.samples.pingsampleapp.userprofile.UserProfileType
@@ -90,7 +92,9 @@ object Route {
     const val JOURNEY_ROUTE = "journey_route"
     const val JOURNEY = "journey"
     const val OIDC = "oidc"
-    const val ACCESS_TOKEN = "access_token"
+    const val OIDC_RAR = "oidc_rar"
+    const val ACCESS_TOKEN = "access_token?tab={tab}"
+    fun accessToken(tab: TokenType? = null) = "access_token?tab=${tab?.name ?: TokenType.JOURNEY.name}"
     internal const val USER_PROFILE_ROUTE = "user_profile?type={type}"
     fun userProfile(type: UserProfileType? = null) =
         if (type != null) "user_profile?type=${type.name}" else "user_profile?type=${UserProfileType.JOURNEY.name}"
@@ -158,6 +162,9 @@ fun AppNavigation(
                 },
                 onOIDCLoginClick = {
                     navController.navigate(Route.OIDC)
+                },
+                onOidcRarLoginClick = {
+                    navController.navigate(Route.OIDC_RAR)
                 },
                 onAccessTokenClick = {
                     navController.navigate(Route.ACCESS_TOKEN)
@@ -302,11 +309,34 @@ fun AppNavigation(
                 }
             )
         }
-        
-        composable(Route.ACCESS_TOKEN) {
+
+        composable(Route.OIDC_RAR) {
+            RarLoginScreen(
+                onSuccess = {
+                    navController.navigate(Route.accessToken(TokenType.OIDC_RAR))
+                },
+                onBack = {
+                    navController.navigateUp()
+                }
+            )
+        }
+
+        composable(
+            route = Route.ACCESS_TOKEN,
+            arguments = listOf(navArgument("tab") {
+                type = NavType.StringType
+                nullable = true
+                defaultValue = null
+            })
+        ) { backStackEntry ->
             val tokenViewModel = viewModel<TokenViewModel>(
                 factory = TokenViewModel.factory()
             )
+            // Land on the tab matching the flow that navigated here (e.g. RAR after a
+            // RAR login); defaults to Journey.
+            backStackEntry.arguments?.getString("tab")
+                ?.let { runCatching { TokenType.valueOf(it) }.getOrNull() }
+                ?.let { tokenViewModel.selectTabFromRoute(it) }
             TokenScreen(tokenViewModel) {
                 navController.navigateUp()
             }
@@ -347,6 +377,9 @@ fun AppNavigation(
                         }
                         UserProfileType.OIDC -> {
                             navController.navigate(Route.OIDC)
+                        }
+                        UserProfileType.OIDC_RAR -> {
+                            navController.navigate(Route.OIDC_RAR)
                         }
                         UserProfileType.AUTH_GRANT -> {
                             navController.navigate(Route.DEVICE_AUTHORIZATION_GRANT)
@@ -647,7 +680,7 @@ fun AppNavigation(
             DeviceAuthorizationGrantScreen(
                 onBack = { navController.popBackStack() },
                 onSuccess = {
-                    navController.navigate(Route.ACCESS_TOKEN) {
+                    navController.navigate(Route.accessToken(TokenType.AUTH_GRANT)) {
                         popUpTo(Route.HOME) {
                             inclusive = false
                         }
