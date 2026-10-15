@@ -9,6 +9,7 @@ package com.pingidentity.recognize.journey
 
 import com.pingidentity.recognize.Recognize
 import com.pingidentity.recognize.asRecognizeException
+import com.pingidentity.recognize.clientErrorReport
 import com.pingidentity.recognize.RecognizeSuccess
 
 /**
@@ -87,13 +88,15 @@ class PingOneRecognizeEnrollCallback : AbstractRecognizeCallback() {
             )
         }.onFailure { error ->
             val ex = error.asRecognizeException()
+            // Shared error name and code (SDK_ERROR fallback), mirroring iOS report().
+            val (clientErrorName, clientErrorCodeValue) = ex.clientErrorReport()
             submitResult(
                 signedJwt = "",
                 clientState = "",
                 recognizeId = "",
                 devicePublicSigningKey = "",
-                clientError = ex.message,
-                clientErrorCode = ex.code.toString(),
+                clientError = clientErrorName,
+                clientErrorCode = clientErrorCodeValue,
             )
         }
         return result
