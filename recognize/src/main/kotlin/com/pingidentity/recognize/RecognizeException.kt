@@ -83,10 +83,10 @@ internal fun Throwable.asRecognizeException(): RecognizeException =
  * SDK does, so an error without a shared name (an error that is not a
  * [RecognizeException], or one created without a name) is unknown to the shared model and
  * is reported as [SharedErrorCode.SDK_ERROR] / 1000, like on the web SDK. A cooperative
- * `CancellationException` also has no shared name and is reported as
- * [SharedErrorCode.SDK_ERROR]; only a cancel raised inside the Keyless SDK (native 30003)
- * maps to `SDK_USER_CANCELLED`. The human-readable message is not submitted: it stays in
- * [RecognizeException.message].
+ * `CancellationException` propagates to the caller without populating the error inputs
+ * (unlike iOS, whose cancellation checkpoints report `SDK_ERROR`); only a cancel raised
+ * inside the Keyless SDK (native 30003) maps to `SDK_USER_CANCELLED`. The human-readable
+ * message is not submitted: it stays in [RecognizeException.message].
  */
 internal fun RecognizeException.clientErrorReport(): Pair<String, String> =
     if (name == null) {
