@@ -181,7 +181,15 @@ class RecognizeEnrollCollectorTest {
 
     @Test
     fun `collect failure from KeylessSdkError maps code to clientErrorCode`() = runTest {
-        val keylessError = RecognizeException(code = 21, message = "user cancelled", debuggingInfo = emptyMap())
+        // DaVinci collectors keep submitting the human message; the shared code flows
+        // through unchanged from RecognizeException.from() at the Keyless boundary.
+        val keylessError = RecognizeException(
+            code = 1005,
+            name = "SDK_USER_CANCELLED",
+            message = "user cancelled",
+            sdkCode = 30003,
+            debuggingInfo = emptyMap(),
+        )
         coEvery { Recognize.enroll(any()) } returns Result.failure(keylessError)
 
         val collector = RecognizeEnrollCollector().apply { init(enrollInput()) }
@@ -189,10 +197,10 @@ class RecognizeEnrollCollectorTest {
 
         assertTrue(result.isFailure)
         val ex = assertIs<RecognizeException>(result.exceptionOrNull())
-        assertEquals(21, ex.code)
+        assertEquals(1005, ex.code)
         val payload = assertNotNull(collector.payload())
         assertEquals("user cancelled", payload["clientError"]?.jsonPrimitive?.content)
-        assertEquals("21", payload["clientErrorCode"]?.jsonPrimitive?.content)
+        assertEquals("1005", payload["clientErrorCode"]?.jsonPrimitive?.content)
     }
 
     // ── generateClientState mapping ──────────────────────────────────────────────

@@ -12,6 +12,7 @@ import com.pingidentity.recognize.Recognize
 import com.pingidentity.recognize.RecognizeException
 import io.keyless.sdk.errorshandling.AuthenticationSuccess
 import io.keyless.sdk.errorshandling.EnrollmentSuccess
+import io.keyless.sdk.errorshandling.KeylessSdkError
 import io.keyless.sdk.configurations.SetupConfig
 import io.keyless.sdk.configurations.enroll.BiomEnrollConfig
 import io.keyless.sdk.configurations.auth.BiomAuthConfig
@@ -75,6 +76,13 @@ class RecognizeCallbackTest {
     }
 
     // ── Helpers ─────────────────────────────────────────────────────────────────
+
+    private fun keylessSdkError(code: Int, message: String): KeylessSdkError =
+        mockk {
+            every { this@mockk.code } returns code
+            every { this@mockk.message } returns message
+            every { this@mockk.debuggingInfo } returns emptyMap()
+        }
 
     /** Enroll input slots: signedJwt, clientState, recognizeId, devicePublicSigningKey, clientError, clientErrorCode */
     private fun enrollCallbackJson(): JsonObject = Json.parseToJsonElement(
@@ -288,7 +296,7 @@ class RecognizeCallbackTest {
 
     @Test
     fun `enroll failure on legacy five-slot journey writes error to correct slots`() = runTest {
-        val error = RecognizeException(code = 21, message = "enroll failed", debuggingInfo = emptyMap())
+        val error = RecognizeException(code = 21, name = "SDK_ERROR", message = "enroll failed", debuggingInfo = emptyMap())
         coEvery { Recognize.enroll(any()) } returns Result.failure(error)
 
         val callback =
@@ -297,7 +305,7 @@ class RecognizeCallbackTest {
         assertTrue(result.isFailure)
 
         val payload = callback.payload()
-        assertEquals("enroll failed", payload.inputValueBySuffix("clientError"))
+        assertEquals("SDK_ERROR", payload.inputValueBySuffix("clientError"))
         assertEquals("21", payload.inputValueBySuffix("clientErrorCode"))
         assertEquals("", payload.inputValueBySuffix("signedJwt"))
     }
@@ -372,7 +380,7 @@ class RecognizeCallbackTest {
 
     @Test
     fun `enroll failure from Recognize_enroll writes error to input`() = runTest {
-        val error = RecognizeException(code = 21, message = "enroll failed", debuggingInfo = emptyMap())
+        val error = RecognizeException(code = 21, name = "SDK_ERROR", message = "enroll failed", debuggingInfo = emptyMap())
         coEvery { Recognize.enroll(any()) } returns Result.failure(error)
 
         val callback = RecognizeCallback().init(enrollCallbackJson()) as PingOneRecognizeEnrollCallback
@@ -385,13 +393,13 @@ class RecognizeCallbackTest {
         assertEquals("", payload.inputValueBySuffix("clientState"))
         assertEquals("", payload.inputValueBySuffix("recognizeId"))
         assertEquals("", payload.inputValueBySuffix("devicePublicSigningKey"))
-        assertEquals("enroll failed", payload.inputValueBySuffix("clientError"))
+        assertEquals("SDK_ERROR", payload.inputValueBySuffix("clientError"))
         assertEquals("21", payload.inputValueBySuffix("clientErrorCode"))
     }
 
     @Test
     fun `enroll failure from Recognize_setup writes error to input`() = runTest {
-        val error = RecognizeException(code = 11, message = "setup failed", debuggingInfo = emptyMap())
+        val error = RecognizeException(code = 11, name = "SDK_ERROR", message = "setup failed", debuggingInfo = emptyMap())
         coEvery { Recognize.setup(any()) } returns Result.failure(error)
 
         val callback = RecognizeCallback().init(enrollCallbackJson()) as PingOneRecognizeEnrollCallback
@@ -404,28 +412,82 @@ class RecognizeCallbackTest {
         assertEquals("", payload.inputValueBySuffix("clientState"))
         assertEquals("", payload.inputValueBySuffix("recognizeId"))
         assertEquals("", payload.inputValueBySuffix("devicePublicSigningKey"))
-        assertEquals("setup failed", payload.inputValueBySuffix("clientError"))
+        assertEquals("SDK_ERROR", payload.inputValueBySuffix("clientError"))
         assertEquals("11", payload.inputValueBySuffix("clientErrorCode"))
     }
 
     @Test
-    fun `enroll failure from KeylessSdkError writes code to clientErrorCode input`() = runTest {
-        val keylessError = RecognizeException(code = 21, message = "user cancelled", debuggingInfo = emptyMap())
+    fun `enroll failure from KeylessSdkError writes shared name and code to inputs`() = runTest {
+        val keylessError = RecognizeException(
+            code = 1005,
+            name = "SDK_USER_CANCELLED",
+            message = "user cancelled",
+            sdkCode = 30003,
+            debuggingInfo = mapOf("sdkCode" to "30003"),
+        )
         coEvery { Recognize.enroll(any()) } returns Result.failure(keylessError)
 
         val callback = RecognizeCallback().init(enrollCallbackJson()) as PingOneRecognizeEnrollCallback
         val result = callback.enroll()
         assertTrue(result.isFailure)
         val ex = assertIs<RecognizeException>(result.exceptionOrNull())
-        assertEquals(21, ex.code)
+        assertEquals(1005, ex.code)
 
         val payload = callback.payload()
         assertEquals("", payload.inputValueBySuffix("signedJwt"))
         assertEquals("", payload.inputValueBySuffix("clientState"))
         assertEquals("", payload.inputValueBySuffix("recognizeId"))
         assertEquals("", payload.inputValueBySuffix("devicePublicSigningKey"))
-        assertEquals("user cancelled", payload.inputValueBySuffix("clientError"))
-        assertEquals("21", payload.inputValueBySuffix("clientErrorCode"))
+        assertEquals("SDK_USER_CANCELLED", payload.inputValueBySuffix("clientError"))
+        assertEquals("1005", payload.inputValueBySuffix("clientErrorCode"))
+    }
+
+    @Test
+    fun `enroll failure from native 20000 reports CORE_USER_NOT_ENROLLED and 3003 like iOS`() = runTest {
+        // End-to-end iOS-parity case: RecognizeException.from resolves native 20000 to the
+        // shared CORE_USER_NOT_ENROLLED / 3003, which is what the callback submits.
+        val error = RecognizeException.from(keylessSdkError(20000, "user is not enrolled"))
+        coEvery { Recognize.enroll(any()) } returns Result.failure(error)
+
+        val callback = RecognizeCallback().init(enrollCallbackJson()) as PingOneRecognizeEnrollCallback
+        val result = callback.enroll()
+        assertTrue(result.isFailure)
+
+        val payload = callback.payload()
+        assertEquals("CORE_USER_NOT_ENROLLED", payload.inputValueBySuffix("clientError"))
+        assertEquals("3003", payload.inputValueBySuffix("clientErrorCode"))
+    }
+
+    @Test
+    fun `enroll failure from a non-RecognizeException is reported as SDK_ERROR`() = runTest {
+        // Mirrors iOS testNonRecognizeErrorIsReportedAsSdkError: the caller still receives
+        // the original error unchanged, while the Journey receives the shared SDK_ERROR,
+        // like any other unknown error.
+        coEvery { Recognize.enroll(any()) } returns Result.failure(IOException("plain error message"))
+
+        val callback = RecognizeCallback().init(enrollCallbackJson()) as PingOneRecognizeEnrollCallback
+        val result = callback.enroll()
+        assertIs<IOException>(result.exceptionOrNull())
+
+        val payload = callback.payload()
+        assertEquals("SDK_ERROR", payload.inputValueBySuffix("clientError"))
+        assertEquals("1000", payload.inputValueBySuffix("clientErrorCode"))
+    }
+
+    @Test
+    fun `enroll failure from a nameless RecognizeException is reported as SDK_ERROR`() = runTest {
+        // Mirrors iOS testRecognizeErrorWithoutNameIsReportedAsSdkError: a nameless error is
+        // unknown to the shared model, so both the name and the code fall back to SDK_ERROR / 1000.
+        val error = RecognizeException(code = 3003, message = "not enrolled", debuggingInfo = emptyMap())
+        coEvery { Recognize.enroll(any()) } returns Result.failure(error)
+
+        val callback = RecognizeCallback().init(enrollCallbackJson()) as PingOneRecognizeEnrollCallback
+        val result = callback.enroll()
+        assertTrue(result.isFailure)
+
+        val payload = callback.payload()
+        assertEquals("SDK_ERROR", payload.inputValueBySuffix("clientError"))
+        assertEquals("1000", payload.inputValueBySuffix("clientErrorCode"))
     }
 
     // ── Authenticate — success path ──────────────────────────────────────────────
@@ -534,7 +596,7 @@ class RecognizeCallbackTest {
 
     @Test
     fun `authenticate failure from Recognize_authenticate writes error to input`() = runTest {
-        val error = RecognizeException(code = 21, message = "auth failed", debuggingInfo = emptyMap())
+        val error = RecognizeException(code = 21, name = "SDK_ERROR", message = "auth failed", debuggingInfo = emptyMap())
         coEvery { Recognize.authenticate(any()) } returns Result.failure(error)
 
         val callback = RecognizeCallback().init(authCallbackJson()) as PingOneRecognizeAuthenticateCallback
@@ -547,13 +609,13 @@ class RecognizeCallbackTest {
         assertEquals("", payload.inputValueBySuffix("clientState"))
         assertEquals("", payload.inputValueBySuffix("recognizeId"))
         assertEquals("", payload.inputValueBySuffix("devicePublicSigningKey"))
-        assertEquals("auth failed", payload.inputValueBySuffix("clientError"))
+        assertEquals("SDK_ERROR", payload.inputValueBySuffix("clientError"))
         assertEquals("21", payload.inputValueBySuffix("clientErrorCode"))
     }
 
     @Test
     fun `authenticate failure from Recognize_setup writes error to input`() = runTest {
-        val error = RecognizeException(code = 11, message = "setup failed", debuggingInfo = emptyMap())
+        val error = RecognizeException(code = 11, name = "SDK_ERROR", message = "setup failed", debuggingInfo = emptyMap())
         coEvery { Recognize.setup(any()) } returns Result.failure(error)
 
         val callback = RecognizeCallback().init(authCallbackJson()) as PingOneRecognizeAuthenticateCallback
@@ -566,28 +628,34 @@ class RecognizeCallbackTest {
         assertEquals("", payload.inputValueBySuffix("clientState"))
         assertEquals("", payload.inputValueBySuffix("recognizeId"))
         assertEquals("", payload.inputValueBySuffix("devicePublicSigningKey"))
-        assertEquals("setup failed", payload.inputValueBySuffix("clientError"))
+        assertEquals("SDK_ERROR", payload.inputValueBySuffix("clientError"))
         assertEquals("11", payload.inputValueBySuffix("clientErrorCode"))
     }
 
     @Test
-    fun `authenticate failure from KeylessSdkError writes code to clientErrorCode input`() = runTest {
-        val keylessError = RecognizeException(code = 42, message = "liveness failed", debuggingInfo = emptyMap())
+    fun `authenticate failure from KeylessSdkError writes shared name and code to inputs`() = runTest {
+        val keylessError = RecognizeException(
+            code = 4002,
+            name = "BIOM_GENUINE_PRESENCE_NOT_ESTABLISHED",
+            message = "liveness failed",
+            sdkCode = 30000,
+            debuggingInfo = mapOf("sdkCode" to "30000"),
+        )
         coEvery { Recognize.authenticate(any()) } returns Result.failure(keylessError)
 
         val callback = RecognizeCallback().init(authCallbackJson()) as PingOneRecognizeAuthenticateCallback
         val result = callback.authenticate()
         assertTrue(result.isFailure)
         val ex = assertIs<RecognizeException>(result.exceptionOrNull())
-        assertEquals(42, ex.code)
+        assertEquals(4002, ex.code)
 
         val payload = callback.payload()
         assertEquals("", payload.inputValueBySuffix("signedJwt"))
         assertEquals("", payload.inputValueBySuffix("clientState"))
         assertEquals("", payload.inputValueBySuffix("recognizeId"))
         assertEquals("", payload.inputValueBySuffix("devicePublicSigningKey"))
-        assertEquals("liveness failed", payload.inputValueBySuffix("clientError"))
-        assertEquals("42", payload.inputValueBySuffix("clientErrorCode"))
+        assertEquals("BIOM_GENUINE_PRESENCE_NOT_ESTABLISHED", payload.inputValueBySuffix("clientError"))
+        assertEquals("4002", payload.inputValueBySuffix("clientErrorCode"))
     }
 
     // ── clientState enrollment-check branch ─────────────────────────────────
@@ -661,7 +729,7 @@ class RecognizeCallbackTest {
 
     @Test
     fun `clientState present and enroll fails writes error to input`() = runTest {
-        val error = RecognizeException(code = 21, message = "enroll from client state failed", debuggingInfo = emptyMap())
+        val error = RecognizeException(code = 21, name = "SDK_ERROR", message = "enroll from client state failed", debuggingInfo = emptyMap())
         coEvery { Recognize.validateUserAndDeviceActive() } returns Result.failure(IOException("not enrolled"))
         coEvery { Recognize.enroll(any()) } returns Result.failure(error)
 
@@ -669,7 +737,7 @@ class RecognizeCallbackTest {
         val result = callback.authenticate()
         assertTrue(result.isFailure)
 
-        assertEquals("enroll from client state failed", callback.payload().inputValueBySuffix("clientError"))
+        assertEquals("SDK_ERROR", callback.payload().inputValueBySuffix("clientError"))
     }
 
     // ── Common fields parsed by AbstractRecognizeCallback ───────────────────────
