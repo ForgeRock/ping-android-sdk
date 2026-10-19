@@ -84,7 +84,8 @@ fun Logout(
                 )
 
                 // Logout All button - enabled only when there are active sessions
-                val hasActiveSessions = state.journey || state.daVinci || state.oidc || state.oidcDeviceClient
+                val hasActiveSessions = state.journey || state.daVinci || state.oidc ||
+                    state.oidcRar || state.oidcDeviceClient
                 Button(
                     onClick = {
                         logoutViewModel.logoutAll {
@@ -156,6 +157,22 @@ fun Logout(
                         }
                     }
 
+                    // OIDC RAR Session (dedicated RAR client, own storage — token B)
+                    if (state.oidcRar) {
+                        item {
+                            LogoutOptionCard(
+                                title = "OIDC RAR Session",
+                                description = "Logout from OIDC RAR authentication",
+                                onLogout = {
+                                    logoutViewModel.logoutOidcRar {
+                                        // Refresh the list after logout
+                                        logoutViewModel.listLogoutOptions()
+                                    }
+                                }
+                            )
+                        }
+                    }
+
                     // OIDC Device Client Session
                     if (state.oidcDeviceClient) {
                         item {
@@ -173,7 +190,8 @@ fun Logout(
                     }
 
                     // No active sessions
-                    if (!state.journey && !state.daVinci && !state.oidc && !state.oidcDeviceClient) {
+                    if (!state.journey && !state.daVinci && !state.oidc && !state.oidcRar &&
+                        !state.oidcDeviceClient) {
                         item {
                             Card(
                                 elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),

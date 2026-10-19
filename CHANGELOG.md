@@ -3,6 +3,8 @@
 #### Added
 - Added AM/AIC transactional backchannel authentication support to the Journey module via `Journey.start(backchannelUri)` [SDKS-5157]
 - Added conditional UI (autofill with passkeys) support to FIDO authentication on Android 15+ [SDKS-4574]
+- Added RFC 9396 `authorization_details` preservation on OIDC `Token` responses, exposed as `Token.authorizationDetails` and preserved through storage round-trips [SDKS-5424]
+- Added RFC 9396 `authorization_details` support on OIDC config and per-call authorize parameters [SDKS-5426]
 
 #### Changed
 - Changed Recognize error reporting to the shared cross-platform error model, matching the web SDK. `RecognizeException` now carries the shared `code` and `name` (e.g. `CORE_USER_NOT_ENROLLED` / 3003), and keeps the native Keyless code in the new `sdkCode` property, with the mapping exposed as the public `SharedErrorCode` enum. The `clientError` Journey input now carries the shared error name and `clientErrorCode` the shared code; an error with no shared name is reported as `SDK_ERROR` (1000). **Upgrade note:** `RecognizeException.code` and the submitted `clientErrorCode` used to be native Keyless codes (e.g. 20000), and `clientError` used to be the error message. App or Journey logic that branches on those values must use the shared codes and names listed in the Recognize README. The `RecognizeException` constructor also gained the `name` and `sdkCode` parameters, so callers constructing it positionally must switch to named arguments. The native code is still available in `sdkCode`, and the message in `RecognizeException.message`. `clientErrorCode` is now always submitted: failures that are not a `RecognizeException` previously reported the code `-1` and now report `SDK_ERROR` / `1000` [P1RECMOB-3848]
