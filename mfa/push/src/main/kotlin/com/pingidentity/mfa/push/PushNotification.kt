@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2025-2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -42,8 +42,10 @@ import java.util.UUID
  * @property contextInfo Optional additional context information. In PingAM, this may contain details such as IP address,
  *                       user agent, location, etc.
  * @property pushType The type of push notification (DEFAULT, CHALLENGE, BIOMETRIC).
- * @property createdAt Timestamp when this notification was created.
- * @property sentAt Optional timestamp from the server when this notification was sent.
+ * @property createdAt Timestamp when this notification was created locally. Used as the expiry base only when
+ *                     [sentAt] is not available.
+ * @property sentAt Optional timestamp from the server (epoch milliseconds, AM clock) when this notification was sent.
+ *                  When present, it is the base used to determine expiry.
  * @property respondedAt Timestamp when the user responded to this notification.
  * @property additionalData Optional additional custom data associated with this notification. This is a map of key-value pairs.
   *                         The values can be of any type (String, Number, Boolean, Map, List, etc.).
@@ -97,12 +99,19 @@ data class PushNotification(
     /**
      * Checks if this notification has expired.
      *
+     * The elapsed time is measured from [sentAt] when present, otherwise from [createdAt]. [sentAt] is
+     * expressed in epoch milliseconds from the AM clock, and [ttl] is expressed in seconds. The
+     * notification is expired when the elapsed time is strictly greater than [ttl].
+     *
+     * This check uses the device clock, so clock skew relative to the server can shift the result either
+     * way; the server remains authoritative. A [sentAt] in the future reads as not expired.
+     *
      * @return true if the notification has expired, false otherwise.
      */
     val expired: Boolean
         get() {
-            val elapsedTimeSeconds = (System.currentTimeMillis() - createdAt.time) / 1000
-            return elapsedTimeSeconds > ttl
+            val expiryBase = sentAt ?: createdAt
+            return System.currentTimeMillis() - expiryBase.time > ttl * 1000L
         }
 
     /**

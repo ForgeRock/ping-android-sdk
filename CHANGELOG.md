@@ -4,6 +4,9 @@
 - Added AM/AIC transactional backchannel authentication support to the Journey module via `Journey.start(backchannelUri)` [SDKS-5157]
 - Added conditional UI (autofill with passkeys) support to FIDO authentication on Android 15+ [SDKS-4574]
 
+#### Fixed
+- Fixed `PushNotification.expired` to use the server send time (`sentAt`) instead of the local creation time, falling back to creation time when `sentAt` is invalid [SDKS-5490]
+
 ## [2.2.0]
 
 #### Added
