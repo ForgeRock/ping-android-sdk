@@ -14,6 +14,7 @@ import com.pingidentity.davinci.user as davinciUser
 import com.pingidentity.samples.pingsampleapp.config.daVinci
 import com.pingidentity.samples.pingsampleapp.config.journey
 import com.pingidentity.samples.pingsampleapp.config.oidcDeviceClient
+import com.pingidentity.samples.pingsampleapp.config.rarWeb
 import com.pingidentity.samples.pingsampleapp.config.web
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
@@ -22,6 +23,7 @@ data class LogoutState(
     val daVinci: Boolean = false,
     val journey: Boolean = false,
     val oidc: Boolean = false,
+    val oidcRar: Boolean = false,
     val oidcDeviceClient: Boolean = false,
 )
 class LogoutViewModel: ViewModel() {
@@ -33,6 +35,7 @@ class LogoutViewModel: ViewModel() {
                 daVinci = daVinci?.davinciUser() != null,
                 journey = journey?.journeyUser() != null,
                 oidc = web?.user() != null,
+                oidcRar = rarWeb?.user() != null,
                 oidcDeviceClient = oidcDeviceClient?.user() != null,
             )
         }
@@ -59,6 +62,13 @@ class LogoutViewModel: ViewModel() {
         }
     }
 
+    fun logoutOidcRar(onCompleted: () -> Unit) {
+        viewModelScope.launch {
+            rarWeb?.user()?.logout()
+            onCompleted()
+        }
+    }
+
     fun logoutOidcDeviceClient(onCompleted: () -> Unit) {
         viewModelScope.launch {
             oidcDeviceClient?.user()?.logout()
@@ -73,6 +83,7 @@ class LogoutViewModel: ViewModel() {
                 runCatching { journey?.journeyUser()?.logout() }
                 runCatching { daVinci?.davinciUser()?.logout() }
                 runCatching { web?.user()?.logout() }
+                runCatching { rarWeb?.user()?.logout() }
                 runCatching { oidcDeviceClient?.user()?.logout() }
             } finally {
                 onCompleted()

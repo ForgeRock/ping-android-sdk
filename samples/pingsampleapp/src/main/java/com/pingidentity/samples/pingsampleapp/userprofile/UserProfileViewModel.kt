@@ -15,6 +15,7 @@ import com.pingidentity.oidc.OidcError
 import com.pingidentity.samples.pingsampleapp.config.daVinci
 import com.pingidentity.samples.pingsampleapp.config.journey
 import com.pingidentity.samples.pingsampleapp.config.oidcDeviceClient
+import com.pingidentity.samples.pingsampleapp.config.rarWeb
 import com.pingidentity.samples.pingsampleapp.config.web
 import com.pingidentity.utils.Result
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -27,6 +28,7 @@ enum class UserProfileType {
     JOURNEY,
     DAVINCI,
     OIDC,
+    OIDC_RAR,
     AUTH_GRANT
 }
 
@@ -38,11 +40,14 @@ data class UserProfileViewState(
     var daVinciError: OidcError? = null,
     var oidcUser: JsonObject? = null,
     var oidcError: OidcError? = null,
+    var oidcRarUser: JsonObject? = null,
+    var oidcRarError: OidcError? = null,
     var authGrantUser: JsonObject? = null,
     var authGrantError: OidcError? = null,
     var showRawJourneyUserInfo: Boolean = false,
     var showRawDaVinciUserInfo: Boolean = false,
     var showRawOidcUserInfo: Boolean = false,
+    var showRawOidcRarUserInfo: Boolean = false,
     var showRawAuthGrantUserInfo: Boolean = false,
 )
 
@@ -72,6 +77,11 @@ class UserProfileViewModel : ViewModel() {
             json.encodeToString(JsonObject.serializer(), it)
         } ?: state.value.oidcError?.toString() ?: "No user information available"
 
+    val formattedOidcRarUserInfo: String
+        get() = state.value.oidcRarUser?.let {
+            json.encodeToString(JsonObject.serializer(), it)
+        } ?: state.value.oidcRarError?.toString() ?: "No user information available"
+
     val formattedAuthGrantUserInfo: String
         get() = state.value.authGrantUser?.let {
             json.encodeToString(JsonObject.serializer(), it)
@@ -86,6 +96,7 @@ class UserProfileViewModel : ViewModel() {
         journeyUserInfo()
         daVinciUserInfo()
         oidcUserInfo()
+        oidcRarUserInfo()
         authGrantUserInfo()
     }
 
@@ -94,6 +105,7 @@ class UserProfileViewModel : ViewModel() {
             UserProfileType.JOURNEY -> toggleJourneyUserInfo()
             UserProfileType.DAVINCI -> toggleDaVinciUserInfo()
             UserProfileType.OIDC -> toggleOidcUserInfo()
+            UserProfileType.OIDC_RAR -> toggleOidcRarUserInfo()
             UserProfileType.AUTH_GRANT -> toggleAuthGrantUserInfo()
         }
     }
@@ -170,6 +182,31 @@ class UserProfileViewModel : ViewModel() {
     private fun toggleOidcUserInfo() {
         state.update { s ->
             s.copy(showRawOidcUserInfo = !s.showRawOidcUserInfo)
+        }
+    }
+
+    // OIDC RAR Operations (dedicated RAR client, own storage)
+    private fun oidcRarUserInfo() {
+        viewModelScope.launch {
+            try {
+                val user = rarWeb?.user()
+                if (user == null) {
+                    state.update { s -> s.copy(oidcRarUser = null, oidcRarError = null) }
+                    return@launch
+                }
+                when (val result = user.userinfo(false)) {
+                    is Result.Failure -> state.update { s -> s.copy(oidcRarUser = null, oidcRarError = result.value) }
+                    is Result.Success -> state.update { s -> s.copy(oidcRarUser = result.value, oidcRarError = null) }
+                }
+            } catch (e: Exception) {
+                state.update { s -> s.copy(oidcRarUser = null, oidcRarError = null) }
+            }
+        }
+    }
+
+    private fun toggleOidcRarUserInfo() {
+        state.update { s ->
+            s.copy(showRawOidcRarUserInfo = !s.showRawOidcRarUserInfo)
         }
     }
 
