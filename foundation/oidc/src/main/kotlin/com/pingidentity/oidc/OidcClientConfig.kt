@@ -147,6 +147,10 @@ class OidcClientConfig {
 
     /**
      * State parameter for OIDC.
+     *
+     * When unset (the default), the SDK generates a random state for web-based authorization
+     * flows and verifies that the authorization response echoes it back unchanged
+     * (RFC 6749 §10.12 CSRF protection). When set, the configured value is sent and verified.
      */
     var state: String? = null
 

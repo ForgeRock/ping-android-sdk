@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 - 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2024 - 2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -32,6 +32,8 @@ import com.pingidentity.oidc.Constants.STATE
 import com.pingidentity.oidc.Constants.UI_LOCATES
 import com.pingidentity.oidc.OidcConfig
 import com.pingidentity.oidc.Pkce
+import com.pingidentity.oidc.generateState
+import com.pingidentity.oidc.validateState
 import com.pingidentity.utils.PingDsl
 import java.net.URL
 
@@ -112,9 +114,6 @@ var browser =
             oidcConfig.oidcClientConfig.scopes.let {
                 builder.appendQueryParameter(SCOPE, it.joinToString(" "))
             }
-            oidcConfig.oidcClientConfig.state?.let {
-                builder.appendQueryParameter(STATE, it)
-            }
             oidcConfig.oidcClientConfig.nonce?.let {
                 builder.appendQueryParameter(NONCE, it)
             }
@@ -144,8 +143,17 @@ var browser =
             builder.appendQueryParameter(CODE_CHALLENGE, pkce.codeChallenge)
                 .appendQueryParameter(CODE_CHALLENGE_METHOD, pkce.codeChallengeMethod);
 
+            // Resolve the state to send and expect (RFC 6749 §10.12 CSRF protection): a
+            // state in additionalParameters is already on the URL; otherwise the typed
+            // config.state or a generated value is appended here — sent exactly once either way.
+            val expected = oidcConfig.oidcClientConfig.additionalParameters[STATE]
+                ?: (oidcConfig.oidcClientConfig.state ?: generateState())
+                    .also { builder.appendQueryParameter(STATE, it) }
+
             val result = BrowserLauncher.launch(URL(builder.build().toString()))
             val uri = result.getOrThrow()
+            // Verify the echoed state before trusting the response.
+            validateState(uri, expected)
             val code = uri.getQueryParameter(CODE)
                 ?: throw IllegalStateException("No authorization code found in response")
             return AuthCode(code, pkce.codeVerifier)
