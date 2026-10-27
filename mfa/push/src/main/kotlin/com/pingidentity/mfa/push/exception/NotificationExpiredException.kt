@@ -14,7 +14,8 @@ import com.pingidentity.mfa.commons.exception.MfaException
  * 
  * This exception is thrown when a notification has exceeded its time-to-live (TTL)
  * and the user attempts to approve or deny it. The notification is considered expired
- * when the elapsed time since creation exceeds the TTL value.
+ * when the elapsed time since the notification was sent (or created locally when no send time
+ * is available) exceeds the TTL value.
  * 
  * @param notificationId The ID of the expired notification.
  * @param ttlSeconds The time-to-live in seconds that was configured for the notification.

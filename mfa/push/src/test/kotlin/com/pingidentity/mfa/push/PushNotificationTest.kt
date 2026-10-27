@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2025-2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -190,8 +190,8 @@ class PushNotificationTest {
     }
 
     @Test
-    fun `test notification expiration`() {
-        // Create an expired notification (createdAt set to long ago)
+    fun `test notification expiration falls back to createdAt when sentAt is null`() {
+        // Create an expired notification (createdAt set to long ago, no sentAt)
         val longAgo = Date(System.currentTimeMillis() - 301 * 1000) // 301 seconds ago
         val notification = PushNotification(
             credentialId = "credential-456",
@@ -216,6 +216,97 @@ class PushNotificationTest {
 
         // Should not be expired
         assertFalse(freshNotification.expired)
+    }
+
+    @Test
+    fun `expired uses sentAt when present`() {
+        // sentAt is 10 minutes ago, createdAt is now: sentAt drives expiry
+        val notification = PushNotification(
+            credentialId = "credential-456",
+            ttl = 120,
+            messageId = "msg-789",
+            pushType = PushType.DEFAULT,
+            createdAt = Date(),
+            sentAt = Date(System.currentTimeMillis() - 600 * 1000)
+        )
+
+        assertTrue(notification.expired)
+    }
+
+    @Test
+    fun `not expired when sentAt is recent`() {
+        val notification = PushNotification(
+            credentialId = "credential-456",
+            ttl = 120,
+            messageId = "msg-789",
+            pushType = PushType.DEFAULT,
+            createdAt = Date(),
+            sentAt = Date(System.currentTimeMillis() - 5 * 1000)
+        )
+
+        assertFalse(notification.expired)
+    }
+
+    @Test
+    fun `not expired when sentAt is just inside ttl`() {
+        val ttl = 120
+        // 30 seconds of margin so the test is not time-sensitive
+        val notification = PushNotification(
+            credentialId = "credential-456",
+            ttl = ttl,
+            messageId = "msg-789",
+            pushType = PushType.DEFAULT,
+            createdAt = Date(),
+            sentAt = Date(System.currentTimeMillis() - (ttl - 30) * 1000L)
+        )
+
+        assertFalse(notification.expired)
+    }
+
+    @Test
+    fun `expired when sentAt is half a second past ttl`() {
+        // Pins the millisecond comparison: a truncating whole-seconds rule would not call this expired
+        val ttl = 120
+        val notification = PushNotification(
+            credentialId = "credential-456",
+            ttl = ttl,
+            messageId = "msg-789",
+            pushType = PushType.DEFAULT,
+            createdAt = Date(),
+            sentAt = Date(System.currentTimeMillis() - (ttl * 1000L + 500))
+        )
+
+        assertTrue(notification.expired)
+    }
+
+    @Test
+    fun `sentAt takes precedence over an older createdAt`() {
+        // createdAt alone would be expired, but the recent sentAt keeps it valid
+        val notification = PushNotification(
+            credentialId = "credential-456",
+            ttl = 120,
+            messageId = "msg-789",
+            pushType = PushType.DEFAULT,
+            createdAt = Date(System.currentTimeMillis() - 600 * 1000),
+            sentAt = Date(System.currentTimeMillis() - 5 * 1000)
+        )
+
+        assertFalse(notification.expired)
+    }
+
+    @Test
+    fun `not expired when sentAt is in the future`() {
+        // Device clock behind the server clock: a future sentAt must not read as expired
+        val notification = PushNotification(
+            credentialId = "credential-456",
+            ttl = 120,
+            messageId = "msg-789",
+            pushType = PushType.DEFAULT,
+            createdAt = Date(System.currentTimeMillis() - 600 * 1000),
+            sentAt = Date(System.currentTimeMillis() + 60 * 1000)
+        )
+
+        assertFalse(notification.expired)
     }
 
     @Test
