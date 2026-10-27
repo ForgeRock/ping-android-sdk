@@ -187,6 +187,11 @@ if (node is ContinueNode) {
     Result<FidoPendingAuthentication>` — Builds a pending
     request for conditional mediation (autofill with passkeys) instead of launching the modal
     ceremony. See "Conditional mediation (autofill with passkeys)" below.
+  - `val isConditionalMediationRequested: Boolean` — Whether the server requested Conditional
+    UI, parsed from the payload's `mediation`/`conditional` fields (defaults to `false` when
+    both are absent). Call `pendingAuthenticate` only when this is `true`.
+  - `val manualButtonEnabled: Boolean` — The server's "Authentication Button" setting
+    (defaults to `true` when absent).
 - **FidoPendingAuthentication**
   - `val request: PendingGetCredentialRequest` — The request to attach to the username field:
     `view.pendingGetCredentialRequest = pending.request`. **View-only** — the androidx extension
@@ -371,16 +376,20 @@ if (isConditionalMediationSupported &&
     (hasConditionalTarget || callback.manualButtonEnabled)
 ) {
     // hasConditionalTarget: a sibling NameCallback carries "webauthn" in autocompleteValues —
-    // the server's marker for the field that should surface passkey suggestions.
-    // manualButtonEnabled: the server's "Authentication Button" setting (defaults to true when
-    // absent) — show a fallback button that starts the modal ceremony when true.
-    callback.pendingAuthenticate { useFido2ApiClient = false }.onSuccess { pending ->
-        // Attach to the regular username field marked with autocompleteValues
-        // ["username","webauthn"]; suggestions appear when the user focuses it.
-        usernameField.pendingGetCredentialRequest = pending.request
+    // the marker for the field that should surface passkey suggestions.
+    // Create the pending request only when the server requested Conditional UI.
+    if (callback.isConditionalMediationRequested) {
+        callback.pendingAuthenticate { useFido2ApiClient = false }.onSuccess { pending ->
+            // Attach to the regular username field marked with autocompleteValues
+            // ["username","webauthn"]; suggestions appear when the user focuses it.
+            usernameField.pendingGetCredentialRequest = pending.request
+        }
     }
-    // Modal fallback button, when the server enables it:
-    // button.onClick { scope.launch { callback.authenticate { useFido2ApiClient = false } } }
+    // Modal fallback button — shown when not in conditional mediation (the button is then
+    // the only way to authenticate) or when the server enables it (manualButtonEnabled):
+    if (!callback.isConditionalMediationRequested || callback.manualButtonEnabled) {
+        // button.onClick { scope.launch { callback.authenticate { useFido2ApiClient = false } } }
+    }
 }
 ```
 

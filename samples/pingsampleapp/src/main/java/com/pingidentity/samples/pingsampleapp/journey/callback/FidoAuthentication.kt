@@ -35,6 +35,9 @@ import kotlinx.coroutines.launch
  * its own — the passkey suggestions surface inline on the regular field marked with
  * autocompleteValues ["username","webauthn"] by the server.
  *
+ * The pending request is created only when [FidoAuthenticationCallback.isConditionalMediationRequested]
+ * is true and a sibling NameCallback is marked as the passkey target.
+ *
  * @param hasConditionalTarget Whether a sibling NameCallback on this node is marked as the
  *   passkey target ("webauthn" in autocompleteValues). When false there is no field to attach
  *   the pending request to, so it is not created.
@@ -50,9 +53,13 @@ fun FidoAuthentication(
     val currentOnCompleted by rememberUpdatedState(onNext)
     val coroutineScope = rememberCoroutineScope()
 
+    // Attach the pending request only when the server requested conditional mediation
+    // and there is a marked field to attach it to.
+    val conditionalUiRequested = hasConditionalTarget && callback.isConditionalMediationRequested
+
     // Modal ceremony (Credential Manager routing — see the routing note at the button) with
-    // post-failure recovery: on failure the user stays on the page and, when a conditional
-    // target exists, a fresh pending request replaces the one the modal superseded, so
+    // post-failure recovery: on failure the user stays on the page and, when the conditional
+    // surface is active, a fresh pending request replaces the one the modal superseded, so
     // passkey autofill on the username field keeps working after a failed attempt.
     val performModalAuthentication: suspend () -> Unit = {
         callback.authenticate { useFido2ApiClient = false }
@@ -63,7 +70,7 @@ fun FidoAuthentication(
                     "Failed to Authenticate",
                     it
                 )
-                if (hasConditionalTarget) {
+                if (conditionalUiRequested) {
                     callback.pendingAuthenticate { useFido2ApiClient = false }
                         .onSuccess { onPending(it) }
                         .onFailure { retryError ->
@@ -84,7 +91,7 @@ fun FidoAuthentication(
     }
 
     if (isConditionalMediationSupported && (hasConditionalTarget || callback.manualButtonEnabled)) {
-        if (hasConditionalTarget) {
+        if (hasConditionalTarget && callback.isConditionalMediationRequested) {
             // Build the pending request up front; the username field's composable attaches it
             // to the regular field, so suggestions appear when the user focuses it. If setup
             // fails, fall back to the modal flow below (createPending nulls `pending` via
@@ -125,20 +132,20 @@ fun FidoAuthentication(
         }
 
         // Modal fallback: covers dismissed suggestions and failed/pending-setup-failed
-        // conditional starts. Shown only when the server's WebAuthn node has
-        // "Authentication Button" enabled (manualButtonEnabled). A failed modal attempt (e.g.
-        // a transient Google Play services disconnection) keeps the user on the page — but
-        // authenticate() superseded the attached pending request (the SDK cancels it before
-        // the modal ceremony), so a fresh pending request is published on failure: without
-        // it the EditText would hold a cancelled request whose ceremony response is dropped,
-        // and passkey autofill on the field would silently stop working.
+        // conditional starts. Outside conditional mediation the button is the only way to
+        // authenticate; within it, the server's manualButtonEnabled setting decides. A failed
+        // modal attempt (e.g. a transient Google Play services disconnection) keeps the user
+        // on the page — but authenticate() superseded the attached pending request (the SDK
+        // cancels it before the modal ceremony), so a fresh pending request is published on
+        // failure: without it the EditText would hold a cancelled request whose ceremony
+        // response is dropped, and passkey autofill on the field would silently stop working.
         //
         // Routing: this journey is the conditional-UI one — the payload carries no rpId
         // (_relyingPartyId is empty) and no allowCredentials, which the Google Play Services
         // FIDO2 API requires (its process crashes on the empty rpId, surfacing as a GMS
         // connection suspension / ApiException 20). The modal button therefore forces the
         // Credential Manager path, which handles the empty rpId correctly.
-        if (callback.manualButtonEnabled) {
+        if (!callback.isConditionalMediationRequested || callback.manualButtonEnabled) {
             Button(
                 modifier = Modifier.padding(4.dp),
                 onClick = {
