@@ -43,10 +43,13 @@ mockk = "1.14.5"
 mockwebserver = "5.1.0"
 mockkAndroid = "1.14.5"
 testLogger = "4.0.0"
-bcpkix-jdk18on = "1.85"
-bcprov-jdk18on = "1.85"
-bcutil-jdk18on = "1.85"
-jackson = "2.22.3"
+bcpkix-jdk18on = "1.86"
+bcprov-jdk18on = "1.86"
+bcutil-jdk18on = "1.86"
+jackson = "2.22.4"
+guava = "33.7.2-jre"
+asm = "9.11.1"
+jaxb-runtime = "2.3.9"
 androidx-annotation = "1.9.1"
 
 activityKtx = "1.10.1"
@@ -101,6 +104,13 @@ bcutil-jdk18on = { module = "org.bouncycastle:bcutil-jdk18on", version.ref = "bc
 jackson-module-kotlin = { module = "com.fasterxml.jackson.module:jackson-module-kotlin", version.ref = "jackson" }
 jackson-dataformat-xml = { module = "com.fasterxml.jackson.dataformat:jackson-dataformat-xml", version.ref = "jackson" }
 jackson-databind = { module = "com.fasterxml.jackson.core:jackson-databind", version.ref = "jackson" }
+guava = { module = "com.google.guava:guava", version.ref = "guava" }
+asm = { module = "org.ow2.asm:asm", version.ref = "asm" }
+asm-commons = { module = "org.ow2.asm:asm-commons", version.ref = "asm" }
+asm-analysis = { module = "org.ow2.asm:asm-analysis", version.ref = "asm" }
+asm-tree = { module = "org.ow2.asm:asm-tree", version.ref = "asm" }
+asm-util = { module = "org.ow2.asm:asm-util", version.ref = "asm" }
+jaxb-runtime = { module = "org.glassfish.jaxb:jaxb-runtime", version.ref = "jaxb-runtime" }
 
 #For Migration only
 androidx-security-crypto = { module = "androidx.security:security-crypto", version.ref = "security-crypto" }
