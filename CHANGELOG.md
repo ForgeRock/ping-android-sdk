@@ -7,9 +7,13 @@
 #### Fixed
 - Fixed `PushNotification.expired` to use the server send time (`sentAt`) instead of the local creation time, falling back to creation time when `sentAt` is invalid [SDKS-5490]
 
+#### Changed
+- Changed Recognize error reporting to the shared cross-platform error model, matching the web SDK. `RecognizeException` now carries the shared `code` and `name` (e.g. `CORE_USER_NOT_ENROLLED` / 3003), and keeps the native Keyless code in the new `sdkCode` property, with the mapping exposed as the public `SharedErrorCode` enum. The `clientError` Journey input now carries the shared error name and `clientErrorCode` the shared code; an error with no shared name is reported as `SDK_ERROR` (1000). **Upgrade note:** `RecognizeException.code` and the submitted `clientErrorCode` used to be native Keyless codes (e.g. 20000), and `clientError` used to be the error message. App or Journey logic that branches on those values must use the shared codes and names listed in the Recognize README. The `RecognizeException` constructor also gained the `name` and `sdkCode` parameters, so callers constructing it positionally must switch to named arguments. The native code is still available in `sdkCode`, and the message in `RecognizeException.message`. `clientErrorCode` is now always submitted: failures that are not a `RecognizeException` previously reported the code `-1` and now report `SDK_ERROR` / `1000` [P1RECMOB-3848]
+
 ## [2.2.0]
 
 #### Added
+- Added device public signing key submission during Recognize enrollment [P1RECMOB-3808]
 - Added AM/AIC transactional backchannel authentication support to the Journey module [SDKS-5157]
 - Added new `pingonemfa` module for PingOne MFA integration [P14C-86660]
 - Added DaVinci `MOBILE_PAIRING` collector support for pairing PingOne MFA accounts directly within a DaVinci flow [P14C-82522]
