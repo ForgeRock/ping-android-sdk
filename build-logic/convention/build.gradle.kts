@@ -21,6 +21,19 @@ dependencies {
     implementation(files(libs.javaClass.superclass.protectionDomain.codeSource.location))
 }
 
+// build-logic is an included build: the root project's resolutionStrategy blocks
+// do not reach this classpath. Force the same secure versions here.
+// asm is used transitively by AGP (gradle-api); fixes CVE-2026-110257..110263.
+configurations.all {
+    resolutionStrategy {
+        force(libs.asm)
+        force(libs.asm.commons)
+        force(libs.asm.analysis)
+        force(libs.asm.tree)
+        force(libs.asm.util)
+    }
+}
+
 gradlePlugin {
     plugins {
         register("androidLibrary") {
