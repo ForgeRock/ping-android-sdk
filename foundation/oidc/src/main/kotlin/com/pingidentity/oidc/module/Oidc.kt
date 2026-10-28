@@ -10,6 +10,7 @@ package com.pingidentity.oidc.module
 import android.net.Uri
 import com.pingidentity.oidc.Agent
 import com.pingidentity.oidc.AuthCode
+import com.pingidentity.oidc.Constants
 import com.pingidentity.oidc.Constants.CLIENT_ID
 import com.pingidentity.oidc.Constants.ID_TOKEN_HINT
 import com.pingidentity.oidc.Constants.USER_CODE
@@ -19,6 +20,7 @@ import com.pingidentity.oidc.OidcClientConfig
 import com.pingidentity.oidc.OidcConfig
 import com.pingidentity.oidc.OidcUser
 import com.pingidentity.oidc.Pkce
+import com.pingidentity.oidc.generateState
 import com.pingidentity.oidc.exception.AuthorizeException
 import com.pingidentity.orchestrate.Module
 import com.pingidentity.orchestrate.Session
@@ -29,6 +31,7 @@ import com.pingidentity.orchestrate.SuccessNode
  * Constant for PKCE.
  */
 private const val PKCE = "com.pingidentity.oidc.PKCE"
+internal const val EXPECTED_STATE = "com.pingidentity.oidc.EXPECTED_STATE"
 private const val OIDC_CONFIG = "com.pingidentity.oidc.OidcClientConfig"
 internal const val PARAMETERS = "com.pingidentity.oidc.PARAMETERS"
 
@@ -90,7 +93,25 @@ val Oidc =
                 // Stash PKCE in the flow context so the success handler can retrieve it for token exchange.
                 flowContext[PKCE] = pkce
                 val parameters = flowContext.getValue<Map<String, String>>(PARAMETERS) ?: emptyMap()
-                config.populateRequest(request, parameters, pkce)
+                // Only web flows get a verified state: the browser callback is where the
+                // authorization server echoes it back (RFC 6749 §10.12). Other agents have no
+                // redirect callback to verify against.
+                if (workflow.isWeb()) {
+                    val resolved = config.resolveState(parameters)
+                    val expected = resolved ?: generateState()
+                    // Inject the state as a per-call parameter only when no source already
+                    // provides one, so the request carries the state exactly once.
+                    val extra =
+                        if (resolved == null) {
+                            parameters + (Constants.STATE to expected)
+                        } else {
+                            parameters
+                        }
+                    flowContext[EXPECTED_STATE] = expected
+                    config.populateRequest(request, extra, pkce)
+                } else {
+                    config.populateRequest(request, parameters, pkce)
+                }
             }
         }
 

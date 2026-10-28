@@ -5,6 +5,7 @@
 - Added conditional UI (autofill with passkeys) support to FIDO authentication on Android 15+ [SDKS-4574]
 - Added RFC 9396 `authorization_details` preservation on OIDC `Token` responses, exposed as `Token.authorizationDetails` and preserved through storage round-trips [SDKS-5424]
 - Added RFC 9396 `authorization_details` support on OIDC config and per-call authorize parameters [SDKS-5426]
+- Added OAuth 2.0 `state` CSRF protection to the OIDC web and browser flows: a `state` is now always sent with the authorization request and the response's `state` is verified against the sent value before the authorization code is trusted. **Upgrade note:** authorization callbacks that omit or alter the `state` parameter (previously accepted) now fail with an `AuthorizeException`, so authorization servers or proxies that strip `state` will surface a login failure [SDKS-5479]
 
 #### Fixed
 - Fixed `PushNotification.expired` to use the server send time (`sentAt`) instead of the local creation time, falling back to creation time when `sentAt` is invalid [SDKS-5490]
