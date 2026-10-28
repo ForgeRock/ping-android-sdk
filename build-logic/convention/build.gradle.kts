@@ -24,6 +24,10 @@ dependencies {
 // build-logic is an included build: the root project's resolutionStrategy blocks
 // do not reach this classpath. Force the same secure versions here.
 // asm is used transitively by AGP (gradle-api); fixes CVE-2026-110257..110263.
+// jackson is declared by dokka-core's POM (2.15.3) for its runtime variant; the
+// forces are defensive — jackson is absent from the compileOnly classpath today
+// but would appear unforced if the dokka dependency scope changes.
+// guava is likewise a transitive of the build toolchain; fixes CVE-2026-102554.
 configurations.all {
     resolutionStrategy {
         force(libs.asm)
@@ -31,6 +35,10 @@ configurations.all {
         force(libs.asm.analysis)
         force(libs.asm.tree)
         force(libs.asm.util)
+        force(libs.jackson.module.kotlin)
+        force(libs.jackson.dataformat.xml)
+        force(libs.jackson.databind)
+        force(libs.guava)
     }
 }
 
