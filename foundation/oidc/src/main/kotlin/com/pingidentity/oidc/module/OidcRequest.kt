@@ -108,6 +108,39 @@ internal fun List<AuthorizationDetail>.toAuthorizationDetailsParam(json: Json = 
     json.encodeToJsonElement(this).toString()
 
 /**
+ * Resolves the `state` value to send with an authorization request and to verify against the
+ * authorization response (RFC 6749 §10.12 CSRF protection).
+ *
+ * Precedence — the first source that provides a state wins:
+ *
+ * 1. `extraParameters["state"]` (per-call)
+ * 2. `additionalParameters["state"]`
+ * 3. [OidcClientConfig.state]
+ *
+ * The request builders emit parameters without deduplicating, so when more than one source
+ * defines `state` the request may carry several values while the value verified here is the
+ * first source above — a server echoing back a different occurrence then fails verification.
+ * Set at most one source; a warning is logged when multiple are present.
+ *
+ * @param extraParameters The per-call authorization parameters.
+ * @return The state to send and verify, or `null` when no source provides a state.
+ */
+internal fun OidcClientConfig.resolveState(extraParameters: Map<String, String>): String? {
+    val perCall = extraParameters[STATE]
+    val additional = additionalParameters[STATE]
+    if ((perCall != null && additional != null) ||
+        (additional != null && state != null) ||
+        (perCall != null && state != null)
+    ) {
+        logger.w(
+            "Multiple state sources are set (per-call parameter, additionalParameters, state). " +
+                "Set at most one to avoid duplicate state parameters in the authorization request.",
+        )
+    }
+    return perCall ?: additional ?: state
+}
+
+/**
  * Internal function to populate an OIDC authorization request with the necessary parameters.
  *
  * This function handles both standard OAuth2 authorization requests and PAR (Pushed Authorization Request):

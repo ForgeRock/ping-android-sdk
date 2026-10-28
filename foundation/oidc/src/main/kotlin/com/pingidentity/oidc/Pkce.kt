@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 - 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2024 - 2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -10,7 +10,6 @@ package com.pingidentity.oidc
 import java.security.MessageDigest
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
-import kotlin.random.Random
 
 /**
  * Data class for PKCE (Proof Key for Code Exchange).
@@ -39,11 +38,7 @@ data class Pkce(
          * Generates a new code verifier for the PKCE.
          * @return A new code verifier.
          */
-        private fun generateCodeVerifier(): String {
-            val bytes = ByteArray(64)
-            Random.nextBytes(bytes)
-            return Base64.UrlSafe.encode(bytes).trimEnd('=') // remove padding as per https://tools.ietf.org/html/rfc7636#section-4.1
-        }
+        private fun generateCodeVerifier(): String = randomBase64UrlSafe(64)
 
         /**
          * Generates a new code challenge for the PKCE.
