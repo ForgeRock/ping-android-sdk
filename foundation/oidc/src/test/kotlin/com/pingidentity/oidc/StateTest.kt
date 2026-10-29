@@ -15,6 +15,7 @@ import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotEquals
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 @RunWith(RobolectricTestRunner::class)
@@ -63,15 +64,50 @@ class StateTest {
     }
 
     @Test
-    fun `validateState is skipped when expected is null`() {
-        // No expected state recorded (e.g. device-code completion flow): no validation.
-        validateState(
-            Uri.parse("https://example.com/callback?code=abc&state=anything"),
-            null,
+    fun `validateState fails when no expected state was recorded`() {
+        // A state is always sent with web authorization flows, so a null expected state
+        // means the flow never recorded one — fail rather than skip.
+        val exception = assertFailsWith<AuthorizeException> {
+            validateState(
+                Uri.parse("https://example.com/callback?code=abc&state=anything"),
+                null,
+            )
+        }
+        assertContains(exception.message ?: "", "No expected state was recorded")
+        assertFailsWith<AuthorizeException> {
+            validateState(
+                Uri.parse("https://example.com/callback?code=abc"),
+                null,
+            )
+        }
+    }
+
+    @Test
+    fun `extractOAuthError reads error params from the query`() {
+        val message = extractOAuthError(
+            Uri.parse("https://example.com/callback?error=access_denied&error_description=User+denied+consent"),
         )
-        validateState(
-            Uri.parse("https://example.com/callback?code=abc"),
-            null,
+        assertEquals(
+            "The authorization server returned an error: access_denied — User denied consent",
+            message,
+        )
+    }
+
+    @Test
+    fun `extractOAuthError reads error params from the fragment`() {
+        val message = extractOAuthError(
+            Uri.parse("https://example.com/callback#error=access_denied&error_uri=https://docs.example.com/err"),
+        )
+        assertEquals(
+            "The authorization server returned an error: access_denied (see https://docs.example.com/err)",
+            message,
+        )
+    }
+
+    @Test
+    fun `extractOAuthError returns null when the redirect is not an error`() {
+        assertNull(
+            extractOAuthError(Uri.parse("https://example.com/callback?code=abc&state=xyz")),
         )
     }
 

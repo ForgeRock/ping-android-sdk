@@ -382,6 +382,44 @@ class BrowserTest {
         assertContains(exception.message ?: "", "did not include the state parameter")
     }
 
+    @Test
+    fun `browser authorize surfaces the OAuth error when the callback carries no code`() = runTest {
+        val oidcClientConfig = OidcClientConfig().apply {
+            openId = OpenIdConfiguration(
+                authorizationEndpoint = "http://localhost/authorize",
+                tokenEndpoint = "http://localhost/token",
+                userinfoEndpoint = "http://localhost/userinfo",
+                endSessionEndpoint = "http://localhost/end-session",
+                revocationEndpoint = "http://localhost/revocation"
+            )
+            clientId = "test-client-id"
+            redirectUri = "https://example.com/callback"
+        }
+        val urlSlot = slot<URL>()
+        coEvery { BrowserLauncher.launch(capture(urlSlot), any()) } returns Result.success(
+            mockk {
+                every { getQueryParameter(any()) } answers {
+                    when (val name = firstArg<String>()) {
+                        Constants.CODE -> null
+                        "error" -> "access_denied"
+                        "error_description" -> "User denied consent"
+                        else -> null
+                    }
+                }
+                // The authorization server echoes the state that was sent.
+                every { getQueryParameter(Constants.STATE) } answers {
+                    urlSlot.captured.query?.let { Uri.parse("?$it").getQueryParameter(Constants.STATE) }
+                }
+                every { encodedFragment } returns null
+            }
+        )
+
+        val exception = assertFailsWith<AuthorizeException> {
+            browser.authorize(OidcConfig(browser.config()(), oidcClientConfig))
+        }
+        assertContains(exception.message ?: "", "error: access_denied — User denied consent")
+    }
+
     /**
      * Mock URI whose `getQueryParameter` resolves names against the query of the URL captured
      * for [BrowserLauncher.launch] — emulating an authorization server that echoes back the

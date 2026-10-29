@@ -20,7 +20,6 @@ import com.pingidentity.oidc.OidcClientConfig
 import com.pingidentity.oidc.OidcConfig
 import com.pingidentity.oidc.OidcUser
 import com.pingidentity.oidc.Pkce
-import com.pingidentity.oidc.generateState
 import com.pingidentity.oidc.exception.AuthorizeException
 import com.pingidentity.orchestrate.Module
 import com.pingidentity.orchestrate.Session
@@ -94,15 +93,14 @@ val Oidc =
                 flowContext[PKCE] = pkce
                 val parameters = flowContext.getValue<Map<String, String>>(PARAMETERS) ?: emptyMap()
                 // Only web flows get a verified state: the browser callback is where the
-                // authorization server echoes it back (RFC 6749 §10.12). Other agents have no
+                // authorization server echoes it back. Other agents have no
                 // redirect callback to verify against.
                 if (workflow.isWeb()) {
-                    val resolved = config.resolveState(parameters)
-                    val expected = resolved ?: generateState()
+                    val expected = config.resolveOrGenerateState(parameters)
                     // Inject the state as a per-call parameter only when no source already
                     // provides one, so the request carries the state exactly once.
                     val extra =
-                        if (resolved == null) {
+                        if (config.resolveState(parameters) == null) {
                             parameters + (Constants.STATE to expected)
                         } else {
                             parameters

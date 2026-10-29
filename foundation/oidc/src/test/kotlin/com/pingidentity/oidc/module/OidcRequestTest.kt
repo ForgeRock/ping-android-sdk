@@ -11,6 +11,7 @@ import com.pingidentity.logger.Logger
 import com.pingidentity.oidc.OidcClientConfig
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -81,5 +82,23 @@ class OidcRequestTest {
         val quiet = CapturingLogger()
         OidcClientConfig().apply { this.logger = quiet }.resolveState(emptyMap())
         assertTrue(quiet.warnings.isEmpty())
+    }
+
+    @Test
+    fun `resolveOrGenerateState returns the resolved state when a source provides one`() {
+        val config =
+            OidcClientConfig().apply {
+                state = "configured"
+            }
+        assertEquals("configured", config.resolveOrGenerateState())
+        assertEquals("per-call", config.resolveOrGenerateState(mapOf("state" to "per-call")))
+    }
+
+    @Test
+    fun `resolveOrGenerateState generates a state when no source provides one`() {
+        val generated = OidcClientConfig().resolveOrGenerateState()
+        assertEquals(43, generated.length)
+        val again = OidcClientConfig().resolveOrGenerateState()
+        assertNotEquals(generated, again)
     }
 }
