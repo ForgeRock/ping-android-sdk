@@ -117,10 +117,9 @@ internal fun List<AuthorizationDetail>.toAuthorizationDetailsParam(json: Json = 
  * 2. `additionalParameters["state"]`
  * 3. [OidcClientConfig.state]
  *
- * The request builders emit parameters without deduplicating, so when more than one source
- * defines `state` the request may carry several values while the value verified here is the
- * first source above — a server echoing back a different occurrence then fails verification.
- * Set at most one source; a warning is logged when multiple are present.
+ * The request builders merge parameters by key, so the request carries exactly one `state`:
+ * the value resolved here. When more than one source defines `state`, the lower-priority
+ * values are ignored. Set at most one source; a warning is logged when multiple are present.
  *
  * @param extraParameters The per-call authorization parameters.
  * @return The state to send and verify, or `null` when no source provides a state.
@@ -134,7 +133,7 @@ internal fun OidcClientConfig.resolveState(extraParameters: Map<String, String>)
     ) {
         logger.w(
             "Multiple state sources are set (per-call parameter, additionalParameters, state). " +
-                "Set at most one to avoid duplicate state parameters in the authorization request.",
+                "Only the highest-priority value is sent and verified; the others are ignored.",
         )
     }
     return perCall ?: additional ?: state

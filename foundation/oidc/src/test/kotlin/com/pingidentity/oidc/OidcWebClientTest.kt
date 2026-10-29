@@ -116,10 +116,6 @@ class OidcWebClientTest {
         every { mockUri.getQueryParameter(Constants.STATE) } answers {
             urlSlot.captured.query?.let { Uri.parse("?$it").getQueryParameter(Constants.STATE) }
         }
-        // The authorization server echoes back the state that was sent with the request.
-        every { mockUri.getQueryParameter(Constants.STATE) } answers {
-            urlSlot.captured.query?.let { Uri.parse("?$it").getQueryParameter(Constants.STATE) }
-        }
 
         val web = OidcWebClient {
             httpClient = KtorHttpClient(HttpClient(mockEngine))
@@ -219,10 +215,6 @@ class OidcWebClientTest {
         every { mockUri.getQueryParameter(Constants.STATE) } answers {
             urlSlot.captured.query?.let { Uri.parse("?$it").getQueryParameter(Constants.STATE) }
         }
-        // The authorization server echoes back the state that was sent with the request.
-        every { mockUri.getQueryParameter(Constants.STATE) } answers {
-            urlSlot.captured.query?.let { Uri.parse("?$it").getQueryParameter(Constants.STATE) }
-        }
 
         val web = OidcWebClient {
             httpClient = KtorHttpClient(HttpClient(mockEngine))
@@ -283,10 +275,6 @@ class OidcWebClientTest {
         every { mockUri.getQueryParameter(Constants.STATE) } answers {
             urlSlot.captured.query?.let { Uri.parse("?$it").getQueryParameter(Constants.STATE) }
         }
-        // The authorization server echoes back the state that was sent with the request.
-        every { mockUri.getQueryParameter(Constants.STATE) } answers {
-            urlSlot.captured.query?.let { Uri.parse("?$it").getQueryParameter(Constants.STATE) }
-        }
 
         val web = OidcWebClient {
             httpClient = KtorHttpClient(HttpClient(mockEngine))
@@ -336,10 +324,6 @@ class OidcWebClientTest {
         every { mockUri.getQueryParameter(Constants.STATE) } answers {
             urlSlot.captured.query?.let { Uri.parse("?$it").getQueryParameter(Constants.STATE) }
         }
-        // The authorization server echoes back the state that was sent with the request.
-        every { mockUri.getQueryParameter(Constants.STATE) } answers {
-            urlSlot.captured.query?.let { Uri.parse("?$it").getQueryParameter(Constants.STATE) }
-        }
 
         val web = OidcWebClient {
             httpClient = KtorHttpClient(HttpClient(mockEngine))
@@ -370,10 +354,6 @@ class OidcWebClientTest {
         val urlSlot = slot<URL>()
         coEvery { BrowserLauncher.launch(capture(urlSlot), any()) } returns Result.success(mockUri)
         every { mockUri.getQueryParameter(Constants.CODE) } returns "test-code"
-        // The authorization server echoes back the state that was sent with the request.
-        every { mockUri.getQueryParameter(Constants.STATE) } answers {
-            urlSlot.captured.query?.let { Uri.parse("?$it").getQueryParameter(Constants.STATE) }
-        }
         // The authorization server echoes back the state that was sent with the request.
         every { mockUri.getQueryParameter(Constants.STATE) } answers {
             urlSlot.captured.query?.let { Uri.parse("?$it").getQueryParameter(Constants.STATE) }

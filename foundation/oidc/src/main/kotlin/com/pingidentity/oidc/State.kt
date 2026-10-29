@@ -9,12 +9,16 @@ package com.pingidentity.oidc
 import android.net.Uri
 import com.pingidentity.oidc.exception.AuthorizeException
 import java.security.MessageDigest
+import java.security.SecureRandom
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
-import kotlin.random.Random
 import androidx.core.net.toUri
 
 private const val STATE_LENGTH_BYTES = 32
+
+// Cryptographically secure source for the state and PKCE verifier (RFC 6749 §10.12:
+// the state must be unguessable by attackers).
+private val secureRandom = SecureRandom()
 
 /**
  * Generates [numBytes] random bytes encoded as Base64 URL-safe without padding,
@@ -23,7 +27,7 @@ private const val STATE_LENGTH_BYTES = 32
 @OptIn(ExperimentalEncodingApi::class)
 internal fun randomBase64UrlSafe(numBytes: Int): String {
     val bytes = ByteArray(numBytes)
-    Random.nextBytes(bytes)
+    secureRandom.nextBytes(bytes)
     return Base64.UrlSafe.encode(bytes).trimEnd('=')
 }
 
