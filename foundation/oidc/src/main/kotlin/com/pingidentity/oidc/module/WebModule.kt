@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2025 - 2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -10,6 +10,9 @@ package com.pingidentity.oidc.module
 import androidx.core.net.toUri
 import com.pingidentity.browser.BrowserLauncher
 import com.pingidentity.oidc.Constants.CODE
+import com.pingidentity.oidc.exception.AuthorizeException
+import com.pingidentity.oidc.extractOAuthError
+import com.pingidentity.oidc.validateState
 import com.pingidentity.orchestrate.Module
 import com.pingidentity.orchestrate.Session
 import com.pingidentity.orchestrate.SuccessNode
@@ -44,8 +47,13 @@ val Web = Module.of(::WebModuleConfig) {
         BrowserLauncher.logger = workflow.config.logger
         val uri = BrowserLauncher.launch(url, workflow.oidcClientConfig().redirectUri.toUri())
             .getOrThrow()
+        // Verify the state echoed by the authorization server before trusting the response
+        // (CSRF protection).
+        validateState(uri, flowContext.getValue<String>(EXPECTED_STATE))
         val code = uri.getQueryParameter(CODE)
-            ?: throw IllegalStateException("No authorization code found in response")
+            ?: throw AuthorizeException(
+                extractOAuthError(uri) ?: "No authorization code found in response",
+            )
 
         object : Response {
             override val request = it

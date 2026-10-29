@@ -17,6 +17,7 @@ import com.pingidentity.browser.BrowserLauncher
 import com.pingidentity.logger.CONSOLE
 import com.pingidentity.logger.Logger
 import com.pingidentity.network.ktor.KtorHttpClient
+import com.pingidentity.oidc.exception.AuthorizeException
 import com.pingidentity.oidc.module.Oidc
 import com.pingidentity.storage.MemoryStorage
 import com.pingidentity.utils.Result.Success
@@ -107,9 +108,14 @@ class OidcWebClientTest {
     fun `authorize returns success when OidcFlow succeeds`() = runTest {
 
         val mockUri = mockk<Uri>()
-        coEvery { BrowserLauncher.launch(any<URL>(), any()) } returns Result.success(mockUri)
+        val urlSlot = slot<URL>()
+        coEvery { BrowserLauncher.launch(capture(urlSlot), any()) } returns Result.success(mockUri)
 
         every { mockUri.getQueryParameter(Constants.CODE) } returns "test-code"
+        // The authorization server echoes back the state that was sent with the request.
+        every { mockUri.getQueryParameter(Constants.STATE) } answers {
+            urlSlot.captured.query?.let { Uri.parse("?$it").getQueryParameter(Constants.STATE) }
+        }
 
         val web = OidcWebClient {
             httpClient = KtorHttpClient(HttpClient(mockEngine))
@@ -173,9 +179,19 @@ class OidcWebClientTest {
     @Test
     fun `authorize returns failure when BrowserLauncher returns Uri without code`() = runTest {
         val mockUri = mockk<Uri>()
-        coEvery { BrowserLauncher.launch(any<URL>(), any()) } returns Result.success(mockUri)
+        val urlSlot = slot<URL>()
+        coEvery { BrowserLauncher.launch(capture(urlSlot), any()) } returns Result.success(mockUri)
 
         every { mockUri.getQueryParameter(Constants.CODE) } returns null
+        // The authorization server echoes back the state that was sent with the request.
+        every { mockUri.getQueryParameter(Constants.STATE) } answers {
+            urlSlot.captured.query?.let { Uri.parse("?$it").getQueryParameter(Constants.STATE) }
+        }
+        // No OAuth error parameters on this callback.
+        every { mockUri.getQueryParameter("error") } returns null
+        every { mockUri.getQueryParameter("error_description") } returns null
+        every { mockUri.getQueryParameter("error_uri") } returns null
+        every { mockUri.encodedFragment } returns null
 
         val web = OidcWebClient {
             httpClient = KtorHttpClient(HttpClient(mockEngine))
@@ -191,7 +207,12 @@ class OidcWebClientTest {
 
         val result = web.authorize()
         assertTrue(result.isFailure)
-        assertIs<IllegalStateException>(result.exceptionOrNull())
+        // A callback with no code and no OAuth error parameters surfaces the generic message.
+        assertIs<AuthorizeException>(result.exceptionOrNull())
+        assertContains(
+            result.exceptionOrNull()?.message ?: "",
+            "No authorization code found in response",
+        )
     }
 
     @Test
@@ -200,6 +221,10 @@ class OidcWebClientTest {
         val urlSlot = slot<URL>()
         coEvery { BrowserLauncher.launch(capture(urlSlot), any()) } returns Result.success(mockUri)
         every { mockUri.getQueryParameter(Constants.CODE) } returns "test-code"
+        // The authorization server echoes back the state that was sent with the request.
+        every { mockUri.getQueryParameter(Constants.STATE) } answers {
+            urlSlot.captured.query?.let { Uri.parse("?$it").getQueryParameter(Constants.STATE) }
+        }
 
         val web = OidcWebClient {
             httpClient = KtorHttpClient(HttpClient(mockEngine))
@@ -256,6 +281,10 @@ class OidcWebClientTest {
         val urlSlot = slot<URL>()
         coEvery { BrowserLauncher.launch(capture(urlSlot), any()) } returns Result.success(mockUri)
         every { mockUri.getQueryParameter(Constants.CODE) } returns "test-code"
+        // The authorization server echoes back the state that was sent with the request.
+        every { mockUri.getQueryParameter(Constants.STATE) } answers {
+            urlSlot.captured.query?.let { Uri.parse("?$it").getQueryParameter(Constants.STATE) }
+        }
 
         val web = OidcWebClient {
             httpClient = KtorHttpClient(HttpClient(mockEngine))
@@ -296,7 +325,183 @@ class OidcWebClientTest {
     }
 
     @Test
+    fun `authorize sends a generated state when none is configured`() = runTest {
+        val mockUri = mockk<Uri>()
+        val urlSlot = slot<URL>()
+        coEvery { BrowserLauncher.launch(capture(urlSlot), any()) } returns Result.success(mockUri)
+        every { mockUri.getQueryParameter(Constants.CODE) } returns "test-code"
+        // The authorization server echoes back the state that was sent with the request.
+        every { mockUri.getQueryParameter(Constants.STATE) } answers {
+            urlSlot.captured.query?.let { Uri.parse("?$it").getQueryParameter(Constants.STATE) }
+        }
+
+        val web = OidcWebClient {
+            httpClient = KtorHttpClient(HttpClient(mockEngine))
+            logger = Logger.CONSOLE
+            module(Oidc) {
+                clientId = "test-client"
+                discoveryEndpoint = "http://localhost/.well-known/openid-configuration"
+                scopes = mutableSetOf("openid", "profile")
+                redirectUri = "https://example.com/callback"
+                storage = { MemoryStorage() }
+            }
+        }
+
+        val result = web.authorize()
+        assertTrue(result.isSuccess)
+
+        // A state must be sent, and the sent value must not be duplicated in the URL.
+        val query = urlSlot.captured.query ?: ""
+        val sentStates = query.split('&').filter { it.startsWith("state=") }
+        assertEquals(1, sentStates.size)
+        val sentState = Uri.parse("?${sentStates.single()}").getQueryParameter(Constants.STATE)
+        assertEquals(43, sentState?.length ?: -1)
+    }
+
+    @Test
+    fun `authorize sends the per-call state unchanged and exactly once`() = runTest {
+        val mockUri = mockk<Uri>()
+        val urlSlot = slot<URL>()
+        coEvery { BrowserLauncher.launch(capture(urlSlot), any()) } returns Result.success(mockUri)
+        every { mockUri.getQueryParameter(Constants.CODE) } returns "test-code"
+        // The authorization server echoes back the state that was sent with the request.
+        every { mockUri.getQueryParameter(Constants.STATE) } answers {
+            urlSlot.captured.query?.let { Uri.parse("?$it").getQueryParameter(Constants.STATE) }
+        }
+
+        val web = OidcWebClient {
+            httpClient = KtorHttpClient(HttpClient(mockEngine))
+            logger = Logger.CONSOLE
+            module(Oidc) {
+                clientId = "test-client"
+                discoveryEndpoint = "http://localhost/.well-known/openid-configuration"
+                scopes = mutableSetOf("openid", "profile")
+                redirectUri = "https://example.com/callback"
+                storage = { MemoryStorage() }
+            }
+        }
+
+        val result = web.authorize {
+            "state" to "per-call-state"
+        }
+        assertTrue(result.isSuccess)
+
+        // The per-call state is the one on the wire, sent exactly once.
+        val query = urlSlot.captured.query ?: ""
+        val sentStates = query.split('&').filter { it.startsWith("state=") }
+        assertEquals(1, sentStates.size)
+        assertEquals(
+            "per-call-state",
+            Uri.parse("?${sentStates.single()}").getQueryParameter(Constants.STATE),
+        )
+    }
+
+    @Test
+    fun `authorize returns failure when the callback state does not match`() = runTest {
+        val mockUri = mockk<Uri>()
+        val urlSlot = slot<URL>()
+        coEvery { BrowserLauncher.launch(capture(urlSlot), any()) } returns Result.success(mockUri)
+        every { mockUri.getQueryParameter(Constants.CODE) } returns "test-code"
+        every { mockUri.getQueryParameter(Constants.STATE) } returns "forged-state"
+
+        val web = OidcWebClient {
+            httpClient = KtorHttpClient(HttpClient(mockEngine))
+            logger = Logger.CONSOLE
+            module(Oidc) {
+                clientId = "test-client"
+                discoveryEndpoint = "http://localhost/.well-known/openid-configuration"
+                scopes = mutableSetOf("openid", "profile")
+                redirectUri = "https://example.com/callback"
+                storage = { MemoryStorage() }
+            }
+        }
+
+        val result = web.authorize()
+        assertTrue(result.isFailure)
+        assertIs<AuthorizeException>(result.exceptionOrNull())
+        assertContains(
+            result.exceptionOrNull()?.message ?: "",
+            "State mismatch",
+        )
+        // The flow must fail before any token exchange: no token request was made.
+        assertTrue(mockEngine.requestHistory.none { it.url.encodedPath == "/token" })
+    }
+
+    @Test
+    fun `authorize returns failure when the callback omits the state`() = runTest {
+        val mockUri = mockk<Uri>()
+        val urlSlot = slot<URL>()
+        coEvery { BrowserLauncher.launch(capture(urlSlot), any()) } returns Result.success(mockUri)
+        every { mockUri.getQueryParameter(Constants.CODE) } returns "test-code"
+        every { mockUri.getQueryParameter(Constants.STATE) } returns null
+        // No fragment on the callback URI either, so the state lookup ends with null.
+        every { mockUri.fragment } returns null
+        every { mockUri.encodedFragment } returns null
+
+        val web = OidcWebClient {
+            httpClient = KtorHttpClient(HttpClient(mockEngine))
+            logger = Logger.CONSOLE
+            module(Oidc) {
+                clientId = "test-client"
+                discoveryEndpoint = "http://localhost/.well-known/openid-configuration"
+                scopes = mutableSetOf("openid", "profile")
+                redirectUri = "https://example.com/callback"
+                storage = { MemoryStorage() }
+            }
+        }
+
+        val result = web.authorize()
+        assertTrue(result.isFailure)
+        assertIs<AuthorizeException>(result.exceptionOrNull())
+        assertContains(
+            result.exceptionOrNull()?.message ?: "",
+            "did not include the state parameter",
+        )
+    }
+
+    @Test
+    fun `authorize surfaces the OAuth error when the callback carries no code`() = runTest {
+        val mockUri = mockk<Uri>()
+        val urlSlot = slot<URL>()
+        coEvery { BrowserLauncher.launch(capture(urlSlot), any()) } returns Result.success(mockUri)
+        every { mockUri.getQueryParameter(Constants.CODE) } returns null
+        // The authorization server echoes back the state that was sent with the request.
+        every { mockUri.getQueryParameter(Constants.STATE) } answers {
+            urlSlot.captured.query?.let { Uri.parse("?$it").getQueryParameter(Constants.STATE) }
+        }
+        every { mockUri.getQueryParameter("error") } returns "access_denied"
+        every { mockUri.getQueryParameter("error_description") } returns "User denied consent"
+        every { mockUri.getQueryParameter("error_uri") } returns null
+        every { mockUri.encodedFragment } returns null
+
+        val web = OidcWebClient {
+            httpClient = KtorHttpClient(HttpClient(mockEngine))
+            logger = Logger.CONSOLE
+            module(Oidc) {
+                clientId = "test-client"
+                discoveryEndpoint = "http://localhost/.well-known/openid-configuration"
+                scopes = mutableSetOf("openid", "profile")
+                redirectUri = "https://example.com/callback"
+                storage = { MemoryStorage() }
+            }
+        }
+
+        val result = web.authorize()
+        assertTrue(result.isFailure)
+        assertIs<AuthorizeException>(result.exceptionOrNull())
+        assertContains(
+            result.exceptionOrNull()?.message ?: "",
+            "error: access_denied — User denied consent",
+        )
+        // The flow must fail before any token exchange: no token request was made.
+        assertTrue(mockEngine.requestHistory.none { it.url.encodedPath == "/token" })
+    }
+
+    @Test
     fun `authorize with PAR pushes params to PAR endpoint and uses request_uri in authorization URL`() = runTest {
+        // The PAR flow pushes the state into the PAR form body; the mock engine captures it
+        // (during the flow) so the callback mock below can echo it back.
+        var pushedState: String? = null
         val parMockEngine = MockEngine { request ->
             when (request.url.encodedPath) {
                 "/.well-known/openid-configuration" -> {
@@ -304,6 +509,9 @@ class OidcWebClientTest {
                 }
 
                 "/par" -> {
+                    // Capture the state pushed in the PAR form body so the callback mock
+                    // (stubbed below, before the flow runs) can echo it back.
+                    pushedState = (request.body as FormDataContent).formData[Constants.STATE]
                     respond(parResponse(), HttpStatusCode.OK, headers)
                 }
 
@@ -324,6 +532,8 @@ class OidcWebClientTest {
         val urlSlot = slot<URL>()
         coEvery { BrowserLauncher.launch(capture(urlSlot), any()) } returns Result.success(mockUri)
         every { mockUri.getQueryParameter(Constants.CODE) } returns "test-code"
+        // The authorization server echoes back the state that was pushed with PAR.
+        every { mockUri.getQueryParameter(Constants.STATE) } answers { pushedState }
 
         val web = OidcWebClient {
             httpClient = KtorHttpClient(HttpClient(parMockEngine))
@@ -368,6 +578,9 @@ class OidcWebClientTest {
 
     @Test
     fun `authorize with PAR includes authorization_details in PAR body`() = runTest {
+        // The PAR flow pushes the state into the PAR form body; the mock engine captures it
+        // (during the flow) so the callback mock below can echo it back.
+        var pushedState: String? = null
         val parMockEngine = MockEngine { request ->
             when (request.url.encodedPath) {
                 "/.well-known/openid-configuration" -> {
@@ -375,6 +588,7 @@ class OidcWebClientTest {
                 }
 
                 "/par" -> {
+                    pushedState = (request.body as FormDataContent).formData[Constants.STATE]
                     respond(parResponse(), HttpStatusCode.OK, headers)
                 }
 
@@ -395,6 +609,8 @@ class OidcWebClientTest {
         val urlSlot = slot<URL>()
         coEvery { BrowserLauncher.launch(capture(urlSlot), any()) } returns Result.success(mockUri)
         every { mockUri.getQueryParameter(Constants.CODE) } returns "test-code"
+        // The authorization server echoes back the state that was pushed with PAR.
+        every { mockUri.getQueryParameter(Constants.STATE) } answers { pushedState }
 
         val web = OidcWebClient {
             httpClient = KtorHttpClient(HttpClient(parMockEngine))
@@ -467,6 +683,10 @@ class OidcWebClientTest {
         val urlSlot = slot<URL>()
         coEvery { BrowserLauncher.launch(capture(urlSlot), any()) } returns Result.success(mockUri)
         every { mockUri.getQueryParameter(Constants.CODE) } returns "test-code"
+        // The authorization server echoes back the state that was sent with the request.
+        every { mockUri.getQueryParameter(Constants.STATE) } answers {
+            urlSlot.captured.query?.let { Uri.parse("?$it").getQueryParameter(Constants.STATE) }
+        }
 
         val web = OidcWebClient {
             httpClient = KtorHttpClient(HttpClient(mockEngine))
@@ -510,6 +730,10 @@ class OidcWebClientTest {
         val urlSlot = slot<URL>()
         coEvery { BrowserLauncher.launch(capture(urlSlot), any()) } returns Result.success(mockUri)
         every { mockUri.getQueryParameter(Constants.CODE) } returns "test-code"
+        // The authorization server echoes back the state that was sent with the request.
+        every { mockUri.getQueryParameter(Constants.STATE) } answers {
+            urlSlot.captured.query?.let { Uri.parse("?$it").getQueryParameter(Constants.STATE) }
+        }
 
         val web = OidcWebClient {
             httpClient = KtorHttpClient(HttpClient(mockEngine))
@@ -536,6 +760,10 @@ class OidcWebClientTest {
         val urlSlot = slot<URL>()
         coEvery { BrowserLauncher.launch(capture(urlSlot), any()) } returns Result.success(mockUri)
         every { mockUri.getQueryParameter(Constants.CODE) } returns "test-code"
+        // The authorization server echoes back the state that was sent with the request.
+        every { mockUri.getQueryParameter(Constants.STATE) } answers {
+            urlSlot.captured.query?.let { Uri.parse("?$it").getQueryParameter(Constants.STATE) }
+        }
 
         val web = OidcWebClient {
             httpClient = KtorHttpClient(HttpClient(mockEngine))
@@ -577,6 +805,10 @@ class OidcWebClientTest {
         val urlSlot = slot<URL>()
         coEvery { BrowserLauncher.launch(capture(urlSlot), any()) } returns Result.success(mockUri)
         every { mockUri.getQueryParameter(Constants.CODE) } returns "test-code"
+        // The authorization server echoes back the state that was sent with the request.
+        every { mockUri.getQueryParameter(Constants.STATE) } answers {
+            urlSlot.captured.query?.let { Uri.parse("?$it").getQueryParameter(Constants.STATE) }
+        }
 
         val web = OidcWebClient {
             httpClient = KtorHttpClient(HttpClient(mockEngine))
@@ -621,6 +853,10 @@ class OidcWebClientTest {
         val urlSlot = slot<URL>()
         coEvery { BrowserLauncher.launch(capture(urlSlot), any()) } returns Result.success(mockUri)
         every { mockUri.getQueryParameter(Constants.CODE) } returns "test-code"
+        // The authorization server echoes back the state that was sent with the request.
+        every { mockUri.getQueryParameter(Constants.STATE) } answers {
+            urlSlot.captured.query?.let { Uri.parse("?$it").getQueryParameter(Constants.STATE) }
+        }
 
         val web = OidcWebClient {
             httpClient = KtorHttpClient(HttpClient(mockEngine))
@@ -673,6 +909,10 @@ class OidcWebClientTest {
         val urlSlot = slot<URL>()
         coEvery { BrowserLauncher.launch(capture(urlSlot), any()) } returns Result.success(mockUri)
         every { mockUri.getQueryParameter(Constants.CODE) } returns "test-code"
+        // The authorization server echoes back the state that was sent with the request.
+        every { mockUri.getQueryParameter(Constants.STATE) } answers {
+            urlSlot.captured.query?.let { Uri.parse("?$it").getQueryParameter(Constants.STATE) }
+        }
 
         val web = OidcWebClient {
             httpClient = KtorHttpClient(HttpClient(mockEngine))
@@ -730,6 +970,10 @@ class OidcWebClientTest {
         val urlSlot = slot<URL>()
         coEvery { BrowserLauncher.launch(capture(urlSlot), any()) } returns Result.success(mockUri)
         every { mockUri.getQueryParameter(Constants.CODE) } returns "test-code"
+        // The authorization server echoes back the state that was sent with the request.
+        every { mockUri.getQueryParameter(Constants.STATE) } answers {
+            urlSlot.captured.query?.let { Uri.parse("?$it").getQueryParameter(Constants.STATE) }
+        }
 
         val web = OidcWebClient {
             httpClient = KtorHttpClient(HttpClient(mockEngine))
@@ -778,6 +1022,10 @@ class OidcWebClientTest {
         val urlSlot = slot<URL>()
         coEvery { BrowserLauncher.launch(capture(urlSlot), any()) } returns Result.success(mockUri)
         every { mockUri.getQueryParameter(Constants.CODE) } returns "test-code"
+        // The authorization server echoes back the state that was sent with the request.
+        every { mockUri.getQueryParameter(Constants.STATE) } answers {
+            urlSlot.captured.query?.let { Uri.parse("?$it").getQueryParameter(Constants.STATE) }
+        }
 
         val web = OidcWebClient {
             httpClient = KtorHttpClient(HttpClient(mockEngine))
@@ -802,6 +1050,9 @@ class OidcWebClientTest {
 
     @Test
     fun `per-call typed authorizationDetails reaches the PAR body`() = runTest {
+        // The PAR flow pushes the state into the PAR form body; the mock engine captures it
+        // (during the flow) so the callback mock below can echo it back.
+        var pushedState: String? = null
         val parMockEngine = MockEngine { request ->
             when (request.url.encodedPath) {
                 "/.well-known/openid-configuration" -> {
@@ -809,6 +1060,7 @@ class OidcWebClientTest {
                 }
 
                 "/par" -> {
+                    pushedState = (request.body as FormDataContent).formData[Constants.STATE]
                     respond(parResponse(), HttpStatusCode.OK, headers)
                 }
 
@@ -829,6 +1081,8 @@ class OidcWebClientTest {
         val urlSlot = slot<URL>()
         coEvery { BrowserLauncher.launch(capture(urlSlot), any()) } returns Result.success(mockUri)
         every { mockUri.getQueryParameter(Constants.CODE) } returns "test-code"
+        // The authorization server echoes back the state that was pushed with PAR.
+        every { mockUri.getQueryParameter(Constants.STATE) } answers { pushedState }
 
         val web = OidcWebClient {
             httpClient = KtorHttpClient(HttpClient(parMockEngine))
@@ -1112,6 +1366,10 @@ class OidcWebClientTest {
         val urlSlot = slot<URL>()
         coEvery { BrowserLauncher.launch(capture(urlSlot), any()) } returns Result.success(mockUri)
         every { mockUri.getQueryParameter(Constants.CODE) } returns "test-code"
+        // The authorization server echoes back the state that was sent with the request.
+        every { mockUri.getQueryParameter(Constants.STATE) } answers {
+            urlSlot.captured.query?.let { Uri.parse("?$it").getQueryParameter(Constants.STATE) }
+        }
 
         val result = web.authorize()
         assertTrue(result.isSuccess)
