@@ -19,10 +19,11 @@ import com.pingidentity.oidc.Constants.ID_TOKEN_HINT
 import com.pingidentity.oidc.Constants.POST_LOGOUT_REDIRECT_URI
 import com.pingidentity.oidc.Constants.STATE
 import com.pingidentity.oidc.OidcConfig
+import com.pingidentity.oidc.exception.AuthorizeException
+import com.pingidentity.oidc.extractOAuthError
 import com.pingidentity.oidc.module.buildAuthorizeParams
-import com.pingidentity.oidc.module.resolveState
+import com.pingidentity.oidc.module.resolveOrGenerateState
 import com.pingidentity.oidc.Pkce
-import com.pingidentity.oidc.generateState
 import com.pingidentity.oidc.validateState
 import com.pingidentity.utils.PingDsl
 import java.net.URL
@@ -97,11 +98,11 @@ var browser =
             BrowserLauncher.logger = oidcConfig.oidcClientConfig.logger
 
             val pkce = Pkce.generate()
-            // Resolve the state to send and expect (RFC 6749 §10.12 CSRF protection): the
+            // Resolve the state to send and expect (CSRF protection): the
             // configured/additional source wins, otherwise a generated one. Injected as a
             // per-call parameter — a no-op when a source already provided one — so the URL
             // carries the state exactly once either way.
-            val expected = oidcConfig.oidcClientConfig.resolveState(emptyMap()) ?: generateState()
+            val expected = oidcConfig.oidcClientConfig.resolveOrGenerateState()
             val params = with(oidcConfig.oidcClientConfig) {
                 buildAuthorizeParams(pkce, mapOf(STATE to expected))
             }
@@ -114,7 +115,9 @@ var browser =
             // Verify the echoed state before trusting the response.
             validateState(uri, expected)
             val code = uri.getQueryParameter(CODE)
-                ?: throw IllegalStateException("No authorization code found in response")
+                ?: throw AuthorizeException(
+                    extractOAuthError(uri) ?: "No authorization code found in response",
+                )
             return AuthCode(code, pkce.codeVerifier)
 
         }

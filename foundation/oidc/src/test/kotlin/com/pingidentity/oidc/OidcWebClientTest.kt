@@ -187,6 +187,11 @@ class OidcWebClientTest {
         every { mockUri.getQueryParameter(Constants.STATE) } answers {
             urlSlot.captured.query?.let { Uri.parse("?$it").getQueryParameter(Constants.STATE) }
         }
+        // No OAuth error parameters on this callback.
+        every { mockUri.getQueryParameter("error") } returns null
+        every { mockUri.getQueryParameter("error_description") } returns null
+        every { mockUri.getQueryParameter("error_uri") } returns null
+        every { mockUri.encodedFragment } returns null
 
         val web = OidcWebClient {
             httpClient = KtorHttpClient(HttpClient(mockEngine))
@@ -202,7 +207,12 @@ class OidcWebClientTest {
 
         val result = web.authorize()
         assertTrue(result.isFailure)
-        assertIs<IllegalStateException>(result.exceptionOrNull())
+        // A callback with no code and no OAuth error parameters surfaces the generic message.
+        assertIs<AuthorizeException>(result.exceptionOrNull())
+        assertContains(
+            result.exceptionOrNull()?.message ?: "",
+            "No authorization code found in response",
+        )
     }
 
     @Test
@@ -447,6 +457,44 @@ class OidcWebClientTest {
             result.exceptionOrNull()?.message ?: "",
             "did not include the state parameter",
         )
+    }
+
+    @Test
+    fun `authorize surfaces the OAuth error when the callback carries no code`() = runTest {
+        val mockUri = mockk<Uri>()
+        val urlSlot = slot<URL>()
+        coEvery { BrowserLauncher.launch(capture(urlSlot), any()) } returns Result.success(mockUri)
+        every { mockUri.getQueryParameter(Constants.CODE) } returns null
+        // The authorization server echoes back the state that was sent with the request.
+        every { mockUri.getQueryParameter(Constants.STATE) } answers {
+            urlSlot.captured.query?.let { Uri.parse("?$it").getQueryParameter(Constants.STATE) }
+        }
+        every { mockUri.getQueryParameter("error") } returns "access_denied"
+        every { mockUri.getQueryParameter("error_description") } returns "User denied consent"
+        every { mockUri.getQueryParameter("error_uri") } returns null
+        every { mockUri.encodedFragment } returns null
+
+        val web = OidcWebClient {
+            httpClient = KtorHttpClient(HttpClient(mockEngine))
+            logger = Logger.CONSOLE
+            module(Oidc) {
+                clientId = "test-client"
+                discoveryEndpoint = "http://localhost/.well-known/openid-configuration"
+                scopes = mutableSetOf("openid", "profile")
+                redirectUri = "https://example.com/callback"
+                storage = { MemoryStorage() }
+            }
+        }
+
+        val result = web.authorize()
+        assertTrue(result.isFailure)
+        assertIs<AuthorizeException>(result.exceptionOrNull())
+        assertContains(
+            result.exceptionOrNull()?.message ?: "",
+            "error: access_denied — User denied consent",
+        )
+        // The flow must fail before any token exchange: no token request was made.
+        assertTrue(mockEngine.requestHistory.none { it.url.encodedPath == "/token" })
     }
 
     @Test
