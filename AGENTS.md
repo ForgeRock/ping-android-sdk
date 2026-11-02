@@ -220,13 +220,16 @@ Log structural facts: HTTP method, URL host (not path segments that may contain 
 
 ## Dependency Pins
 
-The root `build.gradle.kts` contains a `resolutionStrategy { force(...) }` block that pins several transitive dependencies to security-patched versions. These pins must not be relaxed without an explicit, reviewed instruction:
+The root `build.gradle.kts` contains `resolutionStrategy { force(...) }` blocks — one on the `buildscript` classpath and one under `allprojects` — that pin several transitive dependencies to security-patched versions. Several pins (jackson, guava, asm, jaxb-runtime, bouncycastle) are duplicated in **both** blocks: the buildscript block covers the root build-toolchain classpath (AGP, Dokka, lint), the `allprojects` block covers every project's configurations including unit-test classpaths. When adding or relaxing one of these pins, update both blocks or the toolchain classpath silently keeps the old version. These pins must not be relaxed without an explicit, reviewed instruction:
 
 | Dependency | Pinned version | Reason |
 |-----------|---------------|--------|
-| `com.fasterxml.jackson.module:jackson-module-kotlin` | `2.22.2` | CVE-2026-68494, CVE-2026-54512, CVE-2026-54513 (Dokka transitive) |
-| `com.fasterxml.jackson.dataformat:jackson-dataformat-xml` | `2.22.2` | CVE-2026-68494, CVE-2026-54512, CVE-2026-54513 (Dokka transitive) |
-| `com.fasterxml.jackson.core:jackson-databind` | `2.22.2` | CVE-2026-68494, CVE-2026-54512, CVE-2026-54513 (Dokka transitive) |
+| `com.fasterxml.jackson.module:jackson-module-kotlin` | `2.22.4` | CVE-2026-110879 (and previously CVE-2026-68494, CVE-2026-54512, CVE-2026-54513, CVE-2026-89407, CVE-2026-89425, CVE-2026-91776, CVE-2026-91777) (Dokka transitive) |
+| `com.fasterxml.jackson.dataformat:jackson-dataformat-xml` | `2.22.4` | CVE-2026-110879 (and previously CVE-2026-68494, CVE-2026-54512, CVE-2026-54513, CVE-2026-89407, CVE-2026-89425, CVE-2026-91776, CVE-2026-91777) (Dokka transitive) |
+| `com.fasterxml.jackson.core:jackson-databind` | `2.22.4` | CVE-2026-110879 (and previously CVE-2026-68494, CVE-2026-54512, CVE-2026-54513, CVE-2026-89407, CVE-2026-89425, CVE-2026-91776, CVE-2026-91777) (Dokka transitive) |
+| `com.google.guava:guava` | `33.7.2-jre` | CVE-2026-102554 (AGP/Dokka build toolchain, build-time only, not shipped in the SDK) |
+| `org.ow2.asm:asm` (+ `asm-commons`, `asm-analysis`, `asm-tree`, `asm-util`) | `9.11.1` | CVE-2026-110257, CVE-2026-110258, CVE-2026-110259, CVE-2026-110260, CVE-2026-110261, CVE-2026-110263, CVE-2026-110591, CVE-2026-110270, CVE-2026-110262 (AGP/lint toolchain and Robolectric, build/test-time only, not shipped in the SDK) |
+| `org.glassfish.jaxb:jaxb-runtime` | `2.3.9` | CVE-2026-92877 (AGP lint toolchain, build-time only, not shipped in the SDK; 2.3.9 is the final `javax` 2.3.x patch — no dedicated fix release exists) |
 | `org.jsoup:jsoup` | `1.23.2` | CVE-2026-71497 (Dokka transitive) |
 | `org.apache.httpcomponents:httpclient` | `4.5.13` | CVE-2020-13956 (AGP `sdklib` via `httpmime`) |
 | `org.freemarker:freemarker` | `2.3.35` | CVE-2026-84939 (Dokka transitive) |
@@ -241,9 +244,9 @@ The root `build.gradle.kts` contains a `resolutionStrategy { force(...) }` block
 | `com.google.protobuf:protobuf-kotlin-lite` | `4.29.2` | CVE-2024-7254 and related CVEs |
 | `com.google.android.gms:play-services-basement` | `18.5.0` | CVE-2022-2390 (fixed in 18.0.2); 18.5.0 floor required by `play-services-identity-credentials:16.0.0-alpha08` (`ComplianceOptions`) via the `credentials-play-services-auth:1.6.0` bridge |
 | `com.nimbusds:nimbus-jose-jwt` | `10.5` | CVE-2025-53864 |
-| `org.bouncycastle:bcprov-jdk18on` | `1.85` | CVE-2026-8763 (build-toolchain classpath, `lint-gradle`) |
-| `org.bouncycastle:bcpkix-jdk18on` | `1.85` | CVE-2026-8763 (build-toolchain classpath, `lint-gradle`) |
-| `org.bouncycastle:bcutil-jdk18on` | `1.85` | CVE-2026-8763 (build-toolchain classpath, `lint-gradle`) |
+| `org.bouncycastle:bcprov-jdk18on` | `1.86` | CVE-2026-8763, CVE-2026-71889 (build-toolchain classpath, `lint-gradle`). CVE-2026-97873: 1.86 is documented upstream as the fixed release (as is LTS 2.73.13), but Mend still reports it on 1.86 — likely scanner-database lag. Not shipped in the SDK (`compileOnly`, absent from published POMs) and the vulnerable PBE/PKCS#12 path is unused by SDK code. Re-check on the next bcprov release |
+| `org.bouncycastle:bcpkix-jdk18on` | `1.86` | CVE-2026-8763, CVE-2026-71888, CVE-2026-71889 (build-toolchain classpath, `lint-gradle`) |
+| `org.bouncycastle:bcutil-jdk18on` | `1.86` | CVE-2026-8763 (build-toolchain classpath, `lint-gradle`) |
 
 If an agent-proposed dependency upgrade would silently override one of these pins, surface it explicitly in the PR description for reviewer sign-off.
 

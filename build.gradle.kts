@@ -42,10 +42,36 @@ buildscript {
     configurations.all {
         resolutionStrategy {
             // Force secure version of bouncy castle to address security vulnerabilities
-            // Fixes CVE-2026-8763; targets build-toolchain classpath (lint-gradle)
+            // Fixes CVE-2026-8763, CVE-2026-71888, CVE-2026-71889;
+            // targets build-toolchain classpath (lint-gradle)
             force(libs.bcprov.jdk18on)
             force(libs.bcpkix.jdk18on)
             force(libs.bcutil.jdk18on)
+
+            // Force secure version of guava to address security vulnerabilities
+            // Used transitively by AGP/Dokka build toolchain. Fixes CVE-2026-102554.
+            force(libs.guava)
+
+            // Force secure version of jackson to address security vulnerabilities
+            // Used transitively by AGP/Dokka build toolchain. Fixes CVE-2026-110879.
+            force(libs.jackson.module.kotlin)
+            force(libs.jackson.dataformat.xml)
+            force(libs.jackson.databind)
+
+            // Force secure version of asm to address security vulnerabilities
+            // Used transitively by AGP/lint build toolchain and Robolectric (test).
+            // Fixes CVE-2026-110257 through CVE-2026-110263, CVE-2026-110591,
+            // CVE-2026-110270, CVE-2026-110262.
+            force(libs.asm)
+            force(libs.asm.commons)
+            force(libs.asm.analysis)
+            force(libs.asm.tree)
+            force(libs.asm.util)
+
+            // Force secure version of jaxb-runtime to address security vulnerabilities
+            // Used transitively by AGP lint toolchain (build-time only, not shipped
+            // in the SDK). 2.3.9 is the final patch of the javax-jaxb 2.3.x line.
+            force(libs.jaxb.runtime)
         }
     }
 }
@@ -70,11 +96,32 @@ allprojects {
             force(libs.bcpkix.jdk18on)
             force(libs.bcutil.jdk18on)
 
-            // Updated to 2.22.3 per Mend SCA vulnerability [CVE-2026-89407],
-            // [CVE-2026-89425], [CVE-2026-91776], [CVE-2026-91777] from dokka project.
+            // Updated to 2.22.4 per Mend SCA vulnerability [CVE-2026-110879]
+            // (and previously [CVE-2026-89407], [CVE-2026-89425], [CVE-2026-91776],
+            // [CVE-2026-91777]) from dokka project.
             force(libs.jackson.module.kotlin)
             force(libs.jackson.dataformat.xml)
             force(libs.jackson.databind)
+
+            // Force secure version of guava to address security vulnerabilities
+            // Used transitively by AGP/Dokka build toolchain (build-time only,
+            // not shipped in the SDK). Fixes CVE-2026-102554.
+            force(libs.guava)
+
+            // Force secure version of asm to address security vulnerabilities
+            // Used transitively by AGP/lint build toolchain and Robolectric (test).
+            // Fixes CVE-2026-110257 through CVE-2026-110263, CVE-2026-110591,
+            // CVE-2026-110270, CVE-2026-110262.
+            force(libs.asm)
+            force(libs.asm.commons)
+            force(libs.asm.analysis)
+            force(libs.asm.tree)
+            force(libs.asm.util)
+
+            // Force secure version of jaxb-runtime to address security vulnerabilities
+            // Used transitively by AGP lint toolchain (build-time only, not shipped
+            // in the SDK). 2.3.9 is the final patch of the javax-jaxb 2.3.x line.
+            force(libs.jaxb.runtime)
 
             // Force secure version of netty-codec to address security vulnerabilities
             // Used transitively by com.android.tools.emulator:proto (build toolchain only)
