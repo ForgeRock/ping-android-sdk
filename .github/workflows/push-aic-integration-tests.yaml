@@ -162,9 +162,20 @@ jobs:
       # and the AVD config (-camera-back virtualscene) make the emulator's
       # camera render the QR. google_apis_playstore is required: FCM needs Play
       # services. API 34 is a good balance (sample app minSdk is 29).
+      #
+      # NOTE: android-emulator-runner runs `script` LINE BY LINE as separate
+      # `sh -c` processes — no state survives between lines and multi-line
+      # constructs fail with syntax errors. The whole harness therefore lives
+      # in run-on-emulator.sh, invoked here as a single line; values pass via
+      # `env` (secrets included), not inline interpolation.
       - name: Run push e2e flows on emulator
         timeout-minutes: 35
         uses: reactivecircus/android-emulator-runner@v2
+        env:
+          SAMPLE_APP_APK: ${{ runner.temp }}/sample-app.apk
+          PUSH_E2E_PASSWORD: ${{ secrets.PUSH_E2E_PASSWORD }}
+          SVCACCT_ID: ${{ secrets.SVCACCT_ID }}
+          SVCACCT_JWK: ${{ secrets.SVCACCT_JWK }}
         with:
           api-level: 34
           target: google_apis_playstore
@@ -173,65 +184,7 @@ jobs:
           force-avd-creation: false
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back virtualscene -camera-front emulated
           disable-animations: true
-          script: |
-            set -euo pipefail
-
-            # --- install the sample app --------------------------------------
-            adb install -r "${{ runner.temp }}/sample-app.apk"
-            adb shell pm grant com.pingidentity.samples.pingsampleapp android.permission.CAMERA
-            adb shell pm grant com.pingidentity.samples.pingsampleapp android.permission.POST_NOTIFICATIONS
-
-            # --- resolve the SDK root ---------------------------------------
-            # The ubuntu-24.04 runner image does NOT export ANDROID_HOME into the
-            # emulator-runner script shell (the SDK lives at /usr/local/lib/android/sdk);
-            # fall back through the known locations so the patch and poster service
-            # can find Toren1BD.posters.
-            SDK_ROOT="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
-            export ANDROID_HOME="$SDK_ROOT"
-
-            # --- virtual-scene poster geometry -----------------------------
-            # Patch the Toren1BD scene so the `table` poster sits flat, centered,
-            # close to the camera (the QR must fill the scanner's view). Keep a
-            # backup; the emulator reads this file at boot.
-            RESOURCES="${SDK_ROOT}/emulator/resources/Toren1BD.posters"
-            if [ ! -f "$RESOURCES" ]; then
-              echo "::error::Toren1BD.posters not found at $RESOURCES"
-              ls "${SDK_ROOT}/emulator/resources" || true
-              exit 1
-            fi
-            cp "$RESOURCES" "$RESOURCES.bak"
-            python3 .github/scripts/push-e2e/patch-poster-geometry.py
-
-            # --- make the resources dir writable at the poster path ---------
-            # The poster service writes QR PNGs into EMULATOR_RESOURCES_DIR; on the
-            # runner this is under the SDK root, writable without sudo.
-            export EMULATOR_RESOURCES_DIR="${SDK_ROOT}/emulator/resources"
-
-            # --- poster service ---------------------------------------------
-            cd .github/scripts/push-e2e
-            npm install --no-audit --no-fund --ignore-scripts
-            node poster-service.mjs > /tmp/poster-service.log 2>&1 &
-            cd ../../..
-
-            for i in $(seq 1 30); do
-              curl -sf http://127.0.0.1:4724/health >/dev/null && break
-              [ "$i" = 30 ] && { echo "::error::poster service did not start"; cat /tmp/poster-service.log; exit 1; }
-              sleep 1
-            done
-            echo "poster service up"
-
-            # --- flows --------------------------------------------------------
-            export PUSH_E2E_PASSWORD="${{ secrets.PUSH_E2E_PASSWORD }}"
-            # Mint a fresh admin bearer token from the service account (no
-            # long-lived secret to rotate): JWT assertion -> OAuth2 exchange.
-            export PUSH_E2E_ADMIN_TOKEN="$(
-              SVCACCT_ID="${{ secrets.SVCACCT_ID }}" \
-              SVCACCT_JWK="${{ secrets.SVCACCT_JWK }}" \
-              AIC_HOST="${{ inputs.push_host }}" \
-              node .github/scripts/push-e2e/mint-admin-token.mjs
-            )"
-            cd .github/scripts/push-e2e
-            node run-push-flows.mjs
+          script: bash .github/scripts/push-e2e/run-on-emulator.sh
 
       - name: Collect diagnostics on failure
         if: failure()
