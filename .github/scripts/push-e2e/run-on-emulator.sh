@@ -49,9 +49,11 @@ cp "$RESOURCES" "$RESOURCES.bak"
 python3 .github/scripts/push-e2e/patch-poster-geometry.py
 
 # --- poster service -----------------------------------------------------------
-cd .github/scripts/push-e2e
-npm install --no-audit --no-fund --ignore-scripts
-node poster-service.mjs > /tmp/poster-service.log 2>&1 &
+# Start the service from its own directory (npm/node resolution), but keep the
+# workspace as the base for every later path (mint-admin-token, flow runner).
+( cd .github/scripts/push-e2e \
+  && npm install --no-audit --no-fund --ignore-scripts \
+  && node poster-service.mjs > /tmp/poster-service.log 2>&1 ) &
 
 for i in $(seq 1 30); do
   curl -sf http://127.0.0.1:4724/health >/dev/null && break
