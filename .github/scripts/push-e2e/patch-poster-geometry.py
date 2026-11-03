@@ -20,12 +20,12 @@ import os
 import re
 import sys
 
-path = os.path.join(
-    os.environ.get("ANDROID_HOME", os.path.expanduser("~/Library/Android/sdk")),
-    "emulator",
-    "resources",
-    "Toren1BD.posters",
+sdk_root = (
+    os.environ.get("ANDROID_HOME")
+    or os.environ.get("ANDROID_SDK_ROOT")
+    or os.path.expanduser("~/Library/Android/sdk")
 )
+path = os.path.join(sdk_root, "emulator", "resources", "Toren1BD.posters")
 
 content = open(path).read()
 
