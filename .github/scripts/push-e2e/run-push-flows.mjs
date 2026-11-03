@@ -1,0 +1,525 @@
+#!/usr/bin/env node
+/*
+ * Copyright (c) 2026 Ping Identity Corporation. All rights reserved.
+ *
+ * This software may be modified and distributed under the terms
+ * of the MIT license. See the LICENSE file for details.
+ */
+
+// Push e2e flow runner (CI + local): drives the sample app through push
+// registration and push authentication against a live AIC tenant, using plain
+// adb + uiautomator instead of Appium.
+//
+// Flow (mirrors the openam#28854 POC, adapted to the sample app's Compose UI):
+//
+//   1. POST to push-reg-v1 with zero-page login headers -> registration URI
+//      from the HiddenValueCallback (IDToken3 / mfaDeviceRegistration)
+//   2. POST the URI to the poster service -> QR appears in the virtual scene
+//   3. Drive the app: HOME -> "MFA Accounts" -> FAB "Add Account" ->
+//      "Scan QR Code" -> camera scans the virtual scene -> app POSTs the
+//      registration response to AM -> AM confirms -> tokenId
+//   4. POST to push-auth-v1 -> AM sends an FCM push -> approve it in-app
+//      (notification drawer Approve action or the in-app response screen)
+//   5. Resume the AM transaction -> tokenId
+//
+// Configuration (env):
+//   PUSH_E2E_HOST       tenant host, e.g. openam-sdks.forgeblocks.com   (required)
+//   PUSH_E2E_REALM      realm path                                      (default alpha)
+//   PUSH_E2E_TREE_REG   registration journey                            (default push-reg-v1)
+//   PUSH_E2E_TREE_AUTH  authentication journey                          (default push-auth-v1)
+//   PUSH_E2E_USER       zero-page username                              (required)
+//   PUSH_E2E_PASSWORD   zero-page password (may be literal "ignored" if the
+//                       tree's ZeroPageLoginNode does not validate)     (default ignored)
+//   POSTER_SERVICE_URL  poster service base                             (default http://127.0.0.1:4724)
+//   ANDROID_SERIAL      pinned emulator serial                          (optional)
+//   SAMPLE_APP_PKG      sample app package                              (default com.pingidentity.samples.pingsampleapp)
+//   PUSH_E2E_TIMEOUT_MS overall deadline per flow                       (default 120000)
+
+import { execFile as execFileCallback } from 'node:child_process';
+import { promisify } from 'node:util';
+
+const execFile = promisify(execFileCallback);
+
+const HOST = required('PUSH_E2E_HOST');
+const REALM = process.env.PUSH_E2E_REALM || 'alpha';
+const TREE_REG = process.env.PUSH_E2E_TREE_REG || 'push-reg-v1';
+const TREE_AUTH = process.env.PUSH_E2E_TREE_AUTH || 'push-auth-v1';
+const USER = required('PUSH_E2E_USER');
+const PASSWORD = process.env.PUSH_E2E_PASSWORD || 'ignored';
+const POSTER = process.env.POSTER_SERVICE_URL || 'http://127.0.0.1:4724';
+const PKG = process.env.SAMPLE_APP_PKG || 'com.pingidentity.samples.pingsampleapp';
+const OVERALL_MS = Number(process.env.PUSH_E2E_TIMEOUT_MS || 120_000);
+
+const ADB_ARGS = process.env.ANDROID_SERIAL ? ['-s', process.env.ANDROID_SERIAL] : [];
+
+function required(name) {
+  const value = process.env[name];
+  if (!value) {
+    console.error(`Missing required env ${name}`);
+    process.exit(2);
+  }
+  return value;
+}
+
+async function adb(args, opts = {}) {
+  return execFile('adb', [...ADB_ARGS, ...args], {
+    encoding: 'utf8',
+    maxBuffer: 8_388_608,
+    ...opts,
+  });
+}
+
+async function shell(cmd) {
+  const result = await adb(['shell', cmd]);
+  return (result.stdout ?? '').replace(/\r/g, '');
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function uiDump() {
+  await shell('uiautomator dump /sdcard/window.xml');
+  return shell('cat /sdcard/window.xml');
+}
+
+// Center of the first node whose content-desc or text matches `needle`.
+// Note: uiautomator XML lists BOTH text and content-desc attributes on every
+// node; match per-node on either attribute rather than a single regex over
+// attribute pairs (text="" would otherwise shadow a later content-desc hit).
+function findNodeBounds(source, needle) {
+  const nodeRe = /<node\b[^>]*>/g;
+  let node;
+  while ((node = nodeRe.exec(source)) !== null) {
+    const markup = node[0];
+    if (!markup.includes(needle)) {
+      continue;
+    }
+    const desc = markup.match(/content-desc="([^"]*)"/);
+    const text = markup.match(/\btext="([^"]*)"/);
+    const label = (desc?.[1] ?? '') || (text?.[1] ?? '');
+    if (!label.includes(needle)) {
+      continue;
+    }
+    const bounds = markup.match(/bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"/);
+    if (!bounds) {
+      continue;
+    }
+    const x1 = Number(bounds[1]);
+    const y1 = Number(bounds[2]);
+    const x2 = Number(bounds[3]);
+    const y2 = Number(bounds[4]);
+    return { x: Math.round((x1 + x2) / 2), y: Math.round((y1 + y2) / 2) };
+  }
+  return null;
+}
+
+async function tapLabel(needle, { timeoutMs = 10_000, pollMs = 1_000, required = true } = {}) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const source = await uiDump();
+    const point = findNodeBounds(source, needle);
+    if (point) {
+      await adb(['shell', 'input', 'tap', String(point.x), String(point.y)]);
+      return point;
+    }
+    await sleep(pollMs);
+  }
+  if (required) {
+    throw new Error(`UI anchor not found within ${timeoutMs}ms: "${needle}"`);
+  }
+  return null;
+}
+
+async function waitForLabel(needle, timeoutMs) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const source = await uiDump();
+    if (source.includes(needle)) {
+      return source;
+    }
+    await sleep(1_000);
+  }
+  throw new Error(`UI state not reached within ${timeoutMs}ms: "${needle}"`);
+}
+
+// --------------------------------------------------------------------------
+// AM client (zero-page login + callback-echo resume, as in the POC scripts)
+// --------------------------------------------------------------------------
+
+function amHeaders(refererTree) {
+  return {
+    Accept: 'application/json',
+    'Accept-API-Version': 'protocol=1.0,resource=2.1',
+    'Content-Type': 'application/json',
+    Origin: `https://${HOST}`,
+    Referer: `https://${HOST}/am/XUI/?realm=/${REALM}&authIndexType=service&authIndexValue=${refererTree}`,
+    'X-OpenAM-Username': USER,
+    'X-OpenAM-Password': PASSWORD,
+    'x-requested-with': 'forgerock-sdk',
+  };
+}
+
+async function amAuthenticate(tree, { zeroPage = true, cookies = new Map(), body = '' } = {}) {
+  const url = `https://${HOST}/am/json/realms/root/realms/${REALM}/authenticate?authIndexType=service&authIndexValue=${tree}`;
+  const headers = { ...amHeaders(tree) };
+  if (!zeroPage) {
+    delete headers['X-OpenAM-Username'];
+    delete headers['X-OpenAM-Password'];
+  }
+  if (cookies.size > 0) {
+    headers.Cookie = [...cookies.entries()].map(([k, v]) => `${k}=${v}`).join('; ');
+  }
+
+  const response = await fetch(url, { method: 'POST', headers, body });
+  for (const raw of response.headers.getSetCookie?.() ?? []) {
+    const [pair] = raw.split(';');
+    const idx = pair.indexOf('=');
+    if (idx > 0) cookies.set(pair.slice(0, idx).trim(), pair.slice(idx + 1).trim());
+  }
+  const json = await response.json();
+  if (!response.ok) {
+    throw new Error(`AM ${tree} failed: HTTP ${response.status} ${JSON.stringify(json).slice(0, 400)} | zeroPage=${zeroPage} cookies=[${[...cookies.keys()].join(',')}] bodyLen=${body.length}`);
+  }
+  return json;
+}
+
+// Never replay zero-page headers on continuations (breaks AM zero-page handling);
+// strip TextOutputCallbacks (display-only) from the echo.
+function continuationBody(amResponse) {
+  return JSON.stringify({
+    authId: amResponse.authId,
+    callbacks: (amResponse.callbacks ?? []).filter((cb) => cb.type !== 'TextOutputCallback'),
+  });
+}
+
+async function amResumeUntilToken(tree, amResponse, cookies, { timeoutMs = OVERALL_MS, intervalMs = 2_000 } = {}) {
+  const deadline = Date.now() + timeoutMs;
+  let payload = continuationBody(amResponse);
+  while (Date.now() < deadline) {
+    const json = await amAuthenticate(tree, { zeroPage: false, cookies, body: payload });
+    if (json.tokenId) {
+      return json.tokenId;
+    }
+    if (!json.callbacks) {
+      throw new Error(`AM ${tree}: unexpected continuation response ${JSON.stringify(json).slice(0, 300)}`);
+    }
+    payload = continuationBody(json);
+    await sleep(intervalMs);
+  }
+  throw new Error(`AM ${tree}: timed out waiting for tokenId`);
+}
+
+function extractRegistrationUri(amResponse) {
+  const uris = (amResponse.callbacks ?? [])
+    .filter((cb) => cb.type === 'HiddenValueCallback')
+    .flatMap((cb) => cb.output ?? [])
+    .filter((o) => o.name === 'value' && typeof o.value === 'string' && o.value.startsWith('pushauth://'))
+    .map((o) => o.value);
+  if (uris.length !== 1) {
+    throw new Error(`Expected exactly one pushauth:// registration URI, got ${uris.length}`);
+  }
+  return uris[0];
+}
+
+async function posterSwap(uri) {
+  const response = await fetch(`${POSTER}/poster`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ uri }),
+  });
+  const body = await response.json();
+  if (!response.ok) {
+    throw new Error(`Poster swap failed: HTTP ${response.status} ${JSON.stringify(body)}`);
+  }
+  return body;
+}
+
+// --------------------------------------------------------------------------
+// App navigation helpers
+// --------------------------------------------------------------------------
+
+// Wipe the app's data (accounts, FCM token, settings) so every run starts from
+// the same first-launch state. Required between runs: a registered account
+// makes the next scan fail with DuplicateCredentialException ("account already
+// exists"). Re-grants runtime permissions (pm clear revokes them) and relaunches.
+async function resetAppData() {
+  console.log('[push-e2e] resetting app data (pm clear + permission re-grant)');
+  await adb(['shell', 'pm', 'clear', PKG]);
+  await adb(['shell', 'pm', 'grant', PKG, 'android.permission.CAMERA']);
+  await adb(['shell', 'pm', 'grant', PKG, 'android.permission.POST_NOTIFICATIONS']);
+}
+
+// Delete every push device registered for the test user on the AM side, so the
+// registration tree takes the full QR path. Uses the admin token from
+// PUSH_E2E_ADMIN_TOKEN (frodo-style bearer); skipped when absent.
+async function deleteServerDevices() {
+  const token = process.env.PUSH_E2E_ADMIN_TOKEN;
+  if (!token) {
+    console.log('[push-e2e] PUSH_E2E_ADMIN_TOKEN not set; skipping server-side device cleanup');
+    return;
+  }
+  const baseUrl = `https://${HOST}/am/json/realms/root/realms/${REALM}/users/${USER}/devices/2fa/push`;
+  const response = await fetch(`${baseUrl}?_queryFilter=true`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Accept-API-Version': 'protocol=1.0,resource=1.0',
+    },
+  });
+  const json = await response.json();
+  for (const device of json.result ?? []) {
+    const id = device.uuid ?? device._id;
+    // 200 with the deleted payload = success on this endpoint; 404 = already gone.
+    const del = await fetch(`${baseUrl}/${id}`, {
+      method: 'DELETE',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Accept-API-Version': 'protocol=1.0,resource=1.0',
+      },
+    });
+    if (del.ok || del.status === 404) {
+      console.log(`[push-e2e] server device ${id} deleted: HTTP ${del.status}`);
+    } else {
+      throw new Error(`Failed to delete server device ${id}: HTTP ${del.status}`);
+    }
+  }
+}
+
+async function launchApp() {
+  // Bring the sample app to the foreground and VERIFY it owns the screen.
+  // Any other app in front (a previous test app, the launcher) would make the
+  // UI-dump anchors match against the wrong UI or hang.
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    await adb(['shell', 'am', 'force-stop', PKG]);
+    await sleep(1_000);
+    await adb([
+      'shell',
+      'monkey',
+      '-p',
+      PKG,
+      '-c',
+      'android.intent.category.LAUNCHER',
+      '1',
+    ]);
+    await sleep(4_000);
+    if ((await foregroundPackage()) === PKG) {
+      return;
+    }
+  }
+  throw new Error(`Sample app ${PKG} did not reach the foreground`);
+}
+
+async function foregroundPackage() {
+  // API-level dependent: newer builds print "topResumedActivity=", older ones
+  // "ResumedActivity:". Both name the package as "<pkg>/<activity>" inside the
+  // ActivityRecord; match either separator.
+  const out = await shell('dumpsys activity activities | grep -E "ResumedActivity"');
+  const match = out.match(/ResumedActivity[:=]\s*ActivityRecord\{[^}]*\s([^\s/]+)\//);
+  return match ? match[1] : null;
+}
+
+async function navigateToAccounts() {
+  // HOME -> MFA section -> "MFA Accounts" row (subtitle "Manage TOPT, HOTP and
+  // push accounts"). The subtitle is the unique anchor: a PingOne MFA section
+  // item also displays "MFA Accounts" as its title, so match the subtitle text.
+  // The row sits below the fold; scroll down until it enters the accessibility
+  // tree, then tap it. If the app is already on the Accounts screen (leftover
+  // state), skip navigation.
+  {
+    const source = await uiDump();
+    if (source.includes('Add Account') || source.includes('No accounts')) {
+      return; // already there
+    }
+  }
+  const deadline = Date.now() + 45_000;
+  while (Date.now() < deadline) {
+    const source = await uiDump();
+    if (source.includes('Add Account') || source.includes('No accounts')) {
+      return; // Accounts screen reached (post-tap)
+    }
+    const point = findNodeBounds(source, 'Manage TOPT');
+    if (point) {
+      await adb(['shell', 'input', 'tap', String(point.x), String(point.y)]);
+      await sleep(2_000);
+      continue;
+    }
+    await adb(['shell', 'input', 'swipe', '540', '1500', '540', '600', '600']);
+    await sleep(1_200);
+  }
+  throw new Error('UI anchor not found within 45000ms: "Manage TOPT" row');
+}
+
+async function scanQrViaApp() {
+  // Accounts screen: FAB "Add Account" opens the menu with "Scan QR Code".
+  await tapLabel('Add Account', { timeoutMs: 15_000 });
+  await tapLabel('Scan QR Code', { timeoutMs: 10_000 });
+  // The scanner auto-decodes from the virtual scene; success returns to the
+  // Accounts screen and shows the new account ("account added successfully"
+  // snackbar, account row with issuer). Wait for the scanner screen to close.
+  await sleep(2_000);
+}
+
+async function registeredAccountVisible(timeoutMs = 45_000) {
+  // Success signals, in order of decisiveness:
+  //   1. "Account added successfully" snackbar (shown right after registration)
+  //   2. an account row on the Accounts screen — trusted because the run
+  //      starts from a pm-cleared app (empty state)
+  // Failure signal: the SDK's DuplicateCredentialException text — means stale
+  // app state survived and the reset did not happen.
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const source = await uiDump();
+    if (source.includes('Account added successfully')) {
+      return true;
+    }
+    if (source.includes('already exists')) {
+      throw new Error(
+        'Registration rejected: credential already exists on the device (stale app state — resetAppData did not run?)',
+      );
+    }
+    // Scanner closed and an account row is showing (pm-clear guarantees it's new)
+    if (source.includes('ForgeRock') && !source.includes('Scan QR Code')) {
+      return true;
+    }
+    await sleep(2_000);
+  }
+  return false;
+}
+
+async function dismissScannerIfOpen() {
+  // After a successful scan the app navigates back to Accounts automatically.
+  // If a stale frame produced a decode error dialog, try to dismiss it.
+  const source = await uiDump();
+  if (source.includes('OK') && source.includes('dialog')) {
+    const point = findNodeBounds(source, 'OK');
+    if (point) {
+      await adb(['shell', 'input', 'tap', String(point.x), String(point.y)]);
+    }
+  }
+}
+
+// --------------------------------------------------------------------------
+// Push authentication approval
+// --------------------------------------------------------------------------
+
+// The in-app push list opens the response screen with an "Approve" button.
+// Alternative: approve via the system notification's action button.
+async function approvePush(timeoutMs = 90_000) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const source = await uiDump();
+    // 1) In-app response screen "Approve" button (PushNotificationActivity or
+    //    NotificationResponseScreen).
+    let point = findNodeBounds(source, 'Approve');
+    if (point) {
+      await adb(['shell', 'input', 'tap', String(point.x), String(point.y)]);
+      return 'in-app';
+    }
+    // 2) System notification action button.
+    point = await notificationApproveAction();
+    if (point) {
+      await adb(['shell', 'input', 'tap', String(point.x), String(point.y)]);
+      return 'notification-action';
+    }
+    // 3) Pull the notification drawer open once, in case the head-up
+    //    notification has receded but the drawer holds the Approve action.
+    await openNotificationDrawerOnce(deadline);
+    await sleep(2_000);
+  }
+  throw new Error(`No Approve control appeared within ${timeoutMs}ms`);
+}
+
+let drawerOpened = false;
+async function openNotificationDrawerOnce(deadline) {
+  if (drawerOpened || Date.now() > deadline - 20_000) {
+    return;
+  }
+  drawerOpened = true;
+  await adb(['shell', 'cmd', 'statusbar', 'expand-notifications']);
+  await sleep(1_500);
+}
+
+async function notificationApproveAction() {
+  // Notification action buttons are not in the accessibility tree of the app;
+  // read the notification's big-content view via dumpsys instead.
+  try {
+    const out = await shell('dumpsys notification --noredact | grep -A5 "android.text" | head -40');
+    if (out.includes('Approve')) {
+      // fall through: the drawer tap above brings the buttons on screen
+      return null;
+    }
+  } catch {
+    // ignore
+  }
+  return null;
+}
+
+// --------------------------------------------------------------------------
+// Main
+// --------------------------------------------------------------------------
+
+async function main() {
+  console.log(`[push-e2e] tenant=${HOST} realm=${REALM} reg=${TREE_REG} auth=${TREE_AUTH} user=${USER}`);
+
+  // ---------- Cleanup: fresh state on device and server ----------
+  await deleteServerDevices();
+  await resetAppData();
+
+  // ---------- Push registration ----------
+  // ORDER MATTERS: the AM transaction's authId expires after ~120 s (measured),
+  // so the app must already be sitting on the scanner screen BEFORE the
+  // transaction starts — the QR lands in the virtual scene seconds later and
+  // the always-on scanner decodes it immediately.
+  console.log('[push-e2e] step 1: bring the app to the scanner screen');
+  await launchApp();
+  await navigateToAccounts();
+
+  console.log('[push-e2e] step 2: start push registration transaction + swap QR');
+  const regCookies = new Map();
+  const regTx = await amAuthenticate(TREE_REG, { cookies: regCookies });
+  const regUri = extractRegistrationUri(regTx);
+  console.log(`[push-e2e] registration URI: ${regUri.slice(0, 80)}...`);
+  await posterSwap(regUri);
+
+  console.log('[push-e2e] step 3: open the scanner and wait for registration');
+  await scanQrViaApp();
+
+  // The run starts from a pm-cleared app (empty Accounts screen), so any
+  // account row visible after the scan belongs to this run's registration.
+  const visible = await registeredAccountVisible();
+  if (!visible) {
+    // Stale-frame decode errors are the POC's dominant transient failure; the
+    // worker retried once there, we re-run the scan once here.
+    console.log('[push-e2e] account not visible yet; re-running scan once (stale-frame retry)');
+    await dismissScannerIfOpen();
+    // Re-swap the same transaction's URI: the QR may have expired server-side.
+    await posterSwap(regUri);
+    await scanQrViaApp();
+    if (!(await registeredAccountVisible(30_000))) {
+      throw new Error('Registration did not complete: account never appeared on the Accounts screen');
+    }
+  }
+  console.log('[push-e2e] registration confirmed on device; resuming AM transaction');
+
+  const regToken = await amResumeUntilToken(TREE_REG, regTx, regCookies);
+  console.log(`[push-e2e] REGISTRATION OK tokenId=${regToken.slice(0, 16)}...`);
+
+  // ---------- Push authentication ----------
+  console.log('[push-e2e] step 4: start push authentication transaction');
+  const authCookies = new Map();
+  const authTx = await amAuthenticate(TREE_AUTH, { cookies: authCookies });
+
+  console.log('[push-e2e] step 5: wait for the FCM push and approve it in the app');
+  const how = await approvePush();
+  console.log(`[push-e2e] push approved via ${how}`);
+
+  const authToken = await amResumeUntilToken(TREE_AUTH, authTx, authCookies);
+  console.log(`[push-e2e] AUTH OK tokenId=${authToken.slice(0, 16)}...`);
+
+  console.log('[push-e2e] PUSH E2E PASSED');
+}
+
+main().catch((error) => {
+  console.error(`[push-e2e] FAILED: ${error?.message ?? error}`);
+  process.exit(1);
+});

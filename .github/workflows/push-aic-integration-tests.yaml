@@ -1,0 +1,267 @@
+#
+# Copyright (c) 2026 Ping Identity Corporation. All rights reserved.
+#
+# This software may be modified and distributed under the terms
+# of the MIT license. See the LICENSE file for details.
+#
+
+name: Push AIC integration tests
+
+# Push registration/authentication e2e against a live AIC tenant, exercising the
+# SDK's push module (mfa/push) through the sample app on an Android emulator.
+#
+# Shape mirrors integration-tests.yaml (KVM emulator on ubuntu-latest), with the
+# sample app as the client under test instead of Gradle instrumented tests:
+#
+#   build sample app (google-services.json from secrets)
+#     -> boot emulator (Play Store image, virtualscene back camera)
+#     -> start poster service (QR hot-swap into the virtual scene)
+#     -> run flows: app scans the registration QR, AM confirms the device,
+#        push-auth tree sends an FCM push, the app approves it
+#
+# App-level tenant config is NOT needed: the pushauth:// URI embedded in the QR
+# carries the registration/authentication endpoints and shared secret, so the
+# app talks straight to the tenant that issued it. Only FCM delivery depends on
+# google-services.json matching the tenant's Push Notification (SNS) service.
+#
+# Tenant prerequisites (provisioned once; see
+# manual-tests/push-automation/SDKS-5505-local-run-guide.md for the journey
+# definitions and the provisioning notes):
+#   - journeys push-reg-v1 / push-auth-v1 in the realm (Zero Page Login ->
+#     Push Registration / Sender -> Wait -> Verifier)
+#   - Push Notification service configured (SNS delegate, GCM platform app)
+#   - a test user; the FCM project in google-services.json must be the one the
+#     tenant's SNS GCM platform app sends to
+
+on:
+  workflow_call:
+    inputs:
+      head_sha:
+        description: Head commit SHA to check out
+        type: string
+      head_repo:
+        description: Head repository to check out
+        type: string
+      push_host:
+        description: AIC tenant host (FQDN)
+        type: string
+        required: true
+      push_realm:
+        description: Realm path
+        type: string
+        default: alpha
+      push_user:
+        description: Test user for zero-page login
+        type: string
+        required: true
+      push_reg_tree:
+        description: Registration journey name
+        type: string
+        default: push-reg-v1
+      push_auth_tree:
+        description: Authentication journey name
+        type: string
+        default: push-auth-v1
+    secrets:
+      GOOGLE_SERVICES:
+        description: google-services.json matching the tenant's SNS GCM platform app
+        required: true
+      PUSH_E2E_PASSWORD:
+        description: Zero-page login password for the test user
+        required: true
+      SVCACCT_ID:
+        description: AIC service account UUID used to mint the admin token (device cleanup)
+        required: true
+      SVCACCT_JWK:
+        description: Service account private JWK (JSON) used to mint the admin token
+        required: true
+      SLACK_WEBHOOK:
+        description: Slack Notifier Incoming Webhook
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  push-aic-integration-tests:
+    name: Push e2e (sample app on emulator)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    env:
+      ANDROID_SERIAL: emulator-5554
+      SAMPLE_APP_PKG: com.pingidentity.samples.pingsampleapp
+      EMULATOR_RESOURCES_DIR: /opt/android-sdk/emulator/resources
+      PUSH_E2E_HOST: ${{ inputs.push_host }}
+      PUSH_E2E_REALM: ${{ inputs.push_realm }}
+      PUSH_E2E_USER: ${{ inputs.push_user }}
+      PUSH_E2E_TREE_REG: ${{ inputs.push_reg_tree }}
+      PUSH_E2E_TREE_AUTH: ${{ inputs.push_auth_tree }}
+
+    steps:
+      - name: Clone the repository
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.head_sha || github.event.pull_request.head.sha }}
+          repository: ${{ inputs.head_repo || github.event.pull_request.head.repo.full_name }}
+          persist-credentials: false
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # ---------------------------------------------------------------------
+      # Build the sample app with the tenant-matching Firebase config
+      # ---------------------------------------------------------------------
+
+      - name: Write google-services.json from secret
+        env:
+          GOOGLE_SERVICES: ${{ secrets.GOOGLE_SERVICES }}
+        run: |
+          if [ -z "$GOOGLE_SERVICES" ]; then
+            echo "::error::GOOGLE_SERVICES secret is empty; FCM delivery cannot work without it."
+            exit 1
+          fi
+          # The repo ships a placeholder google-services.json; replace it with the
+          # tenant-matching config so the FCM project matches the tenant's SNS GCM app.
+          printf '%s' "$GOOGLE_SERVICES" > samples/pingsampleapp/google-services.json
+          python3 -c "import json; json.load(open('samples/pingsampleapp/google-services.json'))" \
+            || { echo "::error::GOOGLE_SERVICES secret is not valid JSON"; exit 1; }
+
+      - name: Build sample app APK
+        run: |
+          ./gradlew :samples:pingsampleapp:assembleDebug \
+            --stacktrace \
+            --build-cache \
+            --parallel
+
+      - name: Stage sample app APK
+        run: |
+          ls -la samples/pingsampleapp/build/outputs/apk/debug/
+          cp samples/pingsampleapp/build/outputs/apk/debug/pingsampleapp-debug.apk "$RUNNER_TEMP/sample-app.apk"
+
+      # ---------------------------------------------------------------------
+      # Emulator + poster service + flows
+      # ---------------------------------------------------------------------
+
+      # The virtual-scene poster geometry (table poster in front of the camera)
+      # and the AVD config (-camera-back virtualscene) make the emulator's
+      # camera render the QR. google_apis_playstore is required: FCM needs Play
+      # services. API 34 is a good balance (sample app minSdk is 29).
+      - name: Run push e2e flows on emulator
+        timeout-minutes: 35
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis_playstore
+          arch: x86_64
+          channel: stable
+          force-avd-creation: false
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back virtualscene -camera-front emulated
+          disable-animations: true
+          script: |
+            set -euo pipefail
+
+            # --- install the sample app --------------------------------------
+            adb install -r "${{ runner.temp }}/sample-app.apk"
+            adb shell pm grant com.pingidentity.samples.pingsampleapp android.permission.CAMERA
+            adb shell pm grant com.pingidentity.samples.pingsampleapp android.permission.POST_NOTIFICATIONS
+
+            # --- virtual-scene poster geometry -----------------------------
+            # Patch the Toren1BD scene so the `table` poster sits flat, centered,
+            # close to the camera (the QR must fill the scanner's view). Keep a
+            # backup; the emulator reads this file at boot.
+            RESOURCES="${ANDROID_HOME}/emulator/resources/Toren1BD.posters"
+            cp "$RESOURCES" "$RESOURCES.bak"
+            python3 - <<'PYEOF'
+            import re, os
+            path = os.path.join(os.environ['ANDROID_HOME'], 'emulator/resources/Toren1BD.posters')
+            content = open(path).read()
+            block = re.search(r'poster table\n(.*?)(?:\n\n|\Z)', content, re.S)
+            if not block:
+                raise SystemExit('poster table block not found')
+            new_block = "poster table\nsize 1 1\nposition 0 0 -1.5\nrotation 0 0 0\n"
+            content = content[:block.start()] + new_block + content[block.end():]
+            open(path, 'w').write(content)
+            print('patched Toren1BD.posters table geometry')
+            PYEOF
+
+            # --- make the resources dir writable at the poster path ---------
+            # The poster service writes QR PNGs into EMULATOR_RESOURCES_DIR; on the
+            # runner this is under ANDROID_HOME, writable without sudo.
+            export EMULATOR_RESOURCES_DIR="${ANDROID_HOME}/emulator/resources"
+
+            # --- poster service ---------------------------------------------
+            cd .github/scripts/push-e2e
+            npm install --no-audit --no-fund --ignore-scripts
+            node poster-service.mjs > /tmp/poster-service.log 2>&1 &
+            cd ../../..
+
+            for i in $(seq 1 30); do
+              curl -sf http://127.0.0.1:4724/health >/dev/null && break
+              [ "$i" = 30 ] && { echo "::error::poster service did not start"; cat /tmp/poster-service.log; exit 1; }
+              sleep 1
+            done
+            echo "poster service up"
+
+            # --- flows --------------------------------------------------------
+            export PUSH_E2E_PASSWORD="${{ secrets.PUSH_E2E_PASSWORD }}"
+            # Mint a fresh admin bearer token from the service account (no
+            # long-lived secret to rotate): JWT assertion -> OAuth2 exchange.
+            export PUSH_E2E_ADMIN_TOKEN="$(
+              SVCACCT_ID="${{ secrets.SVCACCT_ID }}" \
+              SVCACCT_JWK="${{ secrets.SVCACCT_JWK }}" \
+              AIC_HOST="${{ inputs.push_host }}" \
+              node .github/scripts/push-e2e/mint-admin-token.mjs
+            )"
+            cd .github/scripts/push-e2e
+            node run-push-flows.mjs
+
+      - name: Collect diagnostics on failure
+        if: failure()
+        run: |
+          mkdir -p diagnostics
+          adb -s emulator-5554 shell uiautomator dump /sdcard/window.xml >/dev/null 2>&1 \
+            && adb -s emulator-5554 shell cat /sdcard/window.xml > diagnostics/window.xml \
+            || echo "no ui dump" > diagnostics/window.xml
+          adb -s emulator-5554 logcat -d > diagnostics/logcat.txt 2>/dev/null || true
+          cp /tmp/poster-service.log diagnostics/ 2>/dev/null || true
+          ls -la diagnostics/
+
+      - name: Upload diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: push-e2e-diagnostics
+          path: diagnostics/
+
+      - name: Send slack notification
+        uses: 8398a7/action-slack@v3
+        with:
+          status: custom
+          fields: all
+          custom_payload: |
+            {
+              attachments: [{
+                title: ':no_entry: Push AIC integration tests failed',
+                color: 'danger',
+                text: `\nWorkflow: ${process.env.AS_WORKFLOW} -> ${process.env.AS_JOB}\nPull request: ${process.env.AS_PULL_REQUEST}\nCommit: ${process.env.AS_COMMIT} by ${process.env.AS_AUTHOR}`,
+              }]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
+        if: failure()

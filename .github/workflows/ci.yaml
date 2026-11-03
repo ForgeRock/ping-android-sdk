@@ -137,6 +137,30 @@ jobs:
       SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
+  # Push registration/authentication e2e against the AIC tenant: sample app on
+  # an emulator, QR registration via virtual-scene poster injection, FCM push
+  # approved in-app. Gated by a repo variable so it can be enabled per repo and
+  # skipped for forks (tenant + Firebase secrets unavailable there).
+  push-aic-integration-tests:
+    name: Push AIC integration tests
+    if: ${{ vars.ENABLE_PUSH_E2E_TESTS == 'true' && github.actor != 'dependabot[bot]' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
+    needs:
+      - resolve-context
+      - copyright-check
+    uses: ./.github/workflows/push-aic-integration-tests.yaml
+    with:
+      head_sha: ${{ needs.resolve-context.outputs.head_sha }}
+      head_repo: ${{ needs.resolve-context.outputs.head_repo }}
+      push_host: ${{ vars.PUSH_E2E_HOST }}
+      push_realm: ${{ vars.PUSH_E2E_REALM }}
+      push_user: ${{ vars.PUSH_E2E_USER }}
+    secrets:
+      GOOGLE_SERVICES: ${{ secrets.GOOGLE_SERVICES }}
+      PUSH_E2E_PASSWORD: ${{ secrets.PUSH_E2E_PASSWORD }}
+      SVCACCT_ID: ${{ secrets.SVCACCT_ID }}
+      SVCACCT_JWK: ${{ secrets.SVCACCT_JWK }}
+      SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+
   # Build and sign BrowserStack test artifacts
   # Skip for dependabot and fork PRs (signing secrets unavailable for forks)
   browserstack-prepare-artifacts:
