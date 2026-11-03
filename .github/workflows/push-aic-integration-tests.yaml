@@ -187,18 +187,7 @@ jobs:
             # backup; the emulator reads this file at boot.
             RESOURCES="${ANDROID_HOME}/emulator/resources/Toren1BD.posters"
             cp "$RESOURCES" "$RESOURCES.bak"
-            python3 - <<'PYEOF'
-            import re, os
-            path = os.path.join(os.environ['ANDROID_HOME'], 'emulator/resources/Toren1BD.posters')
-            content = open(path).read()
-            block = re.search(r'poster table\n(.*?)(?:\n\n|\Z)', content, re.S)
-            if not block:
-                raise SystemExit('poster table block not found')
-            new_block = "poster table\nsize 1 1\nposition 0 0 -1.5\nrotation 0 0 0\n"
-            content = content[:block.start()] + new_block + content[block.end():]
-            open(path, 'w').write(content)
-            print('patched Toren1BD.posters table geometry')
-            PYEOF
+            python3 .github/scripts/push-e2e/patch-poster-geometry.py
 
             # --- make the resources dir writable at the poster path ---------
             # The poster service writes QR PNGs into EMULATOR_RESOURCES_DIR; on the
