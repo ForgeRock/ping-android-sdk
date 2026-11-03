@@ -186,6 +186,17 @@ jobs:
           disable-animations: true
           script: bash .github/scripts/push-e2e/run-on-emulator.sh
 
+      # Structured run log (per-step outcomes, every AM HTTP call with status +
+      # duration, final summary report) — recorded by run-push-flows.mjs and
+      # uploaded ALWAYS, success or failure, so every CI run keeps a record.
+      - name: Upload run log
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: push-e2e-run-log
+          path: /tmp/push-e2e-run.log
+          if-no-files-found: warn
+
       - name: Collect diagnostics on failure
         if: failure()
         # timeout guards against adb blocking forever on a dead emulator (this
@@ -206,6 +217,7 @@ jobs:
             echo "emulator not connected" > diagnostics/logcat.txt
           fi
           cp /tmp/poster-service.log diagnostics/ 2>/dev/null || true
+          cp /tmp/push-e2e-run.log diagnostics/ 2>/dev/null || true
           ls -la diagnostics/
 
       - name: Upload diagnostics

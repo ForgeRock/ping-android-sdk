@@ -36,9 +36,77 @@
 //   PUSH_E2E_TIMEOUT_MS overall deadline per flow                       (default 120000)
 
 import { execFile as execFileCallback } from 'node:child_process';
+import { appendFileSync, mkdirSync, readFileSync } from 'node:fs';
 import { promisify } from 'node:util';
 
 const execFile = promisify(execFileCallback);
+
+// --------------------------------------------------------------------------
+// Structured run log: every step + every AM HTTP call is appended to
+// /tmp/push-e2e-run.log (uploaded as part of the diagnostics artifact) and
+// echoed to stdout. The summary report is printed at the end of every run —
+// pass or fail.
+// --------------------------------------------------------------------------
+
+const RUN_LOG = process.env.PUSH_E2E_RUN_LOG || '/tmp/push-e2e-run.log';
+mkdirSync('/tmp', { recursive: true });
+appendFileSync(RUN_LOG, `\n==== push e2e run started ${new Date().toISOString()} ====\n`);
+
+function logRun(line) {
+  const stamped = `[${new Date().toISOString()}] ${line}`;
+  console.log(stamped);
+  try {
+    appendFileSync(RUN_LOG, `${stamped}\n`);
+  } catch {
+    // log file is best-effort; never fail the run over it
+  }
+}
+
+// Wrap fetch so every HTTP call (method, URL, status, duration, and a safe
+// summary of the JSON body) lands in the run log. Request headers are NEVER
+// logged (they carry the password and the admin token); response bodies are
+// truncated and authId/tokenId-style long values are shortened.
+let httpSeq = 0;
+const origFetch = globalThis.fetch;
+globalThis.fetch = async function loggedFetch(url, init = {}) {
+  const id = ++httpSeq;
+  const method = init.method ?? 'GET';
+  const started = Date.now();
+  logRun(`http #${id} --> ${method} ${url}`);
+  const response = await origFetch(url, init);
+  const ms = Date.now() - started;
+  let bodyNote = '';
+  try {
+    const cloned = response.clone();
+    const text = await cloned.text();
+    bodyNote = summarizeBody(text);
+  } catch {
+    bodyNote = '<unreadable body>';
+  }
+  logRun(`http #${id} <-- ${response.status} in ${ms}ms ${bodyNote}`);
+  return response;
+};
+
+function summarizeBody(text) {
+  if (!text) return '(empty body)';
+  let json;
+  try {
+    json = JSON.parse(text);
+  } catch {
+    return `text[${text.length}] ${text.slice(0, 120).replace(/\s+/g, ' ')}`;
+  }
+  const parts = [];
+  if (json.tokenId) parts.push(`tokenId=${String(json.tokenId).slice(0, 12)}...`);
+  if (json.authId) parts.push(`authId=${String(json.authId).slice(0, 12)}...`);
+  if (Array.isArray(json.callbacks)) {
+    parts.push(`callbacks=[${json.callbacks.map((cb) => cb.type).join(', ')}]`);
+  }
+  if (json.result) parts.push(`result=${json.result.length} item(s)`);
+  if (json.code || json.message) parts.push(`error=${json.code ?? ''} ${json.message ?? ''}`.trim().slice(0, 120));
+  if (json.status) parts.push(`status=${json.status}`);
+  if (!parts.length) parts.push(`keys=[${Object.keys(json).slice(0, 8).join(',')}]`);
+  return `{${parts.join(' ')}}`;
+}
 
 const HOST = required('PUSH_E2E_HOST');
 const REALM = process.env.PUSH_E2E_REALM || 'alpha';
@@ -455,71 +523,136 @@ async function notificationApproveAction() {
 }
 
 // --------------------------------------------------------------------------
-// Main
+// Main — every step is wrapped in runStep() so the run log (and the summary
+// report) shows exactly which steps succeeded before a failure.
 // --------------------------------------------------------------------------
 
+async function runStep(name, fn) {
+  logRun(`step: ${name} ...`);
+  const started = Date.now();
+  try {
+    const result = await fn();
+    logRun(`step: ${name} done in ${Date.now() - started}ms${typeof result === 'string' ? ` (${result})` : ''}`);
+    return result;
+  } catch (error) {
+    logRun(`step: ${name} FAILED after ${Date.now() - started}ms: ${error?.message ?? error}`);
+    throw error;
+  }
+}
+
 async function main() {
-  console.log(`[push-e2e] tenant=${HOST} realm=${REALM} reg=${TREE_REG} auth=${TREE_AUTH} user=${USER}`);
+  const runStarted = Date.now();
+  globalThis.__runStartedAt = runStarted;
+  logRun(`tenant=${HOST} realm=${REALM} reg=${TREE_REG} auth=${TREE_AUTH} user=${USER} pkg=${PKG} poster=${POSTER}`);
 
   // ---------- Cleanup: fresh state on device and server ----------
-  await deleteServerDevices();
-  await resetAppData();
+  await runStep('cleanup: delete server-side push devices', deleteServerDevices);
+  await runStep('cleanup: reset app data (pm clear + re-grant)', resetAppData);
 
   // ---------- Push registration ----------
   // ORDER MATTERS: the AM transaction's authId expires after ~120 s (measured),
   // so the app must already be sitting on the scanner screen BEFORE the
   // transaction starts — the QR lands in the virtual scene seconds later and
   // the always-on scanner decodes it immediately.
-  console.log('[push-e2e] step 1: bring the app to the scanner screen');
-  await launchApp();
-  await navigateToAccounts();
+  await runStep('app: launch + navigate to accounts', async () => {
+    await launchApp();
+    await navigateToAccounts();
+  });
 
-  console.log('[push-e2e] step 2: start push registration transaction + swap QR');
   const regCookies = new Map();
-  const regTx = await amAuthenticate(TREE_REG, { cookies: regCookies });
-  const regUri = extractRegistrationUri(regTx);
-  console.log(`[push-e2e] registration URI: ${regUri.slice(0, 80)}...`);
-  await posterSwap(regUri);
+  const regTx = await runStep(`AM: start registration transaction (${TREE_REG})`, () =>
+    amAuthenticate(TREE_REG, { cookies: regCookies }),
+  );
+  const regUri = await runStep('AM: extract pushauth:// registration URI', () => {
+    const uri = extractRegistrationUri(regTx);
+    logRun(`registration URI: ${uri.slice(0, 100)}...`);
+    return uri;
+  });
+  await runStep('poster: swap QR into virtual scene', () => posterSwap(regUri));
 
-  console.log('[push-e2e] step 3: open the scanner and wait for registration');
-  await scanQrViaApp();
+  await runStep('app: scan QR + wait for registration', () => scanQrViaApp());
 
   // The run starts from a pm-cleared app (empty Accounts screen), so any
   // account row visible after the scan belongs to this run's registration.
-  const visible = await registeredAccountVisible();
+  let visible = await runStep('verify: account appears on device', () => registeredAccountVisible());
   if (!visible) {
     // Stale-frame decode errors are the POC's dominant transient failure; the
     // worker retried once there, we re-run the scan once here.
-    console.log('[push-e2e] account not visible yet; re-running scan once (stale-frame retry)');
-    await dismissScannerIfOpen();
-    // Re-swap the same transaction's URI: the QR may have expired server-side.
-    await posterSwap(regUri);
-    await scanQrViaApp();
-    if (!(await registeredAccountVisible(30_000))) {
+    logRun('account not visible yet; re-running scan once (stale-frame retry)');
+    await runStep('retry: dismiss scanner + re-swap QR + rescan', async () => {
+      await dismissScannerIfOpen();
+      // Re-swap the same transaction's URI: the QR may have expired server-side.
+      await posterSwap(regUri);
+      await scanQrViaApp();
+    });
+    visible = await runStep('verify (retry): account appears on device', () => registeredAccountVisible(30_000));
+    if (!visible) {
       throw new Error('Registration did not complete: account never appeared on the Accounts screen');
     }
   }
-  console.log('[push-e2e] registration confirmed on device; resuming AM transaction');
+  logRun('registration confirmed on device; resuming AM transaction');
 
-  const regToken = await amResumeUntilToken(TREE_REG, regTx, regCookies);
-  console.log(`[push-e2e] REGISTRATION OK tokenId=${regToken.slice(0, 16)}...`);
+  const regToken = await runStep('AM: resume registration transaction -> tokenId', () =>
+    amResumeUntilToken(TREE_REG, regTx, regCookies),
+  );
+  logRun(`REGISTRATION OK tokenId=${regToken.slice(0, 16)}...`);
 
   // ---------- Push authentication ----------
-  console.log('[push-e2e] step 4: start push authentication transaction');
   const authCookies = new Map();
-  const authTx = await amAuthenticate(TREE_AUTH, { cookies: authCookies });
+  const authTx = await runStep(`AM: start authentication transaction (${TREE_AUTH})`, () =>
+    amAuthenticate(TREE_AUTH, { cookies: authCookies }),
+  );
 
-  console.log('[push-e2e] step 5: wait for the FCM push and approve it in the app');
-  const how = await approvePush();
-  console.log(`[push-e2e] push approved via ${how}`);
+  const how = await runStep('push: wait for FCM push + approve', () => approvePush());
+  logRun(`push approved via ${how}`);
 
-  const authToken = await amResumeUntilToken(TREE_AUTH, authTx, authCookies);
-  console.log(`[push-e2e] AUTH OK tokenId=${authToken.slice(0, 16)}...`);
+  const authToken = await runStep('AM: resume authentication transaction -> tokenId', () =>
+    amResumeUntilToken(TREE_AUTH, authTx, authCookies),
+  );
+  logRun(`AUTH OK tokenId=${authToken.slice(0, 16)}...`);
 
-  console.log('[push-e2e] PUSH E2E PASSED');
+  printSummary(true, runStarted);
+}
+
+// --------------------------------------------------------------------------
+// Summary report — printed at the end of EVERY run, pass or fail.
+// --------------------------------------------------------------------------
+
+function printSummary(passed, runStarted) {
+  const totalSec = Math.round((Date.now() - runStarted) / 1000);
+  const lines = [
+    '',
+    '================ PUSH E2E SUMMARY ================',
+    `result:     ${passed ? 'PASSED' : 'FAILED'}`,
+    `tenant:     ${HOST} (realm ${REALM}, user ${USER})`,
+    `journeys:   reg=${TREE_REG} auth=${TREE_AUTH}`,
+    `duration:   ${totalSec}s`,
+    ...stepsSummary(),
+    `run log:    ${RUN_LOG}`,
+    '==================================================',
+  ];
+  for (const line of lines) {
+    console.log(line);
+    try { appendFileSync(RUN_LOG, `${line}\n`); } catch { /* best-effort */ }
+  }
+}
+
+// Reconstructs the step outcomes from the run log so a failure shows which
+// steps succeeded before the failing one.
+function stepsSummary() {
+  try {
+    const content = readFileSync(RUN_LOG, 'utf8');
+    return content
+      .split('\n')
+      .filter((l) => / step: .* (done|FAILED) /.test(l))
+      .map((l) => `  ${l.replace(/^\[[^\]]+\] /, '')}`);
+  } catch {
+    return [];
+  }
 }
 
 main().catch((error) => {
   console.error(`[push-e2e] FAILED: ${error?.message ?? error}`);
+  printSummary(false, globalThis.__runStartedAt ?? Date.now());
   process.exit(1);
 });
