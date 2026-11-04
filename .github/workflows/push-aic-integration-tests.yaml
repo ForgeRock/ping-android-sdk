@@ -181,6 +181,11 @@ jobs:
           target: google_apis_playstore
           arch: x86_64
           channel: stable
+          # Without a hardware profile the AVD defaults to a 320x640 skin; the sample
+          # app's MFA section then sits off-screen and the flow's swipes (sized for a
+          # 1080p screen) miss it entirely (run 8's failure). The runner script also
+          # computes swipes from `wm size`, this just gives the app a usable screen.
+          profile: pixel_5
           force-avd-creation: false
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back virtualscene -camera-front emulated
           disable-animations: true

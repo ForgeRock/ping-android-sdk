@@ -455,10 +455,25 @@ async function navigateToAccounts() {
       await sleep(2_000);
       continue;
     }
-    await adb(['shell', 'input', 'swipe', '540', '1500', '540', '600', '600']);
+    await adb(['shell', 'input', 'swipe', ...await swipeUpCoords(), '600']);
     await sleep(1_200);
   }
   throw new Error('UI anchor not found within 45000ms: "Manage TOPT" row');
+}
+
+// Screen-relative upward swipe: from 78% height to 35% height, horizontally centered.
+// Hardcoded pixel coordinates break on the CI's default 320x640 AVD skin (run 8: the
+// swipe went off-screen, the MFA section never entered the accessibility tree).
+async function swipeUpCoords() {
+  if (!swipeUpCoords.cache) {
+    const size = await shell('wm size');
+    const match = size.match(/(\d+)x(\d+)/);
+    const width = match ? Number(match[1]) : 1080;
+    const height = match ? Number(match[2]) : 2340;
+    const x = Math.round(width / 2);
+    swipeUpCoords.cache = [String(x), String(Math.round(height * 0.78)), String(x), String(Math.round(height * 0.35))];
+  }
+  return swipeUpCoords.cache;
 }
 
 async function scanQrViaApp() {
