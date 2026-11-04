@@ -199,7 +199,12 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: push-e2e-run-log
-          path: /tmp/push-e2e-run.log
+          # The flow runner also drops a screenshot + logcat excerpt next to the
+          # log when it fails (captured before the harness trap kills the
+          # emulator — the diagnostics step below runs after that).
+          path: |
+            /tmp/push-e2e-run.log
+            push-e2e-failure.png
           if-no-files-found: warn
 
       - name: Collect diagnostics on failure

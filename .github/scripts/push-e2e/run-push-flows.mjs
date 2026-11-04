@@ -718,11 +718,28 @@ main().catch(async (error) => {
   // state without needing the diagnostics artifact.
   try {
     const source = await uiDump();
-    logRun(`UI at failure (first 2000 chars): ${source.slice(0, 2000)}`);
-    console.log(`[push-e2e] UI at failure (first 2000 chars): ${source.slice(0, 2000)}`);
+    const texts = [...source.matchAll(/text="([^"]{1,80})"/g)].map((m) => m[1]).filter((t) => t.trim());
+    const descs = [...source.matchAll(/content-desc="([^"]{1,80})"/g)].map((m) => m[1]).filter((t) => t.trim());
+    logRun(`UI at failure: text=[${texts.slice(0, 20).join(' | ')}] desc=[${descs.slice(0, 12).join(' | ')}]`);
+    console.log(`[push-e2e] UI at failure: text=[${texts.slice(0, 20).join(' | ')}] desc=[${descs.slice(0, 12).join(' | ')}]`);
   } catch (dumpError) {
     logRun(`UI at failure: dump unavailable (${dumpError?.message ?? dumpError})`);
     console.log(`[push-e2e] UI at failure: dump unavailable (${dumpError?.message ?? dumpError})`);
+  }
+  // Screenshot + logcat BEFORE the harness's cleanup trap kills the emulator
+  // (the diagnostics step runs after the script, when the emulator is gone).
+  try {
+    await shell(`screencap -p /data/local/tmp/push-e2e-failure.png`);
+    await adb(['pull', '/data/local/tmp/push-e2e-failure.png', 'push-e2e-failure.png']);
+    logRun('failure screenshot saved: push-e2e-failure.png');
+  } catch (shotError) {
+    logRun(`failure screenshot unavailable: ${shotError?.message ?? shotError}`);
+  }
+  try {
+    const logs = await shell('logcat -d -t 500 | grep -iE "MLKit|barcode|CameraX|camera2|virtualscene|qr|decode" | tail -40');
+    logRun(`scanner/camera logcat tail:\n${logs || '(no matching lines)'}`);
+  } catch {
+    // best-effort
   }
   process.exit(1);
 });
