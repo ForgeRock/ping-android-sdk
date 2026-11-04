@@ -23,12 +23,15 @@ set -euo pipefail
 
 cd "${GITHUB_WORKSPACE:-$PWD}"
 
-# Kill the emulator on the way out, whatever the exit path. Without this the
-# emulator-runner action's post-run cleanup can hang for 20-35 minutes waiting
-# on the emulator processes (seen twice on CI: the job sat silent after the
-# script's own failure until the step timeout). Killing the emulator HERE means
-# the action's cleanup finds nothing to wait on.
+# Kill the emulator AND the poster service on the way out, whatever the exit path.
+# Without this the emulator-runner action's post-run cleanup can hang for 20-35
+# minutes waiting on leftover processes (runs 5-7 sat silent after the script's
+# own failure until the step timeout / manual cancel). The emulator kill alone
+# was not enough — run 8 still hung — so also stop the poster service (a
+# background child that survives script exit) and any adb server wedge.
+POSTER_PID=""
 cleanup() {
+  [ -n "$POSTER_PID" ] && kill "$POSTER_PID" 2>/dev/null || true
   adb -s "${ANDROID_SERIAL:-emulator-5554}" emu kill >/dev/null 2>&1 || true
 }
 trap cleanup EXIT
@@ -59,11 +62,12 @@ cp "$RESOURCES" "$RESOURCES.bak"
 python3 .github/scripts/push-e2e/patch-poster-geometry.py
 
 # --- poster service -----------------------------------------------------------
-# Start the service from its own directory (npm/node resolution), but keep the
-# workspace as the base for every later path (mint-admin-token, flow runner).
-( cd .github/scripts/push-e2e \
-  && npm install --no-audit --no-fund --ignore-scripts \
-  && node poster-service.mjs > /tmp/poster-service.log 2>&1 ) &
+# npm install in a subshell (failure tolerated: node_modules may be cached),
+# then start the service as a direct background child so its PID is the node
+# process itself and cleanup() can kill it reliably.
+( cd .github/scripts/push-e2e && npm install --no-audit --no-fund --ignore-scripts ) || true
+( cd .github/scripts/push-e2e && exec node poster-service.mjs > /tmp/poster-service.log 2>&1 ) &
+POSTER_PID=$!
 
 for i in $(seq 1 30); do
   curl -sf http://127.0.0.1:4724/health >/dev/null && break
@@ -81,6 +85,8 @@ export PUSH_E2E_ADMIN_TOKEN="$(
     node .github/scripts/push-e2e/mint-admin-token.mjs
 )"
 
-# Run the flows in the foreground (NOT exec: exec replaces this shell and the
-# EXIT trap — the emulator kill — would never fire).
-node .github/scripts/push-e2e/run-push-flows.mjs
+# Run the flows with a hard wall-clock cap (NOT exec: exec replaces this shell
+# and the EXIT trap — the cleanup — would never fire). The flows' internal
+# timeouts sum to ~10 min worst case; 15 min of `timeout` guarantees the script
+# itself always ends, so the action's cleanup always has nothing to wait on.
+timeout --signal=INT --kill-after=30 900 node .github/scripts/push-e2e/run-push-flows.mjs
