@@ -12,6 +12,7 @@ import java.security.MessageDigest
 import java.security.SecureRandom
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
+import androidx.core.net.toUri
 
 private const val STATE_LENGTH_BYTES = 32
 private const val ERROR = "error"
@@ -50,9 +51,9 @@ internal fun generateState(): String = randomBase64UrlSafe(STATE_LENGTH_BYTES)
  * parsed behind a synthetic `https://x/` authority so values containing `:` or `//`
  * (e.g. an `error_uri`) are not mistaken for a URI scheme.
  */
-private fun Uri.queryOrFragmentParameter(name: String): String? =
+internal fun Uri.queryOrFragmentParameter(name: String): String? =
     getQueryParameter(name) ?: encodedFragment?.let { fragment ->
-        Uri.parse("https://x/?$fragment").getQueryParameter(name)
+        "https://x/?$fragment".toUri().getQueryParameter(name)
     }
 
 /**

@@ -12,6 +12,7 @@ import com.pingidentity.browser.BrowserLauncher
 import com.pingidentity.oidc.Constants.CODE
 import com.pingidentity.oidc.exception.AuthorizeException
 import com.pingidentity.oidc.extractOAuthError
+import com.pingidentity.oidc.queryOrFragmentParameter
 import com.pingidentity.oidc.validateState
 import com.pingidentity.orchestrate.Module
 import com.pingidentity.orchestrate.Session
@@ -50,7 +51,9 @@ val Web = Module.of(::WebModuleConfig) {
         // Verify the state echoed by the authorization server before trusting the response
         // (CSRF protection).
         validateState(uri, flowContext.getValue<String>(EXPECTED_STATE))
-        val code = uri.getQueryParameter(CODE)
+        // Query first, fragment fallback: a server may return the code in the fragment
+        // even though the request did not opt into response_mode=fragment.
+        val code = uri.queryOrFragmentParameter(CODE)
             ?: throw AuthorizeException(
                 extractOAuthError(uri) ?: "No authorization code found in response",
             )

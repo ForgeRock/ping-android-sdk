@@ -420,6 +420,41 @@ class BrowserTest {
         assertContains(exception.message ?: "", "error: access_denied — User denied consent")
     }
 
+    @Test
+    fun `browser authorize accepts the code from the fragment`() = runTest {
+        val oidcClientConfig = OidcClientConfig().apply {
+            openId = OpenIdConfiguration(
+                authorizationEndpoint = "http://localhost/authorize",
+                tokenEndpoint = "http://localhost/token",
+                userinfoEndpoint = "http://localhost/userinfo",
+                endSessionEndpoint = "http://localhost/end-session",
+                revocationEndpoint = "http://localhost/revocation"
+            )
+            clientId = "test-client-id"
+            redirectUri = "https://example.com/callback"
+        }
+        val urlSlot = slot<URL>()
+        coEvery { BrowserLauncher.launch(capture(urlSlot), any()) } returns Result.success(
+            // response_mode=fragment-style callback: code and state both in the fragment.
+            mockk {
+                every { getQueryParameter(any()) } returns null
+                every { encodedFragment } answers {
+                    urlSlot.captured.query
+                        ?.let { Uri.parse("https://x/?$it").encodedQuery }
+                        ?.let { query ->
+                            // Replace the code parameter position with the fragment echo.
+                            "code=test-code&" + query.split('&')
+                                .filterNot { it.startsWith("code=") }
+                                .joinToString("&")
+                        }
+                }
+            }
+        )
+
+        val authCode = browser.authorize(OidcConfig(browser.config()(), oidcClientConfig))
+        assertEquals("test-code", authCode.code)
+    }
+
     /**
      * Mock URI whose `getQueryParameter` resolves names against the query of the URL captured
      * for [BrowserLauncher.launch] — emulating an authorization server that echoes back the

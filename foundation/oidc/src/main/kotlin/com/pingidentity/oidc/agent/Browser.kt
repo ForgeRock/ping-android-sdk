@@ -23,6 +23,7 @@ import com.pingidentity.oidc.exception.AuthorizeException
 import com.pingidentity.oidc.extractOAuthError
 import com.pingidentity.oidc.module.buildAuthorizeParams
 import com.pingidentity.oidc.module.resolveOrGenerateState
+import com.pingidentity.oidc.queryOrFragmentParameter
 import com.pingidentity.oidc.Pkce
 import com.pingidentity.oidc.validateState
 import com.pingidentity.utils.PingDsl
@@ -114,7 +115,9 @@ var browser =
             val uri = result.getOrThrow()
             // Verify the echoed state before trusting the response.
             validateState(uri, expected)
-            val code = uri.getQueryParameter(CODE)
+            // Query first, fragment fallback: a server may return the code in the fragment
+            // even though the request did not opt into response_mode=fragment.
+            val code = uri.queryOrFragmentParameter(CODE)
                 ?: throw AuthorizeException(
                     extractOAuthError(uri) ?: "No authorization code found in response",
                 )

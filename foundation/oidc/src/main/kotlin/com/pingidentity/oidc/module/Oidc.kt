@@ -21,6 +21,7 @@ import com.pingidentity.oidc.OidcConfig
 import com.pingidentity.oidc.OidcUser
 import com.pingidentity.oidc.Pkce
 import com.pingidentity.oidc.exception.AuthorizeException
+import com.pingidentity.oidc.generateState
 import com.pingidentity.orchestrate.Module
 import com.pingidentity.orchestrate.Session
 import com.pingidentity.orchestrate.SharedContext
@@ -96,11 +97,13 @@ val Oidc =
                 // authorization server echoes it back. Other agents have no
                 // redirect callback to verify against.
                 if (workflow.isWeb()) {
-                    val expected = config.resolveOrGenerateState(parameters)
+                    // Resolve once so the "multiple state sources" warning is not logged twice.
+                    val resolved = config.resolveState(parameters)
+                    val expected = resolved ?: generateState()
                     // Inject the state as a per-call parameter only when no source already
                     // provides one, so the request carries the state exactly once.
                     val extra =
-                        if (config.resolveState(parameters) == null) {
+                        if (resolved == null) {
                             parameters + (Constants.STATE to expected)
                         } else {
                             parameters

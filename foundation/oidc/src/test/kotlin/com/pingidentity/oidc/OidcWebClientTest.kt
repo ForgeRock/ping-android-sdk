@@ -498,6 +498,80 @@ class OidcWebClientTest {
     }
 
     @Test
+    fun `authorize reports a missing state rather than the server error when an error redirect omits state`() = runTest {
+        // CSRF-first ordering: state verification runs before the OAuth error is read, so an
+        // attacker-crafted error redirect without a matching state is rejected as CSRF (the
+        // server's error message is never surfaced from an unverified response).
+        val mockUri = mockk<Uri>()
+        val urlSlot = slot<URL>()
+        coEvery { BrowserLauncher.launch(capture(urlSlot), any()) } returns Result.success(mockUri)
+        every { mockUri.getQueryParameter(Constants.CODE) } returns null
+        every { mockUri.getQueryParameter(Constants.STATE) } returns null
+        every { mockUri.getQueryParameter("error") } returns "access_denied"
+        every { mockUri.getQueryParameter("error_description") } returns "User denied consent"
+        every { mockUri.getQueryParameter("error_uri") } returns null
+        every { mockUri.fragment } returns null
+        every { mockUri.encodedFragment } returns null
+
+        val web = OidcWebClient {
+            httpClient = KtorHttpClient(HttpClient(mockEngine))
+            logger = Logger.CONSOLE
+            module(Oidc) {
+                clientId = "test-client"
+                discoveryEndpoint = "http://localhost/.well-known/openid-configuration"
+                scopes = mutableSetOf("openid", "profile")
+                redirectUri = "https://example.com/callback"
+                storage = { MemoryStorage() }
+            }
+        }
+
+        val result = web.authorize()
+        assertTrue(result.isFailure)
+        assertIs<AuthorizeException>(result.exceptionOrNull())
+        // The state failure wins; the server's error message is not surfaced.
+        assertContains(
+            result.exceptionOrNull()?.message ?: "",
+            "did not include the state parameter",
+        )
+        assertTrue(
+            (result.exceptionOrNull()?.message ?: "").run { contains("access_denied").not() },
+        )
+        // No token exchange on the rejected redirect.
+        assertTrue(mockEngine.requestHistory.none { it.url.encodedPath == "/token" })
+    }
+
+    @Test
+    fun `authorize accepts the code from the fragment`() = runTest {
+        // response_mode=fragment-style callback: code and state both in the fragment.
+        val mockUri = mockk<Uri>()
+        val urlSlot = slot<URL>()
+        coEvery { BrowserLauncher.launch(capture(urlSlot), any()) } returns Result.success(mockUri)
+        every { mockUri.getQueryParameter(any()) } returns null
+        every { mockUri.encodedFragment } answers {
+            urlSlot.captured.query?.let { query ->
+                "code=test-code&" + query.split('&')
+                    .filterNot { it.startsWith("code=") }
+                    .joinToString("&")
+            }
+        }
+
+        val web = OidcWebClient {
+            httpClient = KtorHttpClient(HttpClient(mockEngine))
+            logger = Logger.CONSOLE
+            module(Oidc) {
+                clientId = "test-client"
+                discoveryEndpoint = "http://localhost/.well-known/openid-configuration"
+                scopes = mutableSetOf("openid", "profile")
+                redirectUri = "https://example.com/callback"
+                storage = { MemoryStorage() }
+            }
+        }
+
+        val result = web.authorize()
+        assertTrue(result.isSuccess)
+    }
+
+    @Test
     fun `authorize with PAR pushes params to PAR endpoint and uses request_uri in authorization URL`() = runTest {
         // The PAR flow pushes the state into the PAR form body; the mock engine captures it
         // (during the flow) so the callback mock below can echo it back.
