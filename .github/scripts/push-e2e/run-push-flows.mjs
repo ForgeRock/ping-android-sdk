@@ -480,10 +480,32 @@ async function scanQrViaApp() {
   // Accounts screen: FAB "Add Account" opens the menu with "Scan QR Code".
   await tapLabel('Add Account', { timeoutMs: 15_000 });
   await tapLabel('Scan QR Code', { timeoutMs: 10_000 });
-  // The scanner auto-decodes from the virtual scene; success returns to the
-  // Accounts screen and shows the new account ("account added successfully"
-  // snackbar, account row with issuer). Wait for the scanner screen to close.
-  await sleep(2_000);
+  // Verify the scanner screen actually opened and which state it is in:
+  //   "Position QR code within frame" = camera preview live
+  //   "Camera permission is required" = permission was not granted
+  //   neither + back on Accounts = the scanner exited immediately (crash?)
+  const scannerState = await waitForScannerState();
+  logRun(`scanner state: ${scannerState}`);
+}
+
+// Determines which state the scanner screen reached. Returns a human-readable
+// tag; never throws (the caller logs whatever it finds).
+async function waitForScannerState({ timeoutMs = 12_000 } = {}) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const source = await uiDump();
+    if (source.includes('Position QR code within frame')) {
+      return 'camera-preview-live';
+    }
+    if (source.includes('Camera permission is required')) {
+      return 'PERMISSION-REQUIRED (camera permission not granted)';
+    }
+    if (source.includes('No accounts added yet')) {
+      return 'scanner-exited-immediately (back on accounts screen)';
+    }
+    await sleep(1_000);
+  }
+  return 'scanner-state-unknown (no marker found within timeout)';
 }
 
 async function registeredAccountVisible(timeoutMs = 45_000) {
@@ -735,9 +757,16 @@ main().catch(async (error) => {
   } catch (shotError) {
     logRun(`failure screenshot unavailable: ${shotError?.message ?? shotError}`);
   }
+  // Camera state evidence: permission grant, CameraX/Camera2/MLKit activity, crashes.
   try {
-    const logs = await shell('logcat -d -t 500 | grep -iE "MLKit|barcode|CameraX|camera2|virtualscene|qr|decode" | tail -40');
-    logRun(`scanner/camera logcat tail:\n${logs || '(no matching lines)'}`);
+    const perm = await shell(`dumpsys package ${PKG} | grep -A2 " CAMERA" | head -8`);
+    logRun(`camera permission state: ${perm.trim().replace(/\n/g, ' | ')}`);
+  } catch { /* best-effort */ }
+  try {
+    const logs = await shell(
+      'logcat -d -t 800 | grep -iE "CameraX|Camera2CameraImpl|CameraDevice|MLKit|barcode|BarcodeScanner|AndroidRuntime|FATAL|virtualscene|emulator.*camera|cameraserver" | tail -60',
+    );
+    logRun(`camera/crash logcat tail:\n${logs || '(no matching lines)'}`);
   } catch {
     // best-effort
   }
