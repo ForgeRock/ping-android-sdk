@@ -146,9 +146,35 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+// Dump to /data/local/tmp (shell-user-writable on every API level; /sdcard writes can
+// fail depending on FUSE/scoped-storage state — run 5 died exactly there on API 34).
+// The dump can transiently fail (accessibility service not settled, screen state);
+// its failure mode is "exit 0 + error on stdout + no file", so verify the file exists
+// and retry a few times before giving up.
+const UI_DUMP_PATH = '/data/local/tmp/push-e2e-window.xml';
+
+async function uiDumpOnce() {
+  // Remove a stale dump first so a failed dump can't be mistaken for success.
+  await shell(`rm -f ${UI_DUMP_PATH}`);
+  const dumpOut = await shell(`uiautomator dump ${UI_DUMP_PATH}`);
+  const check = await shell(`[ -s ${UI_DUMP_PATH} ] && echo ok`);
+  if (!check.includes('ok')) {
+    throw new Error(`uiautomator dump produced no output: ${dumpOut.trim().slice(0, 120)}`);
+  }
+  return shell(`cat ${UI_DUMP_PATH}`);
+}
+
 async function uiDump() {
-  await shell('uiautomator dump /sdcard/window.xml');
-  return shell('cat /sdcard/window.xml');
+  let lastError;
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    try {
+      return await uiDumpOnce();
+    } catch (error) {
+      lastError = error;
+      await sleep(1_000 * attempt);
+    }
+  }
+  throw lastError;
 }
 
 // Center of the first node whose content-desc or text matches `needle`.
@@ -239,7 +265,7 @@ async function amAuthenticate(tree, { zeroPage = true, cookies = new Map(), body
     headers.Cookie = [...cookies.entries()].map(([k, v]) => `${k}=${v}`).join('; ');
   }
 
-  const response = await fetch(url, { method: 'POST', headers, body });
+  const response = await fetch(url, { method: 'POST', headers, body, signal: AbortSignal.timeout(30_000) });
   for (const raw of response.headers.getSetCookie?.() ?? []) {
     const [pair] = raw.split(';');
     const idx = pair.indexOf('=');
@@ -295,6 +321,7 @@ async function posterSwap(uri) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ uri }),
+    signal: AbortSignal.timeout(30_000),
   });
   const body = await response.json();
   if (!response.ok) {
@@ -333,6 +360,7 @@ async function deleteServerDevices() {
       Authorization: `Bearer ${token}`,
       'Accept-API-Version': 'protocol=1.0,resource=1.0',
     },
+    signal: AbortSignal.timeout(30_000),
   });
   const json = await response.json();
   for (const device of json.result ?? []) {
@@ -344,6 +372,7 @@ async function deleteServerDevices() {
         Authorization: `Bearer ${token}`,
         'Accept-API-Version': 'protocol=1.0,resource=1.0',
       },
+      signal: AbortSignal.timeout(30_000),
     });
     if (del.ok || del.status === 404) {
       console.log(`[push-e2e] server device ${id} deleted: HTTP ${del.status}`);

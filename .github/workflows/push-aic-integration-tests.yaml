@@ -205,8 +205,8 @@ jobs:
         run: |
           mkdir -p diagnostics
           if adb devices | grep -q "emulator-5554"; then
-            adb -s emulator-5554 shell 'timeout 10 uiautomator dump /sdcard/window.xml' >/dev/null 2>&1 \
-              && adb -s emulator-5554 shell 'timeout 10 cat /sdcard/window.xml' > diagnostics/window.xml \
+            adb -s emulator-5554 shell 'timeout 10 uiautomator dump /data/local/tmp/window.xml' >/dev/null 2>&1 \
+              && adb -s emulator-5554 shell 'timeout 10 cat /data/local/tmp/window.xml' > diagnostics/window.xml \
               || echo "no ui dump" > diagnostics/window.xml
             adb -s emulator-5554 emu kill >/dev/null 2>&1 || true
             # -d is a one-shot dump; cap it in case adbd wedges after emu kill
