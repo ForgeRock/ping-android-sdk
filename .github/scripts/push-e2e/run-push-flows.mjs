@@ -429,10 +429,25 @@ async function navigateToAccounts() {
     }
   }
   const deadline = Date.now() + 45_000;
+  let tracedAt = 0;
   while (Date.now() < deadline) {
     const source = await uiDump();
     if (source.includes('Add Account') || source.includes('No accounts')) {
       return; // Accounts screen reached (post-tap)
+    }
+    // Every ~15s, log the visible text labels so a CI failure shows what the
+    // app was actually displaying (welcome screen? dialog? empty home?).
+    if (Date.now() - tracedAt > 15_000) {
+      tracedAt = Date.now();
+      const texts = [...source.matchAll(/text="([^"]{1,60})"/g)]
+        .map((m) => m[1])
+        .filter((t) => t.trim() && !/^\d+$/.test(t))
+        .slice(0, 15);
+      const descs = [...source.matchAll(/content-desc="([^"]{1,60})"/g)]
+        .map((m) => m[1])
+        .filter((t) => t.trim())
+        .slice(0, 10);
+      logRun(`navigateToAccounts waiting; visible text=[${texts.join(' | ')}] desc=[${descs.join(' | ')}]`);
     }
     const point = findNodeBounds(source, 'Manage TOPT');
     if (point) {
@@ -680,8 +695,19 @@ function stepsSummary() {
   }
 }
 
-main().catch((error) => {
+main().catch(async (error) => {
   console.error(`[push-e2e] FAILED: ${error?.message ?? error}`);
   printSummary(false, globalThis.__runStartedAt ?? Date.now());
+  // Capture what was actually on screen when the run failed: the UI dump is
+  // echoed into the run log (and stdout) so a CI failure shows the screen
+  // state without needing the diagnostics artifact.
+  try {
+    const source = await uiDump();
+    logRun(`UI at failure (first 2000 chars): ${source.slice(0, 2000)}`);
+    console.log(`[push-e2e] UI at failure (first 2000 chars): ${source.slice(0, 2000)}`);
+  } catch (dumpError) {
+    logRun(`UI at failure: dump unavailable (${dumpError?.message ?? dumpError})`);
+    console.log(`[push-e2e] UI at failure: dump unavailable (${dumpError?.message ?? dumpError})`);
+  }
   process.exit(1);
 });

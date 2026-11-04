@@ -23,6 +23,16 @@ set -euo pipefail
 
 cd "${GITHUB_WORKSPACE:-$PWD}"
 
+# Kill the emulator on the way out, whatever the exit path. Without this the
+# emulator-runner action's post-run cleanup can hang for 20-35 minutes waiting
+# on the emulator processes (seen twice on CI: the job sat silent after the
+# script's own failure until the step timeout). Killing the emulator HERE means
+# the action's cleanup finds nothing to wait on.
+cleanup() {
+  adb -s "${ANDROID_SERIAL:-emulator-5554}" emu kill >/dev/null 2>&1 || true
+}
+trap cleanup EXIT
+
 # --- install the sample app -----------------------------------------------
 adb install -r "${SAMPLE_APP_APK:?SAMPLE_APP_APK is not set}"
 adb shell pm grant "${SAMPLE_APP_PKG:?}" android.permission.CAMERA
@@ -71,4 +81,6 @@ export PUSH_E2E_ADMIN_TOKEN="$(
     node .github/scripts/push-e2e/mint-admin-token.mjs
 )"
 
-exec node .github/scripts/push-e2e/run-push-flows.mjs
+# Run the flows in the foreground (NOT exec: exec replaces this shell and the
+# EXIT trap — the emulator kill — would never fire).
+node .github/scripts/push-e2e/run-push-flows.mjs
