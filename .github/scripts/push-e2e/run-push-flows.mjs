@@ -536,9 +536,16 @@ async function registeredAccountVisible(timeoutMs = 45_000) {
 }
 
 async function dismissScannerIfOpen() {
-  // After a successful scan the app navigates back to Accounts automatically.
-  // If a stale frame produced a decode error dialog, try to dismiss it.
-  const source = await uiDump();
+  // The scanner may still be open when the decode wait times out (run 12: the
+  // retry then failed because the FAB isn't on the scanner screen). If the
+  // scanner's title is showing, press BACK to return to Accounts first; also
+  // handle a decode-error dialog if one is up.
+  let source = await uiDump();
+  if (source.includes('Position QR code within frame')) {
+    await adb(['shell', 'input', 'keyevent', 'KEYCODE_BACK']);
+    await sleep(1_500);
+    source = await uiDump();
+  }
   if (source.includes('OK') && source.includes('dialog')) {
     const point = findNodeBounds(source, 'OK');
     if (point) {
