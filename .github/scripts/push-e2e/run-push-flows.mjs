@@ -366,6 +366,8 @@ async function deleteServerDevices() {
   for (const device of json.result ?? []) {
     const id = device.uuid ?? device._id;
     // 200 with the deleted payload = success on this endpoint; 404 = already gone.
+    // AM sometimes returns 500 on the FIRST delete while still removing the device
+    // (observed live) — re-list to confirm rather than failing the run.
     const del = await fetch(`${baseUrl}/${id}`, {
       method: 'DELETE',
       headers: {
@@ -376,8 +378,21 @@ async function deleteServerDevices() {
     });
     if (del.ok || del.status === 404) {
       console.log(`[push-e2e] server device ${id} deleted: HTTP ${del.status}`);
+      continue;
+    }
+    const recheck = await fetch(`${baseUrl}?_queryFilter=true`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Accept-API-Version': 'protocol=1.0,resource=1.0',
+      },
+      signal: AbortSignal.timeout(30_000),
+    });
+    const recheckJson = await recheck.json();
+    const stillThere = (recheckJson.result ?? []).some((d) => (d.uuid ?? d._id) === id);
+    if (!stillThere) {
+      console.log(`[push-e2e] server device ${id} deleted despite HTTP ${del.status} (re-listed: gone)`);
     } else {
-      throw new Error(`Failed to delete server device ${id}: HTTP ${del.status}`);
+      throw new Error(`Failed to delete server device ${id}: HTTP ${del.status}, still present after re-list`);
     }
   }
 }

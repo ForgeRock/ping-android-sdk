@@ -33,7 +33,7 @@ block = re.search(r"poster table\n(.*?)(?:\n\n|\Z)", content, re.S)
 if not block:
     sys.exit("poster table block not found")
 
-new_block = "poster table\nsize 2 2\nposition 0 0 -2.5\nrotation 0 0 0\n"
+new_block = "poster table\nsize 1 1\nposition 0 0 -1.5\nrotation 0 0 0\n"
 content = content[: block.start()] + new_block + content[block.end() :]
 
 open(path, "w").write(content)
