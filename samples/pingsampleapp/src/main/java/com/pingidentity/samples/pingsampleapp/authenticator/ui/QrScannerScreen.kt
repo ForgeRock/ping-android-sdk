@@ -14,6 +14,8 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.Preview
+import androidx.camera.core.resolutionselector.ResolutionSelector
+import androidx.camera.core.resolutionselector.ResolutionStrategy
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.layout.Arrangement
@@ -157,8 +159,23 @@ fun QrScannerScreen(
                             .requireLensFacing(CameraSelector.LENS_FACING_BACK)
                             .build()
 
-                        // Configure image analysis with higher resolution for large QR codes
+                        // Configure image analysis with higher resolution for large QR codes:
+                        // the default analysis stream is ~640x480, which puts a large
+                        // (version 25, 117-module) push-registration QR at ~4 px/module —
+                        // below ML Kit's reliable decode threshold, especially through the
+                        // emulator's swiftshader camera path. Requesting 1920x1080 (with a
+                        // bounded fallback so devices without it still pick the closest)
+                        // roughly doubles the px/module and makes dense QR codes decodable.
+                        val resolutionSelector = ResolutionSelector.Builder()
+                            .setResolutionStrategy(
+                                ResolutionStrategy(
+                                    android.util.Size(1920, 1080),
+                                    ResolutionStrategy.FALLBACK_RULE_CLOSEST_HIGHER_THEN_LOWER,
+                                ),
+                            )
+                            .build()
                         val imageAnalysis = ImageAnalysis.Builder()
+                            .setResolutionSelector(resolutionSelector)
                             .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                             .build()
 
