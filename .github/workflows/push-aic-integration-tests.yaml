@@ -181,11 +181,13 @@ jobs:
           target: google_apis_playstore
           arch: x86_64
           channel: stable
-          # Without a hardware profile the AVD defaults to a 320x640 skin; the sample
-          # app's MFA section then sits off-screen and the flow's swipes (sized for a
-          # 1080p screen) miss it entirely (run 8's failure). The runner script also
-          # computes swipes from `wm size`, this just gives the app a usable screen.
-          profile: pixel_5
+          # The hardware profile drives the emulated camera's available YUV output
+          # sizes: pixel_5's profile appears to cap the analysis stream at 640x480
+          # (CI runs never decoded, the local Pixel-8-Pro-class AVD with the same app
+          # decoded immediately). pixel_8_pro matches the locally proven setup; the
+          # telemetry added to QrCodeAnalyzer + the continuous logcat capture will
+          # confirm the actual bound resolution either way.
+          profile: pixel_8_pro
           force-avd-creation: false
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back virtualscene -camera-front emulated
           disable-animations: true
@@ -205,6 +207,7 @@ jobs:
           path: |
             /tmp/push-e2e-run.log
             push-e2e-failure.png
+            push-e2e-logcat.txt
           if-no-files-found: warn
 
       - name: Collect diagnostics on failure

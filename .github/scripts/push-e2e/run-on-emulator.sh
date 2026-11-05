@@ -89,4 +89,14 @@ export PUSH_E2E_ADMIN_TOKEN="$(
 # and the EXIT trap — the cleanup — would never fire). The flows' internal
 # timeouts sum to ~10 min worst case; 15 min of `timeout` guarantees the script
 # itself always ends, so the action's cleanup always has nothing to wait on.
-timeout --signal=INT --kill-after=30 900 node .github/scripts/push-e2e/run-push-flows.mjs
+# A continuous logcat capture runs alongside: the at-failure `logcat -d` tail
+# loses the interesting camera lines to uiautomator's own buffer noise, so the
+# evidence has to be streamed to a file the whole run.
+adb logcat -c 2>/dev/null || true
+adb logcat -v time -f /sdcard/push-e2e-logcat.txt > /dev/null 2>&1 &
+LOGCAT_PID=$!
+node .github/scripts/push-e2e/run-push-flows.mjs
+STATUS=$?
+kill "$LOGCAT_PID" 2>/dev/null || true
+adb pull /sdcard/push-e2e-logcat.txt push-e2e-logcat.txt > /dev/null 2>&1 || true
+exit $STATUS
