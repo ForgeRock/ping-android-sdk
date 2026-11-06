@@ -40,7 +40,8 @@ jobs:
       github.event_name == 'pull_request' ||
       (github.event_name == 'issue_comment' &&
        github.event.issue.pull_request &&
-       startsWith(github.event.comment.body, '/run-ci') &&
+       (startsWith(github.event.comment.body, '/run-ci') ||
+        startsWith(github.event.comment.body, '/run-push-e2e')) &&
        (github.event.comment.author_association == 'OWNER' ||
         github.event.comment.author_association == 'MEMBER' ||
         github.event.comment.author_association == 'COLLABORATOR'))
@@ -49,14 +50,18 @@ jobs:
       head_repo: ${{ steps.ctx.outputs.head_repo }}
       base_sha: ${{ steps.ctx.outputs.base_sha }}
       base_repo: ${{ steps.ctx.outputs.base_repo }}
+      push_e2e_host: ${{ steps.push_e2e_params.outputs.host }}
+      push_e2e_realm: ${{ steps.push_e2e_params.outputs.realm }}
+      push_e2e_comment: ${{ steps.push_e2e_params.outputs.is_comment_command }}
     steps:
       - name: React to /run-ci comment with 👀
         if: github.event_name == 'issue_comment'
         uses: actions/github-script@v9
         with:
           script: |
-            if (context.payload.comment.body.trim() !== '/run-ci') {
-              core.setFailed('Comment must be exactly "/run-ci" to trigger CI.');
+            const body = context.payload.comment.body.trim();
+            if (!body.startsWith('/run-ci') && !body.startsWith('/run-push-e2e')) {
+              core.setFailed('Comment must be "/run-ci" or "/run-push-e2e ..." to trigger CI.');
               return;
             }
             await github.rest.reactions.createForIssueComment({
@@ -94,6 +99,39 @@ jobs:
               core.setOutput('base_repo', pr.data.base.repo.full_name);
             }
 
+      # Parses "/run-push-e2e [host] [realm]" from an issue_comment. The host must be
+      # one of the known tenants (the map mirrors push-aic-integration-tests.yaml);
+      # with no argument the default tenant is used. Only meaningful on the
+      # issue_comment path — outputs stay empty for push/pull_request events.
+      - name: Parse /run-push-e2e parameters
+        id: push_e2e_params
+        if: github.event_name == 'issue_comment'
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const KNOWN_TENANTS = {
+              'openam-sdks.forgeblocks.com': 'alpha',
+            };
+            const body = context.payload.comment.body.trim();
+            const isCommand = body.startsWith('/run-push-e2e');
+            core.setOutput('is_comment_command', isCommand ? 'true' : 'false');
+            if (!isCommand) {
+              core.notice('Not a /run-push-e2e comment; push e2e will use the repo defaults.');
+              return;
+            }
+            const args = body.split(/\s+/).slice(1).filter(Boolean);
+            const host = args[0] || 'openam-sdks.forgeblocks.com';
+            const realm = args[1] || KNOWN_TENANTS[host] || 'alpha';
+            if (!KNOWN_TENANTS[host]) {
+              core.setFailed(
+                `Unknown tenant host '${host}'. Known tenants: ${Object.keys(KNOWN_TENANTS).join(', ')}.`,
+              );
+              return;
+            }
+            core.notice(`Push e2e will run against ${host} (realm ${realm}).`);
+            core.setOutput('host', host);
+            core.setOutput('realm', realm);
+
   # Validates Ping Identity copyright headers of the source files changed by the PR / push.
   # Fails fast: every other job depends on it (directly or transitively).
   copyright-check:
@@ -109,6 +147,8 @@ jobs:
   # Build and run unit tests
   build-and-test:
     name: Build and test
+    # Skipped for /run-push-e2e comments: that command runs only the push e2e suite.
+    if: needs.resolve-context.outputs.push_e2e_comment != 'true'
     needs:
       - resolve-context
       - copyright-check
@@ -123,7 +163,8 @@ jobs:
   # Run integration tests on emulators
   integration-tests:
     name: Integration tests
-    if: ${{ vars.ENABLE_INTEGRATION_TESTS == 'true' }}
+    # Skipped for /run-push-e2e comments: that command runs only the push e2e suite.
+    if: ${{ vars.ENABLE_INTEGRATION_TESTS == 'true' && needs.resolve-context.outputs.push_e2e_comment != 'true' }}
     needs:
       - resolve-context
       - copyright-check
@@ -139,8 +180,10 @@ jobs:
 
   # Push registration/authentication e2e against the AIC tenant: sample app on
   # an emulator, QR registration via virtual-scene poster injection, FCM push
-  # approved in-app. Gated by a repo variable so it can be enabled per repo and
-  # skipped for forks (tenant + Firebase secrets unavailable there).
+  # approved in-app. Runs on PRs/pushes when the repo variable enables it, or on
+  # demand via a maintainer's "/run-push-e2e [host] [realm]" PR comment (which also
+  # selects the target tenant). Skipped for forks (tenant + Firebase secrets
+  # unavailable there).
   push-aic-integration-tests:
     name: Push AIC integration tests
     if: ${{ vars.ENABLE_PUSH_E2E_TESTS == 'true' && github.actor != 'dependabot[bot]' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
@@ -151,8 +194,8 @@ jobs:
     with:
       head_sha: ${{ needs.resolve-context.outputs.head_sha }}
       head_repo: ${{ needs.resolve-context.outputs.head_repo }}
-      push_host: ${{ vars.PUSH_E2E_HOST }}
-      push_realm: ${{ vars.PUSH_E2E_REALM }}
+      push_host: ${{ needs.resolve-context.outputs.push_e2e_comment == 'true' && needs.resolve-context.outputs.push_e2e_host || vars.PUSH_E2E_HOST }}
+      push_realm: ${{ needs.resolve-context.outputs.push_e2e_comment == 'true' && needs.resolve-context.outputs.push_e2e_realm || vars.PUSH_E2E_REALM }}
       # push_user_per_run defaults to true: a disposable test user is created per run
       # and deleted at the end, so PUSH_E2E_USER/PUSH_E2E_PASSWORD are only needed for
       # the fixed-user fallback (set push_user_per_run: false to use it).
@@ -167,7 +210,7 @@ jobs:
   # Skip for dependabot and fork PRs (signing secrets unavailable for forks)
   browserstack-prepare-artifacts:
     name: Prepare device farm artifacts
-    if: github.actor != 'dependabot[bot]' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+    if: github.actor != 'dependabot[bot]' && needs.resolve-context.outputs.push_e2e_comment != 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
     needs:
       - build-and-test
       - resolve-context
@@ -279,7 +322,7 @@ jobs:
   # Run Mend SCA Scan — skip for fork PRs (Mend credentials unavailable)
   mend-sca-scan:
     name: Mend SCA Scan
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    if: (needs.resolve-context.outputs.push_e2e_comment != 'true' && github.event_name != 'pull_request') || github.event.pull_request.head.repo.full_name == github.repository
     needs:
       - resolve-context
       - copyright-check
@@ -295,7 +338,7 @@ jobs:
   # Run Mend SAST Scan — skip for fork PRs (Mend credentials unavailable)
   mend-sast-scan:
     name: Mend SAST Scan
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    if: (needs.resolve-context.outputs.push_e2e_comment != 'true' && github.event_name != 'pull_request') || github.event.pull_request.head.repo.full_name == github.repository
     needs:
       - resolve-context
       - copyright-check
@@ -324,13 +367,14 @@ jobs:
 
   # Post /run-ci result back to the PR as a comment and update the reaction
   notify:
-    name: Notify /run-ci result
+    name: Notify comment-command result
     if: always() && github.event_name == 'issue_comment' && needs.resolve-context.result != 'skipped'
     needs:
       - resolve-context
       - copyright-check
       - build-and-test
       - integration-tests
+      - push-aic-integration-tests
       - browserstack-oath-results
       - browserstack-push-results
       - mend-sca-scan
@@ -341,10 +385,14 @@ jobs:
         uses: actions/github-script@v9
         with:
           script: |
+            const command = '${{ needs.resolve-context.outputs.push_e2e_comment }}' === 'true'
+              ? '/run-push-e2e'
+              : '/run-ci';
             const results = [
               '${{ needs.copyright-check.result }}',
               '${{ needs.build-and-test.result }}',
               '${{ needs.integration-tests.result }}',
+              '${{ needs.push-aic-integration-tests.result }}',
               '${{ needs.browserstack-oath-results.result }}',
               '${{ needs.browserstack-push-results.result }}',
               '${{ needs.mend-sca-scan.result }}',
@@ -357,8 +405,8 @@ jobs:
               repo: context.repo.repo,
               issue_number: context.issue.number,
               body: allPassed
-                ? `✅ \`/run-ci\` — CI passed. [View run](${runUrl})`
-                : `❌ \`/run-ci\` — CI failed. [View run](${runUrl})`
+                ? `✅ \`${command}\` — CI passed. [View run](${runUrl})`
+                : `❌ \`${command}\` — CI failed. [View run](${runUrl})`
             });
             await github.rest.reactions.createForIssueComment({
               owner: context.repo.owner,
