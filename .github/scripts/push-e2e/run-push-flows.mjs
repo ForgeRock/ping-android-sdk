@@ -345,6 +345,25 @@ async function resetAppData() {
   await adb(['shell', 'pm', 'grant', PKG, 'android.permission.POST_NOTIFICATIONS']);
 }
 
+// Poll logcat until the SDK reports the FCM device token is set. The token fetch
+// happens asynchronously after app launch; a QR that decodes before it completes
+// makes registration fail with DeviceTokenMissingException.
+async function waitForFcmToken(timeoutMs = 60_000) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    try {
+      const out = await shell('logcat -d | grep -cE "Firebase device token set"');
+      if (out.trim() !== '0') {
+        return 'token set';
+      }
+    } catch {
+      // logcat hiccup: keep polling
+    }
+    await sleep(2_000);
+  }
+  throw new Error(`FCM device token not set within ${timeoutMs}ms (registration would fail with DeviceTokenMissingException)`);
+}
+
 // Delete every push device registered for the test user on the AM side, so the
 // registration tree takes the full QR path. Uses the admin token from
 // PUSH_E2E_ADMIN_TOKEN (frodo-style bearer); skipped when absent.
@@ -592,23 +611,29 @@ async function approvePush(timeoutMs = 90_000) {
       await adb(['shell', 'input', 'tap', String(point.x), String(point.y)]);
       return 'notification-action';
     }
-    // 3) Pull the notification drawer open once, in case the head-up
-    //    notification has receded but the drawer holds the Approve action.
-    await openNotificationDrawerOnce(deadline);
+    // 3) Pull the notification drawer open ONCE, look at it, then CLOSE it again.
+    //    Left open, the shade covers the app for the rest of the window: on some
+    //    emulators the in-app PushNotificationActivity (with the Approve button)
+    //    starts behind it and no uiDump ever sees the app's controls again.
+    if (!drawerOpened && Date.now() <= deadline - 20_000) {
+      drawerOpened = true;
+      await adb(['shell', 'cmd', 'statusbar', 'expand-notifications']);
+      await sleep(1_500);
+      const shade = await uiDump();
+      const shadePoint = findNodeBounds(shade, 'Approve');
+      await adb(['shell', 'cmd', 'statusbar', 'collapse']);
+      await sleep(1_000);
+      if (shadePoint) {
+        await adb(['shell', 'input', 'tap', String(shadePoint.x), String(shadePoint.y)]);
+        return 'notification-action';
+      }
+    }
     await sleep(2_000);
   }
   throw new Error(`No Approve control appeared within ${timeoutMs}ms`);
 }
 
 let drawerOpened = false;
-async function openNotificationDrawerOnce(deadline) {
-  if (drawerOpened || Date.now() > deadline - 20_000) {
-    return;
-  }
-  drawerOpened = true;
-  await adb(['shell', 'cmd', 'statusbar', 'expand-notifications']);
-  await sleep(1_500);
-}
 
 async function notificationApproveAction() {
   // Notification action buttons are not in the accessibility tree of the app;
@@ -661,6 +686,13 @@ async function main() {
     await launchApp();
     await navigateToAccounts();
   });
+
+  // The QR can decode within seconds of the scanner opening — registration runs
+  // right after — so the FCM device token MUST already be set by then, or
+  // registration fails with DeviceTokenMissingException (observed: a decode lost
+  // that race even 90 s after a fresh pm clear, once). Wait for the SDK's own
+  // "Firebase device token set" line before anything can scan.
+  await runStep('app: wait for FCM device token', () => waitForFcmToken(60_000));
 
   const regCookies = new Map();
   const regTx = await runStep(`AM: start registration transaction (${TREE_REG})`, () =>

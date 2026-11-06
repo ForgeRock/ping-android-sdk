@@ -77,18 +77,26 @@ done
 echo "poster service up"
 
 # --- flows ---------------------------------------------------------------------
-# Mint a fresh admin bearer token from the service account (no long-lived
-# secret to rotate): JWT assertion -> OAuth2 exchange. SVCACCT_ID/SVCACCT_JWK
-# come from the step env; the tenant host comes from PUSH_E2E_HOST.
-export PUSH_E2E_ADMIN_TOKEN="$(
-  AIC_HOST="${PUSH_E2E_HOST:?}" \
-    node .github/scripts/push-e2e/mint-admin-token.mjs
-)"
+if [ -n "${PUSH_E2E_RUN_USER:-}" ]; then
+  # Per-run test user: tenant-user.mjs created it before this step (and deletes it
+  # after), so it starts with no devices. No server-side device cleanup is needed,
+  # hence no admin token either.
+  export PUSH_E2E_USER="$PUSH_E2E_RUN_USER"
+  export PUSH_E2E_PASSWORD="${PUSH_E2E_RUN_PASSWORD:?PUSH_E2E_RUN_PASSWORD is not set}"
+  unset PUSH_E2E_ADMIN_TOKEN
+  echo "using per-run test user ${PUSH_E2E_USER}"
+else
+  # Fixed test user: mint a fresh admin bearer token from the service account (no
+  # long-lived secret to rotate) so the runner can delete the user's leftover push
+  # devices. SVCACCT_ID/SVCACCT_JWK come from the step env; the host from PUSH_E2E_HOST.
+  export PUSH_E2E_ADMIN_TOKEN="$(
+    AIC_HOST="${PUSH_E2E_HOST:?}" \
+      node .github/scripts/push-e2e/mint-admin-token.mjs
+  )"
+fi
 
-# Run the flows with a hard wall-clock cap (NOT exec: exec replaces this shell
-# and the EXIT trap — the cleanup — would never fire). The flows' internal
-# timeouts sum to ~10 min worst case; 15 min of `timeout` guarantees the script
-# itself always ends, so the action's cleanup always has nothing to wait on.
+# Run the flows in the foreground (NOT exec: exec replaces this shell and the EXIT
+# trap — the cleanup — would never fire). The flows' own timeouts bound the run.
 # A continuous logcat capture runs alongside: the at-failure `logcat -d` tail
 # loses the interesting camera lines to uiautomator's own buffer noise, so the
 # evidence has to be streamed to a file the whole run.

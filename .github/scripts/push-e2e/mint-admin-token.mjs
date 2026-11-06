@@ -77,8 +77,9 @@ const body = new URLSearchParams({
   grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
   client_id: 'service-account',
   // The exchange declines without an explicit scope (authorization_declined);
-  // fr:am:* covers the admin device API used by the cleanup step.
-  scope: 'fr:am:*',
+  // fr:am:* covers the admin device API used by the cleanup step. SVCACCT_SCOPE
+  // overrides it (space separated) to experiment with other token scopes.
+  scope: process.env.SVCACCT_SCOPE || 'fr:am:*',
   assertion,
 });
 

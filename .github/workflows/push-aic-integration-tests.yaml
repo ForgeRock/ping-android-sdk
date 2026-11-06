@@ -14,6 +14,7 @@ name: Push AIC integration tests
 # sample app as the client under test instead of Gradle instrumented tests:
 #
 #   build sample app (google-services.json from secrets)
+#     -> create a disposable test user in the tenant (deleted again at the end)
 #     -> boot emulator (Play Store image, virtualscene back camera)
 #     -> start poster service (QR hot-swap into the virtual scene)
 #     -> run flows: app scans the registration QR, AM confirms the device,
@@ -30,8 +31,10 @@ name: Push AIC integration tests
 #   - journeys push-reg-v1 / push-auth-v1 in the realm (Zero Page Login ->
 #     Push Registration / Sender -> Wait -> Verifier)
 #   - Push Notification service configured (SNS delegate, GCM platform app)
-#   - a test user; the FCM project in google-services.json must be the one the
-#     tenant's SNS GCM platform app sends to
+#   - a service account with the fr:idm:* scope (creates/deletes the per-run test
+#     user) and fr:am:* (only for the fixed-user fallback's device cleanup)
+#   - the FCM project in google-services.json must be the one the tenant's SNS GCM
+#     platform app sends to
 
 on:
   workflow_call:
@@ -50,10 +53,17 @@ on:
         description: Realm path
         type: string
         default: alpha
+      push_user_per_run:
+        description: >-
+          Create a disposable test user for every run and delete it afterwards
+          (needs the fr:idm:* scope on the service account). When false the fixed
+          push_user is used and its leftover push devices are cleaned up instead.
+        type: boolean
+        default: true
       push_user:
-        description: Test user for zero-page login
+        description: Fixed test user for zero-page login (only used when push_user_per_run is false)
         type: string
-        required: true
+        required: false
       push_reg_tree:
         description: Registration journey name
         type: string
@@ -67,13 +77,13 @@ on:
         description: google-services.json matching the tenant's SNS GCM platform app
         required: true
       PUSH_E2E_PASSWORD:
-        description: Zero-page login password for the test user
-        required: true
+        description: Zero-page login password of the fixed test user (only used when push_user_per_run is false)
+        required: false
       SVCACCT_ID:
-        description: AIC service account UUID used to mint the admin token (device cleanup)
+        description: AIC service account UUID used to mint tokens (per-run test user, or device cleanup)
         required: true
       SVCACCT_JWK:
-        description: Service account private JWK (JSON) used to mint the admin token
+        description: Service account private JWK (JSON) used to mint tokens (needs fr:idm:* and fr:am:*)
         required: true
       SLACK_WEBHOOK:
         description: Slack Notifier Incoming Webhook
@@ -155,6 +165,22 @@ jobs:
           cp samples/pingsampleapp/build/outputs/apk/debug/pingsampleapp-debug.apk "$RUNNER_TEMP/sample-app.apk"
 
       # ---------------------------------------------------------------------
+      # Per-run test user: created here, deleted by the always() step after the
+      # emulator step. It starts with no push devices, so no device cleanup (and
+      # no concurrent-run interference on a shared user). Stale users from runs
+      # that were killed before their teardown are swept first.
+      # ---------------------------------------------------------------------
+
+      - name: Create per-run test user
+        id: create_user
+        if: ${{ inputs.push_user_per_run }}
+        env:
+          AIC_HOST: ${{ inputs.push_host }}
+          SVCACCT_ID: ${{ secrets.SVCACCT_ID }}
+          SVCACCT_JWK: ${{ secrets.SVCACCT_JWK }}
+        run: node .github/scripts/push-e2e/tenant-user.mjs create
+
+      # ---------------------------------------------------------------------
       # Emulator + poster service + flows
       # ---------------------------------------------------------------------
 
@@ -175,9 +201,12 @@ jobs:
         uses: reactivecircus/android-emulator-runner@v2
         env:
           SAMPLE_APP_APK: ${{ runner.temp }}/sample-app.apk
-          PUSH_E2E_PASSWORD: ${{ secrets.PUSH_E2E_PASSWORD }}
-          SVCACCT_ID: ${{ secrets.SVCACCT_ID }}
-          SVCACCT_JWK: ${{ secrets.SVCACCT_JWK }}
+          # The fixed-user fallback is the only mode that needs these in this step;
+          # with a per-run user they stay empty (the user + password arrive through
+          # PUSH_E2E_RUN_* set by the create step).
+          PUSH_E2E_PASSWORD: ${{ !inputs.push_user_per_run && secrets.PUSH_E2E_PASSWORD || '' }}
+          SVCACCT_ID: ${{ !inputs.push_user_per_run && secrets.SVCACCT_ID || '' }}
+          SVCACCT_JWK: ${{ !inputs.push_user_per_run && secrets.SVCACCT_JWK || '' }}
         with:
           api-level: 36
           target: google_apis_playstore
@@ -195,6 +224,18 @@ jobs:
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back virtualscene -camera-front emulated
           disable-animations: true
           script: bash .github/scripts/push-e2e/run-on-emulator.sh
+
+      # Teardown: runs on success, failure AND cancellation, and only when the
+      # create step actually made a user. It never fails the job; a user that
+      # could not be deleted is swept by the next run.
+      - name: Delete per-run test user
+        if: ${{ always() && steps.create_user.outputs.user_id != '' }}
+        timeout-minutes: 3
+        env:
+          AIC_HOST: ${{ inputs.push_host }}
+          SVCACCT_ID: ${{ secrets.SVCACCT_ID }}
+          SVCACCT_JWK: ${{ secrets.SVCACCT_JWK }}
+        run: node .github/scripts/push-e2e/tenant-user.mjs delete
 
       # Structured run log (per-step outcomes, every AM HTTP call with status +
       # duration, final summary report) — recorded by run-push-flows.mjs and
