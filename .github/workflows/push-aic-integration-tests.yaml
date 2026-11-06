@@ -140,71 +140,20 @@ env:
   TENANT_HOST_SDKS: openam-sdks.forgeblocks.com
 
 jobs:
-  # workflow_call receives its credentials as secrets (passed by the caller); manual
-  # runs pick them from the tenant map via the tenant_key. This job normalizes both
-  # entry points into one set of outputs the main job consumes. Secret values travel
-  # through outputs only on the dispatch path (GitHub masks known secrets in logs;
-  # the JWK is passed file-free and never echoed).
-  resolve-tenant:
-    name: Resolve tenant
-    runs-on: ubuntu-latest
-    outputs:
-      svcacct_id: ${{ steps.resolve.outputs.svcacct_id }}
-      svcacct_jwk: ${{ steps.resolve.outputs.svcacct_jwk }}
-    steps:
-      - name: Resolve tenant credentials
-        id: resolve
-        env:
-          # workflow_call path: the caller's secrets, passed straight through.
-          CALLED_ID: ${{ secrets.SVCACCT_ID }}
-          CALLED_JWK: ${{ secrets.SVCACCT_JWK }}
-          # workflow_dispatch path: the tenant map, statically listed (GitHub requires
-          # literal secret names). A tenant without its own pair falls back to the
-          # shared SVCACCT_ID/SVCACCT_JWK pair (as long as the service account is
-          # valid on that tenant too).
-          TENANT_KEY: ${{ inputs.tenant_key || '' }}
-          SVCACCT_ID_SDKS: ${{ secrets.SVCACCT_ID_SDKS }}
-          SVCACCT_JWK_SDKS: ${{ secrets.SVCACCT_JWK_SDKS }}
-          SHARED_ID: ${{ secrets.SVCACCT_ID }}
-          SHARED_JWK: ${{ secrets.SVCACCT_JWK }}
-          EXPECTED_HOST_SDKS: ${{ env.TENANT_HOST_SDKS }}
-        run: |
-          set -euo pipefail
-          if [ -n "$CALLED_JWK" ]; then
-            echo "mode=workflow_call" >> "$GITHUB_OUTPUT" 2>/dev/null || true
-            echo "svcacct_id=$CALLED_ID" >> "$GITHUB_OUTPUT"
-            echo "svcacct_jwk=$CALLED_JWK" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          KEY="$(printf '%s' "$TENANT_KEY" | tr '[:lower:]' '[:upper:]' | tr -c 'A-Z0-9_' '_')"
-          ID_VAR="SVCACCT_ID_${KEY}"; JWK_VAR="SVCACCT_JWK_${KEY}"
-          ID="${!ID_VAR:-}"; JWK="${!JWK_VAR:-}"
-          # No tenant-specific pair? Fall back to the shared one. A dispatch run
-          # normally has no workflow_call secrets — but a re-run of a called job
-          # would; in that case the shared pair is simply the same credentials.
-          if [ -z "$JWK" ] && [ -n "$SHARED_JWK" ]; then
-            echo "no ${JWK_VAR} configured; using the shared SVCACCT_ID/SVCACCT_JWK pair"
-            ID="$SHARED_ID"; JWK="$SHARED_JWK"
-          fi
-          if [ -z "$JWK" ]; then
-            echo "::error::No service-account credentials configured for tenant key '${TENANT_KEY}' (expected secrets ${ID_VAR}/${JWK_VAR}, or the shared SVCACCT_ID/SVCACCT_JWK)"
-            exit 1
-          fi
-          HOST_VAR="EXPECTED_HOST_${KEY}"
-          EXPECTED="${!HOST_VAR:-}"
-          PUSH_HOST_EXPECTED="${{ inputs.push_host }}"
-          if [ -n "$EXPECTED" ] && [ "$EXPECTED" != "$PUSH_HOST_EXPECTED" ]; then
-            echo "::error::Host '$PUSH_HOST_EXPECTED' does not match tenant key '${TENANT_KEY}' (expected $EXPECTED)"
-            exit 1
-          fi
-          echo "svcacct_id=$ID" >> "$GITHUB_OUTPUT"
-          echo "svcacct_jwk=$JWK" >> "$GITHUB_OUTPUT"
+  # Credentials are resolved IN the consuming steps, not in a separate job: GitHub
+  # refuses to pass job outputs whose value matches a secret ("Skip output ... since
+  # it may contain secret"), and the JWK is multiline JSON, which breaks the output
+  # file format anyway (seen on run 42166016717). Every step that needs the pair
+  # selects it the same way, via the shared env below + the small selector block.
+  #
+  # workflow_call receives the pair as secrets (passed by the caller); manual runs
+  # pick it from the tenant map via the tenant_key. Per-tenant pairs are optional:
+  # without SVCACCT_JWK_<KEY> the shared pair is used.
 
   push-aic-integration-tests:
     name: Push e2e (sample app on emulator)
     runs-on: ubuntu-latest
     timeout-minutes: 45
-    needs: resolve-tenant
 
     env:
       ANDROID_SERIAL: emulator-5554
@@ -215,8 +164,51 @@ jobs:
       PUSH_E2E_USER: ${{ inputs.push_user }}
       PUSH_E2E_TREE_REG: ${{ inputs.push_reg_tree }}
       PUSH_E2E_TREE_AUTH: ${{ inputs.push_auth_tree }}
+      # ---- tenant credential map (static names only) -------------------------
+      # workflow_call: caller's secrets. workflow_dispatch: per-tenant pairs
+      # (optional — the shared pair is the fallback), selected by tenant_key.
+      SVCACCT_ID__CALLED: ${{ secrets.SVCACCT_ID }}
+      SVCACCT_JWK__CALLED: ${{ secrets.SVCACCT_JWK }}
+      SVCACCT_ID__SDKS: ${{ secrets.SVCACCT_ID_SDKS }}
+      SVCACCT_JWK__SDKS: ${{ secrets.SVCACCT_JWK_SDKS }}
+      SVCACCT_ID__SHARED: ${{ secrets.SVCACCT_ID }}
+      SVCACCT_JWK__SHARED: ${{ secrets.SVCACCT_JWK }}
 
     steps:
+      # Resolve the tenant's service-account pair into job env (SVCACCT_ID /
+      # SVCACCT_JWK) for the later steps. Also asserts the dispatch host matches
+      # the tenant key's expected host. No secret values are echoed or written
+      # to outputs; everything stays in process env.
+      - name: Resolve tenant
+        env:
+          TENANT_KEY: ${{ inputs.tenant_key || '' }}
+          PUSH_HOST_EXPECTED: ${{ inputs.push_host }}
+        run: |
+          set -euo pipefail
+          if [ -n "${SVCACCT_JWK__CALLED:-}" ] && [ -z "${TENANT_KEY:-}" ]; then
+            echo "credentials: caller-provided (workflow_call)"
+            { echo "SVCACCT_ID=${SVCACCT_ID__CALLED}"; echo "SVCACCT_JWK<<EOF_JWK"; echo "${SVCACCT_JWK__CALLED}"; echo "EOF_JWK"; } >> "$GITHUB_ENV"
+            exit 0
+          fi
+          KEY="$(printf '%s' "${TENANT_KEY:-sdks}" | tr '[:lower:]' '[:upper:]' | tr -c 'A-Z0-9_' '_')"
+          ID_VAR="SVCACCT_ID__${KEY}"; JWK_VAR="SVCACCT_JWK__${KEY}"
+          ID="${!ID_VAR:-}"; JWK="${!JWK_VAR:-}"
+          if [ -z "$JWK" ]; then
+            echo "no ${JWK_VAR} configured; falling back to the shared pair"
+            ID="${SVCACCT_ID__SHARED:-}"; JWK="${SVCACCT_JWK__SHARED:-}"
+          fi
+          if [ -z "$JWK" ]; then
+            echo "::error::No service-account credentials for tenant key '${TENANT_KEY:-sdks}' (expected ${JWK_VAR} or the shared SVCACCT_JWK)"
+            exit 1
+          fi
+          HOST_VAR="TENANT_HOST_${KEY}"
+          EXPECTED="${!HOST_VAR:-}"
+          if [ -n "$EXPECTED" ] && [ "$EXPECTED" != "$PUSH_HOST_EXPECTED" ]; then
+            echo "::error::Host '$PUSH_HOST_EXPECTED' does not match tenant key '${TENANT_KEY}' (expected $EXPECTED)"
+            exit 1
+          fi
+          { echo "SVCACCT_ID=${ID}"; echo "SVCACCT_JWK<<EOF_JWK"; echo "${JWK}"; echo "EOF_JWK"; } >> "$GITHUB_ENV"
+          echo "credentials: tenant '${TENANT_KEY:-sdks}' (host ${PUSH_HOST_EXPECTED})"
       - name: Clone the repository
         uses: actions/checkout@v7
         with:
@@ -284,8 +276,6 @@ jobs:
         if: ${{ inputs.push_user_per_run }}
         env:
           AIC_HOST: ${{ inputs.push_host }}
-          SVCACCT_ID: ${{ needs.resolve-tenant.outputs.svcacct_id }}
-          SVCACCT_JWK: ${{ needs.resolve-tenant.outputs.svcacct_jwk }}
         run: node .github/scripts/push-e2e/tenant-user.mjs create
 
       # ---------------------------------------------------------------------
@@ -313,8 +303,8 @@ jobs:
           # with a per-run user they stay empty (the user + password arrive through
           # PUSH_E2E_RUN_* set by the create step).
           PUSH_E2E_PASSWORD: ${{ !inputs.push_user_per_run && secrets.PUSH_E2E_PASSWORD || '' }}
-          SVCACCT_ID: ${{ !inputs.push_user_per_run && needs.resolve-tenant.outputs.svcacct_id || '' }}
-          SVCACCT_JWK: ${{ !inputs.push_user_per_run && needs.resolve-tenant.outputs.svcacct_jwk || '' }}
+          SVCACCT_ID: ${{ !inputs.push_user_per_run && env.SVCACCT_ID || '' }}
+          SVCACCT_JWK: ${{ !inputs.push_user_per_run && env.SVCACCT_JWK || '' }}
         with:
           api-level: 36
           target: google_apis_playstore
@@ -341,8 +331,6 @@ jobs:
         timeout-minutes: 3
         env:
           AIC_HOST: ${{ inputs.push_host }}
-          SVCACCT_ID: ${{ needs.resolve-tenant.outputs.svcacct_id }}
-          SVCACCT_JWK: ${{ needs.resolve-tenant.outputs.svcacct_jwk }}
         run: node .github/scripts/push-e2e/tenant-user.mjs delete
 
       # Structured run log (per-step outcomes, every AM HTTP call with status +
