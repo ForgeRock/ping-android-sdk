@@ -100,11 +100,15 @@ fi
 # A continuous logcat capture runs alongside: the at-failure `logcat -d` tail
 # loses the interesting camera lines to uiautomator's own buffer noise, so the
 # evidence has to be streamed to a file the whole run.
+# NOTE: under `set -e` a failing top-level command exits the script immediately, so
+# the runner's status is captured with `|| STATUS=$?` — the kill + pull below MUST
+# run even when the flows fail, or the logcat witness never reaches the artifact
+# (that is exactly what happened on the first per-run-user CI run).
 adb logcat -c 2>/dev/null || true
 adb logcat -v time -f /sdcard/push-e2e-logcat.txt > /dev/null 2>&1 &
 LOGCAT_PID=$!
-node .github/scripts/push-e2e/run-push-flows.mjs
-STATUS=$?
+STATUS=0
+node .github/scripts/push-e2e/run-push-flows.mjs || STATUS=$?
 kill "$LOGCAT_PID" 2>/dev/null || true
 adb pull /sdcard/push-e2e-logcat.txt push-e2e-logcat.txt > /dev/null 2>&1 || true
-exit $STATUS
+exit "$STATUS"
