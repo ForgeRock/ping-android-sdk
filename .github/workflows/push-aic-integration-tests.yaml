@@ -1,0 +1,398 @@
+#
+# Copyright (c) 2026 Ping Identity Corporation. All rights reserved.
+#
+# This software may be modified and distributed under the terms
+# of the MIT license. See the LICENSE file for details.
+#
+
+name: Push AIC integration tests
+
+# Push registration/authentication e2e against a live AIC tenant, exercising the
+# SDK's push module (mfa/push) through the sample app on an Android emulator.
+#
+# Shape mirrors integration-tests.yaml (KVM emulator on ubuntu-latest), with the
+# sample app as the client under test instead of Gradle instrumented tests:
+#
+#   build sample app (google-services.json from secrets)
+#     -> create a disposable test user in the tenant (deleted again at the end)
+#     -> boot emulator (Play Store image, virtualscene back camera)
+#     -> start poster service (QR hot-swap into the virtual scene)
+#     -> run flows: app scans the registration QR, AM confirms the device,
+#        push-auth tree sends an FCM push, the app approves it
+#
+# App-level tenant config is NOT needed: the pushauth:// URI embedded in the QR
+# carries the registration/authentication endpoints and shared secret, so the
+# app talks straight to the tenant that issued it. Only FCM delivery depends on
+# google-services.json matching the tenant's Push Notification (SNS) service.
+#
+# Tenant prerequisites (provisioned once; see
+# manual-tests/push-automation/SDKS-5505-local-run-guide.md for the journey
+# definitions and the provisioning notes):
+#   - journeys push-reg-v1 / push-auth-v1 in the realm (Zero Page Login ->
+#     Push Registration / Sender -> Wait -> Verifier)
+#   - Push Notification service configured (SNS delegate, GCM platform app)
+#   - a service account with the fr:idm:* scope (creates/deletes the per-run test
+#     user) and fr:am:* (only for the fixed-user fallback's device cleanup)
+#   - the FCM project in google-services.json must be the one the tenant's SNS GCM
+#     platform app sends to
+#
+# Manual runs (workflow_dispatch): pick a tenant key in the form; the tenant map in the
+# "Resolve tenant" step selects that tenant's service-account credentials and asserts the
+# host matches. Add a tenant: give it a key, add two secrets (SVCACCT_ID_<KEY> /
+# SVCACCT_JWK_<KEY> with fr:idm:*), one entry in the map and in the dropdown.
+#
+# Tenant map (key -> host):
+#   sdks -> openam-sdks.forgeblocks.com
+
+on:
+  workflow_call:
+    inputs:
+      head_sha:
+        description: Head commit SHA to check out
+        type: string
+      head_repo:
+        description: Head repository to check out
+        type: string
+      push_host:
+        description: AIC tenant host (FQDN)
+        type: string
+        required: true
+      push_realm:
+        description: Realm path
+        type: string
+        default: alpha
+      push_user_per_run:
+        description: >-
+          Create a disposable test user for every run and delete it afterwards
+          (needs the fr:idm:* scope on the service account). When false the fixed
+          push_user is used and its leftover push devices are cleaned up instead.
+        type: boolean
+        default: true
+      push_user:
+        description: Fixed test user for zero-page login (only used when push_user_per_run is false)
+        type: string
+        required: false
+      push_reg_tree:
+        description: Registration journey name
+        type: string
+        default: push-reg-v1
+      push_auth_tree:
+        description: Authentication journey name
+        type: string
+        default: push-auth-v1
+    secrets:
+      GOOGLE_SERVICES:
+        description: google-services.json matching the tenant's SNS GCM platform app
+        required: true
+      PUSH_E2E_PASSWORD:
+        description: Zero-page login password of the fixed test user (only used when push_user_per_run is false)
+        required: false
+      SVCACCT_ID:
+        description: AIC service account UUID used to mint tokens (per-run test user, or device cleanup)
+        required: true
+      SVCACCT_JWK:
+        description: Service account private JWK (JSON) used to mint tokens (needs fr:idm:* and fr:am:*)
+        required: true
+      SLACK_WEBHOOK:
+        description: Slack Notifier Incoming Webhook
+        required: true
+
+  workflow_dispatch:
+    inputs:
+      tenant_key:
+        description: Tenant to run against (selects the service-account credentials)
+        type: choice
+        options:
+          - sdks
+        default: sdks
+      push_host:
+        description: Tenant host (must match the tenant key's host in the tenant map)
+        type: string
+        default: openam-sdks.forgeblocks.com
+      push_realm:
+        description: Realm path
+        type: string
+        default: alpha
+      push_user_per_run:
+        description: Create a disposable test user and delete it afterwards (needs fr:idm:*)
+        type: boolean
+        default: true
+      push_user:
+        description: Fixed test user (only when push_user_per_run is false)
+        type: string
+        required: false
+      push_reg_tree:
+        description: Registration journey name
+        type: string
+        default: push-reg-v1
+      push_auth_tree:
+        description: Authentication journey name
+        type: string
+        default: push-auth-v1
+
+permissions:
+  contents: read
+
+env:
+  # Tenant map (key -> host). The dispatch form's tenant_key selects the credentials;
+  # the resolve step asserts the host matches. Add a tenant: key, host here, secrets
+  # SVCACCT_ID_<KEY>/SVCACCT_JWK_<KEY>, and the dropdown option.
+  TENANT_HOST_SDKS: openam-sdks.forgeblocks.com
+
+jobs:
+  # Credentials are resolved IN the consuming steps, not in a separate job: GitHub
+  # refuses to pass job outputs whose value matches a secret ("Skip output ... since
+  # it may contain secret"), and the JWK is multiline JSON, which breaks the output
+  # file format anyway (seen on run 42166016717). Every step that needs the pair
+  # selects it the same way, via the shared env below + the small selector block.
+  #
+  # workflow_call receives the pair as secrets (passed by the caller); manual runs
+  # pick it from the tenant map via the tenant_key. Per-tenant pairs are optional:
+  # without SVCACCT_JWK_<KEY> the shared pair is used.
+
+  push-aic-integration-tests:
+    name: Push e2e (sample app on emulator)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    env:
+      ANDROID_SERIAL: emulator-5554
+      SAMPLE_APP_PKG: com.pingidentity.samples.pingsampleapp
+      EMULATOR_RESOURCES_DIR: /opt/android-sdk/emulator/resources
+      PUSH_E2E_HOST: ${{ inputs.push_host }}
+      PUSH_E2E_REALM: ${{ inputs.push_realm }}
+      PUSH_E2E_USER: ${{ inputs.push_user }}
+      PUSH_E2E_TREE_REG: ${{ inputs.push_reg_tree }}
+      PUSH_E2E_TREE_AUTH: ${{ inputs.push_auth_tree }}
+      # ---- tenant credential map (static names only) -------------------------
+      # workflow_call: caller's secrets. workflow_dispatch: per-tenant pairs
+      # (optional — the shared pair is the fallback), selected by tenant_key.
+      SVCACCT_ID__CALLED: ${{ secrets.SVCACCT_ID }}
+      SVCACCT_JWK__CALLED: ${{ secrets.SVCACCT_JWK }}
+      SVCACCT_ID__SDKS: ${{ secrets.SVCACCT_ID_SDKS }}
+      SVCACCT_JWK__SDKS: ${{ secrets.SVCACCT_JWK_SDKS }}
+      SVCACCT_ID__SHARED: ${{ secrets.SVCACCT_ID }}
+      SVCACCT_JWK__SHARED: ${{ secrets.SVCACCT_JWK }}
+
+    steps:
+      # Resolve the tenant's service-account pair into job env (SVCACCT_ID /
+      # SVCACCT_JWK) for the later steps. Also asserts the dispatch host matches
+      # the tenant key's expected host. No secret values are echoed or written
+      # to outputs; everything stays in process env.
+      - name: Resolve tenant
+        env:
+          TENANT_KEY: ${{ inputs.tenant_key || '' }}
+          PUSH_HOST_EXPECTED: ${{ inputs.push_host }}
+        run: |
+          set -euo pipefail
+          if [ -n "${SVCACCT_JWK__CALLED:-}" ] && [ -z "${TENANT_KEY:-}" ]; then
+            echo "credentials: caller-provided (workflow_call)"
+            { echo "SVCACCT_ID=${SVCACCT_ID__CALLED}"; echo "SVCACCT_JWK<<EOF_JWK"; echo "${SVCACCT_JWK__CALLED}"; echo "EOF_JWK"; } >> "$GITHUB_ENV"
+            exit 0
+          fi
+          KEY="$(printf '%s' "${TENANT_KEY:-sdks}" | tr '[:lower:]' '[:upper:]' | tr -c 'A-Z0-9_' '_')"
+          ID_VAR="SVCACCT_ID__${KEY}"; JWK_VAR="SVCACCT_JWK__${KEY}"
+          ID="${!ID_VAR:-}"; JWK="${!JWK_VAR:-}"
+          if [ -z "$JWK" ]; then
+            echo "no ${JWK_VAR} configured; falling back to the shared pair"
+            ID="${SVCACCT_ID__SHARED:-}"; JWK="${SVCACCT_JWK__SHARED:-}"
+          fi
+          if [ -z "$JWK" ]; then
+            echo "::error::No service-account credentials for tenant key '${TENANT_KEY:-sdks}' (expected ${JWK_VAR} or the shared SVCACCT_JWK)"
+            exit 1
+          fi
+          HOST_VAR="TENANT_HOST_${KEY}"
+          EXPECTED="${!HOST_VAR:-}"
+          if [ -n "$EXPECTED" ] && [ "$EXPECTED" != "$PUSH_HOST_EXPECTED" ]; then
+            echo "::error::Host '$PUSH_HOST_EXPECTED' does not match tenant key '${TENANT_KEY}' (expected $EXPECTED)"
+            exit 1
+          fi
+          { echo "SVCACCT_ID=${ID}"; echo "SVCACCT_JWK<<EOF_JWK"; echo "${JWK}"; echo "EOF_JWK"; } >> "$GITHUB_ENV"
+          echo "credentials: tenant '${TENANT_KEY:-sdks}' (host ${PUSH_HOST_EXPECTED})"
+      - name: Clone the repository
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.head_sha || github.event.pull_request.head.sha }}
+          repository: ${{ inputs.head_repo || github.event.pull_request.head.repo.full_name }}
+          persist-credentials: false
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # ---------------------------------------------------------------------
+      # Build the sample app with the tenant-matching Firebase config
+      # ---------------------------------------------------------------------
+
+      - name: Write google-services.json from secret
+        env:
+          GOOGLE_SERVICES: ${{ secrets.GOOGLE_SERVICES }}
+        run: |
+          if [ -z "$GOOGLE_SERVICES" ]; then
+            echo "::error::GOOGLE_SERVICES secret is empty; FCM delivery cannot work without it."
+            exit 1
+          fi
+          # The repo ships a placeholder google-services.json; replace it with the
+          # tenant-matching config so the FCM project matches the tenant's SNS GCM app.
+          printf '%s' "$GOOGLE_SERVICES" > samples/pingsampleapp/google-services.json
+          python3 -c "import json; json.load(open('samples/pingsampleapp/google-services.json'))" \
+            || { echo "::error::GOOGLE_SERVICES secret is not valid JSON"; exit 1; }
+
+      - name: Build sample app APK
+        run: |
+          ./gradlew :samples:pingsampleapp:assembleDebug \
+            --stacktrace \
+            --build-cache \
+            --parallel
+
+      - name: Stage sample app APK
+        run: |
+          ls -la samples/pingsampleapp/build/outputs/apk/debug/
+          cp samples/pingsampleapp/build/outputs/apk/debug/pingsampleapp-debug.apk "$RUNNER_TEMP/sample-app.apk"
+
+      # ---------------------------------------------------------------------
+      # Per-run test user: created here, deleted by the always() step after the
+      # emulator step. It starts with no push devices, so no device cleanup (and
+      # no concurrent-run interference on a shared user). Stale users from runs
+      # that were killed before their teardown are swept first.
+      # ---------------------------------------------------------------------
+
+      - name: Create per-run test user
+        id: create_user
+        if: ${{ inputs.push_user_per_run }}
+        env:
+          AIC_HOST: ${{ inputs.push_host }}
+        run: node .github/scripts/push-e2e/tenant-user.mjs create
+
+      # ---------------------------------------------------------------------
+      # Emulator + poster service + flows
+      # ---------------------------------------------------------------------
+
+      # The virtual-scene poster geometry (table poster in front of the camera)
+      # and the AVD config (-camera-back virtualscene) make the emulator's
+      # camera render the QR. google_apis_playstore is required: FCM needs Play
+      # services. The device is a Pixel 9 Pro on API 36 (image
+      # system-images;android-36;google_apis_playstore;x86_64) so CI runs the same
+      # device class as the local reference emulator the flow was validated on.
+      #
+      # NOTE: android-emulator-runner runs `script` LINE BY LINE as separate
+      # `sh -c` processes — no state survives between lines and multi-line
+      # constructs fail with syntax errors. The whole harness therefore lives
+      # in run-on-emulator.sh, invoked here as a single line; values pass via
+      # `env` (secrets included), not inline interpolation.
+      - name: Run push e2e flows on emulator
+        timeout-minutes: 35
+        uses: reactivecircus/android-emulator-runner@v2
+        env:
+          SAMPLE_APP_APK: ${{ runner.temp }}/sample-app.apk
+          # The fixed-user fallback is the only mode that needs these in this step;
+          # with a per-run user they stay empty (the user + password arrive through
+          # PUSH_E2E_RUN_* set by the create step).
+          PUSH_E2E_PASSWORD: ${{ !inputs.push_user_per_run && secrets.PUSH_E2E_PASSWORD || '' }}
+          SVCACCT_ID: ${{ !inputs.push_user_per_run && env.SVCACCT_ID || '' }}
+          SVCACCT_JWK: ${{ !inputs.push_user_per_run && env.SVCACCT_JWK || '' }}
+        with:
+          api-level: 36
+          target: google_apis_playstore
+          arch: x86_64
+          channel: stable
+          # The hardware profile drives the emulated camera's available YUV output
+          # sizes: pixel_5's profile appears to cap the analysis stream at 640x480
+          # (CI runs never decoded, while the local Pixel 9 Pro API 36 AVD with the
+          # same app decoded immediately, analysis stream 1280x960). pixel_9_pro
+          # matches that reference device; the analysis-resolution telemetry in
+          # QrCodeAnalyzer plus the continuous logcat capture confirm the actual
+          # bound resolution on every run.
+          profile: pixel_9_pro
+          force-avd-creation: false
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back virtualscene -camera-front emulated
+          disable-animations: true
+          script: bash .github/scripts/push-e2e/run-on-emulator.sh
+
+      # Teardown: runs on success, failure AND cancellation, and only when the
+      # create step actually made a user. It never fails the job; a user that
+      # could not be deleted is swept by the next run.
+      - name: Delete per-run test user
+        if: ${{ always() && steps.create_user.outputs.user_id != '' }}
+        timeout-minutes: 3
+        env:
+          AIC_HOST: ${{ inputs.push_host }}
+        run: node .github/scripts/push-e2e/tenant-user.mjs delete
+
+      # Structured run log (per-step outcomes, every AM HTTP call with status +
+      # duration, final summary report) — recorded by run-push-flows.mjs and
+      # uploaded ALWAYS, success or failure, so every CI run keeps a record.
+      - name: Upload run log
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: push-e2e-run-log
+          # The flow runner also drops a screenshot + logcat excerpt next to the
+          # log when it fails (captured before the harness trap kills the
+          # emulator — the diagnostics step below runs after that).
+          path: |
+            /tmp/push-e2e-run.log
+            push-e2e-failure.png
+            push-e2e-logcat.txt
+          if-no-files-found: warn
+
+      - name: Collect diagnostics on failure
+        if: failure()
+        # timeout guards against adb blocking forever on a dead emulator (this
+        # step is what turned the previous failure into a 28-minute hang).
+        timeout-minutes: 3
+        run: |
+          mkdir -p diagnostics
+          if adb devices | grep -q "emulator-5554"; then
+            adb -s emulator-5554 shell 'timeout 10 uiautomator dump /data/local/tmp/window.xml' >/dev/null 2>&1 \
+              && adb -s emulator-5554 shell 'timeout 10 cat /data/local/tmp/window.xml' > diagnostics/window.xml \
+              || echo "no ui dump" > diagnostics/window.xml
+            adb -s emulator-5554 emu kill >/dev/null 2>&1 || true
+            # -d is a one-shot dump; cap it in case adbd wedges after emu kill
+            timeout 60 adb -s emulator-5554 logcat -d > diagnostics/logcat.txt 2>/dev/null \
+              || echo "logcat dump unavailable" > diagnostics/logcat.txt
+          else
+            echo "emulator not connected" > diagnostics/window.xml
+            echo "emulator not connected" > diagnostics/logcat.txt
+          fi
+          cp /tmp/poster-service.log diagnostics/ 2>/dev/null || true
+          cp /tmp/push-e2e-run.log diagnostics/ 2>/dev/null || true
+          ls -la diagnostics/
+
+      - name: Upload diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: push-e2e-diagnostics
+          path: diagnostics/
+
+      - name: Send slack notification
+        uses: 8398a7/action-slack@v3
+        with:
+          status: custom
+          fields: all
+          custom_payload: |
+            {
+              attachments: [{
+                title: ':no_entry: Push AIC integration tests failed',
+                color: 'danger',
+                text: `\nWorkflow: ${process.env.AS_WORKFLOW} -> ${process.env.AS_JOB}\nPull request: ${process.env.AS_PULL_REQUEST}\nCommit: ${process.env.AS_COMMIT} by ${process.env.AS_AUTHOR}`,
+              }]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
+        if: failure()

@@ -28,6 +28,7 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
@@ -120,14 +121,21 @@ class PingSampleApplication : Application() {
             pushClientDeferred.complete(pushClient)
             diagnosticLogger.i("PingSampleApplication: Push client initialized")
 
-            // Obtain the device token from Firebase and set it in the Push client
+            // Obtain the device token from Firebase and set it in the Push client.
+            // GMS on a freshly created emulator can fail the first token fetch with
+            // AUTHENTICATION_FAILED while it is still completing device check-in
+            // (observed on ephemeral CI runners), and FirebaseMessaging does not
+            // retry on its own — so retry with backoff here until it succeeds.
+            val deviceToken = retryWithBackoff("Firebase token") {
+                FirebaseMessaging.getInstance().token.await()
+            }
             try {
-                pushClient.setDeviceToken(FirebaseMessaging.getInstance().token.await())
+                pushClient.setDeviceToken(deviceToken)
                 diagnosticLogger.i("PingSampleApplication: Firebase device token set")
             } catch (e: IllegalStateException) {
                 diagnosticLogger.e("Firebase not configured properly", e)
             } catch (e: Exception) {
-                diagnosticLogger.w("Failed to get Firebase token", e)
+                diagnosticLogger.w("Failed to set Firebase device token", e)
             }
 
             // Initialize OATH client
@@ -146,6 +154,37 @@ class PingSampleApplication : Application() {
             diagnosticLogger.e("Failed to initialize SDK clients", e)
             throw e
         }
+    }
+
+    /**
+     * Retries [block] with exponential backoff (2 s doubling, capped at 15 s) until it
+     * returns a value or the overall [timeoutMs] budget is exhausted, then rethrows the
+     * last error. Used for the Firebase token fetch, whose first attempt can fail while
+     * Google Play services on a freshly created emulator completes device check-in.
+     */
+    private suspend fun <T> retryWithBackoff(
+        name: String,
+        timeoutMs: Long = 150_000,
+        initialDelayMs: Long = 2_000,
+        maxDelayMs: Long = 15_000,
+        block: suspend () -> T,
+    ): T {
+        var delayMs = initialDelayMs
+        val deadline = System.currentTimeMillis() + timeoutMs
+        var lastError: Exception? = null
+        while (System.currentTimeMillis() < deadline) {
+            try {
+                return block()
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                lastError = e
+                diagnosticLogger.w("$name attempt failed (${e.message}); retrying in ${delayMs}ms", e)
+            }
+            kotlinx.coroutines.delay(delayMs)
+            delayMs = (delayMs * 2).coerceAtMost(maxDelayMs)
+        }
+        throw lastError ?: IllegalStateException("$name did not succeed within ${timeoutMs}ms")
     }
 
     /**
