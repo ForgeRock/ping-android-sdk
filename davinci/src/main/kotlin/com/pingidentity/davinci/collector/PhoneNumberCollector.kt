@@ -61,7 +61,9 @@ class PhoneNumberCollector : FieldCollector<JsonObject>(), Validator {
             phoneNumber = input[PHONE_NUMBER]?.jsonPrimitive?.content ?: ""
             countryCode = input[COUNTRY_CODE]?.jsonPrimitive?.content ?: ""
             extension = input[EXTENSION]?.jsonPrimitive?.content ?: ""
-            extensionLabel = input[EXTENSION_LABEL]?.jsonPrimitive?.content ?: ""
+            if (input.containsKey(EXTENSION_LABEL)) {
+                extensionLabel = input[EXTENSION_LABEL]?.jsonPrimitive?.content ?: ""
+            }
         } else {
             // Legacy structure - simple string
             phoneNumber = input.jsonPrimitive.content

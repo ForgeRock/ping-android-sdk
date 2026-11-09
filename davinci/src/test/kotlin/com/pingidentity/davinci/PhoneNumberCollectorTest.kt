@@ -190,4 +190,47 @@ class PhoneNumberCollectorTest {
         assertEquals("1234", collector.extension)
         assertEquals("Extension", collector.extensionLabel)
     }
+
+    @Test
+    fun `init with phone number but no extension label`() {
+        val input = buildJsonObject {
+            put("phoneNumber", "CA-1-+17783186380-7783186380")
+            put("countryCode", "CA")
+            put("extension", "1234")
+        }
+        val collector = PhoneNumberCollector()
+        collector.init(input as JsonElement)
+
+        assertEquals("CA-1-+17783186380-7783186380", collector.phoneNumber)
+        assertEquals("CA", collector.countryCode)
+        assertEquals("1234", collector.extension)
+        assertEquals("", collector.extensionLabel)
+    }
+
+    @Test
+    fun `init with formData value does not overwrite extension label from field definition`() {
+        val field = buildJsonObject {
+            put("type", "PHONE_NUMBER")
+            put("key", "phone-field")
+            put("label", "Phone Collector")
+            put("defaultCountryCode", "BF")
+            put("validatePhoneNumber", true)
+            put("showExtension", true)
+            put("extensionLabel", "Extension")
+        }
+        val formDataValue = buildJsonObject {
+            put("phoneNumber", "(555)555-1234")
+            put("countryCode", "GB")
+            put("extension", "4321")
+        }
+        val collector = PhoneNumberCollector()
+        // Form.parse order: field definition first, then the prefilled value
+        collector.init(field)
+        collector.init(formDataValue as JsonElement)
+
+        assertEquals("(555)555-1234", collector.phoneNumber)
+        assertEquals("GB", collector.countryCode)
+        assertEquals("4321", collector.extension)
+        assertEquals("Extension", collector.extensionLabel)
+    }
 }
