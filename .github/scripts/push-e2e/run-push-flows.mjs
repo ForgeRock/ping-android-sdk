@@ -430,18 +430,15 @@ async function launchApp() {
   // Bring the sample app to the foreground and VERIFY it owns the screen.
   // Any other app in front (a previous test app, the launcher) would make the
   // UI-dump anchors match against the wrong UI or hang.
+  //
+  // `am start` with the explicit component, not `monkey -p`: monkey's launcher
+  // query can refuse a package in the stopped state (freshly `pm clear`-ed —
+  // exit -5 "no activities found"), while am start launches it regardless. Seen
+  // on a local API 36 arm64 image after a wipe-data boot; am start is immune.
   for (let attempt = 0; attempt < 3; attempt += 1) {
     await adb(['shell', 'am', 'force-stop', PKG]);
     await sleep(1_000);
-    await adb([
-      'shell',
-      'monkey',
-      '-p',
-      PKG,
-      '-c',
-      'android.intent.category.LAUNCHER',
-      '1',
-    ]);
+    await adb(['shell', 'am', 'start', '-n', `${PKG}/.MainActivity`]);
     await sleep(4_000);
     if ((await foregroundPackage()) === PKG) {
       return;

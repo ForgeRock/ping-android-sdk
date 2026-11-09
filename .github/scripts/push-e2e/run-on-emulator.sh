@@ -86,13 +86,20 @@ if [ -n "${PUSH_E2E_RUN_USER:-}" ]; then
   unset PUSH_E2E_ADMIN_TOKEN
   echo "using per-run test user ${PUSH_E2E_USER}"
 else
-  # Fixed test user: mint a fresh admin bearer token from the service account (no
-  # long-lived secret to rotate) so the runner can delete the user's leftover push
-  # devices. SVCACCT_ID/SVCACCT_JWK come from the step env; the host from PUSH_E2E_HOST.
-  export PUSH_E2E_ADMIN_TOKEN="$(
-    AIC_HOST="${PUSH_E2E_HOST:?}" \
-      node .github/scripts/push-e2e/mint-admin-token.mjs
-  )"
+  # Fixed test user. With service-account credentials, mint a fresh admin bearer token
+  # (no long-lived secret to rotate) so the runner can delete the user's leftover push
+  # devices. WITHOUT credentials (a tenant that hosts no service account), skip the
+  # token and let the runner skip server-side cleanup too — the run then requires the
+  # user to have no registered push device at start (first run on a clean user).
+  if [ -n "${SVCACCT_ID:-}" ] && [ -n "${SVCACCT_JWK:-}" ]; then
+    export PUSH_E2E_ADMIN_TOKEN="$(
+      AIC_HOST="${PUSH_E2E_HOST:?}" \
+        node .github/scripts/push-e2e/mint-admin-token.mjs
+    )"
+  else
+    unset PUSH_E2E_ADMIN_TOKEN
+    echo "no service-account credentials; skipping device cleanup — the fixed user must have no registered push device"
+  fi
 fi
 
 # Run the flows in the foreground (NOT exec: exec replaces this shell and the EXIT

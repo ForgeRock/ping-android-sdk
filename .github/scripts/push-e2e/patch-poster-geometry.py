@@ -37,4 +37,4 @@ new_block = "poster table\nsize 1 1\nposition 0 0 -1.5\nrotation 0 0 0\n"
 content = content[: block.start()] + new_block + content[block.end() :]
 
 open(path, "w").write(content)
-print(f"patched {path}: table poster 2x2 at position 0 0 -2.5, rotation 0 0 0")
+print(f"patched {path}: table poster size 1 1 at position 0 0 -1.5, rotation 0 0 0")

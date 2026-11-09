@@ -183,6 +183,7 @@ jobs:
         env:
           TENANT_KEY: ${{ inputs.tenant_key || '' }}
           PUSH_HOST_EXPECTED: ${{ inputs.push_host }}
+          PUSH_USER_PER_RUN: ${{ inputs.push_user_per_run || 'true' }}
         run: |
           set -euo pipefail
           if [ -n "${SVCACCT_JWK__CALLED:-}" ] && [ -z "${TENANT_KEY:-}" ]; then
@@ -198,8 +199,17 @@ jobs:
             ID="${SVCACCT_ID__SHARED:-}"; JWK="${SVCACCT_JWK__SHARED:-}"
           fi
           if [ -z "$JWK" ]; then
-            echo "::error::No service-account credentials for tenant key '${TENANT_KEY:-sdks}' (expected ${JWK_VAR} or the shared SVCACCT_JWK)"
-            exit 1
+            # A tenant may host no service account at all — legal only in fixed-user
+            # mode (the run then skips server-side device cleanup and requires the
+            # user to have no registered push device). In per-run-user mode there is
+            # no way to create the user, so fail.
+            if [ "$PUSH_USER_PER_RUN" = "true" ]; then
+              echo "::error::No service-account credentials for tenant key '${TENANT_KEY:-sdks}' (expected ${JWK_VAR} or the shared SVCACCT_JWK). The disposable per-run user needs them; use push_user_per_run=false for a fixed test user."
+              exit 1
+            fi
+            echo "no service-account credentials; running in fixed-user mode without server-side device cleanup"
+          else
+            { echo "SVCACCT_ID=${ID}"; echo "SVCACCT_JWK<<EOF_JWK"; echo "${JWK}"; echo "EOF_JWK"; } >> "$GITHUB_ENV"
           fi
           HOST_VAR="TENANT_HOST_${KEY}"
           EXPECTED="${!HOST_VAR:-}"
@@ -207,7 +217,6 @@ jobs:
             echo "::error::Host '$PUSH_HOST_EXPECTED' does not match tenant key '${TENANT_KEY}' (expected $EXPECTED)"
             exit 1
           fi
-          { echo "SVCACCT_ID=${ID}"; echo "SVCACCT_JWK<<EOF_JWK"; echo "${JWK}"; echo "EOF_JWK"; } >> "$GITHUB_ENV"
           echo "credentials: tenant '${TENANT_KEY:-sdks}' (host ${PUSH_HOST_EXPECTED})"
       - name: Clone the repository
         uses: actions/checkout@v7
