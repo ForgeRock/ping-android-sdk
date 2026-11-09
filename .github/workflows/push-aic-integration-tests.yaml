@@ -100,11 +100,14 @@ on:
   workflow_dispatch:
     inputs:
       tenant_key:
-        description: Tenant to run against (selects the service-account credentials)
+        description: >-
+          Tenant whose service-account credentials to use. "none" skips credential
+          resolution entirely (fixed-user mode only; no server-side device cleanup).
         type: choice
         options:
+          - none
           - sdks
-        default: sdks
+        default: none
       push_host:
         description: Tenant host (must match the tenant key's host in the tenant map)
         type: string
@@ -191,7 +194,23 @@ jobs:
             { echo "SVCACCT_ID=${SVCACCT_ID__CALLED}"; echo "SVCACCT_JWK<<EOF_JWK"; echo "${SVCACCT_JWK__CALLED}"; echo "EOF_JWK"; } >> "$GITHUB_ENV"
             exit 0
           fi
-          KEY="$(printf '%s' "${TENANT_KEY:-sdks}" | tr '[:lower:]' '[:upper:]' | tr -c 'A-Z0-9_' '_')"
+          # "none" (or empty) = no credential resolution at all: fixed-user mode with a
+          # preset environment (the user typed the host freely, so no host assertion).
+          # Only legal with push_user_per_run=false.
+          RESOLVED_KEY="$(printf '%s' "${TENANT_KEY:-none}" | tr '[:lower:]' '[:upper:]' | tr -c 'A-Z0-9_' '_')"
+          if [ "$RESOLVED_KEY" = "NONE" ]; then
+            if [ "$PUSH_USER_PER_RUN" = "true" ]; then
+              echo "::error::tenant_key=none cannot create the disposable per-run user (no credentials). Set push_user_per_run=false to use a fixed test user."
+              exit 1
+            fi
+            if [ -z "${PUSH_E2E_USER:-}" ]; then
+              echo "::error::tenant_key=none needs a fixed test user: set push_user in the dispatch form."
+              exit 1
+            fi
+            echo "tenant_key=none: fixed-user mode, no service-account credentials, no server-side device cleanup"
+            exit 0
+          fi
+          KEY="$RESOLVED_KEY"
           ID_VAR="SVCACCT_ID__${KEY}"; JWK_VAR="SVCACCT_JWK__${KEY}"
           ID="${!ID_VAR:-}"; JWK="${!JWK_VAR:-}"
           if [ -z "$JWK" ]; then
