@@ -476,6 +476,20 @@ async function navigateToAccounts() {
     if (source.includes('Add Account') || source.includes('No accounts')) {
       return; // Accounts screen reached (post-tap)
     }
+    // SystemUI ANR recovery: a freshly-booted CI emulator's SystemUI can stop
+    // responding while GMS provisioning hammers it (run 42884871951: the
+    // "System UI isn't responding" dialog covered the screen for the entire
+    // 45s window and the step timed out without ever seeing the app). Tap
+    // "Wait" to dismiss the dialog and give SystemUI time to catch up.
+    if (source.includes("System UI isn't responding")) {
+      const waitBtn = findNodeBounds(source, 'Wait');
+      if (waitBtn) {
+        logRun('navigateToAccounts: System UI ANR dialog detected; tapping "Wait"');
+        await adb(['shell', 'input', 'tap', String(waitBtn.x), String(waitBtn.y)]);
+        await sleep(3_000);
+        continue;
+      }
+    }
     // Every ~15s, log the visible text labels so a CI failure shows what the
     // app was actually displaying (welcome screen? dialog? empty home?).
     if (Date.now() - tracedAt > 15_000) {
