@@ -40,6 +40,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -97,6 +98,19 @@ fun QrScannerScreen(
 
     // Create an executor for background operations
     val cameraExecutor = remember { Executors.newSingleThreadExecutor() }
+
+    // One-shot guard for QR detection. The camera analyzer can decode the same
+    // frame (or the next one) more than once before the scanner screen actually
+    // closes — ML Kit's callback is asynchronous, so a second decode can land
+    // after onScanComplete() has already navigated away but before the analyzer
+    // is unbound. Processing it twice registers the credential twice with two
+    // different random IDs: the second registration reaches AM but is rejected
+    // locally (DuplicateCredentialException), leaving AM holding a mechanism the
+    // device never stored — the later push for that mechanism then fails to
+    // approve ("Credential not found") and the AM journey times out (seen twice
+    // in CI, run 42870319675 attempts 1+2). A remember'd flag survives
+    // recomposition; reset it if the user comes back to scan again.
+    var qrHandled by rememberSaveable { mutableStateOf(false) }
 
     // Cleanup resources when leaving the screen
     LaunchedEffect(Unit) {
@@ -182,21 +196,31 @@ fun QrScannerScreen(
                         imageAnalysis.setAnalyzer(
                             cameraExecutor,
                             QrCodeAnalyzer { qrCodeResult ->
+                                // Only the first detection is processed; a second
+                                // decode of the same code is dropped (see the guard
+                                // declaration above for why this matters).
+                                if (qrHandled) {
+                                    diagnosticLogger.d("QrScannerScreen: ignoring duplicate QR detection (already handled)")
+                                    return@QrCodeAnalyzer
+                                }
                                 // Process the QR code result (otpauth URI, pushauth URI, or mfauth URI)
                                 when {
                                     qrCodeResult.startsWith(UriScheme.OTPAUTH.value) -> {
+                                        qrHandled = true
                                         diagnosticLogger.d("QrScannerScreen: Detected OATH QR code")
                                         viewModel.addOathCredentialFromUri(qrCodeResult)
                                         onScanComplete()
                                     }
 
                                     qrCodeResult.startsWith(UriScheme.PUSHAUTH.value) -> {
+                                        qrHandled = true
                                         diagnosticLogger.d("QrScannerScreen: Detected Push QR code")
                                         viewModel.addPushCredentialFromUri(qrCodeResult)
                                         onScanComplete()
                                     }
 
                                     qrCodeResult.startsWith(UriScheme.MFAUTH.value) -> {
+                                        qrHandled = true
                                         diagnosticLogger.d("QrScannerScreen: Detected MFA QR code")
                                         viewModel.addMfaCredentialFromUri(qrCodeResult)
                                         onScanComplete()
