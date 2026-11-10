@@ -234,6 +234,7 @@ The root `build.gradle.kts` contains `resolutionStrategy { force(...) }` blocks 
 | `org.apache.httpcomponents:httpclient` | `4.5.13` | CVE-2020-13956 (AGP `sdklib` via `httpmime`) |
 | `org.freemarker:freemarker` | `2.3.35` | CVE-2026-84939 (Dokka transitive) |
 | `org.apache.commons:commons-lang3` | `3.18.0` | CVE-2025-48924 (AGP `sdklib` via `commons-compress`) |
+| `commons-codec:commons-codec` | `1.23.0` | CVE-2026-119078, Blake3 `doFinalize` key separation (affects 1.16.0–1.22.1). Pulled transitively by AGP lint toolchain (`commons-compress`, `httpclient`) and declared by `mfa:oath`/`mfa:push` (shipped). SDK code does not use Blake3 |
 | `io.netty:netty-codec` | `4.1.125.Final` | Security vulnerabilities (Mend SCA, Nov 2025) |
 | `io.netty:netty-codec-http` | `4.1.125.Final` | Security vulnerabilities (Mend SCA, Nov 2025) |
 | `io.netty:netty-codec-http2` | `4.1.125.Final` | Security vulnerabilities (Mend SCA, Nov 2025) |
