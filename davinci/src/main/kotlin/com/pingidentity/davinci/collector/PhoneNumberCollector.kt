@@ -11,6 +11,7 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.boolean
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 
@@ -61,9 +62,7 @@ class PhoneNumberCollector : FieldCollector<JsonObject>(), Validator {
             phoneNumber = input[PHONE_NUMBER]?.jsonPrimitive?.content ?: ""
             countryCode = input[COUNTRY_CODE]?.jsonPrimitive?.content ?: ""
             extension = input[EXTENSION]?.jsonPrimitive?.content ?: ""
-            if (input.containsKey(EXTENSION_LABEL)) {
-                extensionLabel = input[EXTENSION_LABEL]?.jsonPrimitive?.content ?: ""
-            }
+            input[EXTENSION_LABEL]?.jsonPrimitive?.contentOrNull?.let { extensionLabel = it }
         } else {
             // Legacy structure - simple string
             phoneNumber = input.jsonPrimitive.content
