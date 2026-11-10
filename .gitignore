@@ -13,3 +13,5 @@ xcuserdata
 .claude/settings.local.json
 .playwright-mcp/
 .sdk/
+# push-e2e harness dependencies (installed by CI / npm install)
+node_modules/
