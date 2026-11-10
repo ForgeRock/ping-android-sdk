@@ -20,8 +20,11 @@ import com.pingidentity.android.ContextProvider
 import com.pingidentity.davinci.DaVinci
 import com.pingidentity.davinci.plugin.DaVinci
 import com.pingidentity.journey.Journey
+import com.pingidentity.logger.CONSOLE
 import com.pingidentity.logger.Logger
+import com.pingidentity.logger.NONE
 import com.pingidentity.logger.STANDARD
+import com.pingidentity.logger.WARN
 import com.pingidentity.oidc.JsonConfigKey
 import com.pingidentity.oidc.JsonConfigParser
 import com.pingidentity.oidc.OidcClient
@@ -62,6 +65,8 @@ data class JourneyConfigState(
     // Token storage isolation: forwarded to the SDK's `storage.fileName` JSON key so each
     // config's tokens live in their own DataStore file instead of one shared default file.
     val storageFileName: String? = null,
+    // Log level carried from the config's `log` key (asset/custom JSON). Null = sample default.
+    val log: String? = null,
 )
 
 data class OidcConfigState(
@@ -76,6 +81,7 @@ data class OidcConfigState(
     // Token storage isolation: forwarded to the SDK's `storage.fileName` JSON key so each
     // config's tokens live in their own DataStore file instead of one shared default file.
     val storageFileName: String? = null,
+    val log: String? = null,
 )
 
 data class DeviceAuthConfigState(
@@ -90,6 +96,7 @@ data class DeviceAuthConfigState(
     val revocationEndpoint: String = "",
     val deviceAuthorizationEndpoint: String = "",
     val acrValues: String = "",
+    val log: String? = null,
 )
 
 // ---------------------------------------------------------------------------
@@ -160,6 +167,7 @@ internal fun loadAssetConfigs(): AssetConfigs {
             val discoveryEndpoint = oidc.str("discoveryEndpoint")
             val redirectUri = oidc.str("redirectUri")
             val storageFileName = oidc["storage"]?.jsonObject?.get("fileName")?.jsonPrimitive?.content
+            val log = root.str("log").takeIf { it.isNotEmpty() }
 
             if (journeyObj != null) journey.add(JourneyConfigState(
                 serverUrl = journeyObj.str("serverUrl"),
@@ -172,6 +180,7 @@ internal fun loadAssetConfigs(): AssetConfigs {
                 display = displayName,
                 par = oidc["par"]?.jsonPrimitive?.content?.toBooleanStrictOrNull() ?: false,
                 storageFileName = storageFileName,
+                log = log,
             ))
             if (openIdObj != null || isDaVinci) deviceAuth.add(DeviceAuthConfigState(
                 clientId = clientId,
@@ -185,6 +194,7 @@ internal fun loadAssetConfigs(): AssetConfigs {
                 endSessionEndpoint = openIdObj?.str("endSessionEndpoint") ?: "",
                 revocationEndpoint = openIdObj?.str("revocationEndpoint") ?: "",
                 deviceAuthorizationEndpoint = openIdObj?.str("deviceAuthorizationEndpoint") ?: "",
+                log = log,
             ))
             if (isDaVinci) davinci.add(OidcConfigState(
                 clientId = clientId,
@@ -193,6 +203,7 @@ internal fun loadAssetConfigs(): AssetConfigs {
                 redirectUri = redirectUri,
                 display = displayName,
                 arcValue = oidc.str("acrValues"),
+                log = log,
             ))
 
             web.add(OidcConfigState(
@@ -205,6 +216,7 @@ internal fun loadAssetConfigs(): AssetConfigs {
                 par = oidc["par"]?.jsonPrimitive?.content?.toBooleanStrictOrNull() ?: false,
                 authorizationDetails = oidc["authorizationDetails"],
                 storageFileName = storageFileName,
+                log = log,
             ))
         }
     }
@@ -239,10 +251,24 @@ var daVinciRedirectUri: Uri = Uri.EMPTY
 // Package-level SDK builders (called both at app startup and from ViewModel)
 // ---------------------------------------------------------------------------
 
+/**
+ * Maps a config's `log` key to a logger using the SDK's own `JsonConfigParser.logLevel`
+ * mapping (STANDARD/DEBUG/INFO → STANDARD, WARN/ERROR → WARN, CONSOLE, NONE), so the DSL
+ * builders honor exactly the values the JSON-config path accepts. Null (key absent) keeps
+ * the sample's previous behavior: [Logger.STANDARD].
+ */
+internal fun logKeyToLogger(log: String?): Logger =
+    if (log == null) {
+        Logger.STANDARD
+    } else {
+        JsonConfigParser(buildJsonObject { put(JsonConfigKey.LOG, log) })
+            .logLevel(default = Logger.STANDARD)
+    }
+
 internal fun buildJourney(config: JourneyConfigState) {
     Journey(
         buildJsonObject {
-            put(JsonConfigKey.LOG, "STANDARD")
+            put(JsonConfigKey.LOG, config.log ?: "STANDARD")
             put(JsonConfigKey.JOURNEY, buildJsonObject {
                 put(JsonConfigKey.SERVER_URL, config.serverUrl)
                 put(JsonConfigKey.REALM, config.realm)
@@ -283,7 +309,7 @@ internal fun buildJourney(config: JourneyConfigState) {
 internal fun buildDaVinci(config: OidcConfigState) {
     DaVinci(
         buildJsonObject {
-            put(JsonConfigKey.LOG, "STANDARD")
+            put(JsonConfigKey.LOG, config.log ?: "STANDARD")
             put(JsonConfigKey.OIDC, buildJsonObject {
                 put(JsonConfigKey.CLIENT_ID, config.clientId)
                 put(JsonConfigKey.DISCOVERY_ENDPOINT, config.discoveryEndpoint)
@@ -306,7 +332,7 @@ internal fun buildWeb(config: OidcConfigState) {
     // The DSL constructor throws on invalid config instead of returning Result, so wrap both.
     web = runCatching {
         OidcWebClient {
-            logger = Logger.STANDARD
+            logger = logKeyToLogger(config.log)
             module(Oidc) {
                 clientId = config.clientId
                 discoveryEndpoint = config.discoveryEndpoint
@@ -333,7 +359,7 @@ internal fun buildWeb(config: OidcConfigState) {
     rarWeb = if (details != null) {
         runCatching {
             OidcWebClient {
-                logger = Logger.STANDARD
+                logger = logKeyToLogger(config.log)
                 module(Oidc) {
                     clientId = config.clientId
                     discoveryEndpoint = config.discoveryEndpoint
@@ -370,7 +396,7 @@ internal const val RAR_STORAGE_FILE_NAME = "com.pingidentity.sdk.v1.tokens.rar"
 internal fun buildDeviceAuthClient(config: DeviceAuthConfigState) {
     OidcDeviceClient(
         buildJsonObject {
-            put(JsonConfigKey.LOG, "STANDARD")
+            put(JsonConfigKey.LOG, config.log ?: "STANDARD")
             put(JsonConfigKey.OIDC, buildJsonObject {
                 put(JsonConfigKey.CLIENT_ID, config.clientId)
                 put(JsonConfigKey.DISCOVERY_ENDPOINT, config.discoveryEndpoint)
@@ -437,6 +463,7 @@ suspend fun initConfigs() {
             display = prefs[stringPreferencesKey("j_display")] ?: "",
             par = prefs[stringPreferencesKey("j_par")]?.toBooleanStrictOrNull() ?: false,
             storageFileName = prefs[stringPreferencesKey("j_storageFileName")],
+            log = prefs[stringPreferencesKey("j_log")],
         )
     }
 
@@ -448,6 +475,7 @@ suspend fun initConfigs() {
             redirectUri = prefs[stringPreferencesKey("dv_redirectUri")] ?: "",
             display = prefs[stringPreferencesKey("dv_display")] ?: "",
             arcValue = prefs[stringPreferencesKey("dv_arcValue")] ?: "",
+            log = prefs[stringPreferencesKey("dv_log")],
         )
     }
 
@@ -464,6 +492,7 @@ suspend fun initConfigs() {
                 runCatching { Json.parseToJsonElement(it) }.getOrNull()
             },
             storageFileName = prefs[stringPreferencesKey("w_storageFileName")],
+            log = prefs[stringPreferencesKey("w_log")],
         )
     }
 
@@ -480,6 +509,7 @@ suspend fun initConfigs() {
             revocationEndpoint = prefs[stringPreferencesKey("da_revocationEndpoint")] ?: "",
             deviceAuthorizationEndpoint = prefs[stringPreferencesKey("da_deviceAuthorizationEndpoint")] ?: "",
             acrValues = prefs[stringPreferencesKey("da_acrValues")] ?: "",
+            log = prefs[stringPreferencesKey("da_log")],
         )
     }
 
@@ -726,6 +756,7 @@ class EnvViewModel : ViewModel() {
             display = prefs[stringPreferencesKey("j_display")] ?: "",
             par = prefs[stringPreferencesKey("j_par")]?.toBooleanStrictOrNull() ?: false,
             storageFileName = prefs[stringPreferencesKey("j_storageFileName")],
+            log = prefs[stringPreferencesKey("j_log")],
         )
     }
 
@@ -739,6 +770,7 @@ class EnvViewModel : ViewModel() {
             redirectUri = prefs[stringPreferencesKey("dv_redirectUri")] ?: "",
             display = prefs[stringPreferencesKey("dv_display")] ?: "",
             arcValue = prefs[stringPreferencesKey("dv_arcValue")] ?: "",
+            log = prefs[stringPreferencesKey("dv_log")],
         )
     }
 
@@ -757,6 +789,7 @@ class EnvViewModel : ViewModel() {
                 runCatching { Json.parseToJsonElement(it) }.getOrNull()
             },
             storageFileName = prefs[stringPreferencesKey("w_storageFileName")],
+            log = prefs[stringPreferencesKey("w_log")],
         )
     }
 
@@ -775,6 +808,7 @@ class EnvViewModel : ViewModel() {
             revocationEndpoint = prefs[stringPreferencesKey("da_revocationEndpoint")] ?: "",
             deviceAuthorizationEndpoint = prefs[stringPreferencesKey("da_deviceAuthorizationEndpoint")] ?: "",
             acrValues = prefs[stringPreferencesKey("da_acrValues")] ?: "",
+            log = prefs[stringPreferencesKey("da_log")],
         )
     }
 
@@ -819,6 +853,8 @@ class EnvViewModel : ViewModel() {
             prefs[stringPreferencesKey("j_par")] = config.par.toString()
             config.storageFileName?.let { prefs[stringPreferencesKey("j_storageFileName")] = it }
                 ?: prefs.remove(stringPreferencesKey("j_storageFileName"))
+            config.log?.let { prefs[stringPreferencesKey("j_log")] = it }
+                ?: prefs.remove(stringPreferencesKey("j_log"))
         }
     }
 
@@ -830,6 +866,8 @@ class EnvViewModel : ViewModel() {
             prefs[stringPreferencesKey("dv_redirectUri")] = config.redirectUri
             prefs[stringPreferencesKey("dv_display")] = config.display
             prefs[stringPreferencesKey("dv_arcValue")] = config.arcValue
+            config.log?.let { prefs[stringPreferencesKey("dv_log")] = it }
+                ?: prefs.remove(stringPreferencesKey("dv_log"))
         }
     }
 
@@ -847,6 +885,8 @@ class EnvViewModel : ViewModel() {
             } ?: prefs.remove(stringPreferencesKey("w_authorizationDetails"))
             config.storageFileName?.let { prefs[stringPreferencesKey("w_storageFileName")] = it }
                 ?: prefs.remove(stringPreferencesKey("w_storageFileName"))
+            config.log?.let { prefs[stringPreferencesKey("w_log")] = it }
+                ?: prefs.remove(stringPreferencesKey("w_log"))
         }
     }
 
@@ -863,6 +903,8 @@ class EnvViewModel : ViewModel() {
             prefs[stringPreferencesKey("da_revocationEndpoint")] = config.revocationEndpoint
             prefs[stringPreferencesKey("da_deviceAuthorizationEndpoint")] = config.deviceAuthorizationEndpoint
             prefs[stringPreferencesKey("da_acrValues")] = config.acrValues
+            config.log?.let { prefs[stringPreferencesKey("da_log")] = it }
+                ?: prefs.remove(stringPreferencesKey("da_log"))
         }
     }
 
@@ -903,6 +945,7 @@ class EnvViewModel : ViewModel() {
                     put("scopes", c.scopes); put("redirectUri", c.redirectUri); put("display", c.display)
                     put("par", c.par)
                     c.storageFileName?.let { put("storageFileName", it) }
+                    c.log?.let { put("log", it) }
                 })
             }
         }.toString()
@@ -917,6 +960,7 @@ class EnvViewModel : ViewModel() {
                 scopes = str("scopes"), redirectUri = str("redirectUri"), display = str("display"),
                 par = o["par"]?.jsonPrimitive?.content?.toBooleanStrictOrNull() ?: false,
                 storageFileName = o["storageFileName"]?.jsonPrimitive?.content,
+                log = o["log"]?.jsonPrimitive?.content,
             )
         }
     }.getOrDefault(emptyList())
@@ -930,6 +974,7 @@ class EnvViewModel : ViewModel() {
                     put("display", c.display); put("arcValue", c.arcValue)
                     put("par", c.par)
                     c.storageFileName?.let { put("storageFileName", it) }
+                    c.log?.let { put("log", it) }
                 })
             }
         }.toString()
@@ -944,6 +989,7 @@ class EnvViewModel : ViewModel() {
                 display = str("display"), arcValue = str("arcValue"),
                 par = o["par"]?.jsonPrimitive?.content?.toBooleanStrictOrNull() ?: false,
                 storageFileName = o["storageFileName"]?.jsonPrimitive?.content,
+                log = o["log"]?.jsonPrimitive?.content,
             )
         }
     }.getOrDefault(emptyList())
@@ -960,6 +1006,7 @@ class EnvViewModel : ViewModel() {
                     put("revocationEndpoint", c.revocationEndpoint)
                     put("deviceAuthorizationEndpoint", c.deviceAuthorizationEndpoint)
                     put("acrValues", c.acrValues)
+                    c.log?.let { put("log", it) }
                 })
             }
         }.toString()
@@ -977,6 +1024,7 @@ class EnvViewModel : ViewModel() {
                 revocationEndpoint = str("revocationEndpoint"),
                 deviceAuthorizationEndpoint = str("deviceAuthorizationEndpoint"),
                 acrValues = str("acrValues"),
+                log = o["log"]?.jsonPrimitive?.content,
             )
         }
     }.getOrDefault(emptyList())
