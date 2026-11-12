@@ -175,28 +175,12 @@ class PhoneNumberCollectorTest {
     }
 
     @Test
-    fun `init with phone number and extension`() {
+    fun `init with phone number and extension ignores extension label in value object`() {
         val input = buildJsonObject {
             put("phoneNumber", "CA-1-+17783186380-7783186380")
             put("countryCode", "CA")
             put("extension", "1234")
-            put("extensionLabel", "Extension")
-        }
-        val collector = PhoneNumberCollector()
-        collector.init(input as JsonElement)
-
-        assertEquals("CA-1-+17783186380-7783186380", collector.phoneNumber)
-        assertEquals("CA", collector.countryCode)
-        assertEquals("1234", collector.extension)
-        assertEquals("Extension", collector.extensionLabel)
-    }
-
-    @Test
-    fun `init with phone number but no extension label`() {
-        val input = buildJsonObject {
-            put("phoneNumber", "CA-1-+17783186380-7783186380")
-            put("countryCode", "CA")
-            put("extension", "1234")
+            put("extensionLabel", "Unexpected")
         }
         val collector = PhoneNumberCollector()
         collector.init(input as JsonElement)
