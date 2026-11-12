@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Ping Identity. All rights reserved.
+ * Copyright (c) 2025 - 2026 Ping Identity. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -175,12 +175,12 @@ class PhoneNumberCollectorTest {
     }
 
     @Test
-    fun `init with phone number and extension`() {
+    fun `init with phone number and extension ignores extension label in value object`() {
         val input = buildJsonObject {
             put("phoneNumber", "CA-1-+17783186380-7783186380")
             put("countryCode", "CA")
             put("extension", "1234")
-            put("extensionLabel", "Extension")
+            put("extensionLabel", "Unexpected")
         }
         val collector = PhoneNumberCollector()
         collector.init(input as JsonElement)
@@ -188,6 +188,33 @@ class PhoneNumberCollectorTest {
         assertEquals("CA-1-+17783186380-7783186380", collector.phoneNumber)
         assertEquals("CA", collector.countryCode)
         assertEquals("1234", collector.extension)
+        assertEquals("", collector.extensionLabel)
+    }
+
+    @Test
+    fun `init with formData value does not overwrite extension label from field definition`() {
+        val field = buildJsonObject {
+            put("type", "PHONE_NUMBER")
+            put("key", "phone-field")
+            put("label", "Phone Collector")
+            put("defaultCountryCode", "BF")
+            put("validatePhoneNumber", true)
+            put("showExtension", true)
+            put("extensionLabel", "Extension")
+        }
+        val formDataValue = buildJsonObject {
+            put("phoneNumber", "(555)555-1234")
+            put("countryCode", "GB")
+            put("extension", "4321")
+        }
+        val collector = PhoneNumberCollector()
+        // Form.parse order: field definition first, then the prefilled value
+        collector.init(field)
+        collector.init(formDataValue as JsonElement)
+
+        assertEquals("(555)555-1234", collector.phoneNumber)
+        assertEquals("GB", collector.countryCode)
+        assertEquals("4321", collector.extension)
         assertEquals("Extension", collector.extensionLabel)
     }
 }
