@@ -3,15 +3,19 @@
 #### Added
 - Added conditional UI (autofill with passkeys) support to FIDO authentication on Android 15+ [SDKS-4574]
 - Added RFC 9396 Rich Authorization Requests (RAR) support [SDKS-5424] [SDKS-5426]
-- Improved OAuth 2.0 security in OIDC web and browser flows with state validation, secure PKCE generation, better error handling, and fragment callback support. **Upgrade note:** invalid or missing `state` now fails authorization with `AuthorizeException` instead of `IllegalStateException` [SDKS-5479]
+- Added CI validation for copyright headers [SDKS-5477]
+- Added sample app support for the `log` key from environment config JSONs [SDKS-5577]
 
 #### Fixed
+- Fixed OIDC web and browser flows to validate the OAuth 2.0 `state` parameter, generate PKCE verifiers with a cryptographically secure random source, read authorization callbacks from the query string or fragment, and surface server OAuth errors in the exception. **Upgrade note:** invalid or missing `state` now fails authorization with `AuthorizeException` instead of `IllegalStateException` [SDKS-5479]
 - Fixed `PushNotification.expired` to use the server send time (`sentAt`) instead of the local creation time, falling back to creation time when `sentAt` is invalid [SDKS-5490]
 - Fixed `PhoneNumberCollector.extensionLabel` being reset to an empty string on DaVinci form prefill [SDKS-5073]
 - Fixed commons-codec security vulnerability (CVE-2026-119078) by forcing a secure version on the lint classpath [SDKS-5578]
 
 #### Changed
 - Standardized Recognize error reporting across SDKs using shared error codes and names. Upgrade note: RecognizeException and Journey error values now use shared codes instead of native Keyless codes, and the exception constructor has changed. [P1RECMOB-3848]
+- Updated Bouncy Castle to 1.87, Jackson to 2.22.4, and pinned Guava, ASM and JAXB to address Mend scan findings [SDKS-5542]
+- Upgraded the Ping Signals dependency used by the `protect` module to 5.4.1 and raised `compileSdk` to 37
 
 ## [2.2.0]
 
