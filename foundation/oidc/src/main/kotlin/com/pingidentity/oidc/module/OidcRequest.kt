@@ -26,6 +26,7 @@ import com.pingidentity.oidc.Constants.RESPONSE_MODE
 import com.pingidentity.oidc.Constants.RESPONSE_TYPE
 import com.pingidentity.oidc.Constants.SCOPE
 import com.pingidentity.oidc.Constants.STATE
+import com.pingidentity.oidc.generateState
 import com.pingidentity.oidc.Constants.UI_LOCATES
 import com.pingidentity.oidc.Constants.USER_CODE_CAMEL
 import com.pingidentity.oidc.OidcClientConfig
@@ -106,6 +107,53 @@ internal val authorizeJson: Json = Json { encodeDefaults = false }
  */
 internal fun List<AuthorizationDetail>.toAuthorizationDetailsParam(json: Json = authorizeJson): String =
     json.encodeToJsonElement(this).toString()
+
+/**
+ * Resolves the `state` value to send with an authorization request and to verify against the
+ * authorization response (RFC 6749 CSRF protection).
+ *
+ * Precedence — the first source that provides a state wins:
+ *
+ * 1. `extraParameters["state"]` (per-call)
+ * 2. `additionalParameters["state"]`
+ * 3. [OidcClientConfig.state]
+ *
+ * The request builders merge parameters by key, so the request carries exactly one `state`:
+ * the value resolved here. When more than one source defines `state`, the lower-priority
+ * values are ignored. Set at most one source; a warning is logged when multiple are present.
+ *
+ * @param extraParameters The per-call authorization parameters.
+ * @return The state to send and verify, or `null` when no source provides a state.
+ */
+internal fun OidcClientConfig.resolveState(extraParameters: Map<String, String>): String? {
+    val perCall = extraParameters[STATE]
+    val additional = additionalParameters[STATE]
+    if ((perCall != null && additional != null) ||
+        (additional != null && state != null) ||
+        (perCall != null && state != null)
+    ) {
+        logger.w(
+            "Multiple state sources are set (per-call parameter, additionalParameters, state). " +
+                "Only the highest-priority value is sent and verified; the others are ignored.",
+        )
+    }
+    return perCall ?: additional ?: state
+}
+
+/**
+ * Resolves the `state` to send and verify (see [resolveState]) and generates a fresh one
+ * when no source provides it (RFC 6749 CSRF protection: a state is always sent).
+ *
+ * The returned value must be passed to the request builders as a per-call parameter
+ * (a no-op when a source already provided one, so the request carries the state exactly
+ * once) and recorded so the browser callback can verify it with [validateState].
+ *
+ * @param extraParameters The per-call authorization parameters.
+ * @return The state to send and verify — never `null`.
+ */
+internal fun OidcClientConfig.resolveOrGenerateState(
+    extraParameters: Map<String, String> = emptyMap(),
+): String = resolveState(extraParameters) ?: generateState()
 
 /**
  * Internal function to populate an OIDC authorization request with the necessary parameters.
