@@ -10,6 +10,7 @@
 
 #### Fixed
 - Fixed `PushNotification.expired` to use the server send time (`sentAt`) instead of the local creation time, falling back to creation time when `sentAt` is invalid [SDKS-5490]
+- Fixed `PhoneNumberCollector.extensionLabel` being reset to an empty string on DaVinci form prefill [SDKS-5073]
 - Fixed OIDC PKCE code verifier generation to use a cryptographically secure random source (`SecureRandom`) instead of `kotlin.random.Random` [SDKS-5479]
 
 #### Changed

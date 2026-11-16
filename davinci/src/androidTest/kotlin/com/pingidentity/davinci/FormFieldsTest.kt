@@ -510,9 +510,7 @@ class FormFieldsTest {
 
         // Schema-level extension properties (parsed from init(JsonObject))
         assertEquals(true, phone.showExtension)
-
-        // TODO: Enable the following assertion once SDKS-5073 is resolved
-        // assertEquals("Extension", phone.extensionLabel)
+        assertEquals("Extension", phone.extensionLabel)
 
         // extension is pre-filled from formData object (DV-17946 new format)
         assertEquals("4321", phone.extension)
