@@ -14,6 +14,8 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.Preview
+import androidx.camera.core.resolutionselector.ResolutionSelector
+import androidx.camera.core.resolutionselector.ResolutionStrategy
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.layout.Arrangement
@@ -38,6 +40,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -95,6 +98,19 @@ fun QrScannerScreen(
 
     // Create an executor for background operations
     val cameraExecutor = remember { Executors.newSingleThreadExecutor() }
+
+    // One-shot guard for QR detection. The camera analyzer can decode the same
+    // frame (or the next one) more than once before the scanner screen actually
+    // closes — ML Kit's callback is asynchronous, so a second decode can land
+    // after onScanComplete() has already navigated away but before the analyzer
+    // is unbound. Processing it twice registers the credential twice with two
+    // different random IDs: the second registration reaches AM but is rejected
+    // locally (DuplicateCredentialException), leaving AM holding a mechanism the
+    // device never stored — the later push for that mechanism then fails to
+    // approve ("Credential not found") and the AM journey times out (seen twice
+    // in CI, run 42870319675 attempts 1+2). A remember'd flag survives
+    // recomposition; reset it if the user comes back to scan again.
+    var qrHandled by rememberSaveable { mutableStateOf(false) }
 
     // Cleanup resources when leaving the screen
     LaunchedEffect(Unit) {
@@ -157,29 +173,54 @@ fun QrScannerScreen(
                             .requireLensFacing(CameraSelector.LENS_FACING_BACK)
                             .build()
 
-                        // Configure image analysis with higher resolution for large QR codes
+                        // Configure image analysis with higher resolution for large QR codes:
+                        // the default analysis stream is ~640x480, which puts a large
+                        // (version 25, 117-module) push-registration QR at ~4 px/module —
+                        // below ML Kit's reliable decode threshold, especially through the
+                        // emulator's swiftshader camera path. Requesting 1920x1080 (with a
+                        // bounded fallback so devices without it still pick the closest)
+                        // roughly doubles the px/module and makes dense QR codes decodable.
+                        val resolutionSelector = ResolutionSelector.Builder()
+                            .setResolutionStrategy(
+                                ResolutionStrategy(
+                                    android.util.Size(1920, 1080),
+                                    ResolutionStrategy.FALLBACK_RULE_CLOSEST_HIGHER_THEN_LOWER,
+                                ),
+                            )
+                            .build()
                         val imageAnalysis = ImageAnalysis.Builder()
+                            .setResolutionSelector(resolutionSelector)
                             .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                             .build()
 
                         imageAnalysis.setAnalyzer(
                             cameraExecutor,
                             QrCodeAnalyzer { qrCodeResult ->
+                                // Only the first detection is processed; a second
+                                // decode of the same code is dropped (see the guard
+                                // declaration above for why this matters).
+                                if (qrHandled) {
+                                    diagnosticLogger.d("QrScannerScreen: ignoring duplicate QR detection (already handled)")
+                                    return@QrCodeAnalyzer
+                                }
                                 // Process the QR code result (otpauth URI, pushauth URI, or mfauth URI)
                                 when {
                                     qrCodeResult.startsWith(UriScheme.OTPAUTH.value) -> {
+                                        qrHandled = true
                                         diagnosticLogger.d("QrScannerScreen: Detected OATH QR code")
                                         viewModel.addOathCredentialFromUri(qrCodeResult)
                                         onScanComplete()
                                     }
 
                                     qrCodeResult.startsWith(UriScheme.PUSHAUTH.value) -> {
+                                        qrHandled = true
                                         diagnosticLogger.d("QrScannerScreen: Detected Push QR code")
                                         viewModel.addPushCredentialFromUri(qrCodeResult)
                                         onScanComplete()
                                     }
 
                                     qrCodeResult.startsWith(UriScheme.MFAUTH.value) -> {
+                                        qrHandled = true
                                         diagnosticLogger.d("QrScannerScreen: Detected MFA QR code")
                                         viewModel.addMfaCredentialFromUri(qrCodeResult)
                                         onScanComplete()
