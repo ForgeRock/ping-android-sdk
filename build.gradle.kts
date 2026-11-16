@@ -72,6 +72,12 @@ buildscript {
             // Used transitively by AGP lint toolchain (build-time only, not shipped
             // in the SDK). 2.3.9 is the final patch of the javax-jaxb 2.3.x line.
             force(libs.jaxb.runtime)
+
+            // Force secure version of commons-codec to address security vulnerabilities
+            // Fixes CVE-2026-119078 (Blake3 KDF doFinalize; affects 1.16.0-1.22.1).
+            // Used transitively by AGP lint toolchain (commons-compress, httpclient)
+            // and shipped by mfa:oath / mfa:push (declared in the catalog).
+            force(libs.commons.codec)
         }
     }
 }
@@ -122,6 +128,12 @@ allprojects {
             // Used transitively by AGP lint toolchain (build-time only, not shipped
             // in the SDK). 2.3.9 is the final patch of the javax-jaxb 2.3.x line.
             force(libs.jaxb.runtime)
+
+            // Force secure version of commons-codec to address security vulnerabilities
+            // Fixes CVE-2026-119078 (Blake3 KDF doFinalize; affects 1.16.0-1.22.1).
+            // Used transitively by AGP lint toolchain (commons-compress, httpclient)
+            // and shipped by mfa:oath / mfa:push (declared in the catalog).
+            force(libs.commons.codec)
 
             // Force secure version of netty-codec to address security vulnerabilities
             // Used transitively by com.android.tools.emulator:proto (build toolchain only)
