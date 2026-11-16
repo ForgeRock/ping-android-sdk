@@ -50,6 +50,7 @@ jackson = "2.22.4"
 guava = "33.7.2-jre"
 asm = "9.11.1"
 jaxb-runtime = "2.3.9"
+commons-codec = "1.23.0"
 androidx-annotation = "1.9.1"
 
 activityKtx = "1.10.1"
@@ -178,7 +179,7 @@ androidx-lifecycle-viewmodel-compose = { module = "androidx.lifecycle:lifecycle-
 androidx-ui-graphics = { module = "androidx.compose.ui:ui-graphics" }
 androidx-sqlite = { group = "androidx.sqlite", name = "sqlite", version = "2.5.2" }
 sqlcipher = { group = "net.zetetic", name = "sqlcipher-android", version = "4.12.0" }
-commons-codec = { group = "commons-codec", name = "commons-codec", version = "1.15" }
+commons-codec = { group = "commons-codec", name = "commons-codec", version.ref = "commons-codec" }
 barcode-scanning = { module = "com.google.mlkit:barcode-scanning", version.ref = "barcodeScanning" }
 play-services-auth-blockstore = { module = "com.google.android.gms:play-services-auth-blockstore", version.ref = "playServicesAuthBlockstore" }
 kotlinx-coroutines-play-services = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-play-services", version.ref = "kotlinxCoroutinesPlayServices" }
