@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2025 - 2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -8,6 +8,7 @@
 package com.pingidentity.davinci.module
 
 import com.pingidentity.davinci.json
+import com.pingidentity.logger.Logger
 import com.pingidentity.orchestrate.ContinueNode
 import com.pingidentity.orchestrate.ErrorNode
 import kotlinx.serialization.KSerializer
@@ -32,12 +33,25 @@ fun ErrorNode.continueNode(): ContinueNode? {
     return context.flowContext.getValue(CONTINUE_NODE) as? ContinueNode
 }
 
+/**
+ * Extension function to get the error details from an [ErrorNode].
+ *
+ * Elements that cannot be decoded are skipped (logged at debug level) instead of
+ * throwing, so one malformed detail does not discard the rest.
+ *
+ * @return The list of decodable [Detail]s, or an empty list if there are none.
+ */
 fun ErrorNode.details(): List<Detail> {
-    input["details"]?.jsonArray?.let {
-        return it.map { jsonElement ->
-            json.decodeFromJsonElement(jsonElement)
-        }
-    } ?: return emptyList()
+    val array = input["details"]?.jsonArray ?: return emptyList()
+    return array.mapIndexedNotNull { index, jsonElement ->
+        runCatching { json.decodeFromJsonElement<Detail>(jsonElement) }
+            .onFailure {
+                // Do not log the exception message: decoder errors can embed the
+                // raw response JSON, which may contain user data.
+                Logger.logger.d("Skipping undecodable error detail at index $index")
+            }
+            .getOrNull()
+    }
 }
 
 /**

@@ -218,6 +218,66 @@ fun rewindStateToSpecificRenderedUIResponse() =
                 "}",
     )
 
+// SDKS-5536: PingOne SSO connector's userLookup failure. rawResponse omits
+// id, code, message and details entirely.
+fun userLookupErrorResponse() =
+    ByteReadChannel(
+        "{\n" +
+                "    \"connectorId\": \"pingOneSSOConnector\",\n" +
+                "    \"capabilityName\": \"userLookup\",\n" +
+                "    \"code\": \" Invalid username and/or password\",\n" +
+                "    \"httpResponseCode\": 400,\n" +
+                "    \"message\": \"Invalid username and/or password\",\n" +
+                "    \"details\": [\n" +
+                "        {\n" +
+                "            \"rawResponse\": {\n" +
+                "                \"_embedded\": { \"users\": [] },\n" +
+                "                \"count\": 0,\n" +
+                "                \"size\": 0,\n" +
+                "                \"userFilter\": \"(username eq \\\"unknown-user\\\")\"\n" +
+                "            },\n" +
+                "            \"statusCode\": 200\n" +
+                "        }\n" +
+                "    ]\n" +
+                "}"
+    )
+
+// SDKS-5536: same error with detail elements that cannot be decoded, to pin the
+// skip-and-log behavior. The second element fails with MissingFieldException;
+// the third has a numeric value for the String? code field, the decode failure
+// whose exception message embeds the raw response JSON (see DaVinciErrorTest).
+fun userLookupErrorResponseWithUndecodableDetail() =
+    ByteReadChannel(
+        "{\n" +
+                "    \"connectorId\": \"pingOneSSOConnector\",\n" +
+                "    \"capabilityName\": \"userLookup\",\n" +
+                "    \"code\": \" Invalid username and/or password\",\n" +
+                "    \"httpResponseCode\": 400,\n" +
+                "    \"message\": \"Invalid username and/or password\",\n" +
+                "    \"details\": [\n" +
+                "        {\n" +
+                "            \"rawResponse\": {\n" +
+                "                \"_embedded\": { \"users\": [] },\n" +
+                "                \"count\": 0,\n" +
+                "                \"size\": 0,\n" +
+                "                \"userFilter\": \"(username eq \\\"unknown-user\\\")\"\n" +
+                "            },\n" +
+                "            \"statusCode\": 200\n" +
+                "        },\n" +
+                "        {\n" +
+                "            \"statusCode\": 400\n" +
+                "        },\n" +
+                "        {\n" +
+                "            \"rawResponse\": {\n" +
+                "                \"code\": 1999,\n" +
+                "                \"message\": \"user secret-token-abc123\"\n" +
+                "            },\n" +
+                "            \"statusCode\": 400\n" +
+                "        }\n" +
+                "    ]\n" +
+                "}"
+    )
+
 fun tokeErrorResponse() =
     ByteReadChannel(
         "{\n" +
