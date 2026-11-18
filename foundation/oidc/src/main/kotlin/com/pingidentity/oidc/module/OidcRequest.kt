@@ -146,7 +146,7 @@ internal fun OidcClientConfig.resolveState(extraParameters: Map<String, String>)
  *
  * The returned value must be passed to the request builders as a per-call parameter
  * (a no-op when a source already provided one, so the request carries the state exactly
- * once) and recorded so the browser callback can verify it with [validateState].
+ * once) and recorded so the browser callback can verify it with `validateState`.
  *
  * @param extraParameters The per-call authorization parameters.
  * @return The state to send and verify — never `null`.

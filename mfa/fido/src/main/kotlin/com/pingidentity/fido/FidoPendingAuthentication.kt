@@ -185,11 +185,11 @@ class FidoPendingAuthentication internal constructor(
      *
      * Ordering is load-bearing for visibility: [finalResult] is written and the observers
      * (which store the assertion into the collector/callback that `payload()` and the
-     * workflow's `next()` later read) are invoked **before** [deferred.complete] releases the
+     * workflow's `next()` later read) are invoked **before** `deferred.complete` releases the
      * suspended [await]ers. Otherwise an awaiter could resume and read stale collector state
      * with no happens-before edge — a data race that can silently lose the authentication
      * result. Releasing the awaiter is therefore the last step: even if an observer throws,
-     * the [finally] block completes the deferred so awaiters never hang.
+     * the `finally` block completes the deferred so awaiters never hang.
      */
     private fun complete(result: Result<JsonObject>) {
         if (!completionClaimed.compareAndSet(false, true)) return
