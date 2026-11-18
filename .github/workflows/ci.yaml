@@ -119,6 +119,7 @@ jobs:
     secrets:
       SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+      CLOUDSMITH_TOKEN_RECOGNIZE: ${{ secrets.CLOUDSMITH_TOKEN_RECOGNIZE }}
 
   # Run integration tests on emulators
   integration-tests:
