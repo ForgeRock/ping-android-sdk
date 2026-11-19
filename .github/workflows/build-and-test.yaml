@@ -51,8 +51,11 @@ jobs:
           cache: 'gradle'
 
       # Enable the :recognize module by appending the Cloudsmith token to gradle.properties.
-      # No-op when the secret is absent (fork PRs) — the module then stays excluded, as locally.
+      # Base-repo builds only: on /run-ci against fork PRs the fork's build scripts execute on
+      # this runner and could read the token out of gradle.properties, so fork heads get none —
+      # the :recognize module then stays excluded, as for any build without the token.
       - name: Append Cloudsmith Recognize token to gradle.properties
+        if: (inputs.head_repo || github.event.pull_request.head.repo.full_name) == github.repository
         env:
           CLOUDSMITH_TOKEN_RECOGNIZE: ${{ secrets.CLOUDSMITH_TOKEN_RECOGNIZE }}
         run: |
