@@ -110,7 +110,7 @@ fun OidcClient(json: JsonObject): kotlin.Result<OidcClient> {
  * Token storage is deliberately not configurable from JSON: JSON configuration is shared across
  * platforms, and storage is platform-specific (Android DataStore, iOS Keychain) with no common
  * `storage.fileName` equivalent. Apps that need per-client token isolation set it via the
- * [storage] DSL on each client instead.
+ * [OidcClientConfig.storage] DSL on each client instead.
  *
  * @param oidcJsonConfig Parser wrapping the `oidc` sub-object of the top-level JSON config.
  */

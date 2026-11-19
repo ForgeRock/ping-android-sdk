@@ -39,7 +39,7 @@ class RecognizeException(
         /**
          * Converts a [KeylessSdkError] into a [RecognizeException].
          *
-         * The native code is mapped to the shared error model via [SharedErrorCode.resolve]
+         * The native code is mapped to the shared error model via `SharedErrorCode.resolve`
          * and copied into `debuggingInfo["sdkCode"]`.
          *
          * @param error The raw Keyless SDK error.

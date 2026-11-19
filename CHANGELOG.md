@@ -1,20 +1,21 @@
-## [Unreleased]
+## [2.3.0]
 
 #### Added
-- Added AM/AIC transactional backchannel authentication support to the Journey module via `Journey.start(backchannelUri)` [SDKS-5157]
 - Added conditional UI (autofill with passkeys) support to FIDO authentication on Android 15+ [SDKS-4574]
-- Added RFC 9396 `authorization_details` preservation on OIDC `Token` responses, exposed as `Token.authorizationDetails` and preserved through storage round-trips [SDKS-5424]
-- Added RFC 9396 `authorization_details` support on OIDC config and per-call authorize parameters [SDKS-5426]
-- Added OAuth 2.0 `state` CSRF protection to the OIDC web and browser flows: a `state` is now always sent with the authorization request and the response's `state` is verified against the sent value before the authorization code is trusted. **Upgrade note:** authorization callbacks that omit or alter the `state` parameter (previously accepted) now fail with an `AuthorizeException`, so authorization servers or proxies that strip `state` will surface a login failure. State verification runs before OAuth error surfacing, so an error redirect that omits or alters `state` reports the state failure rather than the server's error [SDKS-5479]
-- Added OAuth error surfacing to the OIDC web and browser flows: when the authorization callback carries no code, the server's `error`, `error_description` and `error_uri` parameters (read from the query string or the fragment) are surfaced in the `AuthorizeException` message instead of a generic "No authorization code found in response". The authorization `code` is likewise now read from the query string or the fragment, so `response_mode=fragment` callbacks succeed instead of failing with a missing-code error. **Upgrade note:** that no-code failure is now an `AuthorizeException` instead of an `IllegalStateException` — code that catches or checks `IllegalStateException` from `OidcWebClient.authorize()` must catch `AuthorizeException` instead, and on the Browser agent the failure now maps to `OidcError.AuthorizeError` instead of `OidcError.Unknown` [SDKS-5479]
+- Added RFC 9396 Rich Authorization Requests (RAR) support [SDKS-5424] [SDKS-5426]
+- Added CI validation for copyright headers [SDKS-5477]
+- Added sample app support for the `log` key from environment config JSONs [SDKS-5577]
 
 #### Fixed
+- Fixed OIDC web and browser flows to validate the OAuth 2.0 `state` parameter, generate PKCE verifiers with a cryptographically secure random source, read authorization callbacks from the query string or fragment, and surface server OAuth errors in the exception. **Upgrade note:** invalid or missing `state` now fails authorization with `AuthorizeException` instead of `IllegalStateException` [SDKS-5479]
 - Fixed `PushNotification.expired` to use the server send time (`sentAt`) instead of the local creation time, falling back to creation time when `sentAt` is invalid [SDKS-5490]
 - Fixed `PhoneNumberCollector.extensionLabel` being reset to an empty string on DaVinci form prefill [SDKS-5073]
-- Fixed OIDC PKCE code verifier generation to use a cryptographically secure random source (`SecureRandom`) instead of `kotlin.random.Random` [SDKS-5479]
+- Fixed commons-codec security vulnerability (CVE-2026-119078) by forcing a secure version on the lint classpath [SDKS-5578]
 
 #### Changed
-- Changed Recognize error reporting to the shared cross-platform error model, matching the web SDK. `RecognizeException` now carries the shared `code` and `name` (e.g. `CORE_USER_NOT_ENROLLED` / 3003), and keeps the native Keyless code in the new `sdkCode` property, with the mapping exposed as the public `SharedErrorCode` enum. The `clientError` Journey input now carries the shared error name and `clientErrorCode` the shared code; an error with no shared name is reported as `SDK_ERROR` (1000). **Upgrade note:** `RecognizeException.code` and the submitted `clientErrorCode` used to be native Keyless codes (e.g. 20000), and `clientError` used to be the error message. App or Journey logic that branches on those values must use the shared codes and names listed in the Recognize README. The `RecognizeException` constructor also gained the `name` and `sdkCode` parameters, so callers constructing it positionally must switch to named arguments. The native code is still available in `sdkCode`, and the message in `RecognizeException.message`. `clientErrorCode` is now always submitted: failures that are not a `RecognizeException` previously reported the code `-1` and now report `SDK_ERROR` / `1000` [P1RECMOB-3848]
+- Standardized Recognize error reporting across SDKs using shared error codes and names. Upgrade note: RecognizeException and Journey error values now use shared codes instead of native Keyless codes, and the exception constructor has changed. [P1RECMOB-3848]
+- Updated Bouncy Castle to 1.87, Jackson to 2.22.4, and pinned Guava, ASM and JAXB to address Mend scan findings [SDKS-5542]
+- Upgraded the Ping Signals dependency used by the `protect` module to 5.4.1 and raised `compileSdk` to 37
 
 ## [2.2.0]
 
