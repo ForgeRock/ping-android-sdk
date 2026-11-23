@@ -43,6 +43,7 @@ import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -870,9 +871,10 @@ class DaVinciErrorTest {
     @Test
     fun `DaVinci error details with rawResponse missing nullable fields`() =
         runTest {
-            // SDKS-5536: rawResponse omits id, code, message and details entirely.
-            // details() must return the Detail with nulls instead of throwing
-            // MissingFieldException.
+            // SDKS-5536: rawResponse omits id, code, message and details entirely,
+            // and a nested ErrorDetail omits every field; the third detail has a
+            // numeric code and is skipped. details() must return the decodable
+            // Details with nulls instead of throwing MissingFieldException.
             mockEngine =
                 MockEngine { request ->
                     when (request.url.encodedPath) {
@@ -934,13 +936,123 @@ class DaVinciErrorTest {
 
             assertTrue(next is ErrorNode)
             val details = next.details()
-            assertEquals(1, details.size)
+            assertEquals(2, details.size)
             details[0].let {
                 assertEquals(200, it.statusCode)
                 assertNull(it.rawResponse.id)
                 assertNull(it.rawResponse.code)
                 assertNull(it.rawResponse.message)
                 assertNull(it.rawResponse.details)
+            }
+            details[1].let {
+                assertEquals(400, it.statusCode)
+                assertNull(it.rawResponse.id)
+                assertNull(it.rawResponse.code)
+                assertNull(it.rawResponse.message)
+                val errorDetails = it.rawResponse.details
+                assertEquals(1, errorDetails?.size)
+                assertNull(errorDetails?.get(0)?.code)
+                assertNull(errorDetails?.get(0)?.target)
+                assertNull(errorDetails?.get(0)?.message)
+                assertNull(errorDetails?.get(0)?.innerError)
+            }
+        }
+
+    @Test
+    fun `DaVinci error details skips undecodable element and logs`() =
+        runTest {
+            // SDKS-5536: one undecodable detail must not discard the decodable
+            // ones; it is skipped and logged at debug level. The log must not
+            // embed the decoder exception message, which can contain the raw
+            // response JSON (e.g. the numeric-code element's values).
+            val logMessages = mutableListOf<String>()
+            val originalLogger = Logger.logger
+            Logger.logger = object : Logger {
+                override fun d(message: String) {
+                    logMessages.add(message)
+                }
+
+                override fun i(message: String) = Unit
+
+                override fun w(message: String, throwable: Throwable?) = Unit
+
+                override fun e(message: String, throwable: Throwable?) = Unit
+            }
+            try {
+                mockEngine =
+                    MockEngine { request ->
+                        when (request.url.encodedPath) {
+                            "/.well-known/openid-configuration" -> {
+                                respond(openIdConfigurationResponse(), HttpStatusCode.OK, headers)
+                            }
+
+                            "/customHTMLTemplate" -> {
+                                respond(
+                                    userLookupErrorResponse(),
+                                    HttpStatusCode.BadRequest,
+                                    customHTMLTemplateHeaders
+                                )
+                            }
+
+                            "/authorize" -> {
+                                respond(
+                                    authorizeResponse(),
+                                    HttpStatusCode.OK,
+                                    authorizeResponseHeaders
+                                )
+                            }
+
+                            else -> {
+                                return@MockEngine respond(
+                                    content =
+                                        ByteReadChannel(""),
+                                    status = HttpStatusCode.InternalServerError,
+                                )
+                            }
+                        }
+                    }
+
+                val daVinci =
+                    DaVinci {
+                        httpClient = KtorHttpClient(HttpClient(mockEngine))
+                        // Oidc as module
+                        module(Oidc) {
+                            clientId = "test"
+                            discoveryEndpoint =
+                                "http://localhost/.well-known/openid-configuration"
+                            scopes = mutableSetOf("openid", "email", "address")
+                            redirectUri = "http://localhost:8080"
+                            storage = { MemoryStorage() }
+                            logger = Logger.STANDARD
+                        }
+                        module(Cookie) {
+                            storage = { MemoryStorage() }
+                            persist = mutableListOf("ST")
+                        }
+                    }
+
+                val node = daVinci.start()
+                assertTrue(node is ContinueNode)
+                (node.collectors[0] as? TextCollector)?.value = "unknown-user"
+                (node.collectors[1] as? PasswordCollector)?.value = "My Password"
+                (node.collectors[2] as? SubmitCollector)?.value = "click me"
+                val next = node.next()
+
+                assertTrue(next is ErrorNode)
+                val details = next.details()
+                assertEquals(2, details.size)
+                assertEquals(200, details[0].statusCode)
+                assertEquals(400, details[1].statusCode)
+                assertContains(
+                    logMessages.toString(),
+                    "Skipping undecodable error detail at index 2"
+                )
+                assertFalse(
+                    logMessages.any { it.contains("1999") || it.contains("secret-token-abc123") },
+                    "Debug log leaked response values: $logMessages"
+                )
+            } finally {
+                Logger.logger = originalLogger
             }
         }
 }
