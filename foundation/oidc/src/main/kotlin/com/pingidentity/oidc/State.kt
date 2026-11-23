@@ -46,7 +46,7 @@ internal fun randomBase64UrlSafe(numBytes: Int): String {
 internal fun generateState(): String = randomBase64UrlSafe(STATE_LENGTH_BYTES)
 
 /**
- * Reads query parameter [name] from [uri]'s query string, falling back to its fragment
+ * Reads query parameter `name` from the receiver URI's query string, falling back to its fragment
  * (parsed as a query string) for `response_mode=fragment` responses. The fragment is
  * parsed behind a synthetic `https://x/` authority so values containing `:` or `//`
  * (e.g. an `error_uri`) are not mistaken for a URI scheme.
