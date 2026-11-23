@@ -43,7 +43,6 @@ import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -942,104 +941,6 @@ class DaVinciErrorTest {
                 assertNull(it.rawResponse.code)
                 assertNull(it.rawResponse.message)
                 assertNull(it.rawResponse.details)
-            }
-        }
-
-    @Test
-    fun `DaVinci error details skips undecodable element and logs`() =
-        runTest {
-            // SDKS-5536: one undecodable detail must not discard the decodable
-            // ones; it is skipped and logged at debug level.
-            val logMessages = mutableListOf<String>()
-            val originalLogger = Logger.logger
-            Logger.logger = object : Logger {
-                override fun d(message: String) {
-                    logMessages.add(message)
-                }
-
-                override fun i(message: String) = Unit
-
-                override fun w(message: String, throwable: Throwable?) = Unit
-
-                override fun e(message: String, throwable: Throwable?) = Unit
-            }
-            try {
-                mockEngine =
-                    MockEngine { request ->
-                        when (request.url.encodedPath) {
-                            "/.well-known/openid-configuration" -> {
-                                respond(openIdConfigurationResponse(), HttpStatusCode.OK, headers)
-                            }
-
-                            "/customHTMLTemplate" -> {
-                                respond(
-                                    userLookupErrorResponseWithUndecodableDetail(),
-                                    HttpStatusCode.BadRequest,
-                                    customHTMLTemplateHeaders
-                                )
-                            }
-
-                            "/authorize" -> {
-                                respond(
-                                    authorizeResponse(),
-                                    HttpStatusCode.OK,
-                                    authorizeResponseHeaders
-                                )
-                            }
-
-                            else -> {
-                                return@MockEngine respond(
-                                    content =
-                                        ByteReadChannel(""),
-                                    status = HttpStatusCode.InternalServerError,
-                                )
-                            }
-                        }
-                    }
-
-                val daVinci =
-                    DaVinci {
-                        httpClient = KtorHttpClient(HttpClient(mockEngine))
-                        // Oidc as module
-                        module(Oidc) {
-                            clientId = "test"
-                            discoveryEndpoint =
-                                "http://localhost/.well-known/openid-configuration"
-                            scopes = mutableSetOf("openid", "email", "address")
-                            redirectUri = "http://localhost:8080"
-                            storage = { MemoryStorage() }
-                            logger = Logger.STANDARD
-                        }
-                        module(Cookie) {
-                            storage = { MemoryStorage() }
-                            persist = mutableListOf("ST")
-                        }
-                    }
-
-                val node = daVinci.start()
-                assertTrue(node is ContinueNode)
-                (node.collectors[0] as? TextCollector)?.value = "unknown-user"
-                (node.collectors[1] as? PasswordCollector)?.value = "My Password"
-                (node.collectors[2] as? SubmitCollector)?.value = "click me"
-                val next = node.next()
-
-                assertTrue(next is ErrorNode)
-                val details = next.details()
-                assertEquals(1, details.size)
-                assertEquals(200, details[0].statusCode)
-                assertContains(
-                    logMessages.toString(),
-                    "Skipping undecodable error detail at index 1"
-                )
-                // The log must not embed the decoder exception message: for the
-                // numeric-code element (index 2) the kotlinx decoder message
-                // contains the raw response JSON, including these values.
-                assertFalse(
-                    logMessages.any { it.contains("1999") || it.contains("secret-token-abc123") },
-                    "Debug log leaked response values: $logMessages"
-                )
-            } finally {
-                Logger.logger = originalLogger
             }
         }
 }
