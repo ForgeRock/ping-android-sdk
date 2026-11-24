@@ -11,10 +11,11 @@
 - Fixed `PushNotification.expired` to use the server send time (`sentAt`) instead of the local creation time, falling back to creation time when `sentAt` is invalid [SDKS-5490]
 - Fixed `PhoneNumberCollector.extensionLabel` being reset to an empty string on DaVinci form prefill [SDKS-5073]
 - Fixed commons-codec security vulnerability (CVE-2026-119078) by forcing a secure version on the lint classpath [SDKS-5578]
+- Fixed Bouncy Castle security vulnerability (CVE-2026-103605) by upgrading the Bouncy Castle libraries to 1.87 [SDKS-5603]
+- Fixed `ErrorNode.details()` throwing `MissingFieldException` when the error payload lacks expected fields [SDKS-5536]
 
 #### Changed
 - Standardized Recognize error reporting across SDKs using shared error codes and names. Upgrade note: RecognizeException and Journey error values now use shared codes instead of native Keyless codes, and the exception constructor has changed. [P1RECMOB-3848]
-- Updated Bouncy Castle to 1.87, Jackson to 2.22.4, and pinned Guava, ASM and JAXB to address Mend scan findings [SDKS-5542]
 - Upgraded the Ping Signals dependency used by the `protect` module to 5.4.1 and raised `compileSdk` to 37
 
 ## [2.2.0]
