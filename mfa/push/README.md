@@ -219,6 +219,26 @@ pushClient.getNotification(notificationId).onSuccess { notification ->
 }
 ```
 
+### Notification Expiry
+
+A push notification expires when `now - (sentAt ?: createdAt) > ttl`:
+
+- `sentAt` is the time AM sent the notification (JWT claim `i`, epoch milliseconds). `ttl` is in seconds.
+- If the `i` claim is missing, not numeric, or not positive, expiry falls back to `createdAt`, the time the notification was created on the device.
+- Expiry is evaluated against the device clock. If the device clock is skewed relative to the server, a notification may be flagged as expired earlier, or later, than AM decides. The server remains authoritative.
+- Expired notifications are excluded from `getPendingNotifications()`, and `approveNotification`/`denyNotification` return `Result.failure(NotificationExpiredException)`.
+
+```kotlin
+pushClient.approveNotification(notificationId)
+    .onFailure { error ->
+        if (error is NotificationExpiredException) {
+            // The notification has expired, ask the user to retry the sign-in
+        }
+    }
+```
+
+`NotificationExpiredException` is in the `com.pingidentity.mfa.push.exception` package.
+
 ### Device Token Management
 
 ```kotlin

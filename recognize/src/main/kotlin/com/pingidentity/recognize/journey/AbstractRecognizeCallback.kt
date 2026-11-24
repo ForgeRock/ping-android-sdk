@@ -17,8 +17,13 @@ import io.keyless.sdk.configurations.enroll.PresentationStyle as EnrollPresentat
 import io.keyless.sdk.core.actions.model.JwtSigningInfo
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.buildJsonArray
+import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.put
 
 /**
  * Abstract base for Recognize Journey callbacks.
@@ -156,6 +161,42 @@ abstract class AbstractRecognizeCallback : AbstractCallback() {
      */
     internal fun buildGeneratingClientState(): ClientStateType? =
         if (generateClientState.equals("true", ignoreCase = true)) ClientStateType.BACKUP else null
+
+    /**
+     * Submits input values by matching each value to the input slot whose name ends with the
+     * given suffix, instead of relying on positional order.
+     *
+     * Unlike the positional [AbstractCallback.input], this tolerates input arrays where slots
+     * are reordered, a value without a matching slot is skipped rather than throwing, and slots
+     * with no submitted value are preserved with their original value. Mirrors the iOS SDK,
+     * which matches by name suffix.
+     *
+     * @param values Map of input-name suffix (e.g. `"signedJwt"`) to the value to submit.
+     * @return The updated callback JSON.
+     */
+    @Synchronized
+    internal fun inputBySuffix(values: Map<String, String>): JsonObject {
+        val updated = buildJsonArray {
+            json["input"]?.jsonArray?.forEach { slot ->
+                val slotName = slot.jsonObject["name"]?.jsonPrimitive?.content ?: ""
+                val value = values.entries.firstOrNull { (suffix, _) ->
+                    slotName.endsWith(suffix)
+                }?.value
+                add(buildJsonObject {
+                    put("name", slotName)
+                    if (value != null) {
+                        put("value", value)
+                    } else {
+                        slot.jsonObject["value"]?.let { put("value", it) }
+                    }
+                })
+            }
+        }
+        val mutableMap = json.toMutableMap()
+        mutableMap["input"] = updated
+        json = JsonObject(mutableMap)
+        return json
+    }
 
 }
 

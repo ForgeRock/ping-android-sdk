@@ -642,8 +642,7 @@ internal class PushService(
         val pushType = if (pushTypeStr != null) PushType.fromString(pushTypeStr) else PushType.DEFAULT
 
         // Use the time interval (date as long) if provided to set sentAt
-        val timeInterval = parsedData[KEY_TIME_INTERVAL] as? Long
-        val sentAt = if (timeInterval != null) Date(timeInterval) else null
+        val sentAt = parseSentAt(parsedData[KEY_TIME_INTERVAL])
         val createdAt = Date()
 
         @Suppress("UNCHECKED_CAST")
@@ -665,6 +664,24 @@ internal class PushService(
             sentAt = sentAt,
             additionalData = additionalDataMap
         )
+    }
+
+    /**
+     * Parse the time the server sent the notification.
+     *
+     * @param value The raw time interval value, in epoch milliseconds.
+     * @return The send time, or null if the value is missing, invalid or not positive.
+     */
+    private fun parseSentAt(value: Any?): Date? {
+        val millis = when (value) {
+            is Double -> if (value.isFinite()) value.toLong() else null
+            is Float -> if (value.isFinite()) value.toLong() else null
+            is Number -> value.toLong()
+            is String -> value.trim().toLongOrNull()
+            else -> null
+        }
+        // A non-positive timestamp is not a real send time; treat it as missing so expiry falls back to createdAt
+        return millis?.takeIf { it > 0 }?.let { Date(it) }
     }
 
     /**

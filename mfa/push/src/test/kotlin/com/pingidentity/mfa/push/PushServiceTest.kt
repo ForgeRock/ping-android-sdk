@@ -9,8 +9,10 @@ package com.pingidentity.mfa.push
 
 import android.content.Context
 import com.pingidentity.logger.Logger
+import com.pingidentity.mfa.commons.exception.CredentialLockedException
 import com.pingidentity.mfa.commons.exception.CredentialNotFoundException
 import com.pingidentity.mfa.commons.exception.MfaException
+import com.pingidentity.mfa.commons.util.JwtUtils
 import com.pingidentity.mfa.push.exception.DeviceTokenMissingException
 import com.pingidentity.mfa.push.exception.NotificationExpiredException
 import com.pingidentity.mfa.push.exception.NotificationNotFoundException
@@ -40,6 +42,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import java.util.Date
 import java.util.UUID
+import kotlin.test.assertFailsWith
 
 /**
  * Unit tests for the PushService class.
@@ -1483,4 +1486,332 @@ class PushServiceTest {
             assertEquals(400, e.status)
         }
     }
+
+    // region sentAt parsing
+
+    private suspend fun processWithTimeInterval(timeInterval: Any?, ttl: Int = 120): PushNotification {
+        val mockHandler = mockk<PushHandler>()
+        val parsed = mutableMapOf<String, Any>(
+            "credentialId" to testCredentialId,
+            "messageId" to "test-message-id",
+            "ttl" to ttl
+        )
+        timeInterval?.let { parsed["timeInterval"] = it }
+
+        every { mockHandler.canHandle(any<Map<String, Any>>()) } returns true
+        every { mockHandler.parseMessage(any<Map<String, Any>>()) } returns parsed
+        coEvery { mockStorage.getNotificationByMessageId(any()) } returns null
+        coEvery { mockStorage.retrievePushCredential(any()) } returns testCredential
+        coEvery { mockStorage.storePushNotification(any()) } just runs
+
+        val pushService = PushService(
+            storage = mockStorage,
+            configuration = configWithCache,
+            httpClient = KtorHttpClient(mockHttpClient),
+            policyEvaluator = mockPolicyEvaluator,
+            handlers = mapOf(PushPlatform.PING_AM.name to mockHandler)
+        )
+
+        return pushService.processNotification(mapOf("message" to "test")) as PushNotification
+    }
+
+    @Test
+    fun `sentAt parsed from Long`() = runTest {
+        val result = processWithTimeInterval(1731000000000L)
+
+        assertEquals(Date(1731000000000L), result.sentAt)
+    }
+
+    @Test
+    fun `sentAt parsed from Int`() = runTest {
+        // An Int-sized value is a valid (small) epoch-ms number: this checks the Int type coercion, not a realistic timestamp
+        val result = processWithTimeInterval(1700000000)
+
+        assertEquals(Date(1700000000L), result.sentAt)
+    }
+
+    @Test
+    fun `sentAt parsed from String`() = runTest {
+        val result = processWithTimeInterval("1731000000000")
+
+        assertEquals(Date(1731000000000L), result.sentAt)
+    }
+
+    @Test
+    fun `sentAt parsed from Double`() = runTest {
+        val result = processWithTimeInterval(1.731E12)
+
+        assertEquals(Date(1731000000000L), result.sentAt)
+    }
+
+    @Test
+    fun `sentAt null when timeInterval absent`() = runTest {
+        val result = processWithTimeInterval(null)
+
+        assertEquals(null, result.sentAt)
+        assertFalse(result.expired)
+    }
+
+    @Test
+    fun `sentAt null when timeInterval invalid`() = runTest {
+        listOf<Any>("abc", true, Double.NaN).forEach { invalid ->
+            val result = processWithTimeInterval(invalid)
+
+            assertEquals(null, result.sentAt)
+            assertFalse(result.expired)
+        }
+    }
+
+    @Test
+    fun `sentAt null when timeInterval not positive`() = runTest {
+        listOf<Any>(0L, -1L, "0", -5.0).forEach { notPositive ->
+            val result = processWithTimeInterval(notPositive)
+
+            assertEquals(null, result.sentAt)
+            assertFalse(result.expired)
+        }
+    }
+
+    @Test
+    fun `sent long ago but stored just now is expired`() = runTest {
+        val tenMinutesAgo = System.currentTimeMillis() - 10 * 60 * 1000L
+
+        val result = processWithTimeInterval(tenMinutesAgo, ttl = 120)
+
+        assertEquals(Date(tenMinutesAgo), result.sentAt)
+        assertTrue(result.expired)
+    }
+
+    @Test
+    fun `real PingAM handler maps string and double typed i claim to sentAt and expiry`() = runTest {
+        val tenMinutesAgo = System.currentTimeMillis() - 10 * 60 * 1000L
+        val secret = "c2VjcmV0S2V5Rm9yVGVzdGluZ1RoaXNOZWVkc1RvQmVBdExlYXN0MjU2Yml0cw=="
+
+        // Both a string-typed and a Double-typed claim must end up as the same sentAt
+        listOf<Any>(tenMinutesAgo.toString(), tenMinutesAgo.toDouble()).forEach { intervalClaim ->
+            val jwt = JwtUtils.generateJwt(
+                secret,
+                mapOf(
+                    "u" to testCredentialId,
+                    "c" to "test-challenge",
+                    "t" to 120,
+                    "i" to intervalClaim
+                )
+            )
+
+            coEvery { mockStorage.getNotificationByMessageId(any()) } returns null
+            coEvery { mockStorage.retrievePushCredential(any()) } returns testCredential
+            coEvery { mockStorage.storePushNotification(any()) } just runs
+
+            val pushService = PushService(
+                storage = mockStorage,
+                configuration = configWithCache,
+                httpClient = KtorHttpClient(mockHttpClient),
+                policyEvaluator = mockPolicyEvaluator,
+                handlers = mapOf(
+                    PushPlatform.PING_AM.name to PingAMPushHandler(KtorHttpClient(mockHttpClient), mockLogger)
+                )
+            )
+
+            val result = pushService.processNotification(
+                mapOf(
+                    PushConstants.KEY_MESSAGE to jwt,
+                    PushConstants.KEY_MESSAGE_ID to "test-message-id"
+                )
+            ) as PushNotification
+
+            assertEquals(Date(tenMinutesAgo), result.sentAt)
+            assertEquals(120, result.ttl)
+            assertTrue(result.expired)
+        }
+    }
+
+    // endregion
+
+    // region expiry on approve and deny
+
+    private val tenMinutesMillis = 10 * 60 * 1000L
+
+    private fun serviceWithHandler(mockHandler: PushHandler): PushService = PushService(
+        storage = mockStorage,
+        configuration = configWithCache,
+        httpClient = KtorHttpClient(mockHttpClient),
+        policyEvaluator = mockPolicyEvaluator,
+        handlers = mapOf(PushPlatform.PING_AM.name to mockHandler)
+    )
+
+    @Test
+    fun `approve throws NotificationExpiredException when sentAt is older than ttl even if createdAt is recent`() =
+        runTest {
+            val mockHandler = mockk<PushHandler>()
+            val notification = testNotification.copy(
+                createdAt = Date(),
+                sentAt = Date(System.currentTimeMillis() - tenMinutesMillis),
+                ttl = 120
+            )
+            coEvery { mockStorage.retrievePushNotification(testNotificationId) } returns notification
+
+            val e = assertFailsWith<NotificationExpiredException> {
+                serviceWithHandler(mockHandler).approveNotification(testNotificationId)
+            }
+
+            assertEquals(testNotificationId, e.notificationId)
+            assertEquals(120, e.ttlSeconds)
+            coVerify(exactly = 0) { mockHandler.sendApproval(any(), any(), any()) }
+            coVerify(exactly = 0) { mockStorage.updatePushNotification(any()) }
+        }
+
+    @Test
+    fun `deny throws NotificationExpiredException when sentAt is older than ttl even if createdAt is recent`() =
+        runTest {
+            val mockHandler = mockk<PushHandler>()
+            val notification = testNotification.copy(
+                createdAt = Date(),
+                sentAt = Date(System.currentTimeMillis() - tenMinutesMillis),
+                ttl = 120
+            )
+            coEvery { mockStorage.retrievePushNotification(testNotificationId) } returns notification
+
+            val e = assertFailsWith<NotificationExpiredException> {
+                serviceWithHandler(mockHandler).denyNotification(testNotificationId)
+            }
+
+            assertEquals(testNotificationId, e.notificationId)
+            assertEquals(120, e.ttlSeconds)
+            coVerify(exactly = 0) { mockHandler.sendDenial(any(), any(), any()) }
+            coVerify(exactly = 0) { mockStorage.updatePushNotification(any()) }
+        }
+
+    @Test
+    fun `approve and deny throw when expired by createdAt fallback`() = runTest {
+        val mockHandler = mockk<PushHandler>()
+        val notification = testNotification.copy(
+            createdAt = Date(System.currentTimeMillis() - tenMinutesMillis),
+            sentAt = null,
+            ttl = 120
+        )
+        coEvery { mockStorage.retrievePushNotification(testNotificationId) } returns notification
+        val pushService = serviceWithHandler(mockHandler)
+
+        assertFailsWith<NotificationExpiredException> {
+            pushService.approveNotification(testNotificationId)
+        }
+        assertFailsWith<NotificationExpiredException> {
+            pushService.denyNotification(testNotificationId)
+        }
+
+        coVerify(exactly = 0) { mockHandler.sendApproval(any(), any(), any()) }
+        coVerify(exactly = 0) { mockHandler.sendDenial(any(), any(), any()) }
+    }
+
+    @Test
+    fun `approve and deny return false when expired notification is not pending`() = runTest {
+        val mockHandler = mockk<PushHandler>()
+        val notification = testNotification.copy(
+            createdAt = Date(),
+            sentAt = Date(System.currentTimeMillis() - tenMinutesMillis),
+            ttl = 120,
+            pending = false
+        )
+        coEvery { mockStorage.retrievePushNotification(testNotificationId) } returns notification
+        val pushService = serviceWithHandler(mockHandler)
+
+        assertFalse(pushService.approveNotification(testNotificationId))
+        assertFalse(pushService.denyNotification(testNotificationId))
+
+        coVerify(exactly = 0) { mockHandler.sendApproval(any(), any(), any()) }
+        coVerify(exactly = 0) { mockHandler.sendDenial(any(), any(), any()) }
+    }
+
+    @Test
+    fun `expired error takes precedence over credential locked`() = runTest {
+        val mockHandler = mockk<PushHandler>()
+        val notification = testNotification.copy(
+            createdAt = Date(),
+            sentAt = Date(System.currentTimeMillis() - tenMinutesMillis),
+            ttl = 120
+        )
+        val lockedCredential = testCredential.copy(isLocked = true, lockingPolicy = "test-policy")
+        coEvery { mockStorage.retrievePushNotification(testNotificationId) } returns notification
+        coEvery { mockStorage.retrievePushCredential(testCredentialId) } returns lockedCredential
+        val pushService = serviceWithHandler(mockHandler)
+
+        val approveError = assertFailsWith<Exception> {
+            pushService.approveNotification(testNotificationId)
+        }
+        val denyError = assertFailsWith<Exception> {
+            pushService.denyNotification(testNotificationId)
+        }
+
+        assertTrue(approveError is NotificationExpiredException)
+        assertTrue(denyError is NotificationExpiredException)
+        assertFalse(approveError is CredentialLockedException)
+        assertFalse(denyError is CredentialLockedException)
+    }
+
+    @Test
+    fun `approve succeeds when sentAt is recent`() = runTest {
+        val mockHandler = mockk<PushHandler>()
+        // Only sentAt keeps this notification valid; createdAt alone would be expired
+        val notification = testNotification.copy(
+            createdAt = Date(System.currentTimeMillis() - tenMinutesMillis),
+            sentAt = Date(System.currentTimeMillis() - 5000),
+            ttl = 120
+        )
+        coEvery { mockHandler.sendApproval(any(), any(), any()) } returns Result.success(true)
+        coEvery { mockStorage.retrievePushNotification(testNotificationId) } returns notification
+        coEvery { mockStorage.retrievePushCredential(testCredentialId) } returns testCredential
+        coEvery { mockStorage.updatePushNotification(any()) } just runs
+
+        val result = serviceWithHandler(mockHandler).approveNotification(testNotificationId)
+
+        assertTrue(result)
+        assertTrue(notification.approved)
+        assertFalse(notification.pending)
+        coVerify(exactly = 1) { mockHandler.sendApproval(any(), any(), any()) }
+    }
+
+    @Test
+    fun `approve succeeds when sentAt is in the future`() = runTest {
+        val mockHandler = mockk<PushHandler>()
+        // Device clock behind the server: sentAt is ahead of the local clock
+        val notification = testNotification.copy(
+            createdAt = Date(),
+            sentAt = Date(System.currentTimeMillis() + tenMinutesMillis),
+            ttl = 120
+        )
+        coEvery { mockHandler.sendApproval(any(), any(), any()) } returns Result.success(true)
+        coEvery { mockStorage.retrievePushNotification(testNotificationId) } returns notification
+        coEvery { mockStorage.retrievePushCredential(testCredentialId) } returns testCredential
+        coEvery { mockStorage.updatePushNotification(any()) } just runs
+
+        val result = serviceWithHandler(mockHandler).approveNotification(testNotificationId)
+
+        assertTrue(result)
+        assertTrue(notification.approved)
+        coVerify(exactly = 1) { mockHandler.sendApproval(any(), any(), any()) }
+    }
+
+    @Test
+    fun `deny succeeds when sentAt is recent`() = runTest {
+        val mockHandler = mockk<PushHandler>()
+        val notification = testNotification.copy(
+            createdAt = Date(System.currentTimeMillis() - tenMinutesMillis),
+            sentAt = Date(System.currentTimeMillis() - 5000),
+            ttl = 120
+        )
+        coEvery { mockHandler.sendDenial(any(), any(), any()) } returns Result.success(true)
+        coEvery { mockStorage.retrievePushNotification(testNotificationId) } returns notification
+        coEvery { mockStorage.retrievePushCredential(testCredentialId) } returns testCredential
+        coEvery { mockStorage.updatePushNotification(any()) } just runs
+
+        val result = serviceWithHandler(mockHandler).denyNotification(testNotificationId)
+
+        assertTrue(result)
+        assertFalse(notification.approved)
+        assertFalse(notification.pending)
+        coVerify(exactly = 1) { mockHandler.sendDenial(any(), any(), any()) }
+    }
+
+    // endregion
 }

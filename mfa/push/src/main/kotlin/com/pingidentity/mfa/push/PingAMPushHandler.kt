@@ -211,6 +211,11 @@ internal class PingAMPushHandler(
                     val timeInterval = when (currentIntervalString) {
                         is Long -> currentIntervalString
                         is Int -> currentIntervalString.toLong()
+                        is Double -> {
+                            // NaN and Infinity would silently convert to 0 or Long.MAX_VALUE
+                            if (!currentIntervalString.isFinite()) throw NumberFormatException("Not a finite number")
+                            currentIntervalString.toLong()
+                        }
                         is String -> currentIntervalString.toLong()
                         else -> currentIntervalString.toString().toLong()
                     }

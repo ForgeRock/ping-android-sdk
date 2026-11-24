@@ -57,11 +57,12 @@ class PhoneNumberCollector : FieldCollector<JsonObject>(), Validator {
 
     override fun init(input: JsonElement) {
         if (input is JsonObject) {
-            // New structure with phoneNumber and countryCode
+            // New structure with phoneNumber and countryCode.
+            // extensionLabel is field-definition data, not part of the formData value
+            // contract - the label parsed in init(JsonObject) must survive this call.
             phoneNumber = input[PHONE_NUMBER]?.jsonPrimitive?.content ?: ""
             countryCode = input[COUNTRY_CODE]?.jsonPrimitive?.content ?: ""
             extension = input[EXTENSION]?.jsonPrimitive?.content ?: ""
-            extensionLabel = input[EXTENSION_LABEL]?.jsonPrimitive?.content ?: ""
         } else {
             // Legacy structure - simple string
             phoneNumber = input.jsonPrimitive.content

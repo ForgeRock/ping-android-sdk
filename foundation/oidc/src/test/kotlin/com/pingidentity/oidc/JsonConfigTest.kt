@@ -11,12 +11,16 @@ import com.pingidentity.logger.NONE
 import com.pingidentity.logger.STANDARD
 import com.pingidentity.logger.WARN
 import com.pingidentity.logger.CONSOLE
+import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.add
+import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class JsonConfigTest {
 
@@ -245,6 +249,98 @@ class JsonConfigTest {
         assertFailsWith<JsonConfigError.InvalidType> {
             parser.additionalParameters("additionalParameters")
         }
+    }
+
+    // -------------------------------------------------------------------------
+    // OidcClientConfig.update - authorizationDetails
+    // -------------------------------------------------------------------------
+
+    @Test
+    fun `update decodes authorizationDetails array into typed list`() {
+        val config = OidcClientConfig()
+        config.update(JsonConfigParser(buildJsonObject {
+            put(JsonConfigKey.AUTHORIZATION_DETAILS, buildJsonArray {
+                add(buildJsonObject {
+                    put("type", "payment_initiation")
+                    put("actions", buildJsonArray { add("initiate"); add("status") })
+                    put("locations", buildJsonArray { add("https://example.com/payments") })
+                })
+                add(buildJsonObject {
+                    put("type", "account_information")
+                    put("instructedAmount", buildJsonObject {
+                        put("currency", "EUR")
+                        put("amount", 559)
+                    })
+                })
+            })
+        }))
+
+        assertEquals(2, config.authorizationDetails.size)
+        val payment = config.authorizationDetails[0]
+        assertEquals("payment_initiation", payment.type)
+        assertEquals(listOf("initiate", "status"), payment.actions)
+        assertEquals(listOf("https://example.com/payments"), payment.locations)
+        // Vendor-extension members survive via the additionalFields catch-all.
+        assertTrue(config.authorizationDetails[1].additionalFields.containsKey("instructedAmount"))
+    }
+
+    @Test
+    fun `update throws InvalidType when authorizationDetails is not an array`() {
+        val config = OidcClientConfig()
+        val ex = assertFailsWith<JsonConfigError.InvalidType> {
+            config.update(JsonConfigParser(buildJsonObject {
+                put(JsonConfigKey.AUTHORIZATION_DETAILS, "not-an-array")
+            }))
+        }
+        assertEquals(JsonConfigKey.AUTHORIZATION_DETAILS, ex.field)
+    }
+
+    @Test
+    fun `update throws InvalidType when an authorizationDetails entry is not an object`() {
+        val config = OidcClientConfig()
+        val ex = assertFailsWith<JsonConfigError.InvalidType> {
+            config.update(JsonConfigParser(buildJsonObject {
+                put(JsonConfigKey.AUTHORIZATION_DETAILS, buildJsonArray {
+                    add(buildJsonObject { put("type", "account_information") })
+                    add("not-an-object")
+                })
+            }))
+        }
+        assertEquals(JsonConfigKey.AUTHORIZATION_DETAILS, ex.field)
+    }
+
+    @Test
+    fun `update throws InvalidType when an authorizationDetails entry misses type`() {
+        val config = OidcClientConfig()
+        val ex = assertFailsWith<JsonConfigError.InvalidType> {
+            config.update(JsonConfigParser(buildJsonObject {
+                put(JsonConfigKey.AUTHORIZATION_DETAILS, buildJsonArray {
+                    add(buildJsonObject { put("actions", buildJsonArray { add("initiate") }) })
+                })
+            }))
+        }
+        assertEquals(JsonConfigKey.AUTHORIZATION_DETAILS, ex.field)
+    }
+
+    @Test
+    fun `update leaves authorizationDetails empty when key is absent`() {
+        val config = OidcClientConfig()
+        config.update(JsonConfigParser(buildJsonObject {
+            put(JsonConfigKey.DISPLAY, "page")
+        }))
+
+        assertTrue(config.authorizationDetails.isEmpty())
+    }
+
+    @Test
+    fun `update leaves authorizationDetails empty when key is explicitly null`() {
+        val config = OidcClientConfig()
+        config.update(JsonConfigParser(buildJsonObject {
+            put("display", "page")
+            put("authorizationDetails", JsonNull)
+        }))
+
+        assertTrue(config.authorizationDetails.isEmpty())
     }
 
     // -------------------------------------------------------------------------

@@ -499,7 +499,71 @@ class PingAMPushHandlerTest {
         ))
         assertEquals(1234567890L, result2[PushConstants.KEY_TIME_INTERVAL])
     }
-    
+
+    @Test
+    fun `claim i as Double is parsed to Long`() {
+        val claims = mapOf<String, Any>(
+            JWT_MECHANISM_UID to "mech-uid",
+            JWT_CHALLENGE to "challenge",
+            JWT_TIME_INTERVAL to 1.731E12
+        )
+        val jwt = JwtUtils.generateJwt(TEST_SECRET, claims)
+
+        val result = pushHandler.parseMessage(mapOf(
+            PushConstants.KEY_MESSAGE to jwt,
+            PushConstants.KEY_MESSAGE_ID to TEST_MESSAGE_ID
+        ))
+
+        assertEquals(1731000000000L, result[PushConstants.KEY_TIME_INTERVAL])
+    }
+
+    @Test
+    fun `claim i that is not a number is skipped`() {
+        val claims = mapOf<String, Any>(
+            JWT_MECHANISM_UID to "mech-uid",
+            JWT_CHALLENGE to "challenge",
+            JWT_TIME_INTERVAL to "abc"
+        )
+        val jwt = JwtUtils.generateJwt(TEST_SECRET, claims)
+
+        val result = pushHandler.parseMessage(mapOf(
+            PushConstants.KEY_MESSAGE to jwt,
+            PushConstants.KEY_MESSAGE_ID to TEST_MESSAGE_ID
+        ))
+
+        assertFalse(result.containsKey(PushConstants.KEY_TIME_INTERVAL))
+        assertEquals("mech-uid", result[PushConstants.KEY_CREDENTIAL_ID])
+    }
+
+    @Test
+    fun `claim i that is not finite is skipped`() {
+        // JwtUtils parses numeric-looking strings with toDoubleOrNull, so these reach the handler as Double NaN / Infinity
+        listOf("NaN", "1e999", "-1e999").forEach { nonFinite ->
+            val claims = mapOf<String, Any>(
+                JWT_MECHANISM_UID to "mech-uid",
+                JWT_CHALLENGE to "challenge",
+                JWT_TIME_INTERVAL to nonFinite
+            )
+            val jwt = JwtUtils.generateJwt(TEST_SECRET, claims)
+
+            // Precondition: the claim really arrives as a non-finite Double
+            val claim = JwtUtils.parseJwtClaims(jwt)[JWT_TIME_INTERVAL]
+            assertTrue("claim '$nonFinite' should parse to a Double, was $claim", claim is Double)
+            assertFalse("claim '$nonFinite' should be non-finite", (claim as Double).isFinite())
+
+            val result = pushHandler.parseMessage(mapOf(
+                PushConstants.KEY_MESSAGE to jwt,
+                PushConstants.KEY_MESSAGE_ID to TEST_MESSAGE_ID
+            ))
+
+            assertFalse(result.containsKey(PushConstants.KEY_TIME_INTERVAL))
+            // The rest of the message still parses
+            assertEquals("mech-uid", result[PushConstants.KEY_CREDENTIAL_ID])
+            assertEquals("challenge", result[PushConstants.KEY_CHALLENGE])
+            assertEquals(TEST_MESSAGE_ID, result[PushConstants.KEY_MESSAGE_ID])
+        }
+    }
+
     @Test
     fun `test parseMessage returns minimal result on parse error`() {
         val messageData = mapOf(
