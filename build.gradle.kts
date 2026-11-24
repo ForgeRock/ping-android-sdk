@@ -138,9 +138,9 @@ allprojects {
             // Force secure version of netty-codec to address security vulnerabilities
             // Used transitively by com.android.tools.emulator:proto (build toolchain only)
             // Updated to 4.1.125.Final per Mend SCA recommendation (Nov 2025)
-            force("io.netty:netty-codec:4.1.125.Final")
-            force("io.netty:netty-codec-http:4.1.125.Final")
-            force("io.netty:netty-codec-http2:4.1.125.Final")
+            force("io.netty:netty-codec:4.1.136.Final")
+            force("io.netty:netty-codec-http:4.1.137.Final")
+            force("io.netty:netty-codec-http2:4.1.136.Final")
             force("io.netty:netty-all:4.1.125.Final")
 
             // Force secure version of protobuf to address security vulnerabilities
@@ -169,7 +169,7 @@ allprojects {
             // org.apache.commons:commons-lang3:3.16.0, transitive runtime dependency of
             // com.android.tools:sdklib:32.2.1 via commons-compress:1.27.1
             // (AGP build toolchain, build-time only, not shipped in the SDK).
-            force("org.apache.commons:commons-lang3:3.18.0")
+            force("org.apache.commons:commons-lang3:3.22.0")
         }
     }
 }
