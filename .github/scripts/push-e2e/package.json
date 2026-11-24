@@ -1,0 +1,15 @@
+{
+  "name": "push-e2e",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Push registration/authentication e2e against a live AIC tenant: poster service (QR hot-swap into the emulator virtual scene) + flow runner driving the sample app via adb/uiautomator.",
+  "scripts": {
+    "poster": "node poster-service.mjs",
+    "flows": "node run-push-flows.mjs"
+  },
+  "dependencies": {
+    "pngjs": "7.0.0",
+    "qrcode": "1.5.4"
+  }
+}

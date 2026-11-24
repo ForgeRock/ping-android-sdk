@@ -26,14 +26,26 @@ import java.util.concurrent.TimeUnit
 class QrCodeAnalyzer(private val onQrCodeDetected: (String) -> Unit) : ImageAnalysis.Analyzer {
     
     private val scanner = BarcodeScanning.getClient()
-    
+
     // Track when we last detected a QR code to avoid duplicate scans
     private var lastAnalyzedTimestamp = 0L
-    
+
+    // Log the analysis stream's actual resolution once — e2e diagnostics depend on
+    // knowing what size ML Kit really receives (preview and analysis can differ).
+    private var resolutionLogged = false
+
     @SuppressLint("UnsafeOptInUsageError")
     @OptIn(ExperimentalGetImage::class)
     override fun analyze(imageProxy: ImageProxy) {
         val currentTimestamp = System.currentTimeMillis()
+
+        if (!resolutionLogged) {
+            resolutionLogged = true
+            android.util.Log.i(
+                "QrCodeAnalyzer",
+                "analysis stream: ${imageProxy.width}x${imageProxy.height} rotation=${imageProxy.imageInfo.rotationDegrees}",
+            )
+        }
         
         // Only analyze if enough time has passed since the last detection
         // to avoid multiple rapid scans of the same code
