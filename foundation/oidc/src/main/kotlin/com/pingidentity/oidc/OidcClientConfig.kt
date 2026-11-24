@@ -147,6 +147,10 @@ class OidcClientConfig {
 
     /**
      * State parameter for OIDC.
+     *
+     * When unset (the default), the SDK generates a random state for web-based authorization
+     * flows and verifies that the authorization response echoes it back unchanged
+     * (RFC 6749 CSRF protection). When set, the configured value is sent and verified.
      */
     var state: String? = null
 
@@ -179,6 +183,31 @@ class OidcClientConfig {
      * Additional parameters for OIDC.
      */
     var additionalParameters = emptyMap<String, String>()
+
+    /**
+     * Rich Authorization Request details (RFC 9396 §2). When non-empty, the SDK serializes the
+     * list into the `authorization_details` request parameter of the authorization request (and
+     * of the PAR form body when [par] is enabled).
+     *
+     * Each entry models one authorization detail object (RFC 9396 §2.2); type-specific members
+     * beyond the common data fields are carried through [AuthorizationDetail.additionalFields].
+     *
+     * Example:
+     * ```kotlin
+     * authorizationDetails = listOf(
+     *     AuthorizationDetail(
+     *         type = "payment_initiation",
+     *         actions = listOf("initiate", "status"),
+     *         locations = listOf("https://example.com/payments"),
+     *     )
+     * )
+     * ```
+     *
+     * A hand-serialized `authorization_details` entry in [additionalParameters] (or in the
+     * per-call parameters of a specific authorize call) takes precedence over this typed list:
+     * the parameter is emitted exactly once, with the hand-serialized value winning.
+     */
+    var authorizationDetails: List<AuthorizationDetail> = emptyList()
 
     /**
      * HTTP client for making network requests.
@@ -286,6 +315,7 @@ class OidcClientConfig {
         this.uiLocales = other.uiLocales
         this.acrValues = other.acrValues
         this.additionalParameters = other.additionalParameters
+        this.authorizationDetails = other.authorizationDetails
         this.httpClient = other.httpClient
         this.par = other.par
         this.openIdOverride = other.openIdOverride

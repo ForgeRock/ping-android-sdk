@@ -189,7 +189,15 @@ class RecognizeAuthenticateCollectorTest {
 
     @Test
     fun `collect failure from KeylessSdkError maps code to clientErrorCode`() = runTest {
-        val keylessError = RecognizeException(code = 42, message = "liveness failed", debuggingInfo = emptyMap())
+        // DaVinci collectors keep submitting the human message; the shared code flows
+        // through unchanged from RecognizeException.from() at the Keyless boundary.
+        val keylessError = RecognizeException(
+            code = 4002,
+            name = "BIOM_GENUINE_PRESENCE_NOT_ESTABLISHED",
+            message = "liveness failed",
+            sdkCode = 30000,
+            debuggingInfo = emptyMap(),
+        )
         coEvery { Recognize.authenticate(any()) } returns Result.failure(keylessError)
 
         val collector = RecognizeAuthenticateCollector().apply { init(authInput()) }
@@ -197,10 +205,10 @@ class RecognizeAuthenticateCollectorTest {
 
         assertTrue(result.isFailure)
         val ex = assertIs<RecognizeException>(result.exceptionOrNull())
-        assertEquals(42, ex.code)
+        assertEquals(4002, ex.code)
         val payload = assertNotNull(collector.payload())
         assertEquals("liveness failed", payload["clientError"]?.jsonPrimitive?.content)
-        assertEquals("42", payload["clientErrorCode"]?.jsonPrimitive?.content)
+        assertEquals("4002", payload["clientErrorCode"]?.jsonPrimitive?.content)
     }
 
     // ── generateClientState mapping ──────────────────────────────────────────────

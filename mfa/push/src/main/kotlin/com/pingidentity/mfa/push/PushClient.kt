@@ -379,6 +379,10 @@ class PushClient internal constructor(
      * Approve a push notification.
      * This method approves the authentication request for the given notification.
      *
+     * The returned [Result] fails with [com.pingidentity.mfa.push.exception.NotificationExpiredException] when the
+     * notification's TTL has elapsed. Expiry is measured from the server send time when available, otherwise from
+     * the local creation time, using the device clock, so clock skew can shift the result.
+     *
      * @param notificationId The ID of the notification to approve.
      * @return A Result containing a Boolean indicating success or an Exception in case of failure.
      */
@@ -402,6 +406,10 @@ class PushClient internal constructor(
      * this method returns [Result.failure] wrapping a [com.pingidentity.mfa.push.exception.PushNumberChallengeException].
      * This is distinct from a generic network or server failure ([com.pingidentity.exception.ApiException]),
      * allowing callers to surface a user-friendly "wrong number" message or offer a retry.
+     *
+     * The returned [Result] also fails with [com.pingidentity.mfa.push.exception.NotificationExpiredException] when
+     * the notification's TTL has elapsed. Expiry is measured from the server send time when available, otherwise
+     * from the local creation time, using the device clock, so clock skew can shift the result.
      *
      * @param notificationId The ID of the notification to approve.
      * @param challengeResponse The challenge response provided by the user.
@@ -429,6 +437,10 @@ class PushClient internal constructor(
      * Note: The actual biometric authentication is handled by the developer on the app side; this method simply
      * records the approval.
      *
+     * The returned [Result] fails with [com.pingidentity.mfa.push.exception.NotificationExpiredException] when the
+     * notification's TTL has elapsed. Expiry is measured from the server send time when available, otherwise from
+     * the local creation time, using the device clock, so clock skew can shift the result.
+     *
      * @param notificationId The ID of the notification to approve.
      * @param authenticationMethod The authentication method used as String (e.g., "face", "fingerprint").
      * @return A Result containing a Boolean indicating success or an Exception in case of failure.
@@ -449,6 +461,10 @@ class PushClient internal constructor(
      * Deny a push notification.
      * This method denies the authentication request for the given notification.
      *
+     * The returned [Result] fails with [com.pingidentity.mfa.push.exception.NotificationExpiredException] when the
+     * notification's TTL has elapsed. Expiry is measured from the server send time when available, otherwise from
+     * the local creation time, using the device clock, so clock skew can shift the result.
+     *
      * @param notificationId The ID of the notification to deny.
      * @return A Result containing a Boolean indicating success or an Exception in case of failure.
      */
@@ -466,6 +482,8 @@ class PushClient internal constructor(
     /**
      * Get all pending push notifications.
      * This method returns all notifications that have not been approved or denied.
+     * Expired notifications are excluded, using the same rule as approve and deny: the TTL is measured from the
+     * server send time when available, otherwise from the local creation time.
      *
      * @return A Result containing a list of all pending PushNotifications or an Exception in case of failure.
      */

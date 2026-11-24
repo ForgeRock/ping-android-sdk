@@ -483,6 +483,34 @@ class SQLPushStorageTest {
     }
 
     /**
+     * Test that pending notifications exclude those expired by their sentAt, even when createdAt is recent
+     */
+    @Test
+    fun testGetPendingPushNotificationsExcludesSentAtExpired() = runTest {
+        val testCred = createTestPushCredential()
+        storage.storePushCredential(testCred)
+
+        // Sent 10 minutes ago with a 120 second TTL, but stored just now
+        val sentAtExpired = createTestPushNotification(credentialId = testCred.id, messageText = "Expired by sentAt")
+            .copy(
+                createdAt = Date(),
+                sentAt = Date(System.currentTimeMillis() - 10 * 60 * 1000L),
+                ttl = 120
+            )
+        val fresh = createTestPushNotification(credentialId = testCred.id, messageText = "Fresh")
+
+        storage.storePushNotification(sentAtExpired)
+        storage.storePushNotification(fresh)
+
+        val pendingNotifications = storage.getPendingPushNotifications()
+
+        assertEquals("Should retrieve only the fresh notification", 1, pendingNotifications.size)
+        assertEquals("Should be the fresh notification", fresh.id, pendingNotifications.first().id)
+        assertFalse("Should not contain sentAt-expired notification",
+            pendingNotifications.any { it.id == sentAtExpired.id })
+    }
+
+    /**
      * Test removing a notification
      */
     @Test

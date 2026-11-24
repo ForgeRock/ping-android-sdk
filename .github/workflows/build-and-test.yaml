@@ -26,6 +26,9 @@ on:
       CODECOV_TOKEN:
         description: Codecov token
         required: true
+      CLOUDSMITH_TOKEN_RECOGNIZE:
+        description: Cloudsmith token for the keyless/partners repository; enables the :recognize module when set
+        required: false
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
@@ -46,6 +49,21 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
           cache: 'gradle'
+
+      # Enable the :recognize module by appending the Cloudsmith token to gradle.properties.
+      # Base-repo builds only: on /run-ci against fork PRs the fork's build scripts execute on
+      # this runner and could read the token out of gradle.properties, so fork heads get none —
+      # the :recognize module then stays excluded, as for any build without the token.
+      - name: Append Cloudsmith Recognize token to gradle.properties
+        if: (inputs.head_repo || github.event.pull_request.head.repo.full_name) == github.repository
+        env:
+          CLOUDSMITH_TOKEN_RECOGNIZE: ${{ secrets.CLOUDSMITH_TOKEN_RECOGNIZE }}
+        run: |
+          if [ -n "$CLOUDSMITH_TOKEN_RECOGNIZE" ]; then
+            printf '\ncloudsmithTokenRecognize=%s\n' "$CLOUDSMITH_TOKEN_RECOGNIZE" >> gradle.properties
+          else
+            echo "CLOUDSMITH_TOKEN_RECOGNIZE not set — :recognize module stays excluded"
+          fi
 
       # Execute all unit tests from all modules
       - name: Execute unit tests

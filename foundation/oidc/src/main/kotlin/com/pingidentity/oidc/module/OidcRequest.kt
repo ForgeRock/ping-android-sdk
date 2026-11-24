@@ -9,7 +9,9 @@ package com.pingidentity.oidc.module
 
 import androidx.core.net.toUri
 import com.pingidentity.network.isSuccess
+import com.pingidentity.oidc.AuthorizationDetail
 import com.pingidentity.oidc.Constants.ACR_VALUES
+import com.pingidentity.oidc.Constants.AUTHORIZATION_DETAILS
 import com.pingidentity.oidc.Constants.CLIENT_ID
 import com.pingidentity.oidc.Constants.CODE
 import com.pingidentity.oidc.Constants.CODE_CHALLENGE
@@ -24,69 +26,134 @@ import com.pingidentity.oidc.Constants.RESPONSE_MODE
 import com.pingidentity.oidc.Constants.RESPONSE_TYPE
 import com.pingidentity.oidc.Constants.SCOPE
 import com.pingidentity.oidc.Constants.STATE
+import com.pingidentity.oidc.generateState
 import com.pingidentity.oidc.Constants.UI_LOCATES
 import com.pingidentity.oidc.Constants.USER_CODE_CAMEL
 import com.pingidentity.oidc.OidcClientConfig
 import com.pingidentity.oidc.Pkce
 import com.pingidentity.oidc.exception.AuthorizeException
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.encodeToJsonElement
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import com.pingidentity.network.HttpRequest as Request
 
 /**
- * Builds OIDC authorization request parameters using the provided configuration.
+ * Builds the OIDC authorization request parameters using the provided configuration.
  *
  * This function populates all required and optional OAuth2/OIDC parameters for an authorization request:
  * - Required parameters: client_id, response_type, scope, redirect_uri, PKCE parameters
  * - Optional parameters: state, nonce, login_hint, prompt, display, UI locales, ACR values
+ * - Rich Authorization Request: authorization_details (RFC 9396 §2)
  * - Additional custom parameters from configuration
  * - Extra parameters passed to this specific request
  *
+ * Every parameter is emitted **exactly once**. All sources are collected into a single map where
+ * a later source overwrites an earlier one, giving the precedence (RFC 6749: the request is the
+ * last word): per-call `extraParameters` > [OidcClientConfig.additionalParameters] > typed
+ * config members (including the `authorization_details` serialization of
+ * [OidcClientConfig.authorizationDetails]). Duplicate keys across sources therefore resolve
+ * structurally — no key-name special cases — so the same rule covers `authorization_details`,
+ * `state`, and any other parameter a caller sets twice.
+ *
  * @param pkce PKCE (Proof Key for Code Exchange) parameters for enhanced security
  * @param extraParameters Additional parameters specific to this authorization request
- * @param onParam Callback function to handle each parameter (name, value) pair
+ * @return The parameters in emission order (required params first, then config/extra values),
+ * keyed by parameter name.
  */
 internal fun OidcClientConfig.buildAuthorizeParams(
     pkce: Pkce,
     extraParameters: Map<String, String> = emptyMap(),
-    onParam: (String, String) -> Unit,
-) {
-    onParam(CLIENT_ID, clientId)
-    onParam(RESPONSE_TYPE, CODE)
-    onParam(SCOPE, scopes.joinToString(" "))
-    onParam(REDIRECT_URI, redirectUri)
-    onParam(CODE_CHALLENGE, pkce.codeChallenge)
-    onParam(CODE_CHALLENGE_METHOD, pkce.codeChallengeMethod)
-    acrValues?.let {
-        onParam(ACR_VALUES, it)
+): LinkedHashMap<String, String> {
+    val params = LinkedHashMap<String, String>()
+    params[CLIENT_ID] = clientId
+    params[RESPONSE_TYPE] = CODE
+    params[SCOPE] = scopes.joinToString(" ")
+    params[REDIRECT_URI] = redirectUri
+    params[CODE_CHALLENGE] = pkce.codeChallenge
+    params[CODE_CHALLENGE_METHOD] = pkce.codeChallengeMethod
+    acrValues?.let { params[ACR_VALUES] = it }
+    if (authorizationDetails.isNotEmpty()) {
+        params[AUTHORIZATION_DETAILS] = authorizationDetails.toAuthorizationDetailsParam()
     }
-    display?.let {
-        onParam(DISPLAY, it)
-    }
-    additionalParameters.forEach { (key, value) ->
-        onParam(key, value)
-    }
-    loginHint?.let {
-        onParam(LOGIN_HINT, it)
-    }
-    state?.let {
-        onParam(STATE, it)
-    }
-    nonce?.let {
-        onParam(NONCE, it)
-    }
-    prompt?.let {
-        onParam(PROMPT, it)
-    }
-    uiLocales?.let {
-        onParam(UI_LOCATES, it)
-    }
-    extraParameters.forEach { (key, value) ->
-        onParam(key, value)
-    }
+    display?.let { params[DISPLAY] = it }
+    loginHint?.let { params[LOGIN_HINT] = it }
+    state?.let { params[STATE] = it }
+    nonce?.let { params[NONCE] = it }
+    prompt?.let { params[PROMPT] = it }
+    uiLocales?.let { params[UI_LOCATES] = it }
+    additionalParameters.forEach { (key, value) -> params[key] = value }
+    extraParameters.forEach { (key, value) -> params[key] = value }
+    return params
 }
 
+/**
+ * `Json` instance used to serialize [AuthorizationDetail] lists onto the wire. Unlike the module
+ * `Json` (`com.pingidentity.oidc.json`, which has `encodeDefaults = true`) it leaves
+ * `encodeDefaults` off, so absent optional members of an authorization detail object are omitted
+ * from the serialized `authorization_details` value instead of emitted as `"locations":null`
+ * (RFC 9396 §2.2 makes every member but `type` optional, and omitting absent members is the
+ * canonical wire form).
+ */
+internal val authorizeJson: Json = Json { encodeDefaults = false }
+
+/**
+ * Serializes authorization details into the value of the `authorization_details` request
+ * parameter (RFC 9396 §2): a JSON array of detail objects. Absent optional members are omitted
+ * from the output (see [authorizeJson]).
+ *
+ * @param json The `Json` instance to serialize with.
+ * @return The serialized JSON array as a string.
+ */
+internal fun List<AuthorizationDetail>.toAuthorizationDetailsParam(json: Json = authorizeJson): String =
+    json.encodeToJsonElement(this).toString()
+
+/**
+ * Resolves the `state` value to send with an authorization request and to verify against the
+ * authorization response (RFC 6749 CSRF protection).
+ *
+ * Precedence — the first source that provides a state wins:
+ *
+ * 1. `extraParameters["state"]` (per-call)
+ * 2. `additionalParameters["state"]`
+ * 3. [OidcClientConfig.state]
+ *
+ * The request builders merge parameters by key, so the request carries exactly one `state`:
+ * the value resolved here. When more than one source defines `state`, the lower-priority
+ * values are ignored. Set at most one source; a warning is logged when multiple are present.
+ *
+ * @param extraParameters The per-call authorization parameters.
+ * @return The state to send and verify, or `null` when no source provides a state.
+ */
+internal fun OidcClientConfig.resolveState(extraParameters: Map<String, String>): String? {
+    val perCall = extraParameters[STATE]
+    val additional = additionalParameters[STATE]
+    if ((perCall != null && additional != null) ||
+        (additional != null && state != null) ||
+        (perCall != null && state != null)
+    ) {
+        logger.w(
+            "Multiple state sources are set (per-call parameter, additionalParameters, state). " +
+                "Only the highest-priority value is sent and verified; the others are ignored.",
+        )
+    }
+    return perCall ?: additional ?: state
+}
+
+/**
+ * Resolves the `state` to send and verify (see [resolveState]) and generates a fresh one
+ * when no source provides it (RFC 6749 CSRF protection: a state is always sent).
+ *
+ * The returned value must be passed to the request builders as a per-call parameter
+ * (a no-op when a source already provided one, so the request carries the state exactly
+ * once) and recorded so the browser callback can verify it with `validateState`.
+ *
+ * @param extraParameters The per-call authorization parameters.
+ * @return The state to send and verify — never `null`.
+ */
+internal fun OidcClientConfig.resolveOrGenerateState(
+    extraParameters: Map<String, String> = emptyMap(),
+): String = resolveState(extraParameters) ?: generateState()
 
 /**
  * Internal function to populate an OIDC authorization request with the necessary parameters.
@@ -114,7 +181,7 @@ val populateRequest: suspend OidcClientConfig.(Request, Map<String, String>, Pkc
                 form {
                     request.url.toUri().getQueryParameter(RESPONSE_MODE)
                         ?.let { put(RESPONSE_MODE, it) }
-                    buildAuthorizeParams(pkce, parameters) { k, v -> put(k, v) }
+                    buildAuthorizeParams(pkce, parameters).forEach { (k, v) -> put(k, v) }
                 }
             }
             if (response.status.isSuccess()) {
@@ -131,7 +198,7 @@ val populateRequest: suspend OidcClientConfig.(Request, Map<String, String>, Pkc
             }
         } else {
             request.url = openId.authorizationEndpoint
-            buildAuthorizeParams(pkce, parameters) { k, v -> request.parameter(k, v) }
+            buildAuthorizeParams(pkce, parameters).forEach { (k, v) -> request.parameter(k, v) }
         }
         request
     }

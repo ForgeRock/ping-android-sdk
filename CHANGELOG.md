@@ -1,6 +1,25 @@
+## [2.3.0]
+
+#### Added
+- Added conditional UI (autofill with passkeys) support to FIDO authentication on Android 15+ [SDKS-4574]
+- Added RFC 9396 Rich Authorization Requests (RAR) support [SDKS-5424] [SDKS-5426]
+
+#### Fixed
+- Fixed OIDC web and browser flows to validate the OAuth 2.0 `state` parameter, generate PKCE verifiers with a cryptographically secure random source, read authorization callbacks from the query string or fragment, and surface server OAuth errors in the exception. **Upgrade note:** invalid or missing `state` now fails authorization with `AuthorizeException` instead of `IllegalStateException` [SDKS-5479]
+- Fixed `PushNotification.expired` to use the server send time (`sentAt`) instead of the local creation time, falling back to creation time when `sentAt` is invalid [SDKS-5490]
+- Fixed `PhoneNumberCollector.extensionLabel` being reset to an empty string on DaVinci form prefill [SDKS-5073]
+- Fixed commons-codec security vulnerability (CVE-2026-119078) by forcing a secure version on the lint classpath [SDKS-5578]
+- Fixed Bouncy Castle security vulnerability (CVE-2026-103605) by upgrading the Bouncy Castle libraries to 1.87 [SDKS-5603]
+- Fixed `ErrorNode.details()` throwing `MissingFieldException` when the error payload lacks expected fields [SDKS-5536]
+
+#### Changed
+- Standardized Recognize error reporting across SDKs using shared error codes and names. Upgrade note: RecognizeException and Journey error values now use shared codes instead of native Keyless codes, and the exception constructor has changed. [P1RECMOB-3848]
+- Upgraded the Ping Signals dependency used by the `protect` module to 5.4.1 and raised `compileSdk` to 37
+
 ## [2.2.0]
 
 #### Added
+- Added device public signing key submission during Recognize enrollment [P1RECMOB-3808]
 - Added AM/AIC transactional backchannel authentication support to the Journey module [SDKS-5157]
 - Added new `pingonemfa` module for PingOne MFA integration [P14C-86660]
 - Added DaVinci `MOBILE_PAIRING` collector support for pairing PingOne MFA accounts directly within a DaVinci flow [P14C-82522]

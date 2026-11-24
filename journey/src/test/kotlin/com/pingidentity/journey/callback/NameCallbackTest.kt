@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Ping Identity Corporation. All rights reserved.
+ * Copyright (c) 2025 - 2026 Ping Identity Corporation. All rights reserved.
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
@@ -56,6 +56,41 @@ class NameCallbackTest {
             "John Doe",
             callback.payload()["input"]?.jsonArray?.get(0)?.jsonObject?.get("value")?.jsonPrimitive?.content
         )
+    }
+
+    @Test
+    fun initializesAutocompleteValuesWhenPresent() {
+        val withAutocomplete = buildJsonObject {
+            put("output", buildJsonArray {
+                add(buildJsonObject {
+                    put("name", JsonPrimitive("prompt"))
+                    put("value", JsonPrimitive("User Name"))
+                })
+                add(buildJsonObject {
+                    put("name", JsonPrimitive("autocompleteValues"))
+                    put("value", buildJsonArray {
+                        add(JsonPrimitive("username"))
+                        add(JsonPrimitive("webauthn"))
+                    })
+                })
+            })
+            put("input", buildJsonArray {
+                add(buildJsonObject {
+                    put("name", JsonPrimitive("IDToken1"))
+                    put("value", JsonPrimitive(""))
+                })
+            })
+        }
+        val callback = NameCallback()
+        callback.init(withAutocomplete)
+        assertEquals(listOf("username", "webauthn"), callback.autocompleteValues)
+    }
+
+    @Test
+    fun autocompleteValuesDefaultToEmptyListWhenAbsent() {
+        val callback = NameCallback()
+        callback.init(jsonObject)
+        assertEquals(emptyList(), callback.autocompleteValues)
     }
 
 }
