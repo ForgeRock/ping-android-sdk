@@ -3,8 +3,6 @@
 #### Added
 - Added conditional UI (autofill with passkeys) support to FIDO authentication on Android 15+ [SDKS-4574]
 - Added RFC 9396 Rich Authorization Requests (RAR) support [SDKS-5424] [SDKS-5426]
-- Added CI validation for copyright headers [SDKS-5477]
-- Added sample app support for the `log` key from environment config JSONs [SDKS-5577]
 
 #### Fixed
 - Fixed OIDC web and browser flows to validate the OAuth 2.0 `state` parameter, generate PKCE verifiers with a cryptographically secure random source, read authorization callbacks from the query string or fragment, and surface server OAuth errors in the exception. **Upgrade note:** invalid or missing `state` now fails authorization with `AuthorizeException` instead of `IllegalStateException` [SDKS-5479]
